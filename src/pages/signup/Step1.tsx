@@ -1,11 +1,11 @@
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import SignUpLayout, { useSignUpContext } from '@/components/SignUpLayout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import type React from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
 
 const Step1: React.FC = () => {
   const navigate = useNavigate();
@@ -13,17 +13,21 @@ const Step1: React.FC = () => {
   const [firstName, setFirstName] = useState(formData.firstName);
   const [lastName, setLastName] = useState(formData.lastName);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{firstName?: string; lastName?: string}>({});
+  const [errors, setErrors] = useState<{
+    firstName?: string;
+    lastName?: string;
+  }>({});
 
   const validateName = (name: string, field: string): string | undefined => {
     if (!name.trim()) return `${field} is required`;
     if (name.trim().length < 2) return `${field} must be at least 2 characters`;
-    if (!/^[a-zA-Z\s'-]+$/.test(name)) return `${field} can only contain letters, spaces, hyphens, and apostrophes`;
+    if (!/^[a-zA-Z\s'-]+$/.test(name))
+      return `${field} can only contain letters, spaces, hyphens, and apostrophes`;
     return undefined;
   };
 
   const validateForm = () => {
-    const newErrors: {firstName?: string; lastName?: string} = {};
+    const newErrors: { firstName?: string; lastName?: string } = {};
     newErrors.firstName = validateName(firstName, 'First name');
     newErrors.lastName = validateName(lastName, 'Last name');
     setErrors(newErrors);
@@ -34,20 +38,24 @@ const Step1: React.FC = () => {
     if (validateForm()) {
       setIsLoading(true);
       // Simulate a brief loading state for better UX
-      await new Promise(resolve => setTimeout(resolve, 300));
-      updateFormData({ firstName: firstName.trim(), lastName: lastName.trim() });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      updateFormData({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
       navigate('/signup/step-2');
       setIsLoading(false);
     }
   };
 
-  const isValid = firstName.trim() && lastName.trim() && !errors.firstName && !errors.lastName && !isLoading;
+  const isValid =
+    firstName.trim() && lastName.trim() && !errors.firstName && !errors.lastName && !isLoading;
 
   return (
     <SignUpLayout currentStep={1} showBackButton={false}>
       <div className="space-y-6">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-primary mb-4">Tell us about yourself</h2>
+        <div className="mb-8 text-center">
+          <h2 className="mb-4 text-3xl font-bold text-primary">Tell us about yourself</h2>
           <p className="text-gray-600">Let's start with your basic information</p>
         </div>
 
@@ -63,16 +71,14 @@ const Step1: React.FC = () => {
               onChange={(e) => {
                 setFirstName(e.target.value);
                 if (errors.firstName) {
-                  setErrors(prev => ({...prev, firstName: undefined}));
+                  setErrors((prev) => ({ ...prev, firstName: undefined }));
                 }
               }}
               placeholder="Enter your first name"
               className={`mt-1 ${errors.firstName ? 'border-red-500' : ''}`}
               required
             />
-            {errors.firstName && (
-              <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
-            )}
+            {errors.firstName && <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>}
           </div>
 
           <div>
@@ -86,16 +92,14 @@ const Step1: React.FC = () => {
               onChange={(e) => {
                 setLastName(e.target.value);
                 if (errors.lastName) {
-                  setErrors(prev => ({...prev, lastName: undefined}));
+                  setErrors((prev) => ({ ...prev, lastName: undefined }));
                 }
               }}
               placeholder="Enter your last name"
               className={`mt-1 ${errors.lastName ? 'border-red-500' : ''}`}
               required
             />
-            {errors.lastName && (
-              <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>
-            )}
+            {errors.lastName && <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>}
           </div>
         </div>
 
@@ -103,7 +107,7 @@ const Step1: React.FC = () => {
           <Button
             onClick={handleNext}
             disabled={!isValid}
-            className="bg-gradient-to-r from-primary-green to-primary-gradient hover:from-primary-gradient hover:to-secondary-teal text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300"
+            className="rounded-lg bg-gradient-to-r from-primary-green to-primary-gradient px-8 py-3 font-semibold text-white transition-all duration-300 hover:from-primary-gradient hover:to-secondary-teal"
           >
             {isLoading ? (
               <>

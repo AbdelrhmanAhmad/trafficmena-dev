@@ -1,15 +1,13 @@
-
-import React from 'react';
+import { ClipboardList } from 'lucide-react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminProtectedRoute from '@/components/AdminProtectedRoute';
-import AdminLayout from '@/components/AdminLayout';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import LibraryGrid from '@/components/LibraryGrid';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { useLibraryAssetsQuery } from '@/hooks/queries/useLibraryAssetsQuery';
+import { useLibraryList } from '@/app/hooks/useLibraryAssets';
+import LibraryGrid from '@/features/library/components/LibraryGrid';
+import LoadingSpinner from '@/shared/components/LoadingSpinner';
+import AdminLayout from '@/shared/components/layout/AdminLayout';
+import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import { Button } from '@/shared/components/ui/button';
+import { useToast } from '@/shared/hooks/custom/use-toast';
 
 // Bug #14 Fix: Replace mock data with actual database queries
 interface LibraryItem {
@@ -17,12 +15,16 @@ interface LibraryItem {
   title: string;
   description: string | null;
   file_type: string;
-  file_url: string | null;
+  video_url?: string | null;
+  document_url?: string | null;
+  embed_url?: string | null;
+  embed_type?: string | null;
+  file_url?: string | null; // Legacy field
   created_at: string;
 }
 
 /**
- * Bug #15 Fix: Standardized component using function declaration  
+ * Bug #15 Fix: Standardized component using function declaration
  * Bug #16 Fix: Library management component with comprehensive interface documentation
  */
 function LibraryManagement() {
@@ -30,66 +32,59 @@ function LibraryManagement() {
   const { toast } = useToast();
 
   // Query library assets (first 100 items)
-  const { data: assetsData, isLoading, isError, error, refetch } = useLibraryAssetsQuery(1, 100);
-
+  const { data: assetsData, isLoading, isError, error } = useLibraryList(1, 100);
 
   // Show error toast if needed
   React.useEffect(() => {
     if (isError) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load library items.';
       toast({
         title: 'Error',
-        description: error?.message || 'Failed to load library items. Please try again.',
+        description: `${errorMessage} Please try again later.`,
         variant: 'destructive',
       });
     }
-  }, [isError, error]);
+  }, [isError, error, toast]);
 
   // Transform library items to match LibraryGrid expected format
-  const transformedItems = (assetsData?.items ?? []).map(item => ({
-    id: item.id,
-    title: item.title,
-    description: item.description || '',
-    type: item.file_type,
-    videoUrl: item.file_url,
-    createdAt: item.created_at
-  }));
+  const transformedItems = useMemo(
+    () =>
+      (assetsData?.items ?? []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        file_type: item.file_type,
+        video_url: item.video_url,
+        document_url: item.document_url,
+        embed_url: item.embed_url,
+        embed_type: item.embed_type,
+        file_url: item.file_url, // Legacy field for backward compatibility
+        created_at: item.created_at,
+        view_count: item.view_count,
+        download_count: item.download_count,
+      })),
+    [assetsData?.items],
+  );
 
   const handleEdit = (itemId: string | number) => {
-    navigate(`/admin/library/edit/${itemId}`);
-  };
-
-  const handleDelete = async (itemId: string | number) => {
-    try {
-      const { error } = await supabase
-        .from('library_assets')
-        .delete()
-        .eq('id', String(itemId)); // Convert to string for database query
-
-      if (error) {
-        console.error('Error deleting library item:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete library item.",
-          variant: "destructive",
-        });
-        return;
-      }
-
+    // Ensure itemId is properly formatted for URL
+    const id = String(itemId).trim();
+    if (id && id !== 'undefined' && id !== 'null') {
+      navigate(`/admin/library/edit/${id}`);
+    } else {
       toast({
-        title: "Success",
-        description: "Library item deleted successfully.",
-      });
-      
-      // Refresh the items
-      refetch();
-    } catch (error) {
-      console.error('Unexpected error deleting library item:', error);
-      toast({
-        title: "Error", 
-        description: "An unexpected error occurred while deleting the item.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Invalid item ID',
+        variant: 'destructive',
       });
     }
+  };
+
+  const handleDelete = (_itemId: string | number) => {
+    toast({
+      title: 'Not Available',
+      description: 'Deleting assets will return once the new API endpoints are ready.',
+    });
   };
 
   const handleAddNew = () => {
@@ -111,30 +106,30 @@ function LibraryManagement() {
       <AdminLayout>
         <div className="space-y-6">
           {/* Page Header */}
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-primary">Library Management</h1>
-              <p className="text-gray-600 mt-2">
-                Organize and manage assets from past meetups and training sessions.
+              <p className="mt-2 text-gray-600">
+                Asset creation stays manual during the MVP. Use the manual upload checklist to seed
+                recordings or documents via the CLI before they appear here.
               </p>
             </div>
-            
-            <Button 
-              onClick={handleAddNew}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Item
+
+            <Button onClick={handleAddNew} variant="outline">
+              <ClipboardList className="mr-2 h-4 w-4" />
+              Manual Upload Instructions
             </Button>
           </div>
 
           {/* Library Items Grid */}
-          <LibraryGrid
-            items={transformedItems}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAddNew={handleAddNew}
-          />
+          <div className="max-w-6xl">
+            <LibraryGrid
+              items={transformedItems}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onAddNew={handleAddNew}
+            />
+          </div>
         </div>
       </AdminLayout>
     </AdminProtectedRoute>

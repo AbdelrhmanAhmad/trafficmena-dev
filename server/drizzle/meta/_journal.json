@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1759778020678,
+      "tag": "0000_ancient_living_tribunal",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1759779111676,
+      "tag": "0001_romantic_wolverine",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760035200000,
+      "tag": "0002_invitation_activation",
+      "breakpoints": true
+    }
+  ]
+}

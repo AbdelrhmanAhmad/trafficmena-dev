@@ -1,10 +1,16 @@
-
-import React, { useState } from 'react';
+import type React from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SignUpLayout, { useSignUpContext } from '@/components/SignUpLayout';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
+import { Button } from '@/shared/components/ui/button';
+import { Label } from '@/shared/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
 
 const Step4: React.FC = () => {
   const navigate = useNavigate();
@@ -34,9 +40,13 @@ const Step4: React.FC = () => {
   return (
     <SignUpLayout currentStep={4} onBack={handleBack}>
       <div className="space-y-6">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-primary mb-4">What is your #1 career goal right now?</h2>
-          <p className="text-gray-600">This helps us match you with the right people and opportunities.</p>
+        <div className="mb-8 text-center">
+          <h2 className="mb-4 text-3xl font-bold text-primary">
+            What is your #1 career goal right now?
+          </h2>
+          <p className="text-gray-600">
+            This helps us match you with the right people and opportunities.
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -46,7 +56,11 @@ const Step4: React.FC = () => {
             </Label>
             <div className="mt-3 space-y-2">
               {goalOptions.map((option) => (
-                <div key={option} className={`flex items-center p-3 rounded-md border cursor-pointer ${primaryGoal === option ? 'border-primary' : 'border-gray-200'}`} onClick={() => setPrimaryGoal(option)}>
+                <div
+                  key={option}
+                  className={`flex cursor-pointer items-center rounded-md border p-3 ${primaryGoal === option ? 'border-primary' : 'border-gray-200'}`}
+                  onClick={() => setPrimaryGoal(option)}
+                >
                   <input
                     type="radio"
                     name="primaryGoal"
@@ -62,17 +76,13 @@ const Step4: React.FC = () => {
         </div>
 
         <div className="flex justify-between pt-6">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            className="px-8 py-3"
-          >
+          <Button variant="outline" onClick={handleBack} className="px-8 py-3">
             Back
           </Button>
           <Button
             onClick={handleNext}
             disabled={!isValid}
-            className="bg-gradient-to-r from-primary-green to-primary-gradient hover:from-primary-gradient hover:to-secondary-teal text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300"
+            className="rounded-lg bg-gradient-to-r from-primary-green to-primary-gradient px-8 py-3 font-semibold text-white transition-all duration-300 hover:from-primary-gradient hover:to-secondary-teal"
           >
             Next
           </Button>

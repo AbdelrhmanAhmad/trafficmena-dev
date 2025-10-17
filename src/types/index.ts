@@ -24,26 +24,49 @@ export interface Event extends EventCore {
   what_youll_learn: string[] | null;
 }
 
-export interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface UserProfile {
   id: string;
   first_name: string | null;
   last_name: string | null;
   email: string;
   phone_number: string | null;
-  role: string | null;
-  subscription_status: string | null;
-  experience_level?: string | null;
+  role: 'user' | 'manager' | 'admin' | null;
+  user_type?: 'learner' | 'expert' | null;
+  subscription_status?: string | null;
   primary_goal?: string | null;
   primary_challenge?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Form update data interfaces
+export interface ProfileUpdateData {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone_number?: string;
+  primary_goal?: string;
+  primary_challenge?: string;
+}
+
+// User activity interfaces
+export interface UserActivity {
+  id: string;
+  user_id: string;
+  activity_type: ActivityType;
+  activity_data: ActivityData;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ActivityType = 'profile_update' | 'event_registration' | 'login' | 'skill_update';
+
+export interface ActivityData {
+  event_id?: string;
+  event_title?: string;
+  profile_changes?: Record<string, unknown>;
+  skills?: string[];
+  metadata?: Record<string, unknown>;
 }
 
 export interface LibraryAsset {
@@ -94,6 +117,24 @@ export interface SupabaseError {
   code?: string;
 }
 
+// Form data interfaces
+export interface EventFormData {
+  title: string;
+  description?: string;
+  date: string;
+  location?: string;
+  max_attendees?: number | string;
+  event_type: EventType;
+  event_description?: string;
+  meeting_link?: string;
+  image_url?: string;
+  tags?: string[];
+  guest_experts?: GuestExpert[];
+}
+
+// Import GuestExpert from events.ts for consistency
+export { EventWithGuestExperts, GuestExpert } from './events';
+
 // Filter types
 export interface EventFilters {
   topic: string;
@@ -108,6 +149,5 @@ export type MeetupCore = EventCore;
 
 export interface UserFilters {
   search: string;
-  status: string;
-  role?: string;
+  role?: 'all' | 'user' | 'manager' | 'admin';
 }

@@ -1,0 +1,50 @@
+type RateLimitRule = {
+  limit: number;
+  windowMs: number;
+};
+
+type Bucket = {
+  count: number;
+  expiresAt: number;
+};
+
+export class InMemoryRateLimiter {
+  private readonly buckets = new Map<string, Bucket>();
+
+  consume(key: string, rule: RateLimitRule) {
+    const now = Date.now();
+    const bucket = this.buckets.get(key);
+
+    if (!bucket || bucket.expiresAt <= now) {
+      const expiresAt = now + rule.windowMs;
+      this.buckets.set(key, { count: 1, expiresAt });
+      return {
+        allowed: true,
+        remaining: rule.limit - 1,
+        resetAt: expiresAt,
+      };
+    }
+
+    if (bucket.count >= rule.limit) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: bucket.expiresAt,
+      };
+    }
+
+    bucket.count += 1;
+    return {
+      allowed: true,
+      remaining: rule.limit - bucket.count,
+      resetAt: bucket.expiresAt,
+    };
+  }
+
+  reset(key: string) {
+    this.buckets.delete(key);
+  }
+}
+
+export const otpRateLimiter = new InMemoryRateLimiter();
+export const invitationRateLimiter = new InMemoryRateLimiter();

@@ -1,72 +1,101 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useSignUpContext } from '@/components/SignUpLayout';
-import Header from '@/components/Header';
+import { format } from 'date-fns';
+import { Calendar, Loader2 } from 'lucide-react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import Header from '@/shared/components/layout/Header';
+import { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { useAuth } from '@/shared/context/AuthContext';
+import { getPendingEventContext } from '@/shared/utils/eventRedirectUtils';
 
 const Step0: React.FC = () => {
   const navigate = useNavigate();
-  const { updateFormData } = useSignUpContext();
+  const { user, loading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { formData, updateFormData } = useSignUpContext();
   const [isLoading, setIsLoading] = useState(false);
-  const [authType, setAuthType] = useState<'google' | 'email' | null>(null);
-
-  // Check if user is already authenticated
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/dashboard');
-      }
-    };
-    checkAuth();
-  }, [navigate]);
-
-  const handleGoogleSignUp = async () => {
-    setAuthType('google');
-    setIsLoading(true);
-    
+  const [eventContext, setEventContext] = useState(getPendingEventContext());
+  const [acceptanceDetails] = useState<{
+    token: string;
+    invitationId: string;
+    email: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    userId?: string;
+  } | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const raw = sessionStorage.getItem('trafficmena:invitation-acceptance');
+    if (!raw) return null;
     try {
-      const redirectUrl = `${window.location.origin}/signup/step-3`;
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl
-        }
-      });
-
-      if (error) {
-        console.error('Google sign up error:', error);
-        setIsLoading(false);
-        setAuthType(null);
-      }
+      return JSON.parse(raw);
     } catch (error) {
-      console.error('Unexpected error during Google sign up:', error);
-      setIsLoading(false);
-      setAuthType(null);
+      console.warn('Invalid invitation acceptance cache', error);
+      return null;
     }
-  };
+  });
+
+  const invitationToken = searchParams.get('invitation');
+
+  useEffect(() => {
+    if (!invitationToken) return;
+    updateFormData({ invitationToken });
+
+    if (!acceptanceDetails || acceptanceDetails.token !== invitationToken) {
+      return;
+    }
+
+    const next: Partial<typeof formData> = {};
+    if (!formData.email) {
+      next.email = acceptanceDetails.email;
+    }
+    if (!formData.firstName && acceptanceDetails.firstName) {
+      next.firstName = acceptanceDetails.firstName;
+    }
+    if (!formData.lastName && acceptanceDetails.lastName) {
+      next.lastName = acceptanceDetails.lastName;
+    }
+    if (!formData.invitationUserId && acceptanceDetails.userId) {
+      next.invitationUserId = acceptanceDetails.userId;
+    }
+
+    if (Object.keys(next).length > 0) {
+      updateFormData(next);
+    }
+  }, [
+    acceptanceDetails,
+    formData.email,
+    formData.firstName,
+    formData.invitationUserId,
+    formData.lastName,
+    invitationToken,
+    updateFormData,
+  ]);
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard');
+    }
+  }, [loading, user, navigate]);
 
   const handleEmailSignUp = () => {
-    setAuthType('email');
     setIsLoading(true);
-    // Add small delay for UX
     setTimeout(() => {
       navigate('/signup/step-1');
-    }, 200);
+    }, 150);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="py-16">
-        <div className="container mx-auto px-4 max-w-md">
-          <div className="bg-white rounded-lg shadow-sm border p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-primary mb-4">
+        <div className="container mx-auto max-w-md px-4">
+          <div className="rounded-lg border bg-white p-8 shadow-sm">
+            <div className="mb-8 text-center">
+              <h1 className="mb-4 text-3xl font-bold text-primary">
                 Join the heart of marketing in MENA
               </h1>
               <p className="text-gray-600">
@@ -74,69 +103,93 @@ const Step0: React.FC = () => {
               </p>
             </div>
 
+            {invitationToken && !eventContext && (
+              <Card className="mb-6 border-blue-200 bg-blue-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg text-blue-800">
+                    Invitation Detected
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-2">
+                    <p className="text-sm text-blue-700">
+                      Token:{' '}
+                      <Badge variant="outline" className="border-blue-200 text-blue-700">
+                        {invitationToken}
+                      </Badge>
+                    </p>
+                    {acceptanceDetails?.email ? (
+                      <>
+                        <p className="text-sm text-blue-600">
+                          Invitation confirmed for {acceptanceDetails.email}.
+                        </p>
+                        <p className="text-sm text-blue-600">
+                          We pre-filled your details and sent a one-time passcode to your inbox to
+                          finish signup.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-blue-600">
+                        Continue with signup and our team will verify your invitation manually
+                        during the MVP.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {eventContext && (
+              <Card className="mb-6 border-green-200 bg-green-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg text-green-800">
+                    <Calendar className="h-5 w-5" />
+                    You're signing up to join this event
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-green-900">{eventContext.eventTitle}</h3>
+                    <div className="flex items-center gap-2 text-sm text-green-700">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {format(new Date(eventContext.eventDate), 'MMMM d, yyyy • h:mm a')}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm text-green-600">
+                    Complete your signup to secure your spot at this event!
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="space-y-6">
-              {/* Google Sign Up Button */}
-              <Button
-                onClick={handleGoogleSignUp}
-                disabled={isLoading}
-                className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center"
-              >
-                {isLoading && authType === 'google' ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Sign up with Google
-                  </>
-                )}
-              </Button>
-
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">OR</span>
-                </div>
-              </div>
-
-              {/* Email Sign Up Button */}
               <Button
                 onClick={handleEmailSignUp}
                 disabled={isLoading}
-                variant="outline"
-                className="w-full border-2 border-primary text-primary hover:bg-primary hover:text-white font-medium py-3 px-4 rounded-lg transition-all duration-300"
+                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 font-medium text-gray-700 transition-all duration-300 hover:bg-gray-50"
               >
-                {isLoading && authType === 'email' ? (
+                {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading...
+                    Redirecting…
                   </>
                 ) : (
-                  'Continue with Email'
+                  'Continue with email'
                 )}
               </Button>
-            </div>
 
-            <div className="mt-8 text-center">
-              <p className="text-sm text-gray-500">
-                Already have an account?{' '}
-                <button 
+              <div className="space-y-2 text-center text-sm text-gray-600">
+                <p>Prefer quick access?</p>
+                <Button
+                  variant="ghost"
+                  className="w-full text-primary"
                   onClick={() => navigate('/signin')}
-                  className="text-primary hover:underline font-medium"
                 >
-                  Sign In
-                </button>
-              </p>
+                  Already a member? Sign in
+                </Button>
+              </div>
             </div>
           </div>
         </div>

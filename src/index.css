@@ -1,3 +1,25 @@
+/* Tiptap Editor Styles - Must be imported first */
+@import "./styles/_variables.scss"; /* Fixed: removed global * selector */
+@import "./styles/_keyframe-animations.scss";
+
+/* Tiptap UI Primitive Component Styles */
+@import "./components/tiptap-ui-primitive/button/button.scss";
+@import "./components/tiptap-ui-primitive/button/button-colors.scss";
+@import "./components/tiptap-ui-primitive/button/button-group.scss";
+@import "./components/tiptap-ui-primitive/toolbar/toolbar.scss";
+@import "./components/tiptap-ui-primitive/tooltip/tooltip.scss";
+@import "./components/tiptap-ui-primitive/separator/separator.scss";
+@import "./components/tiptap-ui-primitive/badge/badge.scss";
+@import "./components/tiptap-ui-primitive/badge/badge-colors.scss";
+@import "./components/tiptap-ui-primitive/badge/badge-group.scss";
+@import "./components/tiptap-ui-primitive/dropdown-menu/dropdown-menu.scss";
+@import "./components/tiptap-ui-primitive/card/card.scss";
+@import "./components/tiptap-ui-primitive/popover/popover.scss";
+@import "./components/tiptap-ui-primitive/input/input.scss";
+
+/* Tiptap UI Component Styles */
+@import "./components/tiptap-ui/color-highlight-button/color-highlight-button.scss";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,7 +71,9 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+}
 
+@layer base {
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -78,14 +102,15 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 215 20.2% 65.1%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 212.7 26.8% 83.9%;
   }
 }
 
@@ -96,5 +121,50 @@
 
   body {
     @apply bg-background text-foreground;
+    transition:
+      background-color 0.2s ease-in-out,
+      color 0.2s ease-in-out;
+  }
+
+  /* Smooth transitions for theme switching */
+  *,
+  *::before,
+  *::after {
+    transition:
+      background-color 0.2s ease-in-out,
+      border-color 0.2s ease-in-out;
+  }
+
+  /* Ensure theme toggle icons have smooth transitions */
+  .theme-toggle-icon {
+    transition: all 0.2s ease-in-out;
+  }
+
+  /* TrafficMENA brand gradients for theme switching */
+  .gradient-brand {
+    background: linear-gradient(135deg, hsl(var(--primary-green)), #29cf9f);
+  }
+
+  .gradient-secondary {
+    background: linear-gradient(135deg, hsl(var(--secondary)), #00fdc2);
+  }
+
+  /* Professional shadows for both themes */
+  .shadow-brand {
+    box-shadow:
+      0 4px 6px -1px rgba(5, 239, 98, 0.1),
+      0 2px 4px -1px rgba(5, 239, 98, 0.06);
+  }
+
+  .dark .shadow-brand {
+    box-shadow:
+      0 4px 6px -1px rgba(5, 239, 98, 0.2),
+      0 2px 4px -1px rgba(5, 239, 98, 0.1);
+  }
+
+  /* Enhanced focus states for accessibility */
+  .focus-brand:focus {
+    outline: 2px solid hsl(var(--primary-green));
+    outline-offset: 2px;
   }
 }

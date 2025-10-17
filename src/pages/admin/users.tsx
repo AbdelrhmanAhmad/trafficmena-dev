@@ -1,10 +1,20 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-import AdminProtectedRoute from '@/components/AdminProtectedRoute';
-import AdminLayout from '@/components/AdminLayout';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, Search, Shield } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { type AdminUserRecord, fetchUsersAdmin } from '@/app/api/users';
+import AdminLayout from '@/shared/components/layout/AdminLayout';
+import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Input } from '@/shared/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
 import {
   Table,
   TableBody,
@@ -12,298 +22,187 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { UserProfile, UserFilters } from '@/types';
-import { useErrorHandler } from '@/utils/errorHandling';
+} from '@/shared/components/ui/table';
+import { useToast } from '@/shared/hooks/custom/use-toast';
 
-const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const ITEMS_PER_PAGE = 10;
-  const [filters, setFilters] = useState<UserFilters>({
-    search: '',
-    status: 'all'
-  });
+const PAGE_SIZE = 10;
+
+const roleLabels: Record<string, string> = {
+  admin: 'Admin',
+  manager: 'Manager',
+  user: 'Member',
+};
+
+const roleColors: Record<string, string> = {
+  admin: 'bg-red-100 text-red-800',
+  manager: 'bg-blue-100 text-blue-800',
+  user: 'bg-green-100 text-green-800',
+};
+
+const AdminUsersPage = () => {
   const { toast } = useToast();
-  const { handleError } = useErrorHandler();
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'manager' | 'user'>('all');
 
-  // Fetch users from database with cleanup
-  useEffect(() => {
-    let mounted = true;
-    const abortController = new AbortController();
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['admin-users', page],
+    queryFn: () => fetchUsersAdmin({ page, pageSize: PAGE_SIZE }),
+    onError: () =>
+      toast({
+        title: 'Unable to load users',
+        description: 'Please refresh the page or try again later.',
+        variant: 'destructive',
+      }),
+    keepPreviousData: true,
+  });
 
-    const fetchUsers = async (page: number = 1) => {
-      try {
-        setLoading(true);
-        
-        // Calculate range for pagination
-        const startIndex = (page - 1) * ITEMS_PER_PAGE;
-        const endIndex = startIndex + ITEMS_PER_PAGE - 1;
-        
-        // Get total count first for pagination
-        const { count } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
-        
-        if (count !== null) {
-          setTotalUsers(count);
-          setTotalPages(Math.ceil(count / ITEMS_PER_PAGE));
-        }
-        
-        // Get users from profiles table with pagination
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select(`
-            id,
-            first_name,
-            last_name,
-            phone_number,
-            role,
-            subscription_status,
-            email
-          `)
-          .range(startIndex, endIndex)
-          .order('created_at', { ascending: false })
-          .abortSignal(abortController.signal);
+  const filteredUsers = useMemo(() => {
+    if (!data?.items) return [];
+    return data.items.filter((user) => {
+      const matchesRole =
+        roleFilter === 'all' || (user.role ?? 'user').toLowerCase() === roleFilter;
+      const query = search.trim().toLowerCase();
+      if (!query) return matchesRole;
+      return (
+        matchesRole &&
+        (`${user.name}`.toLowerCase().includes(query) || user.email.toLowerCase().includes(query))
+      );
+    });
+  }, [data?.items, roleFilter, search]);
 
-        if (!mounted) return;
+  const totalPages = data?.pagination.total
+    ? Math.max(1, Math.ceil(data.pagination.total / PAGE_SIZE))
+    : 1;
 
-        if (error) {
-          const appError = handleError(error);
-          toast({
-            title: "Error",
-            description: "Failed to load users. Please try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        if (!mounted) return;
-
-        // SECURITY FIX: Removed supabase.auth.admin.listUsers() call
-        // This requires service role key which should NOT be in client-side code
-        // Email data should be stored in profiles table or accessed via edge function
-        
-        // Use profile data with actual emails
-        const combinedUsers: UserProfile[] = profiles || [];
-
-        setUsers(combinedUsers);
-        setCurrentPage(page);
-      } catch (error) {
-        if (!mounted || abortController.signal.aborted) return;
-        
-        const appError = handleError(error, 'Failed to fetch users');
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred while loading users.",
-          variant: "destructive",
-        });
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchUsers(currentPage);
-
-    return () => {
-      mounted = false;
-      abortController.abort();
-    };
-  }, [currentPage]); // Re-fetch when page changes
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+  const handlePrev = () => {
+    setPage((prev) => Math.max(1, prev - 1));
   };
 
-  const filteredUsers = users.filter(user => {
-    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-    const matchesSearch = fullName.toLowerCase().includes(filters.search.toLowerCase()) ||
-                         user.email.toLowerCase().includes(filters.search.toLowerCase());
-    const matchesStatus = filters.status === 'all' || 
-                         (user.subscription_status || 'free').toLowerCase() === filters.status;
-    return matchesSearch && matchesStatus;
-  });
-
-  const updateFilters = useCallback((newFilters: Partial<UserFilters>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  }, []);
-
-  const getStatusBadgeVariant = useCallback((status: string | null) => {
-    switch (status?.toLowerCase()) {
-      case 'active':
-      case 'premium':
-        return 'default';
-      case 'expired':
-      case 'free':
-        return 'secondary';
-      case 'cancelled':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
-  }, []);
-
-  if (loading) {
-    return (
-      <AdminProtectedRoute>
-        <AdminLayout>
-          <LoadingSpinner size="lg" text="Loading users..." />
-        </AdminLayout>
-      </AdminProtectedRoute>
-    );
-  }
+  const handleNext = () => {
+    setPage((prev) => Math.min(totalPages, prev + 1));
+  };
 
   return (
     <AdminProtectedRoute>
       <AdminLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">User Management</h1>
-            <p className="text-gray-600 mt-2">
-              Manage and view all registered users and their subscription status.
-            </p>
-          </div>
-
-          {/* Filter Controls */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h2 className="text-lg font-semibold text-primary mb-4">Filter Users</h2>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
+        <Card>
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl font-semibold">
+                <Shield className="h-5 w-5" />
+                Member Directory
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                View and filter community members. Role changes will be handled in a future update.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or email..."
-                  value={filters.search}
-                  onChange={(e) => updateFilters({ search: e.target.value })}
-                  className="w-full"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search by name or email"
+                  className="pl-9"
                 />
               </div>
-              <div className="sm:w-48">
-                <Select value={filters.status} onValueChange={(value) => updateFilters({ status: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Subscription Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="expired">Expired</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={roleFilter}
+                onValueChange={(value: typeof roleFilter) => setRoleFilter(value)}
+              >
+                <SelectTrigger className="sm:w-40">
+                  <SelectValue placeholder="Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  <SelectItem value="admin">Admins</SelectItem>
+                  <SelectItem value="manager">Managers</SelectItem>
+                  <SelectItem value="user">Members</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
+          </CardHeader>
 
-          {/* Users Data Table */}
-          <div className="bg-white rounded-lg shadow-sm border">
-            <div className="p-6 border-b">
-              <h2 className="text-lg font-semibold text-primary">
-                Users ({filteredUsers.length})
-              </h2>
-            </div>
-            <div className="overflow-x-auto">
+          <CardContent>
+            {isLoading ? (
+              <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
+                Loading users…
+              </div>
+            ) : isError ? (
+              <div className="flex min-h-[200px] items-center justify-center text-destructive">
+                Unable to fetch users.
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
+                No users match your filters.
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Subscription Status</TableHead>
+                    <TableHead>Joined</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A'}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone_number || 'N/A'}</TableCell>
-                      <TableCell>{user.role || 'Member'}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(user.subscription_status)}>
-                          {user.subscription_status || 'Free'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
+                    <AdminUserRow key={user.id} user={user} />
                   ))}
-                  {filteredUsers.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                        No users found matching your criteria.
-                      </TableCell>
-                    </TableRow>
-                  )}
                 </TableBody>
               </Table>
-            </div>
-            
-            {/* Pagination Controls */}
-            <div className="p-6 border-t bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-700">
-                  Showing page {currentPage} of {totalPages} ({totalUsers} total users)
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage <= 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  
-                  {/* Page numbers */}
-                  <div className="flex items-center space-x-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const pageNum = Math.max(1, currentPage - 2) + i;
-                      if (pageNum > totalPages) return null;
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={pageNum === currentPage ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageChange(pageNum)}
-                          className="w-8 h-8 p-0"
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= totalPages}
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredUsers.length} of {data?.pagination.total ?? 0} members
+              </p>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="icon" onClick={handlePrev} disabled={page === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleNext}
+                  disabled={page >= totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </AdminLayout>
     </AdminProtectedRoute>
   );
 };
 
-export default UserManagement;
+const AdminUserRow = ({ user }: { user: AdminUserRecord }) => {
+  const roleKey = (user.role ?? 'user').toLowerCase();
+  return (
+    <TableRow>
+      <TableCell>
+        <div>
+          <p className="font-medium text-gray-900">{user.name || 'Member'}</p>
+        </div>
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+      <TableCell>
+        <Badge variant="secondary" className={roleColors[roleKey] ?? 'bg-gray-100 text-gray-700'}>
+          {roleLabels[roleKey] ?? 'Member'}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {new Date(user.created_at).toLocaleDateString()}
+      </TableCell>
+    </TableRow>
+  );
+};
+
+export default AdminUsersPage;

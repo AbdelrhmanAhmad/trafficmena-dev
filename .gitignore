@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# Env files (do not commit real secrets)
+.env
+server/.env
+server/.env.local
+
+# Local Postgres data and secrets
+server/.postgres-data/
+server/.postgres/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +31,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local Postgres cluster
+local/postgres/
+
+# Local frontend env (do not commit secrets)
+web/.env
