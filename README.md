@@ -1,73 +1,118 @@
-# Welcome to your Lovable project
+# TrafficMENA Hub
 
-## Project info
+MVP digital marketing education platform for the MENA region. The core loop is: Signup → Browse Events → Register → Access Library. Built for fast iteration with a modern TypeScript stack.
 
-**URL**: https://lovable.dev/projects/c9553533-9ad4-41d4-9649-d08e9f4be3a1
+## Tech Stack
 
-## How can I edit this code?
+- Frontend: React 18, TypeScript, Vite, Tailwind CSS, Shadcn UI (Radix primitives), TanStack Query
+- Backend API: Hono (Node 20 LTS)
+- Auth: Better Auth (email OTP), Plunk (email delivery)
+- Database: PostgreSQL 17.x with Drizzle ORM
+- Tooling: Ultracite (Biome) for lint/format, path aliases (`@/`)
+- Deployment (prod): Single VPS (Ubuntu + systemd + Caddy)
 
-There are several ways of editing your application.
+## Repository Structure
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/c9553533-9ad4-41d4-9649-d08e9f4be3a1) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+.
+├── server/                 # Hono API (Better Auth + Drizzle + Postgres)
+│   ├── src/
+│   ├── package.json
+│   └── .env.example        # Copy to .env for local dev
+├── src/                    # React SPA
+├── public/                 # Static assets
+├── local/postgres/         # Project-scoped Postgres helper scripts
+├── package.json            # SPA scripts + local DB scripts
+└── README.md
 ```
 
-**Edit a file directly in GitHub**
+## Getting Started (Local)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Prerequisites: Node.js 20+, npm; Postgres is managed locally via helper scripts (no Docker required).
 
-**Use GitHub Codespaces**
+1) Install dependencies
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+npm install
+npm --prefix server install
+```
 
-## What technologies are used for this project?
+2) Configure environment
 
-This project is built with:
+```
+cp server/.env.example server/.env
+# Edit server/.env to match your local setup (secrets stay local)
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3) Start local Postgres (project-scoped)
 
-## How can I deploy this project?
+```
+npm run db:start          # start local PG on 5433
+npm run db:status         # optional health check
+```
 
-Simply open [Lovable](https://lovable.dev/projects/c9553533-9ad4-41d4-9649-d08e9f4be3a1) and click on Share -> Publish.
+4) Apply database migrations
 
-## Can I connect a custom domain to my Lovable project?
+```
+npm --prefix server run db:migrate
+```
 
-Yes, you can!
+5) Run the dev servers (in two terminals)
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```
+# Terminal A (API)
+npm --prefix server run dev   # Hono on http://localhost:3001
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+# Terminal B (SPA)
+npm run dev                   # Vite on http://localhost:8080
+```
+
+To stop the local database:
+
+```
+npm run db:stop
+```
+
+## Available Scripts
+
+Root (SPA):
+- `npm run dev` – start Vite dev server
+- `npm run build` – production build
+- `npm run preview` – preview production build
+- `npm run lint` / `npm run format` – code quality via Ultracite
+- `npm run db:start|stop|status|psql|reset|health` – local Postgres helpers
+
+Server (API):
+- `npm --prefix server run dev` – start Hono with dotenv
+- `npm --prefix server run build` – compile TypeScript
+- `npm --prefix server run start` – run compiled server
+- `npm --prefix server run db:gen` – generate Drizzle SQL
+- `npm --prefix server run db:migrate` – apply migrations
+- `npm --prefix server run db:studio` – open Drizzle Studio
+
+## API Overview (MVP)
+
+- `POST /api/auth/otp/request` – request OTP
+- `POST /api/auth/otp/verify` – verify OTP, create session
+- `GET /api/events` / `GET /api/events/:id`
+- `POST /api/events/:id/register` / `POST /api/events/:id/cancel`
+- `GET /api/library` / `GET /api/library/:id`
+- `GET /api/users/me`
+- `POST /api/invitations` (single) / `POST /api/invitations/csv` / `GET /api/invitations`
+
+All endpoints are protected appropriately; payloads validated with Zod on the server.
+
+## Development Notes
+
+- Do not commit secrets. Use `server/.env` locally; share safe defaults via `server/.env.example`.
+- The SPA talks only to the Hono API; legacy Supabase clients were removed.
+- Prefer simple patterns over over-engineering—this is an MVP.
+
+## Deployment (Brief)
+
+- Single VPS (Ubuntu 22.04+), systemd service for the Hono server, Caddy for TLS and reverse proxy.
+- Use managed Postgres or promote the local schema; enable SSL in production.
+
+---
+
+For day-to-day operator steps, see `docs/admin-content-workflow.md`. For architecture and migration notes, see `warp-reviewed-plan.md`.
