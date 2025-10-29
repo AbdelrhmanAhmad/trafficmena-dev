@@ -1,4 +1,4 @@
-import { Calendar, ExternalLink, RefreshCcw } from 'lucide-react';
+import { Calendar, CalendarPlus, ExternalLink, RefreshCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DataLoader from '@/shared/components/DataLoader';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useEvents } from '../hooks/useEvents';
 
-const PAGE_SIZE = 100;
+// API caps pageSize at 50 (see server/src/routes/api/events.ts); stay within limit.
+const PAGE_SIZE = 50;
 
 const AdminMeetups = () => {
   const navigate = useNavigate();
@@ -27,29 +28,37 @@ const AdminMeetups = () => {
             <div>
               <h1 className="text-3xl font-bold text-primary">Event Overview</h1>
               <p className="text-sm text-muted-foreground">
-                Creation and editing are paused while the new API is completing. Track live events
-                and open the public view from here in the meantime.
+                Manage upcoming workshops and publish new meetups directly from the admin panel.
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            disabled={isFetching}
-            onClick={async () => {
-              const result = await refetch();
-              if (result.error) {
-                toast({
-                  title: 'Refresh failed',
-                  description: 'We could not refresh events right now.',
-                  variant: 'destructive',
-                });
-              }
-            }}
-            className="flex items-center gap-2"
-          >
-            <RefreshCcw className={isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-            Refresh
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => navigate('/admin/meetups/new')}
+              className="flex items-center gap-2"
+            >
+              <CalendarPlus className="h-4 w-4" />
+              Create event
+            </Button>
+            <Button
+              variant="outline"
+              disabled={isFetching}
+              onClick={async () => {
+                const result = await refetch();
+                if (result.error) {
+                  toast({
+                    title: 'Refresh failed',
+                    description: 'We could not refresh events right now.',
+                    variant: 'destructive',
+                  });
+                }
+              }}
+              className="flex items-center gap-2"
+            >
+              <RefreshCcw className={isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <DataLoader
@@ -98,7 +107,8 @@ const AdminMeetups = () => {
                 <CardContent className="space-y-3">
                   {data.items.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No events found. Add new events once the Hono admin endpoints ship.
+                      No events found. Use the “Create event” button above to publish your first
+                      session.
                     </p>
                   ) : (
                     data.items.map((event) => (
@@ -124,15 +134,22 @@ const AdminMeetups = () => {
                             {event.max_attendees ? ` · capacity ${event.max_attendees}` : ''}
                           </p>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="self-start sm:self-auto"
-                          onClick={() => navigate(`/admin/events/${event.id}`)}
-                        >
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          View Details
-                        </Button>
+                        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+                          <Button
+                            size="sm"
+                            onClick={() => navigate(`/admin/meetups/edit/${event.id}`)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/admin/events/${event.id}`)}
+                          >
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            View Details
+                          </Button>
+                        </div>
                       </div>
                     ))
                   )}

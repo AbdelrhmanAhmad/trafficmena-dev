@@ -4,6 +4,7 @@ import { registerEventRoutes } from './events.js';
 import { registerInvitationRoutes } from './invitations.js';
 import { registerLibraryRoutes } from './library.js';
 import { registerSkillRoutes } from './skills.js';
+import { registerUploadRoutes } from './uploads.js';
 import { registerUserRoutes } from './users.js';
 
 export function registerApiRoutes(app: Hono) {
@@ -15,6 +16,7 @@ export function registerApiRoutes(app: Hono) {
   registerLibraryRoutes(api);
   registerSkillRoutes(api);
   registerInvitationRoutes(api);
+  registerUploadRoutes(api);
 
   app.route('/api', api);
 }

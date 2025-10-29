@@ -20,8 +20,11 @@
 /* Tiptap UI Component Styles */
 @import "./components/tiptap-ui/color-highlight-button/color-highlight-button.scss";
 
+/* biome-ignore lint: Tailwind base directive */
 @tailwind base;
+/* biome-ignore lint: Tailwind components directive */
 @tailwind components;
+/* biome-ignore lint: Tailwind utilities directive */
 @tailwind utilities;
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
@@ -116,10 +119,12 @@
 
 @layer base {
   * {
+    /* biome-ignore lint: Tailwind CSS utility */
     @apply border-border;
   }
 
   body {
+    /* biome-ignore lint: Tailwind CSS utility */
     @apply bg-background text-foreground;
     transition:
       background-color 0.2s ease-in-out,
@@ -138,6 +143,61 @@
   /* Ensure theme toggle icons have smooth transitions */
   .theme-toggle-icon {
     transition: all 0.2s ease-in-out;
+  }
+
+  /* Homepage custom animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(30px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes gentleBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out;
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.8s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 0.8s ease-out;
+  }
+
+  .animate-bounce {
+    animation: gentleBounce 2s ease-in-out infinite;
+  }
+
+  .animate-pulse {
+    animation: pulse 4s ease-in-out infinite;
   }
 
   /* TrafficMENA brand gradients for theme switching */

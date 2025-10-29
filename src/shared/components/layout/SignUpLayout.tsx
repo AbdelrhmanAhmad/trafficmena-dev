@@ -84,50 +84,57 @@ const SignUpLayout: React.FC<SignUpLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Add Header Navigation */}
+    <div className="relative isolate min-h-screen overflow-hidden bg-neutral-50">
       <Header />
 
-      <div className="py-8">
-        <div className="container mx-auto max-w-2xl px-4">
-          {/* Header with Back Button */}
+      <div className="pointer-events-none absolute -left-[45vw] top-[-30vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/60 via-[#f4fff9]/40 to-transparent blur-3xl" />
+      <div className="pointer-events-none absolute -right-[48vw] bottom-[-35vh] -z-10 h-[60vh] w-[82vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+
+      <div className="relative py-10">
+        <div className="mx-auto w-full max-w-2xl px-4">
           <div className="mb-8 flex items-center">
             {showBackButton && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleBack}
-                className="mr-4 hover:bg-gray-100"
+                className="mr-4 rounded-full border border-neutral-200 bg-white/80 px-3 py-2 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-white"
               >
                 <ChevronLeft className="mr-1 h-4 w-4" />
                 Back
               </Button>
             )}
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-primary">Join TrafficMENA</h1>
+              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Become a member
+              </span>
+              <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
+                Join TrafficMENA
+              </h1>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="mb-8">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600">
+          <div className="mb-8 rounded-[20px] border border-neutral-200 bg-white/90 px-5 py-4 shadow-sm">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="font-medium text-neutral-700">
                 Step {currentStep} of {totalSteps}
               </span>
-              <span className="text-sm text-gray-500">
+              <span className="text-neutral-500">
                 {Math.round((currentStep / totalSteps) * 100)}% Complete
               </span>
             </div>
-            <div className="h-2 w-full rounded-full bg-gray-200">
+            <div className="h-2 w-full rounded-full bg-neutral-200">
               <div
-                className="h-2 rounded-full bg-gradient-to-r from-primary-green to-primary-gradient transition-all duration-300"
+                className="h-2 rounded-full bg-gradient-to-r from-[#05ef62] to-[#29cf9f] transition-all duration-300"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               ></div>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="rounded-lg border bg-white p-8 shadow-sm">{children}</div>
+          <div className="rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_18px_50px_-20px_rgba(16,16,16,0.35)] backdrop-blur">
+            {children}
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
+import DOMPurify from 'dompurify';
 import { CalendarDays, Clock, MapPin, Users } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import DataLoader from '@/shared/components/DataLoader';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
 import { Badge } from '@/shared/components/ui/badge';
@@ -9,10 +10,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useEvent } from '../hooks/useEvents';
 
+type SanitizedHtmlProps = {
+  className?: string;
+  html: string;
+};
+
+const SanitizedHtml = ({ className, html }: SanitizedHtmlProps) => (
+  <div
+    className={className}
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: content sanitized with DOMPurify above
+    dangerouslySetInnerHTML={{ __html: html }}
+  />
+);
+
 const AdminEventDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const { data: event, isLoading, error } = useEvent(id);
+  const sanitizedDescription = event?.description
+    ? DOMPurify.sanitize(event.description)
+    : 'This event does not have a description yet.';
 
   return (
     <AdminLayout>
@@ -32,20 +50,29 @@ const AdminEventDetail = () => {
                   <CardTitle className="text-2xl font-semibold text-primary">
                     {event.title}
                   </CardTitle>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {event.description ?? 'This event does not have a description yet.'}
-                  </p>
+                  <SanitizedHtml
+                    className="mt-2 prose prose-sm max-w-none text-muted-foreground prose-headings:text-primary prose-strong:text-primary prose-a:text-primary-green"
+                    html={sanitizedDescription}
+                  />
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (!id) return;
-                    window.open(`/meetups/${id}`, '_blank');
-                    toast({ title: 'Opening public event page' });
-                  }}
-                >
-                  View Public Page
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (!id) return;
+                      window.open(`/meetups/${id}`, '_blank');
+                      toast({ title: 'Opening public event page' });
+                    }}
+                  >
+                    View public page
+                  </Button>
+                  <Button
+                    variant="default"
+                    onClick={() => navigate(`/admin/meetups/edit/${event.id}`)}
+                  >
+                    Edit event
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

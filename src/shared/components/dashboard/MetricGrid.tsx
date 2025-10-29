@@ -9,7 +9,7 @@ import { type LucideIcon, RefreshCw } from 'lucide-react';
 import type React from 'react';
 import { Alert, AlertDescription } from '@/shared/components/ui/alert';
 import { Button } from '@/shared/components/ui/button';
-import { MetricCard, type DashboardMetric } from './MetricCard';
+import { type DashboardMetric, MetricCard } from './MetricCard';
 
 interface MetricDefinition {
   key: string;

@@ -88,25 +88,31 @@ const Step0: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="relative isolate min-h-screen overflow-hidden bg-neutral-50">
       <Header />
 
-      <div className="py-16">
-        <div className="container mx-auto max-w-md px-4">
-          <div className="rounded-lg border bg-white p-8 shadow-sm">
+      <div className="pointer-events-none absolute -left-[45vw] top-[-30vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/60 via-[#f4fff9]/40 to-transparent blur-3xl" />
+      <div className="pointer-events-none absolute -right-[48vw] bottom-[-35vh] -z-10 h-[60vh] w-[82vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+
+      <div className="relative py-16">
+        <div className="container mx-auto max-w-xl px-4">
+          <div className="rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_18px_50px_-20px_rgba(16,16,16,0.35)] backdrop-blur">
             <div className="mb-8 text-center">
-              <h1 className="mb-4 text-3xl font-bold text-primary">
+              <span className="inline-flex items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-600">
+                Start your journey
+              </span>
+              <h1 className="mt-5 text-3xl font-semibold tracking-tight text-neutral-900">
                 Join the heart of marketing in MENA
               </h1>
-              <p className="text-gray-600">
+              <p className="mt-2 text-sm text-neutral-600">
                 Connect with experts, master new skills, and accelerate your career.
               </p>
             </div>
 
             {invitationToken && !eventContext && (
-              <Card className="mb-6 border-blue-200 bg-blue-50">
+              <Card className="mb-6 rounded-2xl border-blue-200 bg-blue-50/80">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg text-blue-800">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-blue-900">
                     Invitation Detected
                   </CardTitle>
                 </CardHeader>
@@ -140,9 +146,9 @@ const Step0: React.FC = () => {
             )}
 
             {eventContext && (
-              <Card className="mb-6 border-green-200 bg-green-50">
+              <Card className="mb-6 rounded-2xl border-green-200 bg-green-50/80">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg text-green-800">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-green-900">
                     <Calendar className="h-5 w-5" />
                     You're signing up to join this event
                   </CardTitle>
@@ -168,7 +174,7 @@ const Step0: React.FC = () => {
               <Button
                 onClick={handleEmailSignUp}
                 disabled={isLoading}
-                className="flex w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 font-medium text-gray-700 transition-all duration-300 hover:bg-gray-50"
+                className="flex w-full items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 py-3 font-medium text-neutral-800 transition-all duration-300 hover:bg-neutral-50"
               >
                 {isLoading ? (
                   <>
@@ -180,11 +186,11 @@ const Step0: React.FC = () => {
                 )}
               </Button>
 
-              <div className="space-y-2 text-center text-sm text-gray-600">
+              <div className="space-y-2 text-center text-sm text-neutral-600">
                 <p>Prefer quick access?</p>
                 <Button
                   variant="ghost"
-                  className="w-full text-primary"
+                  className="w-full text-[#05ef62] hover:text-[#29cf9f]"
                   onClick={() => navigate('/signin')}
                 >
                   Already a member? Sign in

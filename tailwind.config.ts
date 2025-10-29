@@ -94,7 +94,73 @@ export default {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
       },
+      typography: ({ theme }) => ({
+        DEFAULT: {
+          css: {
+            color: theme('colors.muted.foreground'),
+            lineHeight: '1.7',
+            a: {
+              color: theme('colors.primary.green'),
+              textDecoration: 'none',
+              fontWeight: '600',
+              '&:hover': {
+                color: theme('colors.secondary.teal'),
+                textDecoration: 'underline',
+              },
+            },
+            strong: { color: theme('colors.foreground') },
+            'h1, h2, h3, h4': {
+              color: theme('colors.foreground'),
+              fontWeight: '700',
+            },
+            blockquote: {
+              color: theme('colors.foreground'),
+              borderLeftColor: theme('colors.primary.green'),
+            },
+            'ul > li::marker': {
+              color: theme('colors.primary.green'),
+            },
+            'ol > li::marker': {
+              color: theme('colors.primary.green'),
+            },
+            code: {
+              color: theme('colors.foreground'),
+              backgroundColor: theme('colors.muted.DEFAULT'),
+              padding: '0.125rem 0.375rem',
+              borderRadius: '0.375rem',
+              fontWeight: '500',
+            },
+          },
+        },
+        invert: {
+          css: {
+            color: theme('colors.muted.foreground'),
+            a: {
+              color: theme('colors.secondary.teal'),
+              '&:hover': {
+                color: theme('colors.primary.green'),
+              },
+            },
+            strong: { color: theme('colors.foreground') },
+            'h1, h2, h3, h4': {
+              color: theme('colors.foreground'),
+            },
+            blockquote: {
+              borderLeftColor: theme('colors.secondary.teal'),
+            },
+            'ul > li::marker': {
+              color: theme('colors.secondary.teal'),
+            },
+            'ol > li::marker': {
+              color: theme('colors.secondary.teal'),
+            },
+            code: {
+              backgroundColor: 'rgba(255,255,255,0.08)',
+            },
+          },
+        },
+      }),
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [require('tailwindcss-animate'), require('@tailwindcss/typography')],
 } satisfies Config;

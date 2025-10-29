@@ -20,10 +20,11 @@ export function useLibraryList(
   pageSize: number,
   params: Omit<FetchLibraryParams, 'page' | 'pageSize'> = {},
 ) {
+  const safePageSize = Math.min(pageSize, 50);
   return useQuery({
-    queryKey: libraryListKey({ page, pageSize, ...params }),
+    queryKey: libraryListKey({ page, pageSize: safePageSize, ...params }),
     queryFn: async (): Promise<PaginatedResult<LibraryAssetRecord>> => {
-      const response = await fetchLibraryAssets({ page, pageSize, ...params });
+      const response = await fetchLibraryAssets({ page, pageSize: safePageSize, ...params });
       return response;
     },
     staleTime: 5 * 60 * 1000,

@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
@@ -12,6 +12,8 @@ const Step1: React.FC = () => {
   const { formData, updateFormData } = useSignUpContext();
   const [firstName, setFirstName] = useState(formData.firstName);
   const [lastName, setLastName] = useState(formData.lastName);
+  const firstNameId = useId();
+  const lastNameId = useId();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{
     firstName?: string;
@@ -55,17 +57,24 @@ const Step1: React.FC = () => {
     <SignUpLayout currentStep={1} showBackButton={false}>
       <div className="space-y-6">
         <div className="mb-8 text-center">
-          <h2 className="mb-4 text-3xl font-bold text-primary">Tell us about yourself</h2>
-          <p className="text-gray-600">Let's start with your basic information</p>
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Step 1
+          </span>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
+            Tell us about yourself
+          </h2>
+          <p className="mt-2 text-sm text-neutral-600">
+            Let&apos;s start with your basic information.
+          </p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+            <Label htmlFor={firstNameId} className="text-sm font-medium text-neutral-700">
               First Name *
             </Label>
             <Input
-              id="firstName"
+              id={firstNameId}
               type="text"
               value={firstName}
               onChange={(e) => {
@@ -75,18 +84,18 @@ const Step1: React.FC = () => {
                 }
               }}
               placeholder="Enter your first name"
-              className={`mt-1 ${errors.firstName ? 'border-red-500' : ''}`}
+              className={`mt-1 rounded-xl border-neutral-200 ${errors.firstName ? 'border-red-500' : ''}`}
               required
             />
             {errors.firstName && <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>}
           </div>
 
           <div>
-            <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+            <Label htmlFor={lastNameId} className="text-sm font-medium text-neutral-700">
               Last Name *
             </Label>
             <Input
-              id="lastName"
+              id={lastNameId}
               type="text"
               value={lastName}
               onChange={(e) => {
@@ -96,7 +105,7 @@ const Step1: React.FC = () => {
                 }
               }}
               placeholder="Enter your last name"
-              className={`mt-1 ${errors.lastName ? 'border-red-500' : ''}`}
+              className={`mt-1 rounded-xl border-neutral-200 ${errors.lastName ? 'border-red-500' : ''}`}
               required
             />
             {errors.lastName && <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>}
@@ -107,7 +116,7 @@ const Step1: React.FC = () => {
           <Button
             onClick={handleNext}
             disabled={!isValid}
-            className="rounded-lg bg-gradient-to-r from-primary-green to-primary-gradient px-8 py-3 font-semibold text-white transition-all duration-300 hover:from-primary-gradient hover:to-secondary-teal"
+            className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-3 font-semibold text-[#101010] shadow hover:brightness-95"
           >
             {isLoading ? (
               <>

@@ -3,8 +3,7 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { libraryAssets } from '../../db/schema/index.js';
-import { getSessionFromRequest } from '../../utils/session.js';
-import { notImplemented } from './utils.js';
+import { requireAdmin } from './utils.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -13,10 +12,58 @@ const listQuerySchema = z.object({
   type: z.enum(['Document', 'Video', 'Presentation']).optional(),
 });
 
-const updateAssetSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().optional(),
+const optionalText = z.union([z.string().trim().max(8000), z.null()]).optional();
+
+const urlSchema = z
+  .union([z.string().trim().url('Provide a valid URL.').max(1000), z.null()])
+  .optional();
+
+const optionalShortString = z.union([z.string().trim().max(120), z.null()]).optional();
+
+const assetObjectSchema = z.object({
+  title: z.string().trim().min(3, 'Title is required.').max(200),
+  description: optionalText,
+  fileType: z.enum(['Document', 'Video', 'Presentation']),
+  videoUrl: urlSchema,
+  documentUrl: urlSchema,
+  embedUrl: urlSchema,
+  embedType: optionalShortString,
+  eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
 });
+
+const createAssetSchema = assetObjectSchema.superRefine((payload, ctx) => {
+  if (payload.fileType === 'Video') {
+    if (!payload.videoUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['videoUrl'],
+        message: 'Video URL is required for video assets.',
+      });
+    }
+  }
+  if (payload.fileType === 'Document') {
+    if (!payload.documentUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['documentUrl'],
+        message: 'Document URL is required for document assets.',
+      });
+    }
+  }
+  if (payload.fileType === 'Presentation') {
+    if (!payload.embedUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['embedUrl'],
+        message: 'Embed URL is required for presentation assets.',
+      });
+    }
+  }
+});
+
+const updateAssetSchema = assetObjectSchema
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
 export function registerLibraryRoutes(app: Hono) {
   app.get('/library', async (c) => {
@@ -134,47 +181,165 @@ export function registerLibraryRoutes(app: Hono) {
     return c.json(asset[0]);
   });
 
-  app.post('/library', (c) => notImplemented(c, { feature: 'library.create' }));
+  app.post('/library', async (c) => {
+    const admin = await requireAdmin(c);
+    if ('response' in admin) return admin.response;
 
-  app.put('/library/:id', async (c) => {
-    const session = await getSessionFromRequest(c);
-    if (!session || !session.user) {
-      return c.json(
-        {
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Authentication required to update assets.',
-          },
-        },
-        401,
-      );
-    }
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = createAssetSchema.safeParse(body);
 
-    const id = c.req.param('id');
-    const body = updateAssetSchema.safeParse(await c.req.json().catch(() => ({})));
-
-    if (!body.success) {
+    if (!parsed.success) {
       return c.json(
         {
           error: {
             code: 'INVALID_REQUEST',
-            message: body.error.message,
+            message: parsed.error.message,
           },
         },
         400,
       );
     }
 
-    if (Object.keys(body.data).length === 0) {
+    const payload = parsed.data;
+
+    const [created] = await db
+      .insert(libraryAssets)
+      .values({
+        title: payload.title,
+        description: payload.description ?? null,
+        fileType: payload.fileType,
+        fileUrl: payload.documentUrl ?? payload.videoUrl ?? payload.embedUrl ?? null,
+        videoUrl: payload.videoUrl ?? null,
+        documentUrl: payload.documentUrl ?? null,
+        embedUrl: payload.embedUrl ?? null,
+        embedType: payload.embedType ?? null,
+        eventId: payload.eventId ?? null,
+      })
+      .returning({
+        id: libraryAssets.id,
+        title: libraryAssets.title,
+        description: libraryAssets.description,
+        fileType: libraryAssets.fileType,
+        fileUrl: libraryAssets.fileUrl,
+        videoUrl: libraryAssets.videoUrl,
+        documentUrl: libraryAssets.documentUrl,
+        embedUrl: libraryAssets.embedUrl,
+        embedType: libraryAssets.embedType,
+        eventId: libraryAssets.eventId,
+        viewCount: libraryAssets.viewCount,
+        downloadCount: libraryAssets.downloadCount,
+        createdAt: libraryAssets.createdAt,
+      });
+
+    return c.json({ asset: created }, 201);
+  });
+
+  app.put('/library/:id', async (c) => {
+    const admin = await requireAdmin(c);
+    if ('response' in admin) return admin.response;
+
+    const id = c.req.param('id');
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = updateAssetSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return c.json(
+        {
+          error: {
+            code: 'INVALID_REQUEST',
+            message: parsed.error.message,
+          },
+        },
+        400,
+      );
+    }
+
+    const updates = parsed.data;
+    const updateValues: Record<string, unknown> = {};
+
+    if (updates.title !== undefined) updateValues.title = updates.title;
+    if (updates.description !== undefined) updateValues.description = updates.description ?? null;
+    if (updates.fileType !== undefined) updateValues.fileType = updates.fileType;
+    if (updates.videoUrl !== undefined) updateValues.videoUrl = updates.videoUrl ?? null;
+    if (updates.documentUrl !== undefined) updateValues.documentUrl = updates.documentUrl ?? null;
+    if (updates.embedUrl !== undefined) updateValues.embedUrl = updates.embedUrl ?? null;
+    if (updates.embedType !== undefined) updateValues.embedType = updates.embedType ?? null;
+    if (updates.eventId !== undefined) updateValues.eventId = updates.eventId ?? null;
+
+    const fileUrlCandidate =
+      updates.documentUrl !== undefined
+        ? updates.documentUrl
+        : updates.videoUrl !== undefined
+          ? updates.videoUrl
+          : updates.embedUrl !== undefined
+            ? updates.embedUrl
+            : undefined;
+
+    if (fileUrlCandidate !== undefined) {
+      updateValues.fileUrl = fileUrlCandidate ?? null;
+    }
+
+    if (Object.keys(updateValues).length === 0) {
       return c.json({ success: true, message: 'No changes applied.' });
     }
 
-    await db.update(libraryAssets).set(body.data).where(eq(libraryAssets.id, id));
+    const [updated] = await db
+      .update(libraryAssets)
+      .set(updateValues)
+      .where(eq(libraryAssets.id, id))
+      .returning({
+        id: libraryAssets.id,
+        title: libraryAssets.title,
+        description: libraryAssets.description,
+        fileType: libraryAssets.fileType,
+        fileUrl: libraryAssets.fileUrl,
+        videoUrl: libraryAssets.videoUrl,
+        documentUrl: libraryAssets.documentUrl,
+        embedUrl: libraryAssets.embedUrl,
+        embedType: libraryAssets.embedType,
+        eventId: libraryAssets.eventId,
+        viewCount: libraryAssets.viewCount,
+        downloadCount: libraryAssets.downloadCount,
+        createdAt: libraryAssets.createdAt,
+      });
+
+    if (!updated) {
+      return c.json(
+        {
+          error: {
+            code: 'ASSET_NOT_FOUND',
+            message: 'Library asset not found',
+          },
+        },
+        404,
+      );
+    }
+
+    return c.json({ asset: updated });
+  });
+
+  app.delete('/library/:id', async (c) => {
+    const admin = await requireAdmin(c);
+    if ('response' in admin) return admin.response;
+
+    const id = c.req.param('id');
+    const deleted = await db
+      .delete(libraryAssets)
+      .where(eq(libraryAssets.id, id))
+      .returning({ id: libraryAssets.id });
+
+    if (deleted.length === 0) {
+      return c.json(
+        {
+          error: {
+            code: 'ASSET_NOT_FOUND',
+            message: 'Library asset not found',
+          },
+        },
+        404,
+      );
+    }
 
     return c.json({ success: true });
   });
-
-  app.delete('/library/:id', (c) => notImplemented(c, { feature: 'library.delete' }));
-  app.post('/library/upload', (c) => notImplemented(c, { feature: 'library.upload' }));
-  app.get('/library/files/:assetId', (c) => notImplemented(c, { feature: 'library.download' }));
 }

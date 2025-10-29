@@ -1,42 +1,79 @@
-import { Pencil, ShieldAlert } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { LibraryAssetForm } from '@/features/library/components/LibraryAssetForm';
+import {
+  useDeleteLibraryAsset,
+  useLibraryAsset,
+  useUpdateLibraryAsset,
+} from '@/features/library/hooks/useLibrary';
+import DataLoader from '@/shared/components/DataLoader';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
-import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 
 const EditLibraryItemPage = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const { data, isLoading, error } = useLibraryAsset(id ?? '');
+  const updateAsset = useUpdateLibraryAsset();
+  const deleteAsset = useDeleteLibraryAsset();
+  const asset = data ?? null;
 
   return (
     <AdminProtectedRoute>
       <AdminLayout>
-        <Card className="max-w-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-              <Pencil className="h-5 w-5" />
-              Edit Library Asset
-            </CardTitle>
+        <Card className="mx-auto max-w-4xl">
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Pencil className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold">
+                  {asset ? `Edit ${asset.title}` : 'Edit library asset'}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Update the title, links, or linked event before saving.
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Library editing from the dashboard is paused while we switch to the unified API.
-              Please update asset <span className="font-semibold">{id}</span> via the CLI tooling or
-              the Hono admin endpoint once it ships. This ensures uploads stay secure during the
-              migration away from Supabase storage.
-            </p>
-            <div className="flex items-center gap-2 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              <ShieldAlert className="h-5 w-5" />
-              <span>
-                Direct bucket access was removed from the SPA to prevent leaking storage keys.
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigate('/admin/library')}>
-                Back to Library Admin
-              </Button>
-            </div>
+          <CardContent>
+            <DataLoader
+              loading={isLoading}
+              error={error ? 'Unable to load asset details.' : null}
+              loadingText="Loading asset..."
+            >
+              {asset ? (
+                <LibraryAssetForm
+                  asset={asset}
+                  submitLabel="Update asset"
+                  isSubmitting={updateAsset.isPending}
+                  isDeleting={deleteAsset.isPending}
+                  onSubmit={async (payload) => {
+                    try {
+                      await updateAsset.mutateAsync({ id: asset.id, data: payload });
+                    } catch {
+                      // toast handled inside mutation hook
+                    }
+                  }}
+                  onDelete={async () => {
+                    const confirmed = window.confirm('Delete this asset? This cannot be undone.');
+                    if (!confirmed) return;
+                    try {
+                      await deleteAsset.mutateAsync(asset.id);
+                      navigate('/admin/library');
+                    } catch {
+                      // toast handled in mutation
+                    }
+                  }}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This asset could not be found. It may have been removed.
+                </p>
+              )}
+            </DataLoader>
           </CardContent>
         </Card>
       </AdminLayout>

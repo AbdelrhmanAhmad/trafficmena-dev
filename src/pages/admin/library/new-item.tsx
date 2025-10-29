@@ -1,35 +1,49 @@
-import { BookOpen, Lock } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { LibraryAssetForm } from '@/features/library/components/LibraryAssetForm';
+import { useCreateLibraryAsset } from '@/features/library/hooks/useLibrary';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
-import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 
 const NewLibraryItemPage = () => {
+  const navigate = useNavigate();
+  const createAsset = useCreateLibraryAsset();
+
   return (
     <AdminProtectedRoute>
       <AdminLayout>
-        <Card className="max-w-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-              <BookOpen className="h-5 w-5" />
-              Add Library Asset
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              The admin upload workflow is being migrated to the new Hono API. Until that lands,
-              please upload assets via the backend CLI script or contact the engineering team for
-              assistance. This keeps our MVP simple while we validate the member experience.
-            </p>
-            <div className="flex items-center gap-2 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              <Lock className="h-5 w-5" />
-              <span>
-                Direct storage access has been disabled in the SPA to avoid exposing secrets.
-              </span>
+        <Card className="mx-auto max-w-4xl">
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <BookOpen className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-semibold">Add library asset</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Upload event recordings, PDFs, or slide decks for members to revisit.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Reference <code>docs/admin-content-workflow.md</code> for storage prep and QA
+                  steps.
+                </p>
+              </div>
             </div>
-            <Button variant="outline" onClick={() => history.back()}>
-              Return to Library Admin
-            </Button>
+          </CardHeader>
+          <CardContent>
+            <LibraryAssetForm
+              submitLabel="Create asset"
+              isSubmitting={createAsset.isPending}
+              onSubmit={async (payload) => {
+                try {
+                  const asset = await createAsset.mutateAsync(payload);
+                  navigate(`/admin/library/${asset.id}`);
+                } catch {
+                  // toast already displayed by mutation
+                }
+              }}
+            />
           </CardContent>
         </Card>
       </AdminLayout>

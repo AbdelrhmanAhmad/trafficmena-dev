@@ -133,7 +133,9 @@ export function useElementRect({
     });
 
     return () => {
-      cleanup.forEach((fn) => fn());
+      cleanup.forEach((fn) => {
+        fn();
+      });
       setRect(initialRect);
     };
   }, [enabled, getTargetElement, updateRect, useResizeObserver]);

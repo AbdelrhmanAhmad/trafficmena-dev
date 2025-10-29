@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Link, type Location, useLocation, useNavigate } from 'react-router-dom';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
@@ -13,6 +13,9 @@ const SignIn: React.FC = () => {
   const location = useLocation();
   const { user, loading, requestOtp, verifyOtp, refreshSession } = useAuth();
   const { toast } = useToast();
+  const requestEmailId = useId();
+  const verifyEmailId = useId();
+  const otpId = useId();
 
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -81,16 +84,26 @@ const SignIn: React.FC = () => {
 
   return (
     <Layout>
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md space-y-8">
-          <div className="rounded-lg border bg-white p-8 shadow-sm">
+      <div className="relative isolate min-h-screen overflow-hidden px-4 py-16 sm:px-6 lg:px-8">
+        <div className="pointer-events-none absolute -left-[45vw] top-[-30vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/60 via-[#f4fff9]/40 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute -right-[48vw] bottom-[-35vh] -z-10 h-[60vh] w-[82vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+
+        <div className="relative mx-auto flex w-full max-w-[420px] flex-col gap-6">
+          <div className="rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_18px_50px_-20px_rgba(16,16,16,0.35)] backdrop-blur">
             <div className="mb-8 text-center">
-              <h2 className="mb-4 text-3xl font-bold text-primary">Welcome Back!</h2>
-              <p className="text-gray-600">Sign in to your TrafficMENA account</p>
+              <span className="inline-flex items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-600">
+                TrafficMENA Account
+              </span>
+              <h2 className="mt-5 text-3xl font-semibold tracking-tight text-neutral-900">
+                Welcome Back
+              </h2>
+              <p className="mt-2 text-sm text-neutral-600">
+                Sign in to continue exploring events, content, and the community.
+              </p>
             </div>
 
             {errorMessage && (
-              <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-600">
                 {errorMessage}
               </div>
             )}
@@ -98,16 +111,16 @@ const SignIn: React.FC = () => {
             {step === 'request' ? (
               <form onSubmit={handleRequestOtp} className="space-y-6">
                 <div>
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor={requestEmailId} className="text-sm font-medium text-neutral-700">
                     Email Address
                   </Label>
                   <Input
-                    id="email"
+                    id={requestEmailId}
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="Enter your email address"
-                    className="mt-1"
+                    className="mt-1 rounded-xl border-neutral-200"
                     required
                     disabled={isSubmitting}
                   />
@@ -116,16 +129,16 @@ const SignIn: React.FC = () => {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full rounded-lg bg-gradient-to-r from-primary-green to-primary-gradient py-3 font-semibold text-white transition-all duration-300 hover:from-primary-gradient hover:to-secondary-teal"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] py-3 font-semibold text-[#101010] shadow hover:brightness-95"
                 >
                   {isSubmitting ? 'Sending code…' : 'Send login code'}
                 </Button>
 
-                <p className="text-center text-sm text-gray-600">
+                <p className="text-center text-sm text-neutral-600">
                   Don&apos;t have an account?{' '}
                   <Link
                     to="/signup/step-0"
-                    className="font-medium text-primary hover:text-primary-green"
+                    className="font-medium text-[#05ef62] hover:text-[#29cf9f]"
                   >
                     Join TrafficMENA
                   </Link>
@@ -134,31 +147,31 @@ const SignIn: React.FC = () => {
             ) : (
               <form onSubmit={handleVerifyOtp} className="space-y-6">
                 <div>
-                  <Label htmlFor="otp-email" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor={verifyEmailId} className="text-sm font-medium text-neutral-700">
                     Email Address
                   </Label>
                   <Input
-                    id="otp-email"
+                    id={verifyEmailId}
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="Enter your email address"
-                    className="mt-1"
+                    className="mt-1 rounded-xl border-neutral-200"
                     required
                     disabled={isSubmitting}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="otp" className="text-sm font-medium text-gray-700">
+                  <Label htmlFor={otpId} className="text-sm font-medium text-neutral-700">
                     6-digit Code
                   </Label>
                   <Input
-                    id="otp"
+                    id={otpId}
                     value={otp}
                     onChange={(event) => setOtp(event.target.value)}
                     placeholder="Enter the code you received"
-                    className="mt-1 tracking-[0.3em] text-center text-lg"
+                    className="mt-1 rounded-xl border-neutral-200 tracking-[0.3em] text-center text-lg"
                     required
                     disabled={isSubmitting}
                   />
@@ -167,16 +180,16 @@ const SignIn: React.FC = () => {
                 <Button
                   type="submit"
                   disabled={isSubmitting || otp.trim().length === 0}
-                  className="w-full rounded-lg bg-gradient-to-r from-primary-green to-primary-gradient py-3 font-semibold text-white transition-all duration-300 hover:from-primary-gradient hover:to-secondary-teal"
+                  className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] py-3 font-semibold text-[#101010] shadow hover:brightness-95"
                 >
                   {isSubmitting ? 'Verifying…' : 'Verify and sign in'}
                 </Button>
 
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-neutral-600">
                   Didn&apos;t get the code?{' '}
                   <button
                     type="button"
-                    className="font-medium text-primary hover:text-primary-green"
+                    className="font-medium text-[#05ef62] hover:text-[#29cf9f]"
                     onClick={requestLoginCode}
                     disabled={isSubmitting}
                   >

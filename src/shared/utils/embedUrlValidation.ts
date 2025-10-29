@@ -136,7 +136,7 @@ export function validateEmbedUrl(url: string): EmbedUrlValidationResult {
   } else {
     const allowedDomains = ALLOWED_EMBED_DOMAINS[embedType];
     const isDomainAllowed = allowedDomains.some(
-      (domain) => hostname === domain || hostname.endsWith('.' + domain),
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
     );
 
     if (!isDomainAllowed) {
@@ -174,7 +174,7 @@ function determineEmbedType(url: URL): EmbedUrlValidationResult['embedType'] {
 
   // Check each embed type's allowed domains
   for (const [type, domains] of Object.entries(ALLOWED_EMBED_DOMAINS)) {
-    if (domains.some((domain) => hostname === domain || hostname.endsWith('.' + domain))) {
+    if (domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))) {
       return type as EmbedUrlValidationResult['embedType'];
     }
   }

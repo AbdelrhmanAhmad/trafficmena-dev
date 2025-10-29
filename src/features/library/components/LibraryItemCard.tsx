@@ -79,7 +79,7 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
     return description;
   };
 
-  const getThumbnailUrl = (fileType: string, videoUrl?: string | null) => {
+  const getThumbnailUrl = (_fileType: string, videoUrl?: string | null) => {
     // For YouTube videos, extract thumbnail
     if (videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'))) {
       const videoId = videoUrl.match(

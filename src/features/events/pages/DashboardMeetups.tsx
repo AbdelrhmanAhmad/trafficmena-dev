@@ -9,6 +9,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
+import { stripHtmlTags } from '@/shared/utils/inputSanitization';
 import { useUpcomingEventsList } from '../hooks/useEventBooking';
 
 const DashboardMeetups: React.FC = () => {
@@ -88,9 +89,11 @@ const DashboardMeetups: React.FC = () => {
                             </div>
                           </div>
 
-                          {event.description && (
-                            <p className="mt-2 line-clamp-2 text-gray-600">{event.description}</p>
-                          )}
+                          {event.description ? (
+                            <p className="mt-2 line-clamp-2 text-gray-600">
+                              {stripHtmlTags(event.description)}
+                            </p>
+                          ) : null}
                         </div>
 
                         <div className="ml-4">

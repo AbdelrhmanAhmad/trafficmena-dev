@@ -4,38 +4,38 @@ import type React from 'react';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLibraryAsset } from '@/features/library/hooks/useLibrary';
-import type { LibraryAsset } from '@/features/library/types';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import DashboardLayout from '@/shared/components/layout/DashboardLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
 import VideoEmbed from '@/shared/components/VideoEmbed';
-import { useToast } from '@/shared/hooks/custom/use-toast';
+
+type SanitizedHtmlProps = {
+  className?: string;
+  html: string;
+};
+
+const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
+  <div
+    className={className}
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: library descriptions are sanitized with DOMPurify
+    dangerouslySetInnerHTML={{ __html: html }}
+  />
+);
 
 const LibraryItemDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { data, isLoading } = useLibraryAsset(id ?? '');
-  const item = data?.asset ?? null;
-  const access = data?.access ?? { canView: true, canDownload: true };
+  const { data, isLoading, error } = useLibraryAsset(id ?? '');
+  const item = data ?? null;
+  const access = { canView: true, canDownload: true };
 
   useEffect(() => {
     if (!id) {
       navigate('/dashboard/library', { replace: true });
     }
   }, [id, navigate]);
-
-  useEffect(() => {
-    if (!isLoading && !access.canView) {
-      toast({
-        title: 'Access Restricted',
-        description: 'You do not have permission to view this library item.',
-        variant: 'destructive',
-      });
-    }
-  }, [access.canView, isLoading, toast]);
 
   const getIcon = (type: string, embedType?: string | null) => {
     if (embedType || type === 'Presentation') {
@@ -118,6 +118,25 @@ const LibraryItemDetail: React.FC = () => {
     );
   }
 
+  if (error) {
+    return (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Unable to load item</h2>
+            <p className="text-gray-600 mb-4">
+              {error instanceof Error ? error.message : 'Please try again shortly.'}
+            </p>
+            <Button onClick={() => navigate('/dashboard/library')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Library
+            </Button>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    );
+  }
+
   if (!item || !access.canView) {
     const title = !access.canView ? 'Access Restricted' : 'Item not found';
     const description = !access.canView
@@ -170,10 +189,10 @@ const LibraryItemDetail: React.FC = () => {
                       <Calendar className="h-4 w-4" />
                       <span>Added {new Date(item.created_at).toLocaleDateString()}</span>
                     </div>
-                    {item.events && (
+                    {item.event_id && (
                       <div className="flex items-center gap-2">
                         <Link2 className="h-4 w-4" />
-                        <span>From: {item.events.title}</span>
+                        <span>Linked event ID: {item.event_id}</span>
                       </div>
                     )}
                   </div>
@@ -265,9 +284,9 @@ const LibraryItemDetail: React.FC = () => {
               {item.description && (
                 <div className="prose prose-gray max-w-none">
                   <h2 className="text-xl font-semibold text-gray-900 mb-3">Description</h2>
-                  <div
+                  <SanitizedDescription
                     className="text-gray-700 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: getSanitizedDescription(item.description) }}
+                    html={getSanitizedDescription(item.description)}
                   />
                 </div>
               )}
@@ -277,38 +296,37 @@ const LibraryItemDetail: React.FC = () => {
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Details</h3>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Event Type</dt>
+                    <dt className="text-sm font-medium text-gray-500">Primary Type</dt>
                     <dd className="mt-1 text-sm text-gray-900">
-                      {item.events ? item.events.event_type : 'Standalone Content'}
+                      {item.embed_type ? 'Presentation' : item.file_type}
                     </dd>
                   </div>
                   {item.embed_type && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Embed Type</dt>
+                      <dt className="text-sm font-medium text-gray-500">Embed Provider</dt>
                       <dd className="mt-1 text-sm text-gray-900">
                         {item.embed_type === 'google_slides' ? 'Google Slides' : item.embed_type}
                       </dd>
                     </div>
                   )}
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Created</dt>
+                    <dt className="text-sm font-medium text-gray-500">Published</dt>
                     <dd className="mt-1 text-sm text-gray-900">
                       {new Date(item.created_at).toLocaleString()}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {new Date(item.updated_at).toLocaleString()}
-                    </dd>
+                    <dt className="text-sm font-medium text-gray-500">Downloads</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{item.download_count ?? 0}</dd>
                   </div>
-                  {item.events && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Views</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{item.view_count ?? 0}</dd>
+                  </div>
+                  {item.event_id && (
                     <div className="sm:col-span-2">
-                      <dt className="text-sm font-medium text-gray-500">Linked Event</dt>
-                      <dd className="mt-1 text-sm text-gray-900">
-                        {item.events.title} -{' '}
-                        {new Date(item.events.event_date).toLocaleDateString()}
-                      </dd>
+                      <dt className="text-sm font-medium text-gray-500">Linked Event ID</dt>
+                      <dd className="mt-1 text-sm text-gray-900">{item.event_id}</dd>
                     </div>
                   )}
                 </dl>

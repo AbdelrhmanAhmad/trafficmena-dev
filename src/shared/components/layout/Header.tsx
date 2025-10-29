@@ -1,15 +1,27 @@
-import { LogOut, Menu, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Calendar, Home, Info, Library, LogOut, Menu, MessageSquare, Users, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/shared/components/ui/drawer';
 import { useAuth } from '@/shared/context/AuthContext';
-import { useIsMobile } from '@/shared/hooks/custom/use-mobile';
 import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
 import UserProfileDropdown from './UserProfileDropdown';
 
-const NAVIGATION_ITEMS = [{ href: '/meetups', label: 'Meetups' }] as const;
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+};
+
+const NAVIGATION_ITEMS: NavItem[] = [
+  { href: '/', label: 'Home', icon: Home },
+  { href: '/meetups', label: 'Events', icon: Calendar },
+  { href: '/library', label: 'Library', icon: Library },
+  { href: '/community', label: 'Community', icon: MessageSquare },
+  { href: '/about', label: 'About Us', icon: Info },
+];
 
 const Header: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -17,11 +29,20 @@ const Header: React.FC = () => {
   const { isAdmin } = useIsAdmin();
   const navigate = useNavigate();
   const location = useLocation();
+  const pathname = location.pathname;
+
+  const isRouteActive = (href: string) => {
+    if (href === '/') {
+      return pathname === '/';
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   // Fix Bug #6: Close drawer on route change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: simply reset drawer when route changes
   useEffect(() => {
     setIsDrawerOpen(false);
-  }, [location.pathname]);
+  }, [pathname]);
 
   const closeDrawer = () => setIsDrawerOpen(false);
 
@@ -32,53 +53,63 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-primary shadow-lg">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+    <header className="sticky top-0 z-30">
+      <div className="mx-auto max-w-[1200px] px-4">
+        <div className="mt-5 flex items-center justify-between rounded-2xl border border-neutral-200 bg-white/80 px-3 py-2 shadow-2xl">
           {/* Logo */}
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center gap-2.5">
             <img
-              src="/lovable-uploads/82e73a70-07ff-410e-b9f5-906aa4d1b00c.png"
+              src="/uploads/82e73a70-07ff-410e-b9f5-906aa4d1b00c.png"
               alt="TrafficMENA Logo"
               className="h-10 w-10 object-contain"
             />
-            <span className="ml-3 text-xl font-bold text-primary-white">TrafficMENA</span>
+            <span className="text-sm font-semibold tracking-tight text-neutral-900">
+              TrafficMENA
+            </span>
           </Link>
 
           {/* Desktop Navigation - Only show on large screens */}
-          <nav className="hidden items-center space-x-8 lg:flex">
-            {NAVIGATION_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                className="font-medium text-primary-white transition-colors duration-200 hover:text-primary-green"
-              >
-                {item.label}
-              </Link>
-            ))}
+          <nav className="hidden items-center gap-6 md:flex">
+            {NAVIGATION_ITEMS.map((item) => {
+              const isActive = isRouteActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={`text-sm font-medium transition-colors ${
+                    isActive ? 'text-neutral-900' : 'text-neutral-700 hover:text-neutral-900'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Desktop Auth - Only show on large screens */}
-          <div className="hidden items-center space-x-4 lg:flex">
-            {user ? (
-              <UserProfileDropdown />
-            ) : (
-              <>
-                <Link to="/signin">
-                  <Button
-                    variant="outline"
-                    className="rounded-lg border-primary-white bg-transparent px-6 py-2 font-semibold text-primary-white transition-all duration-300 hover:bg-primary-white hover:text-primary"
-                  >
-                    Sign In
-                  </Button>
-                </Link>
-                <Link to="/signup">
-                  <Button className="transform rounded-lg bg-gradient-to-r from-primary-green to-primary-gradient px-6 py-2 font-semibold text-primary transition-all duration-300 hover:scale-105 hover:from-primary-gradient hover:to-secondary-teal">
-                    Sign Up
-                  </Button>
-                </Link>
-              </>
-            )}
+          <div className="flex items-center gap-2">
+            <div className="hidden md:inline-flex items-center gap-2">
+              {user ? (
+                <UserProfileDropdown />
+              ) : (
+                <>
+                  <Link to="/signin">
+                    <Button
+                      variant="outline"
+                      className="rounded-lg border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                    >
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link to="/signup">
+                    <Button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] hover:brightness-95 transition-colors">
+                      <span>Join Community</span>
+                      <Users className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Mobile/Tablet Menu Button - Show on medium and smaller screens */}
@@ -86,50 +117,65 @@ const Header: React.FC = () => {
             <DrawerTrigger asChild>
               <Button
                 variant="ghost"
-                size="icon"
-                className="text-primary-white hover:bg-primary-white/10 lg:hidden"
+                size="sm"
+                className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 md:hidden"
               >
-                <Menu className="h-6 w-6" />
+                <Menu className="h-4 w-4" />
                 <span className="sr-only">Open menu</span>
+                <span className="ml-2 text-sm font-medium text-neutral-800">Menu</span>
               </Button>
             </DrawerTrigger>
-            <DrawerContent className="border-primary bg-primary">
+            <DrawerContent className="border-neutral-200 bg-white">
               <div className="space-y-6 p-6">
                 {/* Close button */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold text-primary-white">Menu</span>
+                  <div className="inline-flex items-center gap-2">
+                    <Menu className="h-4 w-4 text-neutral-600" />
+                    <span className="text-sm font-medium text-neutral-700">Menu</span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={closeDrawer}
-                    className="text-primary-white hover:bg-primary-white/10"
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-neutral-50"
                   >
-                    <X className="h-6 w-6" />
+                    <X className="h-4 w-4 text-neutral-700" />
                   </Button>
                 </div>
 
                 {/* Mobile/Tablet Navigation Links */}
-                <nav className="flex flex-col space-y-4">
-                  {NAVIGATION_ITEMS.map((item) => (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      onClick={closeDrawer}
-                      className="border-b border-gray-700 py-2 text-lg font-medium text-primary-white transition-colors duration-200 last:border-b-0 hover:text-primary-green"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
+                <nav className="space-y-1 px-4 py-4">
+                  {NAVIGATION_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = isRouteActive(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={closeDrawer}
+                        className={`flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'bg-neutral-100 text-neutral-900'
+                            : 'text-neutral-800 hover:bg-neutral-50'
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                        <Icon
+                          className={`h-4 w-4 ${isActive ? 'text-neutral-700' : 'text-neutral-500'}`}
+                        />
+                      </Link>
+                    );
+                  })}
                 </nav>
 
                 {/* Mobile/Tablet Auth */}
-                <div className="flex flex-col space-y-3 border-t border-gray-700 pt-4">
+                <div className="flex flex-col space-y-3 border-t border-neutral-200 pt-4">
                   {user ? (
                     <>
                       <Link to="/profile/edit" onClick={closeDrawer}>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start py-2 text-lg font-medium text-primary-white hover:bg-primary-white/10"
+                          className="w-full justify-start rounded-xl px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                         >
                           Edit Profile
                         </Button>
@@ -137,7 +183,7 @@ const Header: React.FC = () => {
                       <Link to="/dashboard/library" onClick={closeDrawer}>
                         <Button
                           variant="ghost"
-                          className="w-full justify-start py-2 text-lg font-medium text-primary-white hover:bg-primary-white/10"
+                          className="w-full justify-start rounded-xl px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                         >
                           Content Library
                         </Button>
@@ -146,7 +192,7 @@ const Header: React.FC = () => {
                         <Link to="/admin" onClick={closeDrawer}>
                           <Button
                             variant="ghost"
-                            className="w-full justify-start py-2 text-lg font-medium text-primary-white hover:bg-primary-white/10"
+                            className="w-full justify-start rounded-xl px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                           >
                             Admin Dashboard
                           </Button>
@@ -155,7 +201,7 @@ const Header: React.FC = () => {
                       <Button
                         onClick={handleSignOut}
                         variant="outline"
-                        className="w-full border-primary-white bg-transparent font-semibold text-primary-white hover:bg-primary-white hover:text-primary"
+                        className="w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                       >
                         <LogOut className="mr-2 h-4 w-4" />
                         Sign Out
@@ -166,13 +212,13 @@ const Header: React.FC = () => {
                       <Link to="/signin" onClick={closeDrawer}>
                         <Button
                           variant="outline"
-                          className="w-full border-primary-white bg-transparent font-semibold text-primary-white hover:bg-primary-white hover:text-primary"
+                          className="w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                         >
                           Sign In
                         </Button>
                       </Link>
                       <Link to="/signup" onClick={closeDrawer}>
-                        <Button className="w-full bg-gradient-to-r from-primary-green to-primary-gradient font-semibold text-primary hover:from-primary-gradient hover:to-secondary-teal">
+                        <Button className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-3 py-3 text-sm font-medium text-[#101010] hover:brightness-95">
                           Sign Up
                         </Button>
                       </Link>

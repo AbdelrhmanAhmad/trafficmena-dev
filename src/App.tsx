@@ -23,10 +23,13 @@ import AdminLibraryItemDetail from './pages/admin/library/[id]';
 import EditLibraryItem from './pages/admin/library/edit-item';
 import NewLibraryItem from './pages/admin/library/new-item';
 import UserManagement from './pages/admin/users';
+import AboutPage from './pages/About';
+import CommunityComingSoon from './pages/Community';
 import Dashboard from './pages/Dashboard';
 import DashboardLibrary from './pages/DashboardLibrary';
 import Index from './pages/Index';
 import InvitationAcceptancePage from './pages/invitation/[token]';
+import LibraryComingSoon from './pages/Library';
 import LibraryItemDetail from './pages/LibraryItemDetail';
 import NotFound from './pages/NotFound';
 import SignIn from './pages/SignIn';
@@ -82,6 +85,30 @@ const App = () => {
                   element={
                     <ErrorBoundary>
                       <Index />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/about"
+                  element={
+                    <ErrorBoundary>
+                      <AboutPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/library"
+                  element={
+                    <ErrorBoundary>
+                      <LibraryComingSoon />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/community"
+                  element={
+                    <ErrorBoundary>
+                      <CommunityComingSoon />
                     </ErrorBoundary>
                   }
                 />

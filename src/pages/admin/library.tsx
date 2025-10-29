@@ -1,4 +1,4 @@
-import { ClipboardList } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
@@ -31,8 +31,8 @@ function LibraryManagement() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Query library assets (first 100 items)
-  const { data: assetsData, isLoading, isError, error } = useLibraryList(1, 100);
+  // Query library assets (first 50 items; API caps pageSize at 50).
+  const { data: assetsData, isLoading, isError, error } = useLibraryList(1, 50);
 
   // Show error toast if needed
   React.useEffect(() => {
@@ -110,14 +110,13 @@ function LibraryManagement() {
             <div>
               <h1 className="text-3xl font-bold text-primary">Library Management</h1>
               <p className="mt-2 text-gray-600">
-                Asset creation stays manual during the MVP. Use the manual upload checklist to seed
-                recordings or documents via the CLI before they appear here.
+                Publish recordings, templates, and resources so members can revisit every session.
               </p>
             </div>
 
-            <Button onClick={handleAddNew} variant="outline">
-              <ClipboardList className="mr-2 h-4 w-4" />
-              Manual Upload Instructions
+            <Button onClick={handleAddNew} className="flex items-center gap-2">
+              <PlusCircle className="h-4 w-4" />
+              Add asset
             </Button>
           </div>
 

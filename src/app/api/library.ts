@@ -56,13 +56,30 @@ export type FetchLibraryParams = {
   type?: ApiLibraryAsset['fileType'];
 };
 
+export type CreateLibraryAssetPayload = {
+  title: string;
+  description?: string | null;
+  fileType: ApiLibraryAsset['fileType'];
+  videoUrl?: string | null;
+  documentUrl?: string | null;
+  embedUrl?: string | null;
+  embedType?: string | null;
+  eventId?: string | null;
+};
+
+export type UpdateLibraryAssetPayload = Partial<CreateLibraryAssetPayload>;
+
 export async function fetchLibraryAssets(
   params: FetchLibraryParams = {},
 ): Promise<PaginatedResult<LibraryAssetRecord>> {
   const query = new URLSearchParams();
 
   if (params.page) query.set('page', String(params.page));
-  if (params.pageSize) query.set('pageSize', String(params.pageSize));
+  if (params.pageSize) {
+    // API enforces a maximum page size of 50.
+    const safePageSize = Math.min(params.pageSize, 50);
+    query.set('pageSize', String(safePageSize));
+  }
   if (params.search) query.set('search', params.search);
   if (params.type) query.set('type', params.type);
 
@@ -88,10 +105,29 @@ export async function fetchLibraryAssetById(id: string): Promise<LibraryAssetRec
 
 export async function updateLibraryAsset(
   id: string,
-  payload: Partial<{ title: string; description: string }>,
-): Promise<{ success: boolean; message?: string }> {
-  return fetchJson<{ success: boolean; message?: string }>(`${API_BASE}/library/${id}`, {
+  payload: UpdateLibraryAssetPayload,
+): Promise<LibraryAssetRecord> {
+  const data = await fetchJson<{ asset: ApiLibraryAsset }>(`${API_BASE}/library/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  });
+
+  return mapAsset(data.asset);
+}
+
+export async function createLibraryAsset(
+  payload: CreateLibraryAssetPayload,
+): Promise<LibraryAssetRecord> {
+  const data = await fetchJson<{ asset: ApiLibraryAsset }>(`${API_BASE}/library`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  return mapAsset(data.asset);
+}
+
+export async function deleteLibraryAsset(id: string): Promise<void> {
+  await fetchJson<{ success: boolean }>(`${API_BASE}/library/${id}`, {
+    method: 'DELETE',
   });
 }

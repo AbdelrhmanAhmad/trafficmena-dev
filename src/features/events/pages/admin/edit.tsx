@@ -1,41 +1,88 @@
 import { Calendar } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import DataLoader from '@/shared/components/DataLoader';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
-import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { useEvent } from '../../hooks/useEvents';
+import { AdminEventForm } from '../../components/AdminEventForm';
+import { useDeleteEvent, useEvent, useUpdateEvent } from '../../hooks/useEvents';
 
 const AdminMeetupEdit = () => {
   const { id } = useParams<{ id: string }>();
-  const { data: event } = useEvent(id);
+  const navigate = useNavigate();
+  const { data: event, isLoading, error } = useEvent(id);
+  const updateMutation = useUpdateEvent(id ?? '');
+  const deleteMutation = useDeleteEvent();
+
+  useEffect(() => {
+    if (!id) {
+      navigate('/admin/meetups', { replace: true });
+    }
+  }, [id, navigate]);
+
+  if (!id) {
+    return null;
+  }
 
   return (
     <AdminLayout>
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Card className="max-w-2xl">
-          <CardHeader className="flex flex-col items-center gap-2 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Calendar className="h-6 w-6 text-primary" />
+      <div className="mx-auto max-w-5xl">
+        <Card>
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Calendar className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-semibold">
+                  {event ? `Edit ${event.title}` : 'Edit event'}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Update the details below and publish instantly to members.
+                </p>
+              </div>
             </div>
-            <CardTitle className="text-2xl">Editing locked during migration</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-sm text-muted-foreground">
-            <p>
-              We removed the Supabase mutation logic to finish the API migration. Once the Hono
-              admin endpoints are live you will be able to update events from here again.
-            </p>
-            {event && (
-              <p>
-                In the meantime, share updates for{' '}
-                <span className="font-medium">{event.title}</span> with the engineering team and we
-                will patch the record manually.
-              </p>
-            )}
-            <div className="flex justify-center">
-              <Button variant="outline" onClick={() => window.history.back()}>
-                Go Back
-              </Button>
-            </div>
+          <CardContent>
+            <DataLoader
+              loading={isLoading}
+              error={error ? 'Unable to load event details.' : null}
+              loadingText="Loading event..."
+            >
+              {event ? (
+                <AdminEventForm
+                  event={event}
+                  submitLabel="Update event"
+                  isSubmitting={updateMutation.isPending}
+                  isDeleting={deleteMutation.isPending}
+                  onSubmit={async (payload) => {
+                    try {
+                      await updateMutation.mutateAsync(payload);
+                    } catch {
+                      // handled by toast inside mutation hook
+                    }
+                  }}
+                  onDelete={async () => {
+                    const confirmed = window.confirm(
+                      'Delete this event? This action cannot be undone.',
+                    );
+                    if (!confirmed) {
+                      return;
+                    }
+                    try {
+                      await deleteMutation.mutateAsync(event.id);
+                      navigate('/admin/meetups');
+                    } catch {
+                      // toast displayed by mutation hook
+                    }
+                  }}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This event could not be found. It may have been removed.
+                </p>
+              )}
+            </DataLoader>
           </CardContent>
         </Card>
       </div>

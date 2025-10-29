@@ -90,21 +90,24 @@ const Step5: React.FC = () => {
     <SignUpLayout currentStep={5} onBack={handleBack}>
       <div className="space-y-6">
         <div className="mb-8 text-center">
-          <h2 className="mb-4 text-3xl font-bold text-primary">
-            What's your biggest challenge at work?
+          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            Step 5
+          </span>
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
+            What&apos;s your biggest challenge at work?
           </h2>
-          <p className="text-gray-600">
-            We'll recommend experts and content that can help solve this.
+          <p className="mt-2 text-sm text-neutral-600">
+            We&apos;ll recommend experts and content that can help solve this.
           </p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor={primaryChallengeId} className="text-sm font-medium text-gray-700">
+            <Label htmlFor={primaryChallengeId} className="text-sm font-medium text-neutral-700">
               Primary Challenge *
             </Label>
             <Select value={primaryChallenge} onValueChange={setPrimaryChallenge}>
-              <SelectTrigger id={primaryChallengeId} className="mt-1">
+              <SelectTrigger id={primaryChallengeId} className="mt-1 rounded-xl border-neutral-200">
                 <SelectValue placeholder="Select your primary challenge" />
               </SelectTrigger>
               <SelectContent>
@@ -119,13 +122,18 @@ const Step5: React.FC = () => {
         </div>
 
         <div className="flex justify-between pt-6">
-          <Button variant="outline" onClick={handleBack} disabled={isSending} className="px-8 py-3">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={isSending}
+            className="rounded-xl border-neutral-200 px-8 py-3 text-neutral-700 hover:bg-neutral-50"
+          >
             Back
           </Button>
           <Button
             onClick={handleComplete}
             disabled={isSending || !primaryChallenge}
-            className="rounded-lg bg-gradient-to-r from-primary-green to-primary-gradient px-8 py-3 font-semibold text-white transition-all duration-300 hover:from-primary-gradient hover:to-secondary-teal"
+            className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-3 font-semibold text-[#101010] shadow hover:brightness-95"
           >
             {isSending ? 'Sending code…' : 'Send me a login code'}
           </Button>

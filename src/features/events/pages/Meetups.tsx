@@ -36,124 +36,170 @@ const EventsPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          {/* Page Header */}
-          <div className="mb-12 text-center">
-            <h1 className="mb-4 text-4xl font-bold text-primary">Digital Marketing Events</h1>
-            <p className="mx-auto max-w-3xl text-xl text-gray-600">
-              Join the MENA region's most engaging digital marketing events. Learn from industry
-              experts, network with peers, and advance your marketing skills.
-            </p>
-          </div>
+      <div className="relative isolate overflow-hidden">
+        <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute -right-[50vw] bottom-[-30vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
 
-          {/* Event Filters */}
-          <Card className="mb-8">
-            <CardContent className="p-6">
-              <div className="flex justify-center">
-                <Button
-                  variant={filters.upcoming_only ? 'default' : 'outline'}
-                  onClick={toggleUpcomingFilter}
-                  className="flex items-center gap-2"
-                >
-                  <Calendar className="h-4 w-4" />
-                  {filters.upcoming_only ? 'Upcoming' : 'All Events'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-12 px-4 pb-20 pt-12 sm:px-6 lg:px-0">
+          {/* Page Header */}
+          <section className="w-full rounded-[28px] border border-neutral-200 bg-white/90 px-6 py-10 text-center shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur sm:px-12">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-xs font-medium text-neutral-600">
+              <Calendar className="h-3.5 w-3.5 text-[#05ef62]" />
+              TrafficMENA Events
+            </span>
+            <h1 className="mt-5 text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl">
+              Where Marketers Meet & Grow
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-neutral-700">
+              Discover upcoming workshops, community meetups, and deep dives built for the MENA
+              region. Join live to learn from operators, swap ideas, and grow together.
+            </p>
+            <div className="mx-auto mt-8 flex w-full flex-wrap justify-center gap-3">
+              <Button
+                onClick={toggleUpcomingFilter}
+                variant={filters.upcoming_only ? 'default' : 'outline'}
+                className={`rounded-xl border-neutral-200 px-5 py-2 text-sm font-medium transition-colors ${
+                  filters.upcoming_only
+                    ? 'bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:brightness-95'
+                    : 'bg-white text-neutral-800 hover:bg-neutral-50'
+                }`}
+              >
+                {filters.upcoming_only ? 'Showing Upcoming Only' : 'Showing All Events'}
+              </Button>
+            </div>
+          </section>
 
           {/* Events Grid */}
-          <DataLoader
-            loading={isLoading}
-            error={error ? 'Failed to load events' : null}
-            loadingText="Loading events..."
-            onRetry={() => window.location.reload()}
-          >
-            {data && (
-              <>
-                {/* Results Info */}
-                <div className="mb-6">
-                  <p className="text-gray-600">
-                    Showing {data.items.length} of {data.total} events
-                    {filters.upcoming_only && ' (upcoming only)'}
-                  </p>
+          <section className="relative w-full rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
+            <div className="pointer-events-none absolute inset-0 opacity-10">
+              <div className="absolute top-1/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
+              <div className="absolute top-3/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
+              <div className="absolute top-0 bottom-0 left-1/3 w-px bg-gradient-to-b from-transparent via-neutral-300 to-transparent" />
+              <div className="absolute top-0 bottom-0 right-1/3 w-px bg-gradient-to-b from-transparent via-neutral-300 to-transparent" />
+            </div>
+
+            <div className="relative z-10">
+              <div className="flex flex-col gap-3 text-center sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
+                    Events
+                  </span>
+                  <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+                    Upcoming Sessions & Experiences
+                  </h2>
                 </div>
+                {data && (
+                  <p className="text-sm text-neutral-500">
+                    Showing {data.items.length} of {data.total} events
+                    {filters.upcoming_only && ' · Upcoming only'}
+                  </p>
+                )}
+              </div>
 
-                {data.items.length > 0 ? (
-                  <>
-                    {/* Events Grid */}
-                    <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                      {data.items.map((event) => (
-                        <EventCard key={event.id} event={event} onViewDetails={handleEventClick} />
-                      ))}
-                    </div>
-
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                      <div className="flex items-center justify-center gap-2">
-                        <Button
-                          variant="outline"
-                          disabled={currentPage === 1}
-                          onClick={() => setCurrentPage((prev) => prev - 1)}
-                        >
-                          Previous
-                        </Button>
-
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                            <Button
-                              key={pageNum}
-                              variant={currentPage === pageNum ? 'default' : 'ghost'}
-                              size="sm"
-                              onClick={() => setCurrentPage(pageNum)}
-                            >
-                              {pageNum}
-                            </Button>
+              <div className="mt-10">
+                <DataLoader
+                  loading={isLoading}
+                  error={error ? 'Failed to load events' : null}
+                  loadingText="Loading events..."
+                  onRetry={() => window.location.reload()}
+                >
+                  {data &&
+                    (data.items.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                          {data.items.map((event) => (
+                            <EventCard
+                              key={event.id}
+                              event={event}
+                              onViewDetails={handleEventClick}
+                            />
                           ))}
                         </div>
 
-                        <Button
-                          variant="outline"
-                          disabled={currentPage === totalPages}
-                          onClick={() => setCurrentPage((prev) => prev + 1)}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  /* No Events State */
-                  <Card>
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                      <Calendar className="mb-4 h-12 w-12 text-gray-400" />
-                      <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                        No events available
-                      </h3>
-                      <p className="mb-4 text-center text-gray-600">
-                        {filters.upcoming_only ? 'No upcoming events' : 'No events'} are currently
-                        scheduled.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            )}
-          </DataLoader>
+                        {totalPages > 1 && (
+                          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage((prev) => prev - 1)}
+                                className="rounded-xl border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+                              >
+                                Previous
+                              </Button>
+                              <Button
+                                variant="outline"
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage((prev) => prev + 1)}
+                                className="rounded-xl border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
+                              >
+                                Next
+                              </Button>
+                            </div>
+                            <div className="flex flex-wrap justify-center gap-2">
+                              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                                (pageNum) => (
+                                  <Button
+                                    key={pageNum}
+                                    variant={currentPage === pageNum ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setCurrentPage(pageNum)}
+                                    className={`rounded-full px-4 py-1 text-xs font-medium ${
+                                      currentPage === pageNum
+                                        ? 'bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:brightness-95'
+                                        : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                                    }`}
+                                  >
+                                    {pageNum}
+                                  </Button>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <Card className="border-dashed border-neutral-200 bg-white/80">
+                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                          <Calendar className="mb-4 h-12 w-12 text-neutral-400" />
+                          <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                            No events available
+                          </h3>
+                          <p className="max-w-sm text-sm text-neutral-600">
+                            {filters.upcoming_only
+                              ? 'No upcoming events are currently scheduled. Check back soon.'
+                              : 'No events found at the moment. Try switching filters or come back later.'}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </DataLoader>
+              </div>
+            </div>
+          </section>
 
           {/* Call to Action */}
-          <Card className="mt-12 bg-primary text-primary-foreground">
-            <CardContent className="p-8 text-center">
-              <h2 className="mb-4 text-2xl font-bold">Ready to Level Up Your Marketing Skills?</h2>
-              <p className="mb-6 text-lg opacity-90">
-                Join our community of digital marketers and never miss an event.
+          <section className="relative w-full overflow-hidden rounded-[28px]">
+            <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900 to-[#0b3a3f]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-green-900/20 via-blue-900/10 to-transparent" />
+            <div className="relative px-6 py-12 text-center sm:px-10">
+              <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Join the TrafficMENA Community
+              </h2>
+              <p className="mx-auto mt-2 max-w-2xl text-sm text-white/70">
+                Become part of a fast-moving network of marketers across the region. Access live
+                sessions, members-only content, and community support.
               </p>
-              <Button size="lg" variant="secondary" onClick={() => navigate('/signup')}>
-                Sign Up for Free
-              </Button>
-            </CardContent>
-          </Card>
+              <div className="mt-6 flex justify-center">
+                <Button
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] transition-all hover:brightness-95"
+                  onClick={() => navigate('/signup')}
+                >
+                  Sign Up for Free
+                </Button>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </Layout>

@@ -8,11 +8,18 @@ import { registerHealthRoutes } from './routes/health.js';
 
 export function createApp() {
   const app = new Hono();
+  const allowedOrigins = env.CORS_ALLOWLIST;
 
   app.use(
     '*',
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: (requestOrigin) => {
+        if (!requestOrigin) {
+          return allowedOrigins[0] ?? null;
+        }
+
+        return allowedOrigins.includes(requestOrigin) ? requestOrigin : null;
+      },
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'Authorization'],
       credentials: true,

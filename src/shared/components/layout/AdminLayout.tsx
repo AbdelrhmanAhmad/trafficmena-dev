@@ -1,12 +1,10 @@
-import { BarChart3, BookOpen, Calendar, LogOut, Mail, Shield, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Calendar, Mail, Shield, Users } from 'lucide-react';
 import type React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Badge } from '@/shared/components/ui/badge';
-import { Button } from '@/shared/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -104,10 +102,13 @@ function AdminSidebar() {
                 src="/favicon-96x96.png"
                 alt="TrafficMENA Logo"
                 className="h-6 w-6 rounded-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML =
-                    '<span class="text-sm font-bold text-primary-green">T</span>';
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none';
+                  const container = event.currentTarget.parentElement;
+                  if (container) {
+                    container.innerHTML =
+                      '<span class="text-sm font-bold text-primary-green">T</span>';
+                  }
                 }}
               />
             </Link>

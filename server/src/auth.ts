@@ -10,10 +10,18 @@ import { sendOtpEmail } from './services/email.js';
 const OTP_TTL_SECONDS = 10 * 60;
 const OTP_TTL_MINUTES = Math.ceil(OTP_TTL_SECONDS / 60);
 
+const authSecret = env.BETTER_AUTH_SECRET;
+
+if (!authSecret || authSecret.length < 32) {
+  throw new Error(
+    'BETTER_AUTH_SECRET must be at least 32 characters. Update your environment configuration before starting the server.',
+  );
+}
+
 export const auth = betterAuth({
-  secret: env.BETTER_AUTH_SECRET ?? 'trafficmena-dev-secret-change-in-production',
+  secret: authSecret,
   url: env.BETTER_AUTH_ISSUER ?? 'http://localhost:3001',
-  trustedOrigins: env.CORS_ORIGIN && env.CORS_ORIGIN !== '*' ? [env.CORS_ORIGIN] : undefined,
+  trustedOrigins: env.CORS_ALLOWLIST.length > 0 ? env.CORS_ALLOWLIST : undefined,
   logger: {
     disabled: isProduction,
   },

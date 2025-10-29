@@ -29,7 +29,8 @@ export function cn(...classes: (string | boolean | undefined | null)[]): string 
  * @returns boolean indicating if the current platform is Mac
  */
 export function isMac(): boolean {
-  return typeof navigator !== 'undefined' && navigator.platform.toLowerCase().includes('mac');
+  if (typeof navigator === 'undefined') return false;
+  return navigator.platform.toLowerCase().includes('mac');
 }
 
 /**
@@ -227,10 +228,10 @@ export function findNodePosition(props: {
   }
 
   // If we have a valid position, use findNodeAtPosition
-  if (hasValidPos) {
-    const nodeAtPos = findNodeAtPosition(editor, nodePos!);
+  if (hasValidPos && typeof nodePos === 'number') {
+    const nodeAtPos = findNodeAtPosition(editor, nodePos);
     if (nodeAtPos) {
-      return { pos: nodePos!, node: nodeAtPos };
+      return { pos: nodePos, node: nodeAtPos };
     }
   }
 
@@ -312,9 +313,11 @@ type ProtocolOptions = {
 
 type ProtocolConfig = Array<ProtocolOptions | string>;
 
-const ATTR_WHITESPACE =
-  // eslint-disable-next-line no-control-regex
-  /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g;
+// biome-ignore lint/complexity/useRegexLiterals: constructor avoids control character lint churn
+const ATTR_WHITESPACE = new RegExp(
+  '[\\u0000-\\u0020\\u00A0\\u1680\\u180E\\u2000-\\u2029\\u205F\\u3000]',
+  'g',
+);
 
 export function isAllowedUri(uri: string | undefined, protocols?: ProtocolConfig) {
   const allowedProtocols: string[] = [

@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 import { and, count, eq, gte, inArray } from 'drizzle-orm';
 import Papa from 'papaparse';
+import { env } from '../config/env.js';
 import { db } from '../db/client.js';
 import { invitations, profiles, users } from '../db/schema/index.js';
-import { env } from '../config/env.js';
 import { sendInvitationEmail } from './email.js';
 
 export type AdminContext = {
@@ -58,12 +58,7 @@ export async function sendSingleInvitation(
   await db
     .update(invitations)
     .set({ status: 'expired', updatedAt: now })
-    .where(
-      and(
-        eq(invitations.email, email),
-        inArray(invitations.status, ['pending', 'sent']),
-      ),
-    );
+    .where(and(eq(invitations.email, email), inArray(invitations.status, ['pending', 'sent'])));
 
   const [invite] = await db
     .insert(invitations)
@@ -176,7 +171,10 @@ export async function sendBulkInvitations(
   return { created, errors };
 }
 
-export async function getOrCreateMember(email: string, names?: { firstName?: string; lastName?: string }) {
+export async function getOrCreateMember(
+  email: string,
+  names?: { firstName?: string; lastName?: string },
+) {
   const normalized = normalizeEmail(email);
   const firstName = optional(names?.firstName);
   const lastName = optional(names?.lastName);

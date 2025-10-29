@@ -179,3 +179,14 @@ export const sanitizeSearchQuery = (input: string): ValidationResult => {
     sanitizedValue: sanitized,
   };
 };
+
+/**
+ * Strips HTML markup and normalizes whitespace, returning a plain-text summary.
+ */
+export const stripHtmlTags = (input: string): string => {
+  if (!input) return '';
+  return input
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};

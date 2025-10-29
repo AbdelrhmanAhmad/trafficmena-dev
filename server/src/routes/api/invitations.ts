@@ -1,20 +1,20 @@
-import type { Context, Hono } from 'hono';
-import { z } from 'zod';
 import { and, count, desc, eq, ilike } from 'drizzle-orm';
+import type { Context, Hono } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { z } from 'zod';
 import { auth } from '../../auth.js';
 import { db } from '../../db/client.js';
 import { invitations, profiles, users } from '../../db/schema/index.js';
 import {
   type AdminContext,
+  getOrCreateMember,
   InvitationError,
+  type InvitationRecord,
   sendBulkInvitations,
   sendSingleInvitation,
-  getOrCreateMember,
-  type InvitationRecord,
 } from '../../services/invitations.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { normalizeEmail } from './utils.js';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
 const singleInviteSchema = z.object({
   email: z.string().email(),
@@ -56,54 +56,78 @@ export function registerInvitationRoutes(app: Hono) {
 
   app.post(
     '/invitations/single',
-    adminRoute(async (c, admin) => {
-      const payload = await parseJson(c, singleInviteSchema);
-      const invitation = await sendSingleInvitation(admin, payload);
-      return c.json({ invitation });
-    }, 'INVITATION_SEND_FAILED', 'Unable to send invitation.', 'single send failed'),
+    adminRoute(
+      async (c, admin) => {
+        const payload = await parseJson(c, singleInviteSchema);
+        const invitation = await sendSingleInvitation(admin, payload);
+        return c.json({ invitation });
+      },
+      'INVITATION_SEND_FAILED',
+      'Unable to send invitation.',
+      'single send failed',
+    ),
   );
 
   app.post(
     '/invitations/bulk',
-    adminRoute(async (c, admin) => {
-      const csv = await extractCsvPayload(c);
-      if (!csv) {
-        throw new InvitationError('INVALID_REQUEST', 'Upload a CSV file with at least one row.', 400);
-      }
-      return c.json(await sendBulkInvitations(admin, csv));
-    }, 'INVITATION_SEND_FAILED', 'Unable to process CSV invitation upload.', 'bulk send failed'),
+    adminRoute(
+      async (c, admin) => {
+        const csv = await extractCsvPayload(c);
+        if (!csv) {
+          throw new InvitationError(
+            'INVALID_REQUEST',
+            'Upload a CSV file with at least one row.',
+            400,
+          );
+        }
+        return c.json(await sendBulkInvitations(admin, csv));
+      },
+      'INVITATION_SEND_FAILED',
+      'Unable to process CSV invitation upload.',
+      'bulk send failed',
+    ),
   );
 
   app.post(
     '/invitations/:token/accept',
-    handle(async (c) => {
-      const token = c.req.param('token');
-      const payload = await parseJson(c, acceptSchema);
-      const invitation = await acceptInvitation(token, payload);
-      try {
-        await auth.api.sendVerificationOTP({
-          body: { email: normalizeEmail(payload.email), type: 'sign-in' },
-          request: c.req.raw,
-          headers: c.req.raw.headers,
+    handle(
+      async (c) => {
+        const token = c.req.param('token');
+        const payload = await parseJson(c, acceptSchema);
+        const invitation = await acceptInvitation(token, payload);
+        try {
+          await auth.api.sendVerificationOTP({
+            body: { email: normalizeEmail(payload.email), type: 'sign-in' },
+            request: c.req.raw,
+            headers: c.req.raw.headers,
+          });
+        } catch (error) {
+          console.error('[invitations] OTP dispatch failed', error);
+        }
+        return c.json({
+          invitation,
+          alreadyAccepted: invitation.status === 'accepted' && invitation.acceptedAt !== null,
         });
-      } catch (error) {
-        console.error('[invitations] OTP dispatch failed', error);
-      }
-      return c.json({
-        invitation,
-        alreadyAccepted: invitation.status === 'accepted' && invitation.acceptedAt !== null,
-      });
-    }, 'INVITATION_ACCEPT_FAILED', 'Unable to accept invitation.', 'accept failed'),
+      },
+      'INVITATION_ACCEPT_FAILED',
+      'Unable to accept invitation.',
+      'accept failed',
+    ),
   );
 
   app.post(
     '/invitations/:token/activate',
-    handle(async (c) => {
-      const token = c.req.param('token');
-      const payload = await parseJson(c, activateSchema);
-      const invitation = await activateInvitation(token, payload.email);
-      return c.json({ invitation, alreadyActivated: invitation.activatedAt !== null });
-    }, 'INVITATION_ACTIVATE_FAILED', 'Unable to activate invitation.', 'activate failed'),
+    handle(
+      async (c) => {
+        const token = c.req.param('token');
+        const payload = await parseJson(c, activateSchema);
+        const invitation = await activateInvitation(token, payload.email);
+        return c.json({ invitation, alreadyActivated: invitation.activatedAt !== null });
+      },
+      'INVITATION_ACTIVATE_FAILED',
+      'Unable to activate invitation.',
+      'activate failed',
+    ),
   );
 }
 
@@ -135,11 +159,16 @@ function adminRoute(
   fallbackMessage = 'Something went wrong.',
   logLabel = 'admin route failed',
 ) {
-  return handle(async (c) => {
-    const admin = await requireAdmin(c);
-    if ('response' in admin) return admin.response;
-    return handler(c, admin.context);
-  }, fallbackCode, fallbackMessage, logLabel);
+  return handle(
+    async (c) => {
+      const admin = await requireAdmin(c);
+      if ('response' in admin) return admin.response;
+      return handler(c, admin.context);
+    },
+    fallbackCode,
+    fallbackMessage,
+    logLabel,
+  );
 }
 
 async function requireAdmin(c: Context): Promise<AdminGuardSuccess | AdminGuardFailure> {
@@ -224,7 +253,7 @@ async function parseJson<T>(c: Context, schema: z.ZodSchema<T>) {
   return result.data;
 }
 
-function parseQuery<T>(c: Context, schema: z.ZodSchema<T>, value: unknown) {
+function parseQuery<T>(_c: Context, schema: z.ZodSchema<T>, value: unknown) {
   const result = schema.safeParse(value);
   if (!result.success) {
     throw new InvitationError('INVALID_QUERY', result.error.message, 400);
@@ -273,7 +302,10 @@ async function fetchInvitations(params: InvitationListParams) {
   };
 }
 
-async function acceptInvitation(token: string, payload: { email: string; firstName?: string; lastName?: string }) {
+async function acceptInvitation(
+  token: string,
+  payload: { email: string; firstName?: string; lastName?: string },
+) {
   const email = normalizeEmail(payload.email);
   const [existing] = await db
     .select()
@@ -282,7 +314,11 @@ async function acceptInvitation(token: string, payload: { email: string; firstNa
     .limit(1);
 
   if (!existing) {
-    throw new InvitationError('INVITATION_NOT_FOUND', 'Invitation is invalid or already revoked.', 404);
+    throw new InvitationError(
+      'INVITATION_NOT_FOUND',
+      'Invitation is invalid or already revoked.',
+      404,
+    );
   }
 
   if (existing.expiresAt && existing.expiresAt.getTime() < Date.now()) {
@@ -290,7 +326,11 @@ async function acceptInvitation(token: string, payload: { email: string; firstNa
       .update(invitations)
       .set({ status: 'expired', updatedAt: new Date() })
       .where(eq(invitations.id, existing.id));
-    throw new InvitationError('INVITATION_EXPIRED', 'This invitation has expired. Please request a new link.', 410);
+    throw new InvitationError(
+      'INVITATION_EXPIRED',
+      'This invitation has expired. Please request a new link.',
+      410,
+    );
   }
 
   if (existing.acceptedAt) {
@@ -328,11 +368,19 @@ async function activateInvitation(token: string, email: string): Promise<Invitat
     .limit(1);
 
   if (!existing) {
-    throw new InvitationError('INVITATION_NOT_FOUND', 'Invitation is invalid or already revoked.', 404);
+    throw new InvitationError(
+      'INVITATION_NOT_FOUND',
+      'Invitation is invalid or already revoked.',
+      404,
+    );
   }
 
   if (!existing.acceptedAt) {
-    throw new InvitationError('INVITATION_NOT_ACCEPTED', 'This invitation has not been accepted yet.', 409);
+    throw new InvitationError(
+      'INVITATION_NOT_ACCEPTED',
+      'This invitation has not been accepted yet.',
+      409,
+    );
   }
 
   if (existing.activatedAt) {

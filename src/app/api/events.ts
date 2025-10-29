@@ -58,6 +58,20 @@ const mapEventDetail = (event: ApiEventDetail): EventDetailRecord => ({
   attending: Boolean(event.attending),
 });
 
+export type CreateEventPayload = {
+  title: string;
+  description: string;
+  date: string;
+  location?: string | null;
+  meetingLink?: string | null;
+  maxAttendees?: number | null;
+  imageUrl?: string | null;
+  tags?: string[];
+  eventType?: ApiEvent['eventType'];
+};
+
+export type UpdateEventPayload = Partial<CreateEventPayload>;
+
 export type FetchEventsParams = {
   page?: number;
   pageSize?: number;
@@ -97,6 +111,33 @@ export async function fetchEventById(id: string): Promise<EventDetailRecord> {
   });
 
   return mapEventDetail(data);
+}
+
+export async function createEvent(payload: CreateEventPayload): Promise<EventDetailRecord> {
+  const data = await fetchJson<{ event: ApiEventDetail }>(`${API_BASE}/events`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  return mapEventDetail(data.event);
+}
+
+export async function updateEvent(
+  id: string,
+  payload: UpdateEventPayload,
+): Promise<EventDetailRecord> {
+  const data = await fetchJson<{ event: ApiEventDetail }>(`${API_BASE}/events/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+  return mapEventDetail(data.event);
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  await fetchJson<{ success: boolean }>(`${API_BASE}/events/${id}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function registerForEvent(

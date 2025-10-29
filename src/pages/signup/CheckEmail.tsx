@@ -109,8 +109,8 @@ const CheckEmail: React.FC = () => {
             </p>
 
             <p className="mb-8 text-sm text-gray-500">
-              Enter the 6-digit code to finish setting up your account. Codes expire in 10 minutes and you
-              can request a new one up to 3 times.
+              Enter the 6-digit code to finish setting up your account. Codes expire in 10 minutes
+              and you can request a new one up to 3 times.
             </p>
 
             <form onSubmit={handleVerify} className="space-y-6">

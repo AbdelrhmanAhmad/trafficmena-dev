@@ -1,5 +1,5 @@
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { SkillRecord } from '@/app/api/skills';
 import { useCurrentUser, useUpdateCurrentUser } from '@/app/hooks/useCurrentUser';
 import {
@@ -34,6 +34,12 @@ interface ProfileFormState {
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const firstNameId = useId();
+  const lastNameId = useId();
+  const emailId = useId();
+  const phoneId = useId();
+  const goalId = useId();
+  const challengeId = useId();
 
   const { data: profileResponse, isLoading: profileLoading } = useCurrentUser();
   const { data: skillsData, isLoading: skillsLoading } = useSkills();
@@ -197,9 +203,9 @@ const Dashboard: React.FC = () => {
               ) : (
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <Label htmlFor="firstName">First Name</Label>
+                    <Label htmlFor={firstNameId}>First Name</Label>
                     <Input
-                      id="firstName"
+                      id={firstNameId}
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
@@ -208,9 +214,9 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="lastName">Last Name</Label>
+                    <Label htmlFor={lastNameId}>Last Name</Label>
                     <Input
-                      id="lastName"
+                      id={lastNameId}
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
@@ -219,17 +225,17 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" value={formData.email} disabled />
+                    <Label htmlFor={emailId}>Email</Label>
+                    <Input id={emailId} name="email" value={formData.email} disabled />
                     <p className="mt-1 text-xs text-muted-foreground">
                       Email updates coming soon. Contact support if you need to change this.
                     </p>
                   </div>
 
                   <div>
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor={phoneId}>Phone Number</Label>
                     <Input
-                      id="phone"
+                      id={phoneId}
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
@@ -238,9 +244,9 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor="primaryGoal">Primary Goal</Label>
+                    <Label htmlFor={goalId}>Primary Goal</Label>
                     <Textarea
-                      id="primaryGoal"
+                      id={goalId}
                       name="primaryGoal"
                       value={formData.primaryGoal}
                       onChange={handleInputChange}
@@ -250,9 +256,9 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor="primaryChallenge">Primary Challenge</Label>
+                    <Label htmlFor={challengeId}>Primary Challenge</Label>
                     <Textarea
-                      id="primaryChallenge"
+                      id={challengeId}
                       name="primaryChallenge"
                       value={formData.primaryChallenge}
                       onChange={handleInputChange}
@@ -290,12 +296,15 @@ const Dashboard: React.FC = () => {
                 <div className="grid gap-3 md:grid-cols-2">
                   {allSkills.map((skill) => {
                     const checked = selectedSkillIds.includes(skill.id);
+                    const checkboxId = `skill-${skill.id}`;
                     return (
                       <label
                         key={skill.id}
+                        htmlFor={checkboxId}
                         className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:border-primary"
                       >
                         <Checkbox
+                          id={checkboxId}
                           checked={checked}
                           onCheckedChange={() => toggleSkill(skill.id)}
                           className="mt-1"

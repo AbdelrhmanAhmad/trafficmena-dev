@@ -4,7 +4,11 @@ import { useId, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { InvitationStatus } from '@/app/api/invitations';
-import { useCreateInvitation, useInvitations, useBulkInvitations } from '@/app/hooks/useInvitations';
+import {
+  useBulkInvitations,
+  useCreateInvitation,
+  useInvitations,
+} from '@/app/hooks/useInvitations';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import { Badge } from '@/shared/components/ui/badge';
@@ -77,10 +81,10 @@ export default function AdminInvitations() {
   const customMessageFieldId = useId();
   const statusFilterFieldId = useId();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [bulkSummary, setBulkSummary] = useState<
-    | { created: number; errors: Array<{ line: number; email: string; reason: string }> }
-    | null
-  >(null);
+  const [bulkSummary, setBulkSummary] = useState<{
+    created: number;
+    errors: Array<{ line: number; email: string; reason: string }>;
+  } | null>(null);
   const { toast } = useToast();
   const { handleError } = useErrorHandler();
 
@@ -317,7 +321,8 @@ export default function AdminInvitations() {
                             <ul className="space-y-1">
                               {bulkSummary.errors.slice(0, 5).map((error, index) => (
                                 <li key={`${error.email}-${error.line}-${index}`}>
-                                  Line {error.line} ({error.email || 'missing email'}): {error.reason}
+                                  Line {error.line} ({error.email || 'missing email'}):{' '}
+                                  {error.reason}
                                 </li>
                               ))}
                             </ul>
@@ -360,7 +365,6 @@ export default function AdminInvitations() {
                     automatically expire when a new one is created.
                   </p>
                 </div>
-
               </CardContent>
             </Card>
           </div>
@@ -390,11 +394,11 @@ export default function AdminInvitations() {
                       <TableHead>Accepted</TableHead>
                       <TableHead>Activated</TableHead>
                       <TableHead>Expires</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data?.items?.map((invite) => (
-                    <TableRow key={invite.id}>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data?.items?.map((invite) => (
+                      <TableRow key={invite.id}>
                         <TableCell className="font-medium text-primary">{invite.email}</TableCell>
                         <TableCell>
                           {invite.firstName || invite.lastName

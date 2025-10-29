@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
-import { Calendar, CheckCircle, Clock, MapPin, Users, Video } from 'lucide-react';
+import DOMPurify from 'dompurify';
+import { Calendar, CheckCircle, Clock, MapPin, Sparkles, Users, Video } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -7,13 +8,13 @@ import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
 import {
   clearPendingEventContext,
   storePendingEventContext,
 } from '@/shared/utils/eventRedirectUtils';
+import { stripHtmlTags } from '@/shared/utils/inputSanitization';
 import { useEventBooking } from '../hooks/useEventBooking';
 import { useEvent } from '../hooks/useEvents';
 
@@ -67,6 +68,19 @@ const validateMeetingUrl = (url: string) => {
     return { isValid: false, error: 'Invalid meeting link.' };
   }
 };
+
+type SanitizedHtmlProps = {
+  className?: string;
+  html: string;
+};
+
+const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
+  <div
+    className={className}
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: event descriptions are sanitized with DOMPurify
+    dangerouslySetInnerHTML={{ __html: html }}
+  />
+);
 
 const EventDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -130,6 +144,20 @@ const EventDetail: React.FC = () => {
     cancelBooking({ eventId: id });
   };
 
+  const sanitizedDescription = event?.description ? DOMPurify.sanitize(event.description) : null;
+  const summaryText = event?.description ? stripHtmlTags(event.description) : '';
+  const eventImageUrl =
+    event?.image_url && event.image_url.trim().length > 0
+      ? event.image_url.trim()
+      : '/placeholder.svg';
+  const isUpcoming = event ? new Date(event.date) > new Date() : false;
+  const locationLabel =
+    event?.location && event.location.trim().length > 0
+      ? event.location.trim()
+      : event?.meeting_link
+        ? 'Online'
+        : 'Location coming soon';
+
   return (
     <Layout>
       <DataLoader
@@ -138,102 +166,201 @@ const EventDetail: React.FC = () => {
         loadingText="Loading event details..."
       >
         {event && (
-          <div className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
-            <div className="mx-auto flex max-w-5xl flex-col gap-8">
-              <div className="rounded-lg border bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <Badge className="mb-4 inline-flex">{event.event_type}</Badge>
-                    <h1 className="text-4xl font-bold text-primary">{event.title}</h1>
-                    <p className="mt-4 text-base text-muted-foreground">
-                      {event.description ?? 'Event description coming soon.'}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    <Button
-                      onClick={event.attending ? handleCancel : handleRegister}
-                      disabled={isBooking || isCancelling}
-                    >
-                      {event.attending ? 'Cancel Registration' : 'Register Now'}
-                    </Button>
-                    {event.attending && (
-                      <div className="flex items-center gap-2 text-sm text-green-700">
-                        <CheckCircle className="h-4 w-4" />
-                        Registered for this event
-                      </div>
-                    )}
-                  </div>
-                </div>
+          <div className="relative isolate overflow-hidden">
+            <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/60 via-[#f4fff9]/40 to-transparent blur-3xl" />
+            <div className="pointer-events-none absolute -right-[48vw] top-[35vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
 
-                <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatEventDate(event.date)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>{formatEventTime(event.date)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{event.location ?? 'Location coming soon'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>{attendeeCountLabel}</span>
-                  </div>
+            <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-12 px-4 pb-20 pt-12 sm:px-6 lg:px-0">
+              <div className="lg:hidden">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-neutral-600">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1">
+                    <Sparkles className="h-3 w-3 text-[#05ef62]" />
+                    TrafficMENA Event
+                  </span>
+                  <span className="rounded-full bg-neutral-900/90 px-3 py-1 text-[11px] font-semibold text-white">
+                    {event.event_type}
+                  </span>
+                  {event.tags[0] && (
+                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-[11px] text-neutral-600">
+                      {event.tags[0]}
+                    </span>
+                  )}
                 </div>
+                <h1 className="mt-5 text-3xl font-semibold tracking-tight text-neutral-900">
+                  {event.title}
+                </h1>
               </div>
 
-              {event.meeting_link && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Video className="h-5 w-5" />
-                      Meeting Link
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {showMeetingLink ? (
-                      (() => {
-                        const validation = validateMeetingUrl(event.meeting_link);
-                        if (!validation.isValid) {
-                          return <p className="text-sm text-destructive">{validation.error}</p>;
-                        }
-                        return (
-                          <a
-                            href={validation.validatedUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-                          >
-                            Join the session
-                          </a>
-                        );
-                      })()
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        The meeting link is available once you register.
-                      </p>
+              <section className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr),340px]">
+                <div className="order-2 rounded-[28px] border border-neutral-200 bg-white/95 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10 lg:order-1">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-neutral-600">
+                    <span className="hidden items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 lg:inline-flex">
+                      <Sparkles className="h-3 w-3 text-[#05ef62]" />
+                      TrafficMENA Event
+                    </span>
+                    <span className="hidden rounded-full bg-neutral-900/90 px-3 py-1 text-[11px] font-semibold text-white lg:inline">
+                      {event.event_type}
+                    </span>
+                    {event.tags[0] && (
+                      <span className="hidden rounded-full bg-neutral-100 px-3 py-1 text-[11px] text-neutral-600 lg:inline">
+                        {event.tags[0]}
+                      </span>
                     )}
-                  </CardContent>
-                </Card>
-              )}
+                  </div>
 
-              {event.tags.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Topics Covered</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap gap-2">
-                    {event.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
+                  <h1 className="mt-5 hidden text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl lg:block">
+                    {event.title}
+                  </h1>
+
+                  {summaryText && (
+                    <p className="mt-4 max-w-2xl text-sm leading-relaxed text-neutral-600">
+                      {summaryText.slice(0, 280)}
+                      {summaryText.length > 280 ? '…' : ''}
+                    </p>
+                  )}
+
+                  {sanitizedDescription && (
+                    <div className="mt-8 space-y-4">
+                      <h2 className="text-lg font-semibold text-neutral-900">What to Expect</h2>
+                      <SanitizedDescription
+                        className="prose prose-base max-w-none text-neutral-700 prose-headings:text-neutral-900 prose-strong:text-neutral-900 prose-a:text-[#05ef62]"
+                        html={sanitizedDescription}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <aside className="order-1 lg:order-2 lg:sticky lg:top-24">
+                  <div className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-[0_10px_30px_-18px_rgba(16,16,16,0.35)]">
+                    <div className="relative aspect-[320/210] w-full overflow-hidden bg-neutral-900/60">
+                      <img
+                        src={eventImageUrl}
+                        alt={`${event.title} cover`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                      <span className="absolute left-5 top-5 inline-flex rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-neutral-800">
+                        {isUpcoming ? 'Upcoming Session' : 'Past Session'}
+                      </span>
+                    </div>
+                    <div className="space-y-4 p-6">
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
+                          <Calendar className="h-5 w-5 text-[#05ef62]" />
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                              Date
+                            </p>
+                            <p className="text-sm font-semibold text-neutral-900">
+                              {formatEventDate(event.date)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
+                          <Clock className="h-5 w-5 text-[#05ef62]" />
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                              Time
+                            </p>
+                            <p className="text-sm font-semibold text-neutral-900">
+                              {formatEventTime(event.date)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
+                          <MapPin className="h-5 w-5 text-[#05ef62]" />
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                              Location
+                            </p>
+                            <p className="text-sm font-semibold text-neutral-900">
+                              {locationLabel}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
+                          <Users className="h-5 w-5 text-[#05ef62]" />
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                              Attendance
+                            </p>
+                            <p className="text-sm font-semibold text-neutral-900">
+                              {attendeeCountLabel}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] hover:brightness-95"
+                        onClick={event.attending ? handleCancel : handleRegister}
+                        disabled={isBooking || isCancelling}
+                      >
+                        {event.attending ? 'Cancel Registration' : 'Register for Event'}
+                      </Button>
+
+                      {event.attending && (
+                        <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>You’re registered</span>
+                        </div>
+                      )}
+
+                      {event.meeting_link && (
+                        <div className="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                          <div className="flex items-center gap-2 text-neutral-900">
+                            <Video className="h-4 w-4 text-[#05ef62]" />
+                            <span className="text-sm font-semibold">Meeting Link</span>
+                          </div>
+                          <div className="mt-3">
+                            {showMeetingLink ? (
+                              (() => {
+                                const validation = validateMeetingUrl(event.meeting_link ?? '');
+                                if (!validation.isValid) {
+                                  return <p className="text-xs text-red-500">{validation.error}</p>;
+                                }
+                                return (
+                                  <a
+                                    href={validation.validatedUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-neutral-800"
+                                  >
+                                    Join Live Session
+                                  </a>
+                                );
+                              })()
+                            ) : (
+                              <p className="text-xs text-neutral-600">
+                                Register to unlock the secure meeting link.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {event.tags.length > 0 && (
+                        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                            Topics & Focus Areas
+                          </span>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {event.tags.map((tag) => (
+                              <Badge
+                                key={tag}
+                                variant="secondary"
+                                className="rounded-full px-3 py-1 text-xs"
+                              >
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </aside>
+              </section>
             </div>
           </div>
         )}

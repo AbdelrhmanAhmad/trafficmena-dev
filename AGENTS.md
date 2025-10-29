@@ -8,9 +8,9 @@ This file provides guidance to AI Coder when working with code in this repositor
 
 **IMPORTANT:** This is an MVP (Minimum Viable Product). Prioritize simplicity, speed to market, and user validation over technical perfection.
 
-**Latest Backend Update (9 Oct 2025):** Hono now exposes the functional MVP APIs — `/api/auth/otp/*`, `/api/events` (list/detail/register/cancel), `/api/library` (list/detail/update), `/api/invitations` (single-send/list/CSV/accept with Better Auth provisioning), and `/api/users/me`. These endpoints run against the Drizzle/Postgres 17.6 stack with Better Auth sessions. All new frontend or automation work must consume these APIs; Supabase clients have been removed from the runtime and live only under `archive/legacy` for reference.
+**Latest Backend Update (9 Oct 2025):** Hono now exposes the functional MVP APIs — `/api/auth/otp/*`, `/api/events` (list/detail/register/cancel), `/api/library` (list/detail/update), `/api/invitations` (single-send/list/CSV/accept with Better Auth provisioning), and `/api/users/me`. These endpoints run against the Drizzle/Postgres 17.6 stack with Better Auth sessions. All new frontend or automation work must consume these APIs; Supabase clients have been removed from the runtime and are no longer shipped in this repository.
 
-You are an expert in TypeScript, React, Vite, Shadcn UI, Radix UI, Tailwind CSS, and have familiarity with the archived Supabase implementation when historical context is required.
+You are an expert in TypeScript, React, Vite, Shadcn UI, Radix UI, Tailwind CSS, and the current Hono + Better Auth + Drizzle stack. Historical Supabase knowledge is optional and only needed when reading legacy documentation.
 
 ---
 
@@ -37,9 +37,9 @@ You are an expert in TypeScript, React, Vite, Shadcn UI, Radix UI, Tailwind CSS,
    - Multi-type events (Event, Meetup, Mastermind, Retreat)
    - Complete admin-to-public integration with library linking
 
-2. **✅ Invitations System** - **COMPLETE** (Modern implementation, legacy archived)
+2. **✅ Invitations System** - **COMPLETE** (Modern implementation)
 - MVP uses simplified Hono `/api/invitations` endpoints for single-send/list/CSV/accept
-   - Legacy queue/backoff code remains in `archive/legacy` for reference (bulk CSV deferred)
+   - The queue/backoff prototype shipped during the Supabase era has been removed; rely on the current endpoints only (bulk CSV enhancements remain deferred)
    - Comprehensive event tracking (sent, delivered, opened, clicked, accepted) captured in schema
    - Integration-ready for email service providers (Plunk API)
    - **Update 17 Oct 2025:** Bulk CSV parser now respects quoted fields, optional headers, and validates emails so multi-line/custom messages no longer produce phantom invites.
@@ -134,7 +134,7 @@ You are an expert in TypeScript, React, Vite, Shadcn UI, Radix UI, Tailwind CSS,
 
 **DO for MVP:**
 - Watch the simplified invitation flow (single + CSV); keep deferred CSV guidance visible and adjust daily limits if needed
-- Decide and document the admin CRUD story (enable via API or keep manual)
+- Keep the admin CRUD runbook (`docs/admin-content-workflow.md`) up to date as operators publish new content
 - Provide lightweight dashboard metrics or remove the widget grid
 - Add a smoke test for OTP login → event registration → library access
 - Keep the UI simple and clearly communicate manual steps when automation is deferred
@@ -340,7 +340,7 @@ export const sanitizeSearchQuery = (input: string): ValidationResult => {
   default-src 'self'; 
   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
   frame-src 'self' https://www.youtube.com https://player.vimeo.com [+15 more];
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co;
+  connect-src 'self' https://api.trafficmena.com http://localhost:3001;
 "/>
 ```
 
@@ -395,16 +395,13 @@ import { EventCard } from '../components/EventCard';
 **Error Handling Standard (Consistently Applied):**
 ```typescript
 import { useErrorHandler } from '@/shared/utils/errorHandling';
+import { API_BASE, fetchJson } from '@/app/api/client';
 
 const { handleError } = useErrorHandler();
 
 try {
-  const { data, error } = await supabaseCall();
-  if (error) {
-    handleError(error);
-    return;
-  }
-  // Success handling
+  const data = await fetchJson<ApiResponse>(`${API_BASE}/events`);
+  // Success handling with `data`
 } catch (error) {
   handleError(error);
 }
@@ -593,8 +590,8 @@ export const validateAndSanitizeSkillName = (input: string): ValidationResult =>
    - Confirm acceptance from onboarding and reflect completion status in the admin dashboard
    - Document CSV/bulk import as post-MVP scope
 
-2. **Clarify Admin CRUD Story**
-   - Enable event/library create/edit/delete via new API handlers **or** remove the UI affordances and document the manual process for MVP
+2. **Admin Content Workflow**
+   - Dashboard create/edit/delete flows are live; keep the `docs/admin-content-workflow.md` runbook fresh and watch for operator friction
 
 3. **Dashboard Metrics Decision**
    - Provide a lightweight `/api/admin/metrics` endpoint or retire the metric grid to avoid stale UI
@@ -639,9 +636,9 @@ npx ultracite check  # Comprehensive code quality check
 
 **Database Operations:**
 ```bash
-npx supabase db reset          # Reset local database
-npx supabase db push          # Push migrations to remote
-npx supabase gen types typescript --local  # Generate types
+npm run db:reset                     # Reset the project-scoped local Postgres instance
+npm --prefix server run db:migrate   # Apply Drizzle migrations to the active database
+npm run db:status                    # Verify local Postgres status
 ```
 
 ### Quality Assurance Workflow
@@ -672,16 +669,21 @@ npx supabase gen types typescript --local  # Generate types
 
 **Critical Setup:**
 ```bash
-# .env.local (required for development)
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+# server/.env (copy server/.env.example and update)
+PGHOST=127.0.0.1
+PGPORT=5433
+PGUSER=trafficmena_app
+PGPASSWORD=your_local_password
+PGDATABASE=trafficmena_dev
+BETTER_AUTH_SECRET=generate_a_32_char_secret
+BETTER_AUTH_ISSUER=http://localhost:3001
+CORS_ORIGIN=http://localhost:5173
+PLUNK_API_KEY=your_plunk_key
 
-# Optional (production)
-VITE_ENVIRONMENT=production
-VITE_APP_VERSION=0.2.0
+# Frontend currently relies on Vite defaults; add VITE_API_BASE if you deploy behind a custom domain.
 ```
 
-**Security Note:** Never commit `.env` files. Use `.env.example` for documentation.
+**Security Note:** Never commit `.env` files. Use `server/.env.example` as the canonical template and keep secrets in local-only `.env`.
 
 ### Build Configuration
 
@@ -758,7 +760,7 @@ export default defineConfig({
 
 **Next Phase Focus:**
 🎯 Monitor the streamlined invitation flow (single + CSV), adjust guardrails if daily limits bite, and keep operator docs current
-🎯 Finalise admin CRUD story (either enable via API or hide/manual)
+🎯 Keep the admin content workflow runbook current as operators seed events and assets
 🎯 Deliver dashboard metrics replacement or retire the widget grid
 🎯 Add smoke tests and production logging before VPS deployment
 

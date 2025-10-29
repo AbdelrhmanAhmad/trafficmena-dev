@@ -306,24 +306,19 @@ export function SimpleEditorWrapper({
 
   // Update editor content when value prop changes
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value || '<p></p>', false);
+    if (!editor) return;
 
-      // Update character count
-      const textLength = editor.getText().length;
-      setCharCount(textLength);
-    }
-  }, [editor, value]);
+    const sanitizedValue = value ? DOMPurify.sanitize(value, sanitizeConfig) : '';
 
-  // Sanitize initial content on mount
-  useEffect(() => {
-    if (value) {
-      const sanitizedValue = DOMPurify.sanitize(value, sanitizeConfig);
-      if (sanitizedValue !== value) {
-        onChange(sanitizedValue);
-      }
+    if (sanitizedValue !== value) {
+      onChange(sanitizedValue);
     }
-  }, []); // Only run on mount
+
+    if (sanitizedValue !== editor.getHTML()) {
+      editor.commands.setContent(sanitizedValue || '<p></p>', false);
+      setCharCount(editor.getText().length);
+    }
+  }, [editor, value, onChange, sanitizeConfig]);
 
   React.useEffect(() => {
     if (!isMobile && mobileView !== 'main') {

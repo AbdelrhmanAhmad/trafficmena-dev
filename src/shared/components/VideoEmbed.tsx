@@ -25,7 +25,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
       for (const pattern of patterns) {
         try {
           const match = url.match(pattern);
-          if (match && match[1]) {
+          if (match?.[1]) {
             // Validate video ID format (should be 11 characters for YouTube)
             const videoId = match[1];
             if (videoId.length === 11 && /^[a-zA-Z0-9_-]+$/.test(videoId)) {
@@ -94,7 +94,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
 
       // If it contains video ID, try to construct embed URL
       const videoIdMatch = url.match(/\/([a-zA-Z0-9-_]+)\.mp4/);
-      if (videoIdMatch && videoIdMatch[1]) {
+      if (videoIdMatch?.[1]) {
         const baseUrl = url.substring(0, url.lastIndexOf('/'));
         return `${baseUrl}/embed/${videoIdMatch[1]}`;
       }
