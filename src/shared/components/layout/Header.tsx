@@ -6,7 +6,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/shared/components/ui/drawer';
 import { useAuth } from '@/shared/context/AuthContext';
-import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 import UserProfileDropdown from './UserProfileDropdown';
 
 type NavItem = {
@@ -26,7 +26,7 @@ const NAVIGATION_ITEMS: NavItem[] = [
 const Header: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const { isAdmin } = useIsAdmin();
+  const { canAccessAdmin, isOwner, isAdmin, isManager } = useRolePermissions();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
@@ -188,13 +188,19 @@ const Header: React.FC = () => {
                           Content Library
                         </Button>
                       </Link>
-                      {isAdmin && (
+                      {canAccessAdmin && (
                         <Link to="/admin" onClick={closeDrawer}>
                           <Button
                             variant="ghost"
                             className="w-full justify-start rounded-xl px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                           >
-                            Admin Dashboard
+                            {isOwner
+                              ? 'Owner Dashboard'
+                              : isAdmin
+                                ? 'Admin Dashboard'
+                                : isManager
+                                  ? 'Manager Dashboard'
+                                  : 'Admin Dashboard'}
                           </Button>
                         </Link>
                       )}

@@ -14,7 +14,7 @@ import {
 
 // --- Enums -----------------------------------------------------------------
 
-export const userRoleEnum = pgEnum('user_role', ['admin', 'manager', 'user']);
+export const userRoleEnum = pgEnum('user_role', ['owner', 'admin', 'manager', 'expert', 'user']);
 export const userTypeEnum = pgEnum('user_type', ['learner', 'expert']);
 export const eventTypeEnum = pgEnum('event_type', ['Event', 'Meetup', 'Mastermind', 'Retreat']);
 export const assetFileTypeEnum = pgEnum('asset_file_type', ['Document', 'Video', 'Presentation']);

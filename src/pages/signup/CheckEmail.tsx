@@ -2,7 +2,13 @@ import { Mail } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { updateCurrentUser } from '@/app/api/users';
 import Header from '@/shared/components/layout/Header';
+import {
+  SIGNUP_CURRENT_STEP_KEY,
+  SIGNUP_FORM_DATA_KEY,
+  type SignUpFormData,
+} from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 import {
   InputOTP,
@@ -13,6 +19,46 @@ import {
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
+import { getLocalStorageItem, removeLocalStorageItem } from '@/shared/utils/localStorage';
+
+const persistSignupProfile = async () => {
+  const stored = getLocalStorageItem<SignUpFormData>(SIGNUP_FORM_DATA_KEY);
+  if (!stored.success || !stored.data) {
+    return;
+  }
+
+  const data = stored.data;
+  const firstName = data.firstName?.trim();
+  const lastName = data.lastName?.trim();
+  const phone = data.phoneNumber?.trim();
+  const primaryGoal = data.primaryGoal?.trim();
+  const primaryChallenge = data.primaryChallenge?.trim();
+
+  const payload: Record<string, string> = {};
+  if (firstName) payload.first_name = firstName;
+  if (lastName) payload.last_name = lastName;
+  if (firstName || lastName) {
+    payload.name = [firstName, lastName].filter(Boolean).join(' ');
+  }
+  if (phone) payload.phone_number = phone;
+  if (primaryGoal) payload.primary_goal = primaryGoal;
+  if (primaryChallenge) payload.primary_challenge = primaryChallenge;
+
+  if (Object.keys(payload).length === 0) {
+    removeLocalStorageItem(SIGNUP_FORM_DATA_KEY);
+    removeLocalStorageItem(SIGNUP_CURRENT_STEP_KEY);
+    return;
+  }
+
+  try {
+    await updateCurrentUser(payload);
+  } catch (error) {
+    console.warn('[signup] failed to persist profile data', error);
+  } finally {
+    removeLocalStorageItem(SIGNUP_FORM_DATA_KEY);
+    removeLocalStorageItem(SIGNUP_CURRENT_STEP_KEY);
+  }
+};
 
 const CheckEmail: React.FC = () => {
   const location = useLocation();
@@ -49,6 +95,7 @@ const CheckEmail: React.FC = () => {
     setIsVerifying(true);
     try {
       await verifyOtp({ email, otp: code.trim() });
+      await persistSignupProfile();
       toast({
         title: 'Welcome to TrafficMENA',
         description: 'You are now signed in.',

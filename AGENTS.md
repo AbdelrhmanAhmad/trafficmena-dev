@@ -54,13 +54,17 @@ You are an expert in TypeScript, React, Vite, Shadcn UI, Radix UI, Tailwind CSS,
    - Multiple content types (video_url, document_url, embed_url)
    - Event-library linking via foreign keys
    - Usage analytics (view_count, download_count)
+   - Direct BunnyCDN uploads (PDF, PPT, images) capped at 20 MB
+   - Admin deletions remove library records; storage cleanup backlog for Bunny assets
    - Missing: Advanced content curation, recommendation engine
 
 5. **📋 User Management** - **80% COMPLETE** (Service layer complete, UI needs update)
    - Multi-step onboarding with skills tracking (7 steps)
    - Comprehensive user profiles with audit logging
-   - Skills management with proper foreign key relationships
+- Skills management with proper foreign key relationships
+- Profile rows now auto-provision on first OTP login; dashboard skill selections capture future personalization data even though no recommendation engine ships yet
    - Role-based access control with privilege escalation prevention
+- RBAC tiers: Owner (full control), Admin (full control except removing owners), Manager (create/update events & library, no delete, no invites/users), Expert (co-host/author only), User (view-only — marketing copy still calls them “members”)
 
 6. **❌ Subscriptions** - **REMOVED FOR MVP SCOPE**
    - Subscription pages, hooks, and schema dependencies removed to simplify launch
@@ -458,6 +462,7 @@ try {
 - **Extensions**: Typography, text alignment, highlighting, lists
 - **Mobile-Responsive**: Adaptive toolbar and cursor visibility handling
 - **Security**: File size limits, content sanitization, XSS prevention
+- **Storage**: Rich text image uploads share the BunnyCDN pipeline (20 MB limit)
 
 **Performance Optimizations:**
 ```typescript

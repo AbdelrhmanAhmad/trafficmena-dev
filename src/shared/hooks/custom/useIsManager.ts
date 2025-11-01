@@ -1,16 +1,10 @@
-import { useMemo } from 'react';
-import { useCurrentUser } from '@/app/hooks/useCurrentUser';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 
 export const useIsManager = () => {
-  const { data, isLoading } = useCurrentUser();
-
-  const isManager = useMemo(() => {
-    if (!data?.profile?.role) return false;
-    return data.profile.role.toLowerCase() === 'manager';
-  }, [data?.profile?.role]);
+  const { loading, hasRankAtLeast } = useRolePermissions();
 
   return {
-    isManager,
-    loading: isLoading,
+    isManager: hasRankAtLeast('manager'),
+    loading,
   };
 };

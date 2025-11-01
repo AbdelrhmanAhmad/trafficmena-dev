@@ -22,6 +22,48 @@
       "when": 1760035200000,
       "tag": "0002_invitation_activation",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1762041600000,
+      "tag": "0003_rbac_roles_fixed",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1762128000000,
+      "tag": "0004_user_role_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1762214400000,
+      "tag": "0005_profile_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1762300800000,
+      "tag": "0006_profile_name_cleanup",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1762387200000,
+      "tag": "0007_profile_name_reset",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1762473600000,
+      "tag": "0008_profile_name_reset_case",
+      "breakpoints": true
     }
   ]
 }

@@ -11,14 +11,12 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/components/ui/dropdown-menu';
 import { useAuth } from '@/shared/context/AuthContext';
-import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
-import { useIsManager } from '@/shared/hooks/custom/useIsManager';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 
 const UserProfileDropdown: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { isAdmin } = useIsAdmin();
-  const { isManager } = useIsManager();
+  const { canAccessAdmin, isOwner, isAdmin, isManager } = useRolePermissions();
   const { data: currentUser } = useCurrentUser();
   const profile = currentUser?.profile;
 
@@ -117,11 +115,13 @@ const UserProfileDropdown: React.FC = () => {
           </Link>
         </DropdownMenuItem>
 
-        {(isAdmin || isManager) && (
+        {canAccessAdmin && (
           <DropdownMenuItem asChild>
             <Link to="/admin" className="flex cursor-pointer items-center">
               <Shield className="mr-2 h-4 w-4" />
-              <span>{isAdmin ? 'Admin Dashboard' : 'Manager Dashboard'}</span>
+              <span>
+                {isOwner ? 'Owner Dashboard' : isAdmin ? 'Admin Dashboard' : 'Manager Dashboard'}
+              </span>
             </Link>
           </DropdownMenuItem>
         )}

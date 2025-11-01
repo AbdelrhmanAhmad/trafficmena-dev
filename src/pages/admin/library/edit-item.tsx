@@ -10,6 +10,7 @@ import DataLoader from '@/shared/components/DataLoader';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 
 const EditLibraryItemPage = () => {
   const navigate = useNavigate();
@@ -18,9 +19,10 @@ const EditLibraryItemPage = () => {
   const updateAsset = useUpdateLibraryAsset();
   const deleteAsset = useDeleteLibraryAsset();
   const asset = data ?? null;
+  const { canDeleteContent } = useRolePermissions();
 
   return (
-    <AdminProtectedRoute>
+    <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
       <AdminLayout>
         <Card className="mx-auto max-w-4xl">
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -50,6 +52,7 @@ const EditLibraryItemPage = () => {
                   submitLabel="Update asset"
                   isSubmitting={updateAsset.isPending}
                   isDeleting={deleteAsset.isPending}
+                  canDelete={canDeleteContent}
                   onSubmit={async (payload) => {
                     try {
                       await updateAsset.mutateAsync({ id: asset.id, data: payload });
@@ -58,6 +61,7 @@ const EditLibraryItemPage = () => {
                     }
                   }}
                   onDelete={async () => {
+                    if (!canDeleteContent) return;
                     const confirmed = window.confirm('Delete this asset? This cannot be undone.');
                     if (!confirmed) return;
                     try {

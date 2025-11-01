@@ -8,7 +8,7 @@
 ## 1. Before You Start
 
 - **Auth:** Sign in with an admin account. Only admins will see the creation buttons.
-- **Assets:** Upload raw files (videos, PDFs, slide decks) to the Hetzner object storage bucket or approved CDN. Capture the public URLs—our SPA does not upload binaries directly.
+- **Assets:** PDFs, slide decks, and images up to **20 MB** can be uploaded straight from the admin forms—files land in the BunnyCDN storage zone configured in `server/.env`. Larger media (e.g. >20 MB video masters) should still be pushed manually and referenced via URL.
 - **Event logistics:** Confirm timezones, speaker notes, meeting links, and capacity limits before opening the form.
 
 > Tip: keep a simple checklist in Notion with “asset URL”, “event date”, and “follow‑up owner” so nothing ships half‑ready.
@@ -23,8 +23,7 @@
    - **Date & time**: the picker stores local time and converts to ISO automatically.
    - **Format & location**: choose Event/Meetup/Mastermind/Retreat, add city or “Online”.
    - **Description**: the TipTap editor accepts formatted text and links. Keep it to the core promise.
-- **Optional**: Zoom/Meet link, capacity, comma-separated tags (max 12), and a cover image. Use the **Upload** button to push JPG/PNG/WebP straight to BunnyCDN—no manual CLI steps required.
- - **Optional**: Zoom/Meet link, capacity, comma-separated tags (max 12), and a cover image. Use the **Upload** button to push JPG/PNG/WebP straight to BunnyCDN—just provide the Storage Zone name, password, and CDN URL in the server `.env` (the password doubles as the `AccessKey`).
+ - **Optional**: Zoom/Meet link, capacity, comma-separated tags (max 12), and a cover image. Use the **Upload** button to push JPG/PNG/WebP straight to BunnyCDN—no manual CLI steps required once the Storage Zone credentials live in `server/.env`.
 3. Review the live preview on the right; tags and capacity update in real time.
 4. Press **Create event**. The dashboard toasts on success and redirects to the detail page.
 5. Share the public link (`/meetups/:id`) with marketing or embed it in campaigns.
@@ -41,17 +40,17 @@
 1. Navigate to **Admin → Content Library** and click **Add asset** (or **Add Your First Item** if empty).
 2. In the form:
    - Pick the **asset type** (Video, Document, Presentation).
-   - Provide the matching URL:
-     - **Video**: YouTube, Vimeo, or direct MP4 link.
-     - **Document**: public PDF/Doc URL.
-     - **Presentation**: embed URL (Google Slides “/embed”, etc.) plus optional provider code (`google_slides`, `canva`, …).
+   - Provide the matching URL or upload directly:
+     - **Video**: YouTube, Vimeo, or direct MP4 link (uploads still manual for large files).
+     - **Document**: upload PDFs/PPT/PPTX ≤20 MB or paste an existing URL.
+     - **Presentation**: upload deck files (≤20 MB) or use an embed URL (Google Slides “/embed”, etc.) plus optional provider code (`google_slides`, `canva`, …).
    - Use the editor for a concise summary (who, what, key takeaways).
    - Optionally link to the event it belongs to—the dropdown lists the latest 50 events.
 3. Save with **Create asset**. You’ll be redirected to the admin detail view where you can double-check the player/iframe.
 4. For edits, open the asset from **Admin → Content Library**, choose **Edit**, update links or descriptions, and save.
-5. To remove outdated content, hit **Delete asset** and confirm. The list view updates immediately.
+5. To remove outdated content, hit **Delete asset** and confirm. (Only owners and admins can delete; managers should escalate if clean-up is required.) The list view updates immediately; remember to manually delete any large media you uploaded outside the tool.
 
-> Storage hygiene: we only store URLs, so deleting a library entry does not remove the file from Hetzner/CDN. Clean up the underlying file separately if required.
+> Storage hygiene: assets uploaded through the form live in BunnyCDN. Deleting a library entry only removes the database row—you can remove the underlying file later if you don’t plan to reuse it.
 
 ---
 
@@ -96,7 +95,7 @@ If the UI fails unexpectedly, capture the toast/error message and raise it in th
 
 - Admin dashboard: `/admin/meetups`, `/admin/library`
 - Public endpoints leveraged: `/api/events`, `/api/library`
-- Storage: Hetzner object storage (`/mnt/trafficmena-files/library`)
+- Storage: BunnyCDN storage zone configured via `BUNNY_STORAGE_*`
 - Support channel: `#trafficmena-ops`
 
 Ship the event, publish the replay, learn faster. 🚀

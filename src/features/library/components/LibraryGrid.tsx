@@ -21,11 +21,20 @@ interface LibraryItem {
 interface LibraryGridProps {
   items: LibraryItem[];
   onEdit: (itemId: string | number) => void;
-  onDelete: (itemId: string | number) => void;
+  onDelete?: (itemId: string | number) => void;
   onAddNew: () => void;
+  canManage?: boolean;
+  canDelete?: boolean;
 }
 
-const LibraryGrid: React.FC<LibraryGridProps> = ({ items, onEdit, onDelete, onAddNew }) => {
+const LibraryGrid: React.FC<LibraryGridProps> = ({
+  items,
+  onEdit,
+  onDelete,
+  onAddNew,
+  canManage = false,
+  canDelete = false,
+}) => {
   if (items.length === 0) {
     return (
       <div className="py-12 text-center">
@@ -34,7 +43,7 @@ const LibraryGrid: React.FC<LibraryGridProps> = ({ items, onEdit, onDelete, onAd
         <p className="mb-4 text-gray-600">
           Start building your library by adding videos and documents from past meetups.
         </p>
-        <Button onClick={onAddNew}>
+        <Button onClick={onAddNew} disabled={!canManage}>
           <Plus className="mr-2 h-4 w-4" />
           Add Your First Item
         </Button>
@@ -50,7 +59,8 @@ const LibraryGrid: React.FC<LibraryGridProps> = ({ items, onEdit, onDelete, onAd
           item={item}
           onEdit={onEdit}
           onDelete={onDelete}
-          isAdmin={true}
+          canManage={canManage}
+          canDelete={canDelete}
         />
       ))}
     </div>

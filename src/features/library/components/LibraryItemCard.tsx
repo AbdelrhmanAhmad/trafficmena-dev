@@ -30,14 +30,16 @@ interface LibraryItemCardProps {
   item: LibraryItem;
   onEdit?: (itemId: string | number) => void;
   onDelete?: (itemId: string | number) => void;
-  isAdmin?: boolean;
+  canManage?: boolean;
+  canDelete?: boolean;
 }
 
 const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
   item,
   onEdit,
   onDelete,
-  isAdmin = false,
+  canManage = false,
+  canDelete = false,
 }) => {
   const navigate = useNavigate();
   const getIcon = (fileType: string, videoUrl?: string | null, embedType?: string | null) => {
@@ -100,7 +102,7 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
       return;
     }
     // Navigate based on context - admin stays in admin, users stay in dashboard
-    const basePath = isAdmin ? '/admin/library' : '/dashboard/library';
+    const basePath = canManage ? '/admin/library' : '/dashboard/library';
     navigate(`${basePath}/${item.id}`);
   };
 
@@ -147,30 +149,34 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
           </span>
         </div>
 
-        {isAdmin && (
+        {(canManage || canDelete) && (
           <div className="absolute top-2 right-2 z-10 flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full bg-white/90 text-gray-700 shadow-sm transition-colors hover:bg-white"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.(item.id);
-              }}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full bg-white/90 text-red-600 shadow-sm transition-colors hover:bg-white"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.(item.id);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {canManage && onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full bg-white/90 text-gray-700 shadow-sm transition-colors hover:bg-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(item.id);
+                }}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            {canDelete && onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full bg-white/90 text-red-600 shadow-sm transition-colors hover:bg-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -190,7 +196,7 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
             <span>Added {new Date(item.created_at).toLocaleDateString()}</span>
           </div>
 
-          {isAdmin && ((item.view_count ?? 0) > 0 || (item.download_count ?? 0) > 0) && (
+          {canManage && ((item.view_count ?? 0) > 0 || (item.download_count ?? 0) > 0) && (
             <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
               {(item.view_count ?? 0) > 0 && (
                 <span>

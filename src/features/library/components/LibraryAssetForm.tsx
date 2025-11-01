@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FileText, Link2, Video } from 'lucide-react';
-import { useMemo } from 'react';
+import { type ChangeEvent, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type {
@@ -8,6 +8,7 @@ import type {
   LibraryAssetRecord,
   UpdateLibraryAssetPayload,
 } from '@/app/api/library';
+import { uploadFile } from '@/app/api/uploads';
 import { useEvents } from '@/features/events/hooks/useEvents';
 import { SimpleEditorWrapper } from '@/shared/components/SimpleEditorWrapper';
 import { Button } from '@/shared/components/ui/button';
@@ -40,6 +41,13 @@ const libraryAssetFormSchema = z
     embedUrl: z.string().trim().max(1000).optional(),
     embedType: z.string().trim().max(120).optional(),
     eventId: z.string().trim().uuid().optional(),
+    fileSizeBytes: z
+      .number({ invalid_type_error: 'Provide a valid file size.' })
+      .int()
+      .min(0, 'File size cannot be negative.')
+      .max(20 * 1024 * 1024, 'Files must be 20 MB or smaller.')
+      .nullable()
+      .optional(),
   })
   .superRefine((values, ctx) => {
     if (values.fileType === 'Video' && !values.videoUrl) {
@@ -74,6 +82,7 @@ type LibraryAssetFormProps = {
   isSubmitting?: boolean;
   onDelete?: () => Promise<void>;
   isDeleting?: boolean;
+  canDelete?: boolean;
 };
 
 function normaliseUrl(value?: string | null) {
@@ -89,6 +98,7 @@ export function LibraryAssetForm({
   isSubmitting,
   onDelete,
   isDeleting,
+  canDelete = true,
 }: LibraryAssetFormProps) {
   const defaultValues: LibraryAssetFormValues = {
     title: asset?.title ?? '',
@@ -101,6 +111,7 @@ export function LibraryAssetForm({
       asset?.embed_url ?? (asset?.file_type === 'Presentation' ? (asset?.file_url ?? '') : ''),
     embedType: asset?.embed_type ?? '',
     eventId: asset?.event_id ?? undefined,
+    fileSizeBytes: asset?.file_size_bytes ?? null,
   };
 
   const form = useForm<LibraryAssetFormValues>({
@@ -110,6 +121,10 @@ export function LibraryAssetForm({
 
   const { data: eventsData } = useEvents(1, 50);
 
+  const documentInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [documentUploadError, setDocumentUploadError] = useState<string | null>(null);
+
   const linkedEventTitle = useMemo(() => {
     if (!asset?.event_id) return null;
     const match = eventsData?.items.find((event) => event.id === asset.event_id);
@@ -117,17 +132,58 @@ export function LibraryAssetForm({
   }, [asset?.event_id, eventsData?.items]);
 
   const primaryType = form.watch('fileType');
+  const currentFileSize = form.watch('fileSizeBytes');
+
+  const formatFileSize = (bytes: number | null | undefined) => {
+    if (bytes == null) return null;
+    if (bytes === 0) return '0 bytes';
+    const units = ['bytes', 'KB', 'MB'];
+    let size = bytes;
+    let index = 0;
+    while (size >= 1024 && index < units.length - 1) {
+      size /= 1024;
+      index += 1;
+    }
+    return `${size.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  };
+
+  const handleDocumentFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setDocumentUploadError(null);
+    setIsUploadingDocument(true);
+
+    try {
+      const result = await uploadFile({ file, scope: 'library' });
+      form.setValue('documentUrl', result.url, { shouldDirty: true, shouldTouch: true });
+      form.setValue('fileSizeBytes', result.sizeBytes ?? null, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    } catch (error) {
+      setDocumentUploadError(error instanceof Error ? error.message : 'Upload failed.');
+    } finally {
+      setIsUploadingDocument(false);
+      event.target.value = '';
+    }
+  };
 
   const handleSubmit = async (values: LibraryAssetFormValues) => {
+    const videoUrl = normaliseUrl(values.videoUrl);
+    const documentUrl = normaliseUrl(values.documentUrl);
+    const embedUrl = normaliseUrl(values.embedUrl);
+
     const payload: CreateLibraryAssetPayload = {
       title: values.title.trim(),
       description: values.description?.trim() || null,
       fileType: values.fileType,
-      videoUrl: normaliseUrl(values.videoUrl),
-      documentUrl: normaliseUrl(values.documentUrl),
-      embedUrl: normaliseUrl(values.embedUrl),
+      videoUrl,
+      documentUrl,
+      embedUrl,
       embedType: values.embedType?.trim() ? values.embedType.trim() : null,
       eventId: values.eventId?.trim() ? values.eventId.trim() : null,
+      fileSizeBytes: documentUrl ? (values.fileSizeBytes ?? null) : null,
     };
 
     await onSubmit(payload);
@@ -233,14 +289,42 @@ export function LibraryAssetForm({
                     Document URL {primaryType === 'Document' ? '(required)' : '(optional)'}
                   </FormLabel>
                   <FormControl>
-                    <Input placeholder="https://cdn.example.com/document.pdf" {...field} />
+                    <div className="flex gap-2">
+                      <Input placeholder="https://cdn.example.com/document.pdf" {...field} />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="whitespace-nowrap"
+                        disabled={isUploadingDocument}
+                        onClick={() => documentInputRef.current?.click()}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        {isUploadingDocument ? 'Uploading…' : 'Upload'}
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormDescription>
-                    Add a PDF or document download. Required when asset type is Document.
+                    Upload PDFs or presentations up to 20&nbsp;MB, or paste an existing link.
                   </FormDescription>
+                  {documentUploadError && (
+                    <p className="text-xs text-destructive">{documentUploadError}</p>
+                  )}
+                  {formatFileSize(currentFileSize) && (
+                    <p className="text-xs text-muted-foreground">
+                      Uploaded file size: {formatFileSize(currentFileSize)}
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <input
+              ref={documentInputRef}
+              type="file"
+              accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/*"
+              className="hidden"
+              onChange={handleDocumentFileUpload}
             />
 
             <FormField
@@ -353,7 +437,7 @@ export function LibraryAssetForm({
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : submitLabel}
               </Button>
-              {onDelete ? (
+              {onDelete && canDelete ? (
                 <Button
                   type="button"
                   variant="destructive"

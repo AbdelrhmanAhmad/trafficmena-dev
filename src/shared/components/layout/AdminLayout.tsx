@@ -1,5 +1,6 @@
 import { BarChart3, BookOpen, Calendar, Mail, Shield, Users } from 'lucide-react';
 import type React from 'react';
+import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Badge } from '@/shared/components/ui/badge';
 import {
@@ -17,8 +18,11 @@ import {
   SidebarTrigger,
 } from '@/shared/components/ui/sidebar';
 import { useAuth } from '@/shared/context/AuthContext';
-import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
-import { useIsManager } from '@/shared/hooks/custom/useIsManager';
+import {
+  getRolePriority,
+  type UserRole,
+  useRolePermissions,
+} from '@/shared/hooks/custom/useRolePermissions';
 import UserProfileDropdown from './UserProfileDropdown';
 
 const adminMenuItems = [
@@ -26,35 +30,35 @@ const adminMenuItems = [
     title: 'Dashboard',
     url: '/admin',
     icon: BarChart3,
-    roles: ['admin', 'manager'],
+    roles: ['owner', 'admin', 'manager'],
     description: 'Analytics & overview',
   },
   {
     title: 'User Management',
     url: '/admin/users',
     icon: Users,
-    roles: ['admin'],
+    roles: ['owner', 'admin'],
     description: 'Manage users & roles',
   },
   {
     title: 'User Invitations',
     url: '/admin/invitations',
     icon: Mail,
-    roles: ['admin'],
+    roles: ['owner', 'admin'],
     description: 'Send & manage invitations',
   },
   {
     title: 'Events',
     url: '/admin/meetups',
     icon: Calendar,
-    roles: ['admin', 'manager'],
+    roles: ['owner', 'admin', 'manager'],
     description: 'Events & workshops',
   },
   {
     title: 'Content Library',
     url: '/admin/library',
     icon: BookOpen,
-    roles: ['admin', 'manager'],
+    roles: ['owner', 'admin', 'manager'],
     description: 'Resources & assets',
   },
 ];
@@ -66,28 +70,50 @@ interface AdminLayoutProps {
 function AdminSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { isManager, loading: managerLoading } = useIsManager();
+  const { loading, role, rank, isOwner, isAdmin, isManager } = useRolePermissions();
 
   const handleSignOut = async () => {
     await signOut();
   };
 
-  // Wait for both role checks to complete to prevent flickering
-  const isLoadingRoles = adminLoading || managerLoading;
+  const allowedMenuItems = useMemo(() => {
+    return adminMenuItems.filter((item) => {
+      const roles = item.roles as UserRole[];
+      if (!roles.length) return false;
+      const minRank = Math.min(...roles.map((allowed) => getRolePriority(allowed)));
+      return rank >= minRank;
+    });
+  }, [rank]);
 
-  // Determine user role for filtering navigation
-  const getCurrentRole = () => {
-    if (isLoadingRoles) return 'user'; // Default while loading
-    if (isAdmin) return 'admin';
-    if (isManager) return 'manager';
-    return 'user';
-  };
+  const badgeLabel = loading
+    ? 'Loading'
+    : isOwner
+      ? 'Owner'
+      : isAdmin
+        ? 'Admin'
+        : isManager
+          ? 'Manager'
+          : 'Member';
 
-  const currentRole = getCurrentRole();
+  const badgeVariant = isOwner || isAdmin ? 'destructive' : 'default';
 
-  // Filter menu items based on user role
-  const allowedMenuItems = adminMenuItems.filter((item) => item.roles.includes(currentRole));
+  const panelLabel = loading
+    ? 'Loading...'
+    : isOwner
+      ? 'Owner Panel'
+      : isAdmin
+        ? 'Admin Panel'
+        : isManager
+          ? 'Manager Panel'
+          : 'Member Area';
+
+  const accessDescription = loading
+    ? 'Checking role permissions...'
+    : isOwner || isAdmin
+      ? 'Complete control over all platform features'
+      : isManager
+        ? 'Event and content management privileges'
+        : 'View-only access';
 
   return (
     <Sidebar>
@@ -114,20 +140,19 @@ function AdminSidebar() {
             </Link>
             <h2 className="text-lg font-semibold text-primary">TrafficMENA</h2>
           </div>
-          {!isLoadingRoles && (
-            <Badge variant={isAdmin ? 'destructive' : 'default'} className="text-xs">
-              {isAdmin ? 'Admin' : 'Manager'}
+          {loading ? (
+            <div className="h-5 w-12 animate-pulse rounded bg-gray-200"></div>
+          ) : (
+            <Badge variant={badgeVariant} className="text-xs">
+              {badgeLabel}
             </Badge>
           )}
-          {isLoadingRoles && <div className="h-5 w-12 animate-pulse rounded bg-gray-200"></div>}
         </div>
         <p className="text-sm text-gray-600">{user?.email}</p>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>
-            {isLoadingRoles ? 'Loading...' : isAdmin ? 'Admin Panel' : 'Manager Panel'}
-          </SidebarGroupLabel>
+          <SidebarGroupLabel>{panelLabel}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {allowedMenuItems.map((item) => {
@@ -154,7 +179,7 @@ function AdminSidebar() {
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <div className="rounded-lg bg-muted/50 p-3 text-xs">
-              {isLoadingRoles ? (
+              {loading ? (
                 <div className="space-y-2">
                   <div className="h-3 w-full animate-pulse rounded bg-gray-200"></div>
                   <div className="h-3 w-3/4 animate-pulse rounded bg-gray-200"></div>
@@ -163,14 +188,8 @@ function AdminSidebar() {
                 <div className="flex items-start gap-2">
                   <Shield className="mt-0.5 h-4 w-4 shrink-0 text-primary-green" />
                   <div>
-                    <p className="font-medium text-foreground">
-                      {isAdmin ? 'Full Access' : 'Manager Access'}
-                    </p>
-                    <p className="mt-1 text-muted-foreground">
-                      {isAdmin
-                        ? 'Complete control over all platform features'
-                        : 'Event and content management privileges'}
-                    </p>
+                    <p className="font-medium text-foreground">{panelLabel}</p>
+                    <p className="mt-1 text-muted-foreground">{accessDescription}</p>
                   </div>
                 </div>
               )}
@@ -183,10 +202,7 @@ function AdminSidebar() {
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { isManager, loading: managerLoading } = useIsManager();
-  const { user } = useAuth();
-  const isLoadingRoles = adminLoading || managerLoading;
+  const { loading, isOwner, isAdmin, isManager } = useRolePermissions();
 
   return (
     <SidebarProvider>
@@ -197,7 +213,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
               <h1 className="text-xl font-semibold">
-                {isLoadingRoles ? 'Loading...' : isAdmin ? 'Admin Panel' : 'Manager Panel'}
+                {loading
+                  ? 'Loading...'
+                  : isOwner
+                    ? 'Owner Panel'
+                    : isAdmin
+                      ? 'Admin Panel'
+                      : isManager
+                        ? 'Manager Panel'
+                        : 'Dashboard'}
               </h1>
             </div>
             <UserProfileDropdown />

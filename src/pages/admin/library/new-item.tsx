@@ -11,7 +11,7 @@ const NewLibraryItemPage = () => {
   const createAsset = useCreateLibraryAsset();
 
   return (
-    <AdminProtectedRoute>
+    <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
       <AdminLayout>
         <Card className="mx-auto max-w-4xl">
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">

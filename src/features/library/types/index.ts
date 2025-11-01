@@ -120,7 +120,7 @@ export const ACCESS_LEVELS: {
 }[] = [
   { value: 'public', label: 'Public', color: 'bg-green-100 text-green-800' },
   {
-    value: 'member',
+    value: 'user',
     label: 'Members Only',
     color: 'bg-blue-100 text-blue-800',
   },

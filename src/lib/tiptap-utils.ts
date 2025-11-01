@@ -1,8 +1,9 @@
 import type { Node as TiptapNode } from '@tiptap/pm/model';
 import { NodeSelection, Selection, TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/react';
+import { uploadFile } from '@/app/api/uploads';
 
-export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB alignment with Bunny uploads
 
 export const MAC_SYMBOLS: Record<string, string> = {
   mod: '⌘',
@@ -281,17 +282,39 @@ export const handleImageUpload = async (
     throw new Error(`File size exceeds maximum allowed (${MAX_FILE_SIZE / (1024 * 1024)}MB)`);
   }
 
-  // For demo/testing: Simulate upload progress. In production, replace the following code
-  // with your own upload implementation.
-  for (let progress = 0; progress <= 100; progress += 10) {
-    if (abortSignal?.aborted) {
-      throw new Error('Upload cancelled');
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    onProgress?.({ progress });
+  if (abortSignal?.aborted) {
+    throw new Error('Upload cancelled');
   }
 
-  return '/images/tiptap-ui-placeholder-image.jpg';
+  let progress = 5;
+  let tickTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const scheduleProgress = () => {
+    if (!onProgress) return;
+    tickTimer = setTimeout(() => {
+      if (abortSignal?.aborted) return;
+      progress = Math.min(progress + 12, 90);
+      onProgress({ progress });
+      if (progress < 90) {
+        scheduleProgress();
+      }
+    }, 300);
+  };
+
+  if (onProgress) {
+    onProgress({ progress });
+    scheduleProgress();
+  }
+
+  try {
+    const { url } = await uploadFile({ file, scope: 'editor', signal: abortSignal });
+    onProgress?.({ progress: 100 });
+    return url;
+  } finally {
+    if (tickTimer) {
+      clearTimeout(tickTimer);
+    }
+  }
 };
 
 type ProtocolOptions = {

@@ -35,7 +35,7 @@ Removed for MVP scope: products/commerce and subscriptions.
 - **Frontend data access:** Use the helpers in `src/app/api/*` (`fetchJson`, typed fetchers). Do not reintroduce Supabase clients.  
 - **Auth & Sessions:** Better Auth handles session cookies via `/api/auth/otp/*`. OTP send/verify must continue to call the API with `credentials: 'include'`.  
 - **Database:** All schema changes flow through Drizzle SQL migrations in `server/migrations` (generated via Drizzle Kit).  
-- **Uploads:** `POST /api/uploads/image` pipes to BunnyCDN using credentials from `server/.env`.
+- **Uploads:** `POST /api/uploads` proxies files (<=20 MB) to BunnyCDN using credentials from `server/.env` (legacy `/api/uploads/image` remains as an alias).
 
 ---
 

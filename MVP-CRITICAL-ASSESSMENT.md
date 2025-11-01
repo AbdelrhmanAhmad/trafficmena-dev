@@ -29,7 +29,8 @@ What remains is polish and feature completion rather than foundational wiring. A
 | --- | --- | --- |
 | Frontend data layer | SPA called Supabase RPCs and client SDKs | SPA now uses `src/app/api/*` fetchers against Hono exclusively |
 | Events feature | Supabase services + duplicate descriptions | Uses `/api/events`; admin views are read-only while create/edit endpoints are scoped for later |
-| Library feature | Supabase hooks & mutations | Hooks call `/api/library`; admin deletion/create show MVP stubs until endpoints ship |
+| Library feature | Supabase hooks & mutations | Hooks call `/api/library`; admin create/edit/delete live with shared BunnyCDN upload (20 MB cap) |
+| RBAC | Admin-only guard | Tiered roles (owner/admin/manager/expert/member) enforced on API + SPA; managers limited to create/update |
 | Dashboard metrics | Supabase analytics service | Legacy widgets removed; awaiting lightweight replacement metrics |
 | Build dependencies | Bundled `@supabase/supabase-js` | Dependency removed from `package.json` / lockfile |
 
@@ -43,7 +44,7 @@ What remains is polish and feature completion rather than foundational wiring. A
 | Admin CRUD | Event and library dashboards now ship create/edit/delete flows backed by Hono. Runbook: `docs/admin-content-workflow.md`. | ✅ Done |
 | Analytics | Dashboard metric cards were tied to the Supabase analytics service. Decide whether to reintroduce lightweight stats via Hono or keep the cards hidden for MVP. | **High** |
 | QA & Telemetry | No automated regression tests or runtime monitoring. Need smoke tests for auth → events → library loop plus basic logging/alerting. | **High** |
-| Content Authoring | Library create/delete APIs are absent; mutations in hooks throw friendly errors. Implement endpoints or document that admin adds assets manually pre-launch. | **High** |
+| Content Authoring | Unified upload endpoint powers events/library/editor; backlog: automate Bunny cleanup when assets are deleted. | **Medium** |
 | Documentation | Architecture guides must emphasise the Hono/Drizzle workflow and remove Supabase references. | **Medium** |
 
 ---

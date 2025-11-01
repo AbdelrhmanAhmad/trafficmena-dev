@@ -1,13 +1,37 @@
 import { API_BASE } from './client';
 
-export async function uploadImage(file: File): Promise<{ url: string }> {
+export type UploadScope = 'events' | 'library' | 'editor' | 'general';
+
+export type UploadFileOptions = {
+  file: File;
+  scope?: UploadScope;
+  signal?: AbortSignal;
+};
+
+export type UploadFileResult = {
+  url: string;
+  path: string;
+  sizeBytes: number;
+  contentType: string;
+  scope: UploadScope;
+};
+
+export async function uploadFile({
+  file,
+  scope = 'events',
+  signal,
+}: UploadFileOptions): Promise<UploadFileResult> {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('scope', scope);
 
-  const response = await fetch(`${API_BASE}/uploads/image`, {
+  const endpoint = `${API_BASE}/uploads?scope=${encodeURIComponent(scope)}`;
+
+  const response = await fetch(endpoint, {
     method: 'POST',
     body: formData,
     credentials: 'include',
+    signal,
   });
 
   if (!response.ok) {
@@ -26,6 +50,6 @@ export async function uploadImage(file: File): Promise<{ url: string }> {
     throw new Error(message);
   }
 
-  const data = (await response.json()) as { url: string };
+  const data = (await response.json()) as UploadFileResult;
   return data;
 }

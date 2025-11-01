@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { checkEmailExists } from '@/app/api/users';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -13,6 +14,7 @@ const Step2: React.FC = () => {
   const [email, setEmail] = useState(formData.email);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const emailId = useId();
 
   const validateEmail = (value: string) => {
@@ -22,7 +24,7 @@ const Step2: React.FC = () => {
     return null;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const validationError = validateEmail(email);
     if (validationError) {
       setError(validationError);
@@ -30,8 +32,26 @@ const Step2: React.FC = () => {
     }
 
     setIsLoading(true);
-    updateFormData({ email: email.trim().toLowerCase() });
-    navigate('/signup/step-3');
+    setApiError(null);
+
+    const normalized = email.trim().toLowerCase();
+
+    try {
+      const { exists } = await checkEmailExists(normalized);
+      if (exists) {
+        setError('This email already has an account. Please sign in instead.');
+        setIsLoading(false);
+        return;
+      }
+
+      updateFormData({ email: normalized });
+      navigate('/signup/step-3');
+    } catch (requestError) {
+      console.warn('[signup] email validation failed', requestError);
+      setApiError('Unable to verify this email right now. Please try again in a moment.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleBack = () => {
@@ -65,11 +85,15 @@ const Step2: React.FC = () => {
               onChange={(event) => {
                 setEmail(event.target.value);
                 if (error) setError(null);
+                if (apiError) setApiError(null);
               }}
               placeholder="Enter your email"
-              className={`mt-1 rounded-xl border-neutral-200 ${error ? 'border-red-500' : ''}`}
+              className={`mt-1 rounded-xl border-neutral-200 ${
+                error || apiError ? 'border-red-500' : ''
+              }`}
             />
             {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+            {apiError && !error && <p className="mt-1 text-sm text-red-500">{apiError}</p>}
           </div>
 
           <Button

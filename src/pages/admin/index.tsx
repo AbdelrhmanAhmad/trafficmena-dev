@@ -90,7 +90,7 @@ const AdminDashboard: React.FC = () => {
   ];
 
   return (
-    <AdminProtectedRoute>
+    <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
       <AdminLayout>
         <div className="space-y-8">
           {/* Header Section */}

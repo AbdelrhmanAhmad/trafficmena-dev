@@ -14,6 +14,7 @@ type ApiLibraryAsset = {
   eventId: string | null;
   viewCount: number | null;
   downloadCount: number | null;
+  fileSizeBytes: number | null;
   createdAt: string;
 };
 
@@ -30,6 +31,7 @@ export type LibraryAssetRecord = {
   event_id: string | null;
   view_count: number;
   download_count: number;
+  file_size_bytes: number | null;
   created_at: string;
 };
 
@@ -46,6 +48,7 @@ const mapAsset = (asset: ApiLibraryAsset): LibraryAssetRecord => ({
   event_id: asset.eventId,
   view_count: Number(asset.viewCount ?? 0),
   download_count: Number(asset.downloadCount ?? 0),
+  file_size_bytes: asset.fileSizeBytes,
   created_at: asset.createdAt,
 });
 
@@ -65,6 +68,7 @@ export type CreateLibraryAssetPayload = {
   embedUrl?: string | null;
   embedType?: string | null;
   eventId?: string | null;
+  fileSizeBytes?: number | null;
 };
 
 export type UpdateLibraryAssetPayload = Partial<CreateLibraryAssetPayload>;

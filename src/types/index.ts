@@ -30,7 +30,7 @@ export interface UserProfile {
   last_name: string | null;
   email: string;
   phone_number: string | null;
-  role: 'user' | 'manager' | 'admin' | null;
+  role: 'user' | 'expert' | 'manager' | 'admin' | 'owner' | null;
   user_type?: 'learner' | 'expert' | null;
   subscription_status?: string | null;
   primary_goal?: string | null;
@@ -149,5 +149,5 @@ export type MeetupCore = EventCore;
 
 export interface UserFilters {
   search: string;
-  role?: 'all' | 'user' | 'manager' | 'admin';
+  role?: 'all' | 'user' | 'expert' | 'manager' | 'admin' | 'owner';
 }

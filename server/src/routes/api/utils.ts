@@ -5,6 +5,19 @@ import { db } from '../../db/client.js';
 import { profiles } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 
+export type UserRole = 'owner' | 'admin' | 'manager' | 'expert' | 'user';
+
+const ROLE_PRIORITY: Record<UserRole, number> = {
+  user: 0,
+  expert: 1,
+  manager: 2,
+  admin: 3,
+  owner: 4,
+};
+
+type RoleGuardSuccess = { userId: string; role: UserRole };
+type RoleGuardFailure = { response: Response };
+
 type NotImplementedOptions = {
   feature: string;
 };
@@ -64,9 +77,25 @@ export function getRequestIp(c: Context) {
   return 'unknown';
 }
 
-export async function requireAdmin(
+function normalizeRole(value: string | null | undefined): UserRole {
+  const normalized = (value ?? '').toLowerCase();
+  if (normalized === 'owner' || normalized === 'admin' || normalized === 'manager') {
+    return normalized;
+  }
+  if (normalized === 'expert') return 'expert';
+  if (normalized === 'member') return 'user';
+  return 'user';
+}
+
+function isRoleAllowed(role: UserRole, allowed: UserRole[]) {
+  return allowed.includes(role);
+}
+
+export async function requireRole(
   c: Context,
-): Promise<{ adminId: string } | { response: Response }> {
+  allowedRoles: UserRole[],
+  options?: { forbiddenMessage?: string },
+): Promise<RoleGuardSuccess | RoleGuardFailure> {
   const session = await getSessionFromRequest(c);
   if (!session || !session.user) {
     return {
@@ -88,13 +117,15 @@ export async function requireAdmin(
     .where(eq(profiles.id, session.user.id))
     .limit(1);
 
-  if ((record?.role ?? 'user') !== 'admin') {
+  const role = normalizeRole(record?.role ?? null);
+
+  if (!isRoleAllowed(role, allowedRoles)) {
     return {
       response: c.json(
         {
           error: {
             code: 'FORBIDDEN',
-            message: 'Admin privileges required.',
+            message: options?.forbiddenMessage ?? 'Insufficient permissions for this action.',
           },
         },
         403,
@@ -102,5 +133,19 @@ export async function requireAdmin(
     };
   }
 
-  return { adminId: session.user.id };
+  return { userId: session.user.id, role };
+}
+
+export async function requireAdmin(c: Context): Promise<RoleGuardSuccess | RoleGuardFailure> {
+  return requireRole(c, ['owner', 'admin'], { forbiddenMessage: 'Admin privileges required.' });
+}
+
+export async function requireManager(c: Context): Promise<RoleGuardSuccess | RoleGuardFailure> {
+  return requireRole(c, ['owner', 'admin', 'manager'], {
+    forbiddenMessage: 'Manager or admin privileges required.',
+  });
+}
+
+export function getRolePriority(role: UserRole): number {
+  return ROLE_PRIORITY[role];
 }

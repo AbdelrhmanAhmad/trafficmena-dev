@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import type React from 'react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
@@ -9,7 +9,7 @@ import { Label } from '@/shared/components/ui/label';
 
 const Step1: React.FC = () => {
   const navigate = useNavigate();
-  const { formData, updateFormData } = useSignUpContext();
+  const { formData, updateFormData, setCurrentStep: setSignUpCurrentStep } = useSignUpContext();
   const [firstName, setFirstName] = useState(formData.firstName);
   const [lastName, setLastName] = useState(formData.lastName);
   const firstNameId = useId();
@@ -19,6 +19,10 @@ const Step1: React.FC = () => {
     firstName?: string;
     lastName?: string;
   }>({});
+
+  useEffect(() => {
+    setSignUpCurrentStep(1);
+  }, [setSignUpCurrentStep]);
 
   const validateName = (name: string, field: string): string | undefined => {
     if (!name.trim()) return `${field} is required`;

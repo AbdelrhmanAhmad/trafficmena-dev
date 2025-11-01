@@ -86,6 +86,8 @@ export type AdminUsersResponse = {
   };
 };
 
+export type UserRoleValue = 'owner' | 'admin' | 'manager' | 'expert' | 'user';
+
 export async function fetchCurrentUser(): Promise<CurrentUserResponse> {
   const data = await fetchJson<ApiUsersMeResponse>(`${API_BASE}/users/me`, {
     method: 'GET',
@@ -124,6 +126,11 @@ export async function fetchUsersAdmin(
   };
 }
 
+export async function checkEmailExists(email: string): Promise<{ exists: boolean }> {
+  const params = new URLSearchParams({ email });
+  return fetchJson<{ exists: boolean }>(`${API_BASE}/users/email-exists?${params.toString()}`);
+}
+
 export type UpdateCurrentUserPayload = Partial<{
   name: string;
   first_name: string;
@@ -150,5 +157,36 @@ export async function updateCurrentUser(
   return fetchJson<{ success: boolean; message?: string }>(`${API_BASE}/users/me`, {
     method: 'PUT',
     body: JSON.stringify(body),
+  });
+}
+
+export async function updateUserRole(
+  userId: string,
+  role: UserRoleValue,
+): Promise<{ success: boolean; user: AdminUserRecord }> {
+  const response = await fetchJson<{
+    success: boolean;
+    user: ApiAdminUser;
+  }>(`${API_BASE}/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ role }),
+  });
+
+  return {
+    success: response.success,
+    user: {
+      id: response.user.id,
+      email: response.user.email,
+      name: response.user.name,
+      created_at: response.user.createdAt,
+      role: response.user.role,
+      user_type: response.user.userType,
+    },
+  };
+}
+
+export async function deleteUser(userId: string): Promise<{ success: boolean }> {
+  return fetchJson<{ success: boolean }>(`${API_BASE}/users/${userId}`, {
+    method: 'DELETE',
   });
 }

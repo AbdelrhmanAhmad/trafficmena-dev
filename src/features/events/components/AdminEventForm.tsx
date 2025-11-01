@@ -5,7 +5,7 @@ import { type ChangeEvent, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { CreateEventPayload, EventDetailRecord } from '@/app/api/events';
-import { uploadImage } from '@/app/api/uploads';
+import { uploadFile } from '@/app/api/uploads';
 import { SimpleEditorWrapper } from '@/shared/components/SimpleEditorWrapper';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -68,6 +69,7 @@ type AdminEventFormProps = {
   isSubmitting?: boolean;
   onDelete?: () => Promise<void>;
   isDeleting?: boolean;
+  canDelete?: boolean;
 };
 
 function toDateTimeLocalString(input: string | Date | undefined) {
@@ -106,6 +108,7 @@ export function AdminEventForm({
   isSubmitting,
   onDelete,
   isDeleting,
+  canDelete = true,
 }: AdminEventFormProps) {
   const defaultValues: AdminEventFormValues = {
     title: event?.title ?? '',
@@ -161,7 +164,7 @@ export function AdminEventForm({
     setUploadError(null);
     setIsUploadingImage(true);
     try {
-      const { url } = await uploadImage(file);
+      const { url } = await uploadFile({ file, scope: 'events' });
       form.setValue('imageUrl', url, { shouldDirty: true, shouldTouch: true });
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : 'Image upload failed.');
@@ -322,6 +325,7 @@ export function AdminEventForm({
                         </div>
                       </FormControl>
                       {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
+                      <FormDescription>JPEG, PNG, WebP, or AVIF up to 20&nbsp;MB.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -437,7 +441,7 @@ export function AdminEventForm({
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : submitLabel}
               </Button>
-              {onDelete ? (
+              {onDelete && canDelete ? (
                 <Button
                   type="button"
                   variant="destructive"

@@ -10,8 +10,8 @@
 - ✅ SPA now talks exclusively to the Hono API (`/api/auth/otp/*`, `/api/events`, `/api/library`, `/api/users/me`).
 - ✅ Legacy Supabase hooks/services removed; `@supabase/supabase-js` eliminated from dependencies.
 - ✅ Events and library views (member + admin read scenarios) are API-driven; admin invitations screen now lists live send/accept status.
-- ✅ Invitation create/list APIs (single + CSV) plus `/api/invitations/:token/(accept|activate)` ship, provisioning Better Auth users, firing OTP automatically, and reflecting activation in the admin UI. Bulk CSV importer now respects quoted fields/headers and validates emails to prevent phantom rows from custom messages.
-- 🚧 Outstanding: admin CRUD parity, dashboard metrics decision, smoke-test coverage, and production logging.
+- ✅ Unified BunnyCDN upload flow serves events, library assets, and TipTap images (20 MB cap) with shared API + client helpers; admin deletions update immediately.
+- 🚧 Outstanding: invitation activation loop, dashboard metrics decision, smoke-test coverage, production logging, and Bunny asset cleanup guidance.
 
 **Launch Target:** Immediately after the remaining feature and QA tasks reach "done" (estimated 3–4 focused engineering days).
 
@@ -22,12 +22,14 @@
 | Priority | Item | Owner | Notes |
 | --- | --- | --- | --- |
 | 🟢 | Simplify invitation flow (single + CSV) | Backend/Frontend | Single-send + CSV upload live; admin UI documents daily limit + manual fallback |
-| ✅ | Admin CRUD path locked to manual seeding | Product/Eng | MVP keeps event/library creation manual; UI now points to CLI instructions below |
+| ✅ | Admin CRUD path locked to manual seeding | Product/Eng | SPA create/edit/delete flows live; SQL fallback retained as break-glass |
 | 🟠 | Provide lightweight dashboard metrics or remove cards | Product/Eng | Metrics grid hidden for MVP; backlog `/api/admin/metrics` to reinstate cards |
 | 🟠 | Add end-to-end smoke test (signup → register → library) | QA/Frontend | Playwright/Cypress acceptable; run in CI |
 | 🟠 | Enable request/error logging on Hono server | Backend | pino + stdout rotation for Hetzner deployment |
 | 🟢 | Admin CRUD workflow live | Product/Eng | Dashboard create/edit/delete shipped; runbook in `docs/admin-content-workflow.md` |
 | 🟢 | Update documentation & runbooks | Eng Enablement | Sync INVESTIGATION-RESULTS, warp-reviewed-plan, AGENTS, README-local-db |
+| 🟠 | Close the invitation activation loop | Backend/Frontend | Ensure accepted invites auto-create Better Auth sessions + dashboard confirmation |
+| 🟡 | Plan BunnyCDN asset pruning | Platform | Decide on manual vs automated cleanup for deleted library files |
 
 ---
 
@@ -40,8 +42,8 @@
 - ➡️ Monitor daily limit feedback and adjust thresholds if operators hit the guardrail.
 
 ### Phase B – Admin Workflow Decision (0.5 day)
-- ✅ Decision: keep creation flows in the SPA now that the Hono endpoints are live.  
-- Admins can add/edit/delete events and assets directly; fallback SQL snippets live in the runbook for emergencies.
+- ✅ Decision: keep creation flows in the SPA now that the Hono endpoints are live.
+- Admins can add/edit/delete events and assets directly; runbook covers Bunny uploads and retains SQL snippets for emergencies.
 
 ### Operational Runbook – Events & Library (MVP)
 - Primary workflow documented in `docs/admin-content-workflow.md` (prep checklist, form guidance, QA steps).
@@ -76,6 +78,8 @@
 - Admin invitations experience simplified (single invite + CSV upload); acceptance endpoint provisions members and dispatches OTP automatically.
 - Invitation bulk uploader now handles quoted/custom-message rows correctly and surfaces per-line validation errors.
 - Admin dashboard now surfaces lightweight stats and CSV guidance without the legacy telemetry stack.
+- Unified uploads route pipes events/library/editor files to BunnyCDN (20 MB cap) with shared SPA helper.
+- RBAC tightened: Owner/Admin/Manager/Expert/User roles enforced across API + SPA (managers = create/update only).
 
 ---
 

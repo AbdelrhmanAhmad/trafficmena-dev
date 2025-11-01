@@ -3,7 +3,7 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { libraryAssets } from '../../db/schema/index.js';
-import { requireAdmin } from './utils.js';
+import { requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -29,6 +29,12 @@ const assetObjectSchema = z.object({
   embedUrl: urlSchema,
   embedType: optionalShortString,
   eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
+  fileSizeBytes: z
+    .union([z.number().int().min(0), z.null()])
+    .optional()
+    .refine((value) => value == null || value <= 20 * 1024 * 1024, {
+      message: 'File size must be 20 MB or less.',
+    }),
 });
 
 const createAssetSchema = assetObjectSchema.superRefine((payload, ctx) => {
@@ -122,6 +128,7 @@ export function registerLibraryRoutes(app: Hono) {
         eventId: libraryAssets.eventId,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
+        fileSizeBytes: libraryAssets.fileSizeBytes,
         createdAt: libraryAssets.createdAt,
       })
       .from(libraryAssets);
@@ -160,6 +167,7 @@ export function registerLibraryRoutes(app: Hono) {
         eventId: libraryAssets.eventId,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
+        fileSizeBytes: libraryAssets.fileSizeBytes,
         createdAt: libraryAssets.createdAt,
       })
       .from(libraryAssets)
@@ -182,8 +190,8 @@ export function registerLibraryRoutes(app: Hono) {
   });
 
   app.post('/library', async (c) => {
-    const admin = await requireAdmin(c);
-    if ('response' in admin) return admin.response;
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
 
     const body = await c.req.json().catch(() => ({}));
     const parsed = createAssetSchema.safeParse(body);
@@ -214,6 +222,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedUrl: payload.embedUrl ?? null,
         embedType: payload.embedType ?? null,
         eventId: payload.eventId ?? null,
+        fileSizeBytes: payload.fileSizeBytes ?? null,
       })
       .returning({
         id: libraryAssets.id,
@@ -228,6 +237,7 @@ export function registerLibraryRoutes(app: Hono) {
         eventId: libraryAssets.eventId,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
+        fileSizeBytes: libraryAssets.fileSizeBytes,
         createdAt: libraryAssets.createdAt,
       });
 
@@ -235,8 +245,8 @@ export function registerLibraryRoutes(app: Hono) {
   });
 
   app.put('/library/:id', async (c) => {
-    const admin = await requireAdmin(c);
-    if ('response' in admin) return admin.response;
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
 
     const id = c.req.param('id');
     const body = await c.req.json().catch(() => ({}));
@@ -265,6 +275,8 @@ export function registerLibraryRoutes(app: Hono) {
     if (updates.embedUrl !== undefined) updateValues.embedUrl = updates.embedUrl ?? null;
     if (updates.embedType !== undefined) updateValues.embedType = updates.embedType ?? null;
     if (updates.eventId !== undefined) updateValues.eventId = updates.eventId ?? null;
+    if (updates.fileSizeBytes !== undefined)
+      updateValues.fileSizeBytes = updates.fileSizeBytes ?? null;
 
     const fileUrlCandidate =
       updates.documentUrl !== undefined
@@ -300,6 +312,7 @@ export function registerLibraryRoutes(app: Hono) {
         eventId: libraryAssets.eventId,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
+        fileSizeBytes: libraryAssets.fileSizeBytes,
         createdAt: libraryAssets.createdAt,
       });
 

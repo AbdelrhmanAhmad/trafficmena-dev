@@ -1,6 +1,6 @@
 import { ChevronLeft } from 'lucide-react';
 import type React from 'react';
-import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/shared/components/layout/Header';
 import { Button } from '@/shared/components/ui/button';
@@ -35,14 +35,28 @@ interface SignUpContextType {
   updateFormData: (data: Partial<SignUpFormData>) => void;
   currentStep: number;
   setCurrentStep: (step: number) => void;
+  resetForm: () => void;
 }
 
 // Create context
 const SignUpContext = createContext<SignUpContextType | undefined>(undefined);
 
 // LocalStorage key for form data persistence
-const FORM_DATA_KEY = 'signup_form_data';
-const CURRENT_STEP_KEY = 'signup_current_step';
+export const SIGNUP_FORM_DATA_KEY = 'signup_form_data';
+export const SIGNUP_CURRENT_STEP_KEY = 'signup_current_step';
+
+const DEFAULT_FORM_DATA: SignUpFormData = {
+  firstName: '',
+  lastName: '',
+  phoneNumber: '',
+  email: '',
+  password: '',
+  primaryGoal: '',
+  primaryChallenge: '',
+  loginMethod: undefined,
+  invitationToken: undefined,
+  invitationUserId: undefined,
+};
 
 // Custom hook to use the context
 export const useSignUpContext = () => {
@@ -145,29 +159,19 @@ const SignUpLayout: React.FC<SignUpLayoutProps> = ({
 export const SignUpProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Load initial form data from localStorage with error handling
   const getInitialFormData = (): SignUpFormData => {
-    const result = getLocalStorageItem<SignUpFormData>(FORM_DATA_KEY);
+    const result = getLocalStorageItem<SignUpFormData>(SIGNUP_FORM_DATA_KEY);
 
     if (result.success && result.data) {
       return result.data;
     }
 
     // Return default values if localStorage fails
-    return {
-      firstName: '',
-      lastName: '',
-      phoneNumber: '',
-      email: '',
-      password: '',
-      primaryGoal: '',
-      primaryChallenge: '',
-      loginMethod: undefined,
-      invitationUserId: undefined,
-    };
+    return { ...DEFAULT_FORM_DATA };
   };
 
   // Load initial step from localStorage with error handling
   const getInitialStep = (): number => {
-    const result = getLocalStorageItem<number>(CURRENT_STEP_KEY, 1);
+    const result = getLocalStorageItem<number>(SIGNUP_CURRENT_STEP_KEY, 1);
 
     if (result.success && result.data !== undefined) {
       return result.data;
@@ -181,7 +185,7 @@ export const SignUpProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Save form data to localStorage whenever it changes
   useEffect(() => {
-    const result = setLocalStorageItem(FORM_DATA_KEY, formData);
+    const result = setLocalStorageItem(SIGNUP_FORM_DATA_KEY, formData);
     if (!result.success && result.error) {
       // Silently handle localStorage errors - the app should continue to work
     }
@@ -189,7 +193,7 @@ export const SignUpProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Save current step to localStorage whenever it changes
   useEffect(() => {
-    const result = setLocalStorageItem(CURRENT_STEP_KEY, currentStep);
+    const result = setLocalStorageItem(SIGNUP_CURRENT_STEP_KEY, currentStep);
     if (!result.success && result.error) {
       // Silently handle localStorage errors
     }
@@ -199,11 +203,12 @@ export const SignUpProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setFormData((prev) => ({ ...prev, ...data }));
   };
 
-  // Clear localStorage on successful completion
-  const clearFormData = () => {
-    removeLocalStorageItem(FORM_DATA_KEY);
-    removeLocalStorageItem(CURRENT_STEP_KEY);
-  };
+  const resetForm = useCallback(() => {
+    setFormData({ ...DEFAULT_FORM_DATA });
+    setCurrentStep(1);
+    removeLocalStorageItem(SIGNUP_FORM_DATA_KEY);
+    removeLocalStorageItem(SIGNUP_CURRENT_STEP_KEY);
+  }, []);
 
   return (
     <SignUpContext.Provider
@@ -212,6 +217,7 @@ export const SignUpProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         updateFormData,
         currentStep,
         setCurrentStep,
+        resetForm,
       }}
     >
       {children}

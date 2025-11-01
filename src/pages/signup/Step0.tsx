@@ -15,8 +15,12 @@ const Step0: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
-  const { formData, updateFormData } = useSignUpContext();
+  const { formData, updateFormData, resetForm } = useSignUpContext();
   const [isLoading, setIsLoading] = useState(false);
+  useEffect(() => {
+    resetForm();
+  }, [resetForm]);
+
   const [eventContext, setEventContext] = useState(getPendingEventContext());
   const [acceptanceDetails] = useState<{
     token: string;

@@ -3,11 +3,13 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
 import LibraryGrid from '@/features/library/components/LibraryGrid';
+import { useDeleteLibraryAsset } from '@/features/library/hooks/useLibrary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 
 // Bug #14 Fix: Replace mock data with actual database queries
 interface LibraryItem {
@@ -30,6 +32,8 @@ interface LibraryItem {
 function LibraryManagement() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const deleteMutation = useDeleteLibraryAsset();
+  const { canManageContent, canDeleteContent, loading: roleLoading } = useRolePermissions();
 
   // Query library assets (first 50 items; API caps pageSize at 50).
   const { data: assetsData, isLoading, isError, error } = useLibraryList(1, 50);
@@ -80,11 +84,39 @@ function LibraryManagement() {
     }
   };
 
-  const handleDelete = (_itemId: string | number) => {
-    toast({
-      title: 'Not Available',
-      description: 'Deleting assets will return once the new API endpoints are ready.',
-    });
+  const handleDelete = (itemId: string | number) => {
+    if (!canDeleteContent) {
+      toast({
+        title: 'Insufficient permissions',
+        description: 'Only owners and admins can delete library assets.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (deleteMutation.isPending) {
+      toast({
+        title: 'Please wait',
+        description: 'Deleting the selected asset…',
+      });
+      return;
+    }
+
+    const id = String(itemId).trim();
+
+    if (!id || id === 'undefined' || id === 'null') {
+      toast({
+        title: 'Error',
+        description: 'Invalid item ID',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const confirmed = window.confirm('Remove this library asset for all members?');
+    if (!confirmed) return;
+
+    deleteMutation.mutate(id);
   };
 
   const handleAddNew = () => {
@@ -93,7 +125,7 @@ function LibraryManagement() {
 
   if (isLoading) {
     return (
-      <AdminProtectedRoute>
+      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
         <AdminLayout>
           <LoadingSpinner size="lg" text="Loading library items..." />
         </AdminLayout>
@@ -102,7 +134,7 @@ function LibraryManagement() {
   }
 
   return (
-    <AdminProtectedRoute>
+    <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
       <AdminLayout>
         <div className="space-y-6">
           {/* Page Header */}
@@ -114,7 +146,11 @@ function LibraryManagement() {
               </p>
             </div>
 
-            <Button onClick={handleAddNew} className="flex items-center gap-2">
+            <Button
+              onClick={handleAddNew}
+              className="flex items-center gap-2"
+              disabled={!canManageContent || roleLoading}
+            >
               <PlusCircle className="h-4 w-4" />
               Add asset
             </Button>
@@ -125,8 +161,10 @@ function LibraryManagement() {
             <LibraryGrid
               items={transformedItems}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={canDeleteContent ? handleDelete : undefined}
               onAddNew={handleAddNew}
+              canManage={canManageContent}
+              canDelete={canDeleteContent}
             />
           </div>
         </div>

@@ -35,6 +35,7 @@ No new critical vulnerabilities were discovered after the Supabase client remova
 | Hono endpoints | `/api/events`, `/api/library`, `/api/users/me`, `/api/invitations` live (accept + activate provision users, log activity, send OTP) |
 | Database | Drizzle migrations (0000–0002) applied to local Postgres 17.6; runtime uses `trafficmena_app` role |
 | Supabase | SDK removed; repository no longer ships Supabase migrations or types |
+| Profile provisioning | `0005_profile_backfill` plus runtime upsert guarantees every session has a profile row, so edit-profile no longer renders empty states |
 | Logging | Basic console logging; needs production-friendly logger/rotation before launch |
 
 ---

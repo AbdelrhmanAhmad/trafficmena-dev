@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { eventAttendees, events } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { requireAdmin } from './utils.js';
+import { requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -252,8 +252,8 @@ export function registerEventRoutes(app: Hono) {
   });
 
   app.post('/events', async (c) => {
-    const admin = await requireAdmin(c);
-    if ('response' in admin) return admin.response;
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
 
     const body = await c.req.json().catch(() => ({}));
     const parsed = createEventSchema.safeParse(body);
@@ -308,8 +308,8 @@ export function registerEventRoutes(app: Hono) {
   });
 
   app.put('/events/:id', async (c) => {
-    const admin = await requireAdmin(c);
-    if ('response' in admin) return admin.response;
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
 
     const eventId = c.req.param('id');
     const body = await c.req.json().catch(() => ({}));
