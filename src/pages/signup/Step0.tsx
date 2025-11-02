@@ -1,8 +1,9 @@
 import { format } from 'date-fns';
 import { Calendar, Loader2 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { acceptInvitation } from '@/app/api/invitations';
 import Header from '@/shared/components/layout/Header';
 import { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Badge } from '@/shared/components/ui/badge';
@@ -10,6 +11,25 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getPendingEventContext } from '@/shared/utils/eventRedirectUtils';
+
+const ACCEPTANCE_CACHE_KEY = 'trafficmena:invitation-acceptance';
+const AUTO_ACCEPT_META_KEY = 'trafficmena:invitation-autoaccept-meta';
+const AUTO_ACCEPT_COOLDOWN_MS = 5 * 60 * 1000;
+const AUTO_CONTINUE_FLAG_KEY = 'trafficmena:invitation-auto-continue';
+
+type AcceptanceDetails = {
+  token: string;
+  invitationId: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  userId?: string;
+};
+
+type AutoAcceptMeta = {
+  token: string;
+  timestamp: number;
+};
 
 const Step0: React.FC = () => {
   const navigate = useNavigate();
@@ -22,16 +42,9 @@ const Step0: React.FC = () => {
   }, [resetForm]);
 
   const [eventContext, setEventContext] = useState(getPendingEventContext());
-  const [acceptanceDetails] = useState<{
-    token: string;
-    invitationId: string;
-    email: string;
-    firstName?: string | null;
-    lastName?: string | null;
-    userId?: string;
-  } | null>(() => {
+  const [acceptanceDetails, setAcceptanceDetails] = useState<AcceptanceDetails | null>(() => {
     if (typeof window === 'undefined') return null;
-    const raw = sessionStorage.getItem('trafficmena:invitation-acceptance');
+    const raw = sessionStorage.getItem(ACCEPTANCE_CACHE_KEY);
     if (!raw) return null;
     try {
       return JSON.parse(raw);
@@ -42,26 +55,50 @@ const Step0: React.FC = () => {
   });
 
   const invitationToken = searchParams.get('invitation');
+  const invitationEmailParam = searchParams.get('email')?.toLowerCase() ?? null;
+  const invitationFirstNameParam = searchParams.get('firstName') ?? null;
+  const invitationLastNameParam = searchParams.get('lastName') ?? null;
 
   useEffect(() => {
     if (!invitationToken) return;
     updateFormData({ invitationToken });
 
-    if (!acceptanceDetails || acceptanceDetails.token !== invitationToken) {
-      return;
-    }
-
     const next: Partial<typeof formData> = {};
     if (!formData.email) {
-      next.email = acceptanceDetails.email;
+      if (acceptanceDetails && acceptanceDetails.token === invitationToken) {
+        next.email = acceptanceDetails.email;
+      } else if (invitationEmailParam) {
+        next.email = invitationEmailParam;
+      }
     }
-    if (!formData.firstName && acceptanceDetails.firstName) {
-      next.firstName = acceptanceDetails.firstName;
+    if (!formData.firstName) {
+      if (
+        acceptanceDetails &&
+        acceptanceDetails.token === invitationToken &&
+        acceptanceDetails.firstName
+      ) {
+        next.firstName = acceptanceDetails.firstName;
+      } else if (invitationFirstNameParam) {
+        next.firstName = invitationFirstNameParam;
+      }
     }
-    if (!formData.lastName && acceptanceDetails.lastName) {
-      next.lastName = acceptanceDetails.lastName;
+    if (!formData.lastName) {
+      if (
+        acceptanceDetails &&
+        acceptanceDetails.token === invitationToken &&
+        acceptanceDetails.lastName
+      ) {
+        next.lastName = acceptanceDetails.lastName;
+      } else if (invitationLastNameParam) {
+        next.lastName = invitationLastNameParam;
+      }
     }
-    if (!formData.invitationUserId && acceptanceDetails.userId) {
+    if (
+      !formData.invitationUserId &&
+      acceptanceDetails &&
+      acceptanceDetails.token === invitationToken &&
+      acceptanceDetails.userId
+    ) {
       next.invitationUserId = acceptanceDetails.userId;
     }
 
@@ -74,6 +111,9 @@ const Step0: React.FC = () => {
     formData.firstName,
     formData.invitationUserId,
     formData.lastName,
+    invitationEmailParam,
+    invitationFirstNameParam,
+    invitationLastNameParam,
     invitationToken,
     updateFormData,
   ]);
@@ -84,12 +124,143 @@ const Step0: React.FC = () => {
     }
   }, [loading, user, navigate]);
 
-  const handleEmailSignUp = () => {
+  const persistAcceptance = useCallback((details: AcceptanceDetails) => {
+    setAcceptanceDetails(details);
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(ACCEPTANCE_CACHE_KEY, JSON.stringify(details));
+    } catch (error) {
+      console.warn('[signup] unable to cache invitation acceptance', error);
+    }
+  }, []);
+
+  const runAutoAcceptIfNeeded = useCallback(async () => {
+    if (!invitationToken) return;
+    if (acceptanceDetails?.invitationId) return;
+
+    const emailForAcceptance =
+      invitationEmailParam ?? acceptanceDetails?.email ?? formData.email?.toLowerCase() ?? null;
+
+    if (!emailForAcceptance) {
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        const rawMeta = sessionStorage.getItem(AUTO_ACCEPT_META_KEY);
+        if (rawMeta) {
+          const meta = JSON.parse(rawMeta) as AutoAcceptMeta;
+          if (
+            meta.token === invitationToken &&
+            Date.now() - meta.timestamp < AUTO_ACCEPT_COOLDOWN_MS
+          ) {
+            return;
+          }
+        }
+        sessionStorage.setItem(
+          AUTO_ACCEPT_META_KEY,
+          JSON.stringify({ token: invitationToken, timestamp: Date.now() }),
+        );
+      } catch (error) {
+        console.warn('[signup] unable to persist auto-accept meta', error);
+      }
+    }
+
+    try {
+      const response = await acceptInvitation({
+        token: invitationToken,
+        email: emailForAcceptance,
+        firstName:
+          acceptanceDetails?.firstName ??
+          invitationFirstNameParam ??
+          formData.firstName ??
+          undefined,
+        lastName:
+          acceptanceDetails?.lastName ?? invitationLastNameParam ?? formData.lastName ?? undefined,
+      });
+
+      const stored: AcceptanceDetails = {
+        token: invitationToken,
+        invitationId: response.invitation.id,
+        email: response.invitation.email,
+        firstName: response.invitation.firstName,
+        lastName: response.invitation.lastName,
+        userId: response.userId,
+      };
+
+      persistAcceptance(stored);
+
+      const nextUpdates: Partial<typeof formData> = {
+        invitationToken,
+      };
+
+      if (stored.userId) {
+        nextUpdates.invitationUserId = stored.userId;
+      }
+
+      if (!formData.email || formData.email.toLowerCase() !== stored.email.toLowerCase()) {
+        nextUpdates.email = stored.email;
+      }
+
+      if (!formData.firstName && stored.firstName) {
+        nextUpdates.firstName = stored.firstName;
+      }
+
+      if (!formData.lastName && stored.lastName) {
+        nextUpdates.lastName = stored.lastName;
+      }
+
+      if (Object.keys(nextUpdates).length > 0) {
+        updateFormData(nextUpdates);
+      }
+    } catch (error) {
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.removeItem(AUTO_ACCEPT_META_KEY);
+        } catch (storageError) {
+          console.warn('[signup] cleanup auto-accept meta failed', storageError);
+        }
+      }
+      console.warn('[signup] auto invitation acceptance failed', error);
+    }
+  }, [
+    acceptanceDetails,
+    formData.email,
+    formData.firstName,
+    formData.lastName,
+    invitationEmailParam,
+    invitationFirstNameParam,
+    invitationLastNameParam,
+    invitationToken,
+    persistAcceptance,
+    updateFormData,
+  ]);
+
+  const handleEmailSignUp = useCallback(async () => {
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await runAutoAcceptIfNeeded();
       navigate('/signup/step-1');
-    }, 150);
-  };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [navigate, runAutoAcceptIfNeeded]);
+
+  useEffect(() => {
+    if (!invitationToken) return;
+    if (!acceptanceDetails?.invitationId) return;
+    if (typeof window === 'undefined') return;
+
+    try {
+      const shouldAutoContinue = sessionStorage.getItem(AUTO_CONTINUE_FLAG_KEY);
+      if (shouldAutoContinue === '1') {
+        sessionStorage.removeItem(AUTO_CONTINUE_FLAG_KEY);
+        void handleEmailSignUp();
+      }
+    } catch (error) {
+      console.warn('[signup] auto-continue handshake failed', error);
+    }
+  }, [acceptanceDetails?.invitationId, handleEmailSignUp, invitationToken]);
 
   return (
     <div className="relative isolate min-h-screen overflow-hidden bg-neutral-50">

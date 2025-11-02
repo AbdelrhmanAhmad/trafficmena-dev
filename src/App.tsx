@@ -11,6 +11,7 @@ import Meetups from '@/features/events/pages/Meetups';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
+import { SignUpGuard } from '@/shared/components/layout/SignUpGuard';
 import { SignUpProvider } from '@/shared/components/layout/SignUpLayout';
 import { Toaster as Sonner } from '@/shared/components/ui/sonner';
 import { Toaster } from '@/shared/components/ui/toaster';
@@ -23,11 +24,13 @@ import LibraryManagement from './pages/admin/library';
 import AdminLibraryItemDetail from './pages/admin/library/[id]';
 import EditLibraryItem from './pages/admin/library/edit-item';
 import NewLibraryItem from './pages/admin/library/new-item';
+import AdminSettingsPage from './pages/admin/settings';
 import UserManagement from './pages/admin/users';
 import CommunityComingSoon from './pages/Community';
 import Dashboard from './pages/Dashboard';
 import DashboardLibrary from './pages/DashboardLibrary';
 import Index from './pages/Index';
+import InviteOnlyPage from './pages/InviteOnly';
 import InvitationAcceptancePage from './pages/invitation/[token]';
 import LibraryComingSoon from './pages/Library';
 import LibraryItemDetail from './pages/LibraryItemDetail';
@@ -109,6 +112,14 @@ const App = () => {
                   element={
                     <ErrorBoundary>
                       <CommunityComingSoon />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/invite-only"
+                  element={
+                    <ErrorBoundary>
+                      <InviteOnlyPage />
                     </ErrorBoundary>
                   }
                 />
@@ -225,6 +236,16 @@ const App = () => {
                   }
                 />
                 <Route
+                  path="/admin/settings"
+                  element={
+                    <AdminProtectedRoute>
+                      <ErrorBoundary>
+                        <AdminSettingsPage />
+                      </ErrorBoundary>
+                    </AdminProtectedRoute>
+                  }
+                />
+                <Route
                   path="/admin/users"
                   element={
                     <AdminProtectedRoute>
@@ -336,17 +357,19 @@ const App = () => {
                   path="/signup/*"
                   element={
                     <ErrorBoundary>
-                      <SignUpProvider>
-                        <Routes>
-                          <Route index element={<Step0 />} />
-                          <Route path="step-1" element={<Step1 />} />
-                          <Route path="step-2" element={<Step2 />} />
-                          <Route path="step-3" element={<Step3 />} />
-                          <Route path="step-4" element={<Step4 />} />
-                          <Route path="step-5" element={<Step5 />} />
-                          <Route path="check-email" element={<CheckEmail />} />
-                        </Routes>
-                      </SignUpProvider>
+                      <SignUpGuard>
+                        <SignUpProvider>
+                          <Routes>
+                            <Route index element={<Step0 />} />
+                            <Route path="step-1" element={<Step1 />} />
+                            <Route path="step-2" element={<Step2 />} />
+                            <Route path="step-3" element={<Step3 />} />
+                            <Route path="step-4" element={<Step4 />} />
+                            <Route path="step-5" element={<Step5 />} />
+                            <Route path="check-email" element={<CheckEmail />} />
+                          </Routes>
+                        </SignUpProvider>
+                      </SignUpGuard>
                     </ErrorBoundary>
                   }
                 />

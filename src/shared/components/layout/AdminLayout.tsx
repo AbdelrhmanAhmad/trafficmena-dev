@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, Calendar, Mail, Shield, Users } from 'lucide-react';
+import { BarChart3, BookOpen, Calendar, Mail, Settings, Shield, Users } from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -32,6 +32,13 @@ const adminMenuItems = [
     icon: BarChart3,
     roles: ['owner', 'admin', 'manager'],
     description: 'Analytics & overview',
+  },
+  {
+    title: 'General Settings',
+    url: '/admin/settings',
+    icon: Settings,
+    roles: ['owner', 'admin'],
+    description: 'Control platform access',
   },
   {
     title: 'User Management',

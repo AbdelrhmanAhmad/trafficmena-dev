@@ -200,6 +200,13 @@ export const userActivities = pgTable(
   }),
 );
 
+export const platformSettings = pgTable('platform_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  inviteOnlySignup: boolean('invite_only_signup').notNull().default(false),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+});
+
 export const assetViews = pgTable(
   'asset_views',
   {

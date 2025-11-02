@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -53,6 +53,13 @@ export function registerInvitationRoutes(app: Hono) {
       return c.json(await fetchInvitations(params));
     }),
   );
+  app.get(
+    '/invitations/stats',
+    adminRoute(async (c) => {
+      const stats = await fetchInvitationStats();
+      return c.json({ stats });
+    }),
+  );
 
   app.post(
     '/invitations/single',
@@ -94,7 +101,7 @@ export function registerInvitationRoutes(app: Hono) {
       async (c) => {
         const token = c.req.param('token');
         const payload = await parseJson(c, acceptSchema);
-        const invitation = await acceptInvitation(token, payload);
+        const { invitation, userId } = await acceptInvitation(token, payload);
         try {
           await auth.api.sendVerificationOTP({
             body: { email: normalizeEmail(payload.email), type: 'sign-in' },
@@ -107,6 +114,7 @@ export function registerInvitationRoutes(app: Hono) {
         return c.json({
           invitation,
           alreadyAccepted: invitation.status === 'accepted' && invitation.acceptedAt !== null,
+          userId,
         });
       },
       'INVITATION_ACCEPT_FAILED',
@@ -121,8 +129,17 @@ export function registerInvitationRoutes(app: Hono) {
       async (c) => {
         const token = c.req.param('token');
         const payload = await parseJson(c, activateSchema);
-        const invitation = await activateInvitation(token, payload.email);
-        return c.json({ invitation, alreadyActivated: invitation.activatedAt !== null });
+        const result = await activateInvitation(c, token, payload.email);
+        if (result.setCookie) {
+          for (const value of result.setCookie) {
+            c.header('set-cookie', value, { append: true });
+          }
+        }
+        return c.json({
+          invitation: result.invitation,
+          alreadyActivated: result.alreadyActivated,
+          sessionCreated: result.sessionCreated,
+        });
       },
       'INVITATION_ACTIVATE_FAILED',
       'Unable to activate invitation.',
@@ -270,6 +287,40 @@ type InvitationListParams = {
   search?: string;
 };
 
+type InvitationStats = {
+  total: number;
+  pending: number;
+  sent: number;
+  accepted: number;
+  expired: number;
+  failed: number;
+  activated: number;
+};
+
+async function fetchInvitationStats(): Promise<InvitationStats> {
+  const [row] = await db
+    .select({
+      total: count(invitations.id),
+      pending: sql<number>`sum(case when ${invitations.status} = 'pending' then 1 else 0 end)`,
+      sent: sql<number>`sum(case when ${invitations.status} = 'sent' then 1 else 0 end)`,
+      accepted: sql<number>`sum(case when ${invitations.status} = 'accepted' then 1 else 0 end)`,
+      expired: sql<number>`sum(case when ${invitations.status} = 'expired' then 1 else 0 end)`,
+      failed: sql<number>`sum(case when ${invitations.status} = 'failed' then 1 else 0 end)`,
+      activated: sql<number>`sum(case when ${invitations.activatedAt} is not null then 1 else 0 end)`,
+    })
+    .from(invitations);
+
+  return {
+    total: Number(row?.total ?? 0),
+    pending: Number(row?.pending ?? 0),
+    sent: Number(row?.sent ?? 0),
+    accepted: Number(row?.accepted ?? 0),
+    expired: Number(row?.expired ?? 0),
+    failed: Number(row?.failed ?? 0),
+    activated: Number(row?.activated ?? 0),
+  };
+}
+
 async function fetchInvitations(params: InvitationListParams) {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(Math.max(1, params.pageSize ?? 25), 100);
@@ -307,7 +358,7 @@ async function fetchInvitations(params: InvitationListParams) {
 async function acceptInvitation(
   token: string,
   payload: { email: string; firstName?: string; lastName?: string },
-) {
+): Promise<{ invitation: InvitationRecord; userId: string }> {
   const email = normalizeEmail(payload.email);
   const [existing] = await db
     .select()
@@ -336,7 +387,21 @@ async function acceptInvitation(
   }
 
   if (existing.acceptedAt) {
-    return existing;
+    let userId = existing.acceptedUserId;
+    if (!userId) {
+      userId = await getOrCreateMember(email, {
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+      });
+      await db
+        .update(invitations)
+        .set({
+          acceptedUserId: userId,
+          updatedAt: new Date(),
+        })
+        .where(eq(invitations.id, existing.id));
+    }
+    return { invitation: existing, userId };
   }
 
   const userId = await getOrCreateMember(email, {
@@ -358,10 +423,21 @@ async function acceptInvitation(
     .where(eq(invitations.id, existing.id))
     .returning();
 
-  return updated;
+  return { invitation: updated, userId };
 }
 
-async function activateInvitation(token: string, email: string): Promise<InvitationRecord> {
+type ActivationResult = {
+  invitation: InvitationRecord;
+  alreadyActivated: boolean;
+  sessionCreated: boolean;
+  setCookie?: string[];
+};
+
+async function activateInvitation(
+  c: Context,
+  token: string,
+  email: string,
+): Promise<ActivationResult> {
   const normalized = normalizeEmail(email);
   const [existing] = await db
     .select()
@@ -385,17 +461,78 @@ async function activateInvitation(token: string, email: string): Promise<Invitat
     );
   }
 
-  if (existing.activatedAt) {
-    return existing;
+  let inviteeUserId = existing.acceptedUserId;
+  if (!inviteeUserId) {
+    inviteeUserId = await getOrCreateMember(normalized, {
+      firstName: existing.firstName ?? undefined,
+      lastName: existing.lastName ?? undefined,
+    });
+    await db
+      .update(invitations)
+      .set({ acceptedUserId: inviteeUserId, updatedAt: new Date() })
+      .where(eq(invitations.id, existing.id));
   }
 
-  const [updated] = await db
-    .update(invitations)
-    .set({ activatedAt: new Date(), updatedAt: new Date() })
-    .where(eq(invitations.id, existing.id))
-    .returning();
+  let sessionCreated = false;
+  const setCookieValues: string[] = [];
 
-  return updated;
+  if (inviteeUserId) {
+    try {
+      const sessionResponse = await auth.api.internalInviteSession({
+        body: { userId: inviteeUserId },
+        request: c.req.raw,
+        headers: c.req.raw.headers,
+        asResponse: true,
+      });
+
+      if (sessionResponse.ok) {
+        sessionCreated = true;
+        const rawSetCookie: string[] | undefined =
+          typeof (sessionResponse.headers as unknown as { raw?: () => Record<string, string[]> })
+            .raw === 'function'
+            ? (sessionResponse.headers as unknown as { raw: () => Record<string, string[]> }).raw()[
+                'set-cookie'
+              ]
+            : undefined;
+
+        if (rawSetCookie && rawSetCookie.length > 0) {
+          setCookieValues.push(...rawSetCookie);
+        } else {
+          const singleCookie = sessionResponse.headers.get('set-cookie');
+          if (singleCookie) {
+            setCookieValues.push(singleCookie);
+          }
+        }
+      } else {
+        const errorBody = await sessionResponse.text();
+        console.error('[invitations] auto session creation failed', {
+          status: sessionResponse.status,
+          body: errorBody,
+        });
+      }
+    } catch (error) {
+      sessionCreated = false;
+      console.error('[invitations] auto session creation failed', error);
+    }
+  }
+
+  let updatedInvitation = existing;
+  if (!existing.activatedAt) {
+    const now = new Date();
+    const [updated] = await db
+      .update(invitations)
+      .set({ activatedAt: now, updatedAt: now })
+      .where(eq(invitations.id, existing.id))
+      .returning();
+    updatedInvitation = updated ?? existing;
+  }
+
+  return {
+    invitation: updatedInvitation,
+    alreadyActivated: existing.activatedAt !== null,
+    sessionCreated,
+    setCookie: setCookieValues.length > 0 ? setCookieValues : undefined,
+  };
 }
 
 function optional(value?: string) {

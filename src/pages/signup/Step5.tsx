@@ -15,6 +15,7 @@ import {
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
+import { persistSignupProfile } from './persistProfile';
 
 const challengeOptions = [
   'Generating more high-quality leads',
@@ -33,6 +34,7 @@ const Step5: React.FC = () => {
   const [primaryChallenge, setPrimaryChallenge] = useState(formData.primaryChallenge);
   const [isSending, setIsSending] = useState(false);
   const primaryChallengeId = useId();
+  const acceptanceCacheKey = 'trafficmena:invitation-acceptance';
 
   const handleComplete = async () => {
     if (!formData.email) {
@@ -52,10 +54,27 @@ const Step5: React.FC = () => {
 
       if (formData.invitationToken) {
         try {
-          await activateInvitation({
+          const activationResult = await activateInvitation({
             token: formData.invitationToken,
             email: formData.email,
           });
+          if (activationResult.sessionCreated) {
+            await persistSignupProfile({
+              ...formData,
+              primaryChallenge,
+            });
+            try {
+              sessionStorage.removeItem(acceptanceCacheKey);
+            } catch {
+              // ignore storage errors
+            }
+            toast({
+              title: 'Welcome to TrafficMENA',
+              description: 'Your account is active and you are signed in.',
+            });
+            navigate('/dashboard');
+            return;
+          }
         } catch (activationError) {
           console.warn('[signup] failed to mark invitation activated', activationError);
         }

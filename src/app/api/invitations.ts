@@ -27,6 +27,16 @@ export type FetchInvitationsParams = {
   search?: string;
 };
 
+export type InvitationStats = {
+  total: number;
+  pending: number;
+  sent: number;
+  accepted: number;
+  expired: number;
+  failed: number;
+  activated: number;
+};
+
 export type CreateInvitationPayload = {
   email: string;
   firstName?: string;
@@ -69,6 +79,13 @@ export async function fetchInvitations(
   };
 }
 
+export async function fetchInvitationStats(): Promise<InvitationStats> {
+  const data = await fetchJson<{ stats: InvitationStats }>(`${API_BASE}/invitations/stats`, {
+    method: 'GET',
+  });
+  return data.stats;
+}
+
 export async function createInvitation(
   payload: CreateInvitationPayload,
 ): Promise<{ invitation: InvitationRecord }> {
@@ -98,10 +115,16 @@ export async function acceptInvitation(
   });
 }
 
+export type ActivateInvitationResponse = {
+  invitation: InvitationRecord;
+  alreadyActivated: boolean;
+  sessionCreated: boolean;
+};
+
 export async function activateInvitation(
   payload: ActivateInvitationPayload,
-): Promise<{ invitation: InvitationRecord; alreadyActivated: boolean }> {
-  return fetchJson<{ invitation: InvitationRecord; alreadyActivated: boolean }>(
+): Promise<ActivateInvitationResponse> {
+  return fetchJson<ActivateInvitationResponse>(
     `${API_BASE}/invitations/${payload.token}/activate`,
     {
       method: 'POST',

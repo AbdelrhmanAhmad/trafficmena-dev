@@ -99,3 +99,20 @@ If the UI fails unexpectedly, capture the toast/error message and raise it in th
 - Support channel: `#trafficmena-ops`
 
 Ship the event, publish the replay, learn faster. 🚀
+
+---
+
+## 8. Invite-Only Signup Toggle
+
+- **Location:** Admin dashboard → General Settings card (top of the page). Only owners/admins can modify it; managers can view the setting but the switch is disabled.
+- **When enabled:** Public `/signup` is gated. Only invited users can join and they will be signed in automatically once the invitation is activated.
+- **When disabled:** Public OTP signup is restored for everyone.
+
+### Operational Notes
+
+1. **Default posture:** Leave invite-only **ON** while we validate the curated onboarding loop.
+2. **Monitoring:** Check the “Invitation Activation” metrics panel — “Activated Members” should increase shortly after invites are accepted.
+3. **Fallback:** If invitations are accepted but members report they’re not being signed in, flip invite-only **OFF** temporarily. This reverts to the standard OTP flow so nobody is blocked while engineering investigates.
+4. **After a rollback:** Post in `#trafficmena-ops` so the team knows to pause new invites until the issue is resolved.
+
+Remember to re-enable invite-only once the underlying issue is fixed so that new members continue through the invitation path.

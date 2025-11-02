@@ -41,7 +41,6 @@ const AdminDashboard: React.FC = () => {
     isLoading: invitationsLoading,
     isError: invitationsError,
   } = useInvitations({ page: 1, pageSize: 50 });
-
   const loading = adminLoading || managerLoading;
 
   const invitationStats = useMemo(() => {

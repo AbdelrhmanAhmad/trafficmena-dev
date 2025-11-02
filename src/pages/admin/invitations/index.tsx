@@ -1,12 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertTriangle, Loader2, Mail, Send, Upload, Users } from 'lucide-react';
-import { useId, useMemo, useState } from 'react';
+import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { InvitationStatus } from '@/app/api/invitations';
 import {
   useBulkInvitations,
   useCreateInvitation,
+  useInvitationStats,
   useInvitations,
 } from '@/app/hooks/useInvitations';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
@@ -93,6 +94,7 @@ export default function AdminInvitations() {
     pageSize: 25,
     status: statusFilter === 'all' ? undefined : statusFilter,
   });
+  const { data: statsData, isLoading: statsLoading } = useInvitationStats();
 
   const createInvitationMutation = useCreateInvitation();
   const bulkInvitationMutation = useBulkInvitations();
@@ -107,16 +109,25 @@ export default function AdminInvitations() {
     },
   });
 
-  const stats = useMemo(() => {
-    const items = data?.items ?? [];
-    return {
-      total: data?.pagination.total ?? items.length,
-      pending: items.filter((item) => item.status === 'pending').length,
-      sent: items.filter((item) => item.status === 'sent').length,
-      accepted: items.filter((item) => item.status === 'accepted').length,
-      activated: items.filter((item) => Boolean(item.activatedAt)).length,
-    };
-  }, [data]);
+  const stats = statsData ?? {
+    total: 0,
+    pending: 0,
+    sent: 0,
+    accepted: 0,
+    activated: 0,
+    expired: 0,
+    failed: 0,
+  };
+
+  const metricCards = [
+    { label: 'Total invites', value: stats.total, accent: 'text-primary' },
+    { label: 'Pending', value: stats.pending, accent: 'text-amber-600' },
+    { label: 'Sent', value: stats.sent, accent: 'text-sky-600' },
+    { label: 'Accepted', value: stats.accepted, accent: 'text-emerald-600' },
+    { label: 'Activated', value: stats.activated, accent: 'text-primary' },
+    { label: 'Expired', value: stats.expired, accent: 'text-neutral-600' },
+    { label: 'Failed', value: stats.failed, accent: 'text-rose-600' },
+  ];
 
   const onSubmit = async (values: InvitationFormValues) => {
     try {
@@ -270,23 +281,21 @@ export default function AdminInvitations() {
                 <CardTitle>Team activity & bulk upload</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  <div className="rounded-lg border bg-muted/40 p-3">
-                    <p className="text-xs text-muted-foreground">Total invites</p>
-                    <p className="text-2xl font-semibold text-primary">{stats.total}</p>
-                  </div>
-                  <div className="rounded-lg border bg-muted/40 p-3">
-                    <p className="text-xs text-muted-foreground">Pending</p>
-                    <p className="text-2xl font-semibold text-amber-600">{stats.pending}</p>
-                  </div>
-                  <div className="rounded-lg border bg-muted/40 p-3">
-                    <p className="text-xs text-muted-foreground">Accepted</p>
-                    <p className="text-2xl font-semibold text-emerald-600">{stats.accepted}</p>
-                  </div>
-                  <div className="rounded-lg border bg-muted/40 p-3">
-                    <p className="text-xs text-muted-foreground">Activated</p>
-                    <p className="text-2xl font-semibold text-primary">{stats.activated}</p>
-                  </div>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                  {metricCards.map((metric) => (
+                    <div key={metric.label} className="rounded-lg border bg-muted/40 p-3">
+                      <p className="text-xs text-muted-foreground">{metric.label}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        {statsLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        ) : (
+                          <span className={cn('text-2xl font-semibold', metric.accent)}>
+                            {metric.value.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 <div className="space-y-3">

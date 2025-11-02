@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP } from 'better-auth/plugins/email-otp';
+import { inviteSessionPlugin } from './auth/plugins/inviteSession.js';
 import { env, isProduction } from './config/env.js';
 import { db } from './db/client.js';
 import { authAccounts, authSessions, authVerifications, users } from './db/schema/index.js';
@@ -49,6 +50,7 @@ export const auth = betterAuth({
       },
       otpLength: 6,
     }),
+    inviteSessionPlugin(),
   ],
   advanced: {
     database: {

@@ -8,8 +8,10 @@ import {
   createInvitation,
   createInvitationsFromCsv,
   type FetchInvitationsParams,
+  fetchInvitationStats,
   fetchInvitations,
   type InvitationRecord,
+  type InvitationStats,
 } from '@/app/api/invitations';
 
 const invitationQueryKey = (params: FetchInvitationsParams) =>
@@ -23,12 +25,21 @@ export function useInvitations(params: FetchInvitationsParams) {
   });
 }
 
+export function useInvitationStats() {
+  return useQuery<InvitationStats>({
+    queryKey: ['admin', 'invitations', 'stats'],
+    queryFn: () => fetchInvitationStats(),
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useCreateInvitation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CreateInvitationPayload) => createInvitation(payload),
     onSuccess: (_data, _variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'invitations'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'invitations', 'stats'] });
     },
   });
 }
@@ -39,6 +50,7 @@ export function useBulkInvitations() {
     mutationFn: (file: File) => createInvitationsFromCsv(file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'invitations'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'invitations', 'stats'] });
     },
   });
 }

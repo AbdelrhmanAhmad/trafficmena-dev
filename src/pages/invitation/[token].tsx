@@ -122,7 +122,13 @@ export default function InvitationAcceptancePage() {
       navigate('/signup');
       return;
     }
-
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('trafficmena:invitation-auto-continue', '1');
+      } catch (error) {
+        console.warn('[invitation] unable to persist auto-continue flag', error);
+      }
+    }
     const params = new URLSearchParams({ invitation: invitationToken, email });
     if (firstName.trim()) params.set('firstName', firstName.trim());
     if (lastName.trim()) params.set('lastName', lastName.trim());
@@ -228,15 +234,6 @@ export default function InvitationAcceptancePage() {
                         ? 'Confirming invitation…'
                         : 'Confirm invitation'}
                   </Button>
-                  {state !== 'accepted' && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate('/signup')}
-                    >
-                      Skip and create account manually
-                    </Button>
-                  )}
                 </div>
               </>
             )}

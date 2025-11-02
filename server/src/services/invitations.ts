@@ -224,7 +224,7 @@ function normalizeEmail(value: string) {
 function buildInvitationLink(token: string, email: string) {
   const base = env.APP_BASE_URL?.replace(/\/$/, '') ?? 'http://localhost:8080';
   const params = new URLSearchParams({ invitation: token, email });
-  return `${base}/signup?${params.toString()}`;
+  return `${base}/invitation/${token}?${params.toString()}`;
 }
 
 function buildAdminName(admin: AdminContext) {
