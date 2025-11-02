@@ -112,24 +112,26 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
 
   return (
     <Card
-      className="group flex h-full cursor-pointer flex-col overflow-hidden transition-shadow hover:shadow-lg"
+      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1"
       onClick={handleCardClick}
     >
       {/* Thumbnail Section */}
-      <div className="relative aspect-video bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+      <div className="relative aspect-[300/160] bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
         {thumbnailUrl ? (
           <img
             src={thumbnailUrl}
             alt={item.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={(e) => {
               // Hide image on error and show placeholder
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            {getIcon(item.file_type, videoUrl, item.embed_type)}
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#f4fff9]/20 to-[#d5ffe9]/10">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/80 backdrop-blur">
+              {getIcon(item.file_type, videoUrl, item.embed_type)}
+            </div>
           </div>
         )}
 
@@ -143,19 +145,19 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
         )}
 
         {/* Type Badge */}
-        <div className="absolute top-2 left-2">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-white/90 backdrop-blur-sm text-gray-700">
+        <div className="absolute top-3 left-3">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-neutral-700 border border-white/50">
             {item.embed_type ? 'Presentation' : item.file_type}
           </span>
         </div>
 
         {(canManage || canDelete) && (
-          <div className="absolute top-2 right-2 z-10 flex gap-1">
+          <div className="absolute top-3 right-3 z-10 flex gap-2">
             {canManage && onEdit && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-full bg-white/90 text-gray-700 shadow-sm transition-colors hover:bg-white"
+                className="h-8 w-8 rounded-full bg-white/90 text-neutral-700 shadow-md transition-all duration-300 hover:bg-white hover:scale-110"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(item.id);
@@ -168,7 +170,7 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-full bg-white/90 text-red-600 shadow-sm transition-colors hover:bg-white"
+                className="h-8 w-8 rounded-full bg-white/90 text-red-600 shadow-md transition-all duration-300 hover:bg-white hover:scale-110"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(item.id);
@@ -183,29 +185,29 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
 
       <div className="flex flex-1 flex-col">
         <CardHeader className="space-y-3 pb-4">
-          <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
+          <CardTitle className="text-lg font-semibold text-neutral-900 line-clamp-2">
             {item.title}
           </CardTitle>
-          <CardDescription className="line-clamp-3 text-sm text-gray-600">
+          <CardDescription className="line-clamp-3 text-sm text-neutral-600">
             {getSanitizedDescription(item.description)}
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="mt-auto border-t pt-4 min-h-[80px]">
-          <div className="flex items-center justify-between text-xs text-gray-500">
+        <CardContent className="mt-auto border-t border-neutral-200/60 pt-4 min-h-[80px]">
+          <div className="flex items-center justify-between text-xs text-neutral-500">
             <span>Added {new Date(item.created_at).toLocaleDateString()}</span>
           </div>
 
           {canManage && ((item.view_count ?? 0) > 0 || (item.download_count ?? 0) > 0) && (
-            <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+            <div className="mt-3 flex items-center gap-4 text-xs text-neutral-500">
               {(item.view_count ?? 0) > 0 && (
                 <span>
-                  <strong className="text-gray-700">{item.view_count}</strong> views
+                  <strong className="text-neutral-700">{item.view_count}</strong> views
                 </span>
               )}
               {(item.download_count ?? 0) > 0 && (
                 <span>
-                  <strong className="text-gray-700">{item.download_count}</strong> downloads
+                  <strong className="text-neutral-700">{item.download_count}</strong> downloads
                 </span>
               )}
             </div>

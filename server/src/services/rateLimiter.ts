@@ -10,6 +10,19 @@ type Bucket = {
 
 export class InMemoryRateLimiter {
   private readonly buckets = new Map<string, Bucket>();
+  private readonly cleanupInterval: NodeJS.Timeout;
+
+  constructor(cleanupIntervalMs = 5 * 60 * 1000) {
+    this.cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [key, bucket] of this.buckets.entries()) {
+        if (bucket.expiresAt <= now) {
+          this.buckets.delete(key);
+        }
+      }
+    }, cleanupIntervalMs);
+    this.cleanupInterval.unref?.();
+  }
 
   consume(key: string, rule: RateLimitRule) {
     const now = Date.now();
@@ -44,7 +57,12 @@ export class InMemoryRateLimiter {
   reset(key: string) {
     this.buckets.delete(key);
   }
+
+  dispose() {
+    clearInterval(this.cleanupInterval);
+  }
 }
 
 export const otpRateLimiter = new InMemoryRateLimiter();
 export const invitationRateLimiter = new InMemoryRateLimiter();
+export const otpVerificationRateLimiter = new InMemoryRateLimiter();

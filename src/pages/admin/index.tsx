@@ -1,4 +1,4 @@
-import { Activity, BadgeCheck, Clock, TrendingUp, UserCheck, Users } from 'lucide-react';
+import { Activity, BadgeCheck, Clock, Sparkles, TrendingUp, UserCheck, Users } from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
@@ -19,14 +19,16 @@ type MetricCardProps = {
 };
 
 const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon: Icon, trend }) => (
-  <Card>
+  <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
     <CardContent className="p-6">
       <div className="flex items-center">
-        <Icon className="h-8 w-8 text-muted-foreground" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20 p-2">
+          <Icon className="h-6 w-6 text-[#05ef62]" />
+        </div>
         <div className="ml-4">
-          <p className="text-sm font-medium leading-none">{label}</p>
-          <p className="text-2xl font-bold">{value}</p>
-          <p className="text-xs text-muted-foreground">{trend}</p>
+          <p className="text-sm font-medium leading-none text-neutral-700">{label}</p>
+          <p className="text-2xl font-bold text-neutral-900">{value}</p>
+          <p className="text-xs text-neutral-600">{trend}</p>
         </div>
       </div>
     </CardContent>
@@ -95,7 +97,7 @@ const AdminDashboard: React.FC = () => {
           {/* Header Section */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-primary">
+              <h1 className="text-3xl font-bold text-neutral-900">
                 {loading
                   ? 'Loading...'
                   : isAdmin
@@ -104,7 +106,7 @@ const AdminDashboard: React.FC = () => {
                       ? 'Manager Dashboard'
                       : 'Dashboard'}
               </h1>
-              <p className="mt-2 text-muted-foreground">
+              <p className="mt-2 text-neutral-700">
                 {loading
                   ? 'Determining access level...'
                   : isAdmin
@@ -121,9 +123,11 @@ const AdminDashboard: React.FC = () => {
             <>
               {/* Key Metrics Section */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-semibold text-primary">Business Metrics</h2>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                    <TrendingUp className="h-5 w-5 text-[#05ef62]" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-neutral-900">Business Metrics</h2>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {coreMetrics.map((metric) => (
@@ -142,12 +146,14 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </div>
 
-              <Card>
+              <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Invitation Activation
-                  </CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                      <Users className="h-5 w-5 text-[#05ef62]" />
+                    </div>
+                    <CardTitle className="text-neutral-900">Invitation Activation</CardTitle>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {invitationsError ? (
@@ -240,12 +246,14 @@ const AdminDashboard: React.FC = () => {
               {/* Dashboard Sections Grid */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Recent Activity Card */}
-                <Card className="lg:col-span-1">
+                <Card className="lg:col-span-1 rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="h-5 w-5" />
-                      Recent Activity
-                    </CardTitle>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                        <Activity className="h-5 w-5 text-[#05ef62]" />
+                      </div>
+                      <CardTitle className="text-neutral-900">Recent Activity</CardTitle>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 text-sm">
@@ -270,26 +278,58 @@ const AdminDashboard: React.FC = () => {
                 </Card>
 
                 {/* Growth Insights Card */}
-                <Card className="lg:col-span-1">
+                <Card className="lg:col-span-1 rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Growth Insights
-                    </CardTitle>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                        <TrendingUp className="h-5 w-5 text-[#05ef62]" />
+                      </div>
+                      <CardTitle className="text-neutral-900">Growth Insights</CardTitle>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4 text-sm">
-                      <div className="rounded-lg bg-green-50 p-3">
-                        <p className="font-medium text-green-900">Platform Ready</p>
-                        <p className="text-green-700">Ready for your first users</p>
+                      <div className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 relative overflow-hidden">
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#05ef62] via-[#29cf9f] to-[#00fdc2]" />
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#05ef62] to-[#29cf9f]">
+                            <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4zm0-6a2 2 0 100-4 2 2 0 000 4z"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium text-neutral-900">Platform Ready</p>
+                            <p className="text-neutral-700">Ready for your first users</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="rounded-lg bg-blue-50 p-3">
-                        <p className="font-medium text-blue-900">Events System</p>
-                        <p className="text-blue-700">Ready to create engaging events</p>
+                      <div className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 relative overflow-hidden">
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#29cf9f] via-[#00fdc2] to-[#05ef62]" />
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#29cf9f] to-[#00fdc2]">
+                            <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6z"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium text-neutral-900">Events System</p>
+                            <p className="text-neutral-700">Ready to create engaging events</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="rounded-lg bg-purple-50 p-3">
-                        <p className="font-medium text-purple-900">Content Library</p>
-                        <p className="text-purple-700">Ready for valuable resources</p>
+                      <div className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 relative overflow-hidden">
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#00fdc2] via-[#05ef62] to-[#29cf9f]" />
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#00fdc2] to-[#05ef62]">
+                            <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-medium text-neutral-900">Content Library</p>
+                            <p className="text-neutral-700">Ready for valuable resources</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -299,7 +339,7 @@ const AdminDashboard: React.FC = () => {
           ) : (
             /* Regular User Message */
             <div className="py-12 text-center">
-              <Card className="mx-auto max-w-lg">
+              <Card className="mx-auto max-w-lg rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
                 <CardContent className="p-8">
                   <h3 className="mb-4 text-xl font-semibold text-foreground">
                     Welcome to TrafficMENA

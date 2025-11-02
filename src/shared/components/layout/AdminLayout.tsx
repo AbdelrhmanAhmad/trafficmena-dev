@@ -123,13 +123,13 @@ function AdminSidebar() {
         : 'View-only access';
 
   return (
-    <Sidebar>
-      <SidebarHeader className="p-4">
+    <Sidebar className="bg-white/95 backdrop-blur border-r border-neutral-200/40">
+      <SidebarHeader className="p-4 bg-white/80 backdrop-blur">
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               to="/"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-colors hover:border-primary-green hover:shadow-md"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/80 shadow-sm transition-all duration-300 hover:border-[#05ef62]/60 hover:shadow-md hover:scale-105"
             >
               <img
                 src="/favicon-96x96.png"
@@ -145,33 +145,33 @@ function AdminSidebar() {
                 }}
               />
             </Link>
-            <h2 className="text-lg font-semibold text-primary">TrafficMENA</h2>
+            <h2 className="text-lg font-semibold text-neutral-900">TrafficMENA</h2>
           </div>
           {loading ? (
-            <div className="h-5 w-12 animate-pulse rounded bg-gray-200"></div>
+            <div className="h-5 w-12 animate-pulse rounded bg-neutral-100"></div>
           ) : (
-            <Badge variant={badgeVariant} className="text-xs">
+            <Badge variant={badgeVariant} className="text-xs bg-white/70 border border-white/50 backdrop-blur">
               {badgeLabel}
             </Badge>
           )}
         </div>
-        <p className="text-sm text-gray-600">{user?.email}</p>
+        <p className="text-sm text-neutral-600">{user?.email}</p>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="bg-white/60 backdrop-blur">
         <SidebarGroup>
-          <SidebarGroupLabel>{panelLabel}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-neutral-700">{panelLabel}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {allowedMenuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.title} className="mb-2">
-                    <SidebarMenuButton asChild isActive={location.pathname === item.url}>
+                    <SidebarMenuButton asChild isActive={location.pathname === item.url} className="hover:bg-white/40 rounded-xl">
                       <Link to={item.url} className="flex items-center gap-3 py-3">
-                        <Icon className="h-4 w-4 shrink-0" />
+                        <Icon className="h-4 w-4 shrink-0 text-neutral-700" />
                         <div className="flex flex-col items-start">
-                          <span className="font-medium">{item.title}</span>
-                          <span className="text-xs text-muted-foreground">{item.description}</span>
+                          <span className="font-medium text-neutral-900">{item.title}</span>
+                          <span className="text-xs text-neutral-500">{item.description}</span>
                         </div>
                       </Link>
                     </SidebarMenuButton>
@@ -185,18 +185,20 @@ function AdminSidebar() {
         {/* Role Information */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
-            <div className="rounded-lg bg-muted/50 p-3 text-xs">
+            <div className="rounded-2xl border border-neutral-200/60 bg-white/80 backdrop-blur p-3 text-xs">
               {loading ? (
                 <div className="space-y-2">
-                  <div className="h-3 w-full animate-pulse rounded bg-gray-200"></div>
-                  <div className="h-3 w-3/4 animate-pulse rounded bg-gray-200"></div>
+                  <div className="h-3 w-full animate-pulse rounded bg-neutral-100"></div>
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-neutral-100"></div>
                 </div>
               ) : (
                 <div className="flex items-start gap-2">
-                  <Shield className="mt-0.5 h-4 w-4 shrink-0 text-primary-green" />
+                  <div className="mt-0.5 h-4 w-4 shrink-0 rounded-lg bg-gradient-to-br from-[#05ef62] to-[#29cf9f] p-1">
+                    <Shield className="h-2.5 w-2.5 text-white" />
+                  </div>
                   <div>
-                    <p className="font-medium text-foreground">{panelLabel}</p>
-                    <p className="mt-1 text-muted-foreground">{accessDescription}</p>
+                    <p className="font-medium text-neutral-900">{panelLabel}</p>
+                    <p className="mt-1 text-neutral-600">{accessDescription}</p>
                   </div>
                 </div>
               )}
@@ -216,10 +218,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <div className="flex min-h-screen w-full">
         <AdminSidebar />
         <SidebarInset className="flex-1">
-          <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4">
+          <header className="relative flex h-16 shrink-0 items-center justify-between gap-2 border-b border-neutral-200/60 bg-white/90 backdrop-blur px-4">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
-              <h1 className="text-xl font-semibold">
+              <h1 className="text-xl font-semibold text-neutral-900">
                 {loading
                   ? 'Loading...'
                   : isOwner
@@ -233,7 +235,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </div>
             <UserProfileDropdown />
           </header>
-          <main className="flex-1 p-6">{children}</main>
+          <main className="relative flex-1">
+            <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/60 via-[#f4fff9]/40 to-transparent blur-3xl" />
+            <div className="pointer-events-none absolute -right-[48vw] top-[35vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+            <div className="relative p-6">{children}</div>
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

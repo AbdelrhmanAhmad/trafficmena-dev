@@ -1,4 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
+import { Sparkles } from 'lucide-react';
 import { useAdminSettings, useUpdateAdminSettings } from '@/app/hooks/useSettings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Switch } from '@/shared/components/ui/switch';
@@ -48,9 +49,16 @@ export function InviteOnlySettingsCard({ canEdit }: InviteOnlySettingsCardProps)
   };
 
   return (
-    <Card>
+    <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">General Settings</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+              <Sparkles className="h-5 w-5 text-[#05ef62]" />
+            </div>
+            <CardTitle className="text-neutral-900">General Settings</CardTitle>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">

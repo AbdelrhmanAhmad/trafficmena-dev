@@ -167,18 +167,18 @@ const LibraryItemDetail: React.FC = () => {
           <Button
             variant="ghost"
             onClick={() => navigate('/dashboard/library')}
-            className="mb-6 -ml-2 hover:bg-gray-100"
+            className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Library
           </Button>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-4">{item.title}</h1>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  <h1 className="text-3xl font-bold text-neutral-900 mb-4">{item.title}</h1>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-600">
                     <div className="flex items-center gap-2">
                       {getIcon(item.file_type, item.embed_type)}
                       <span className="font-medium">
@@ -205,10 +205,12 @@ const LibraryItemDetail: React.FC = () => {
               {item.video_url && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Video className="h-5 w-5 text-blue-600" />
-                    <h2 className="text-lg font-semibold text-gray-900">Video Content</h2>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+                      <Video className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-neutral-900">Video Content</h2>
                   </div>
-                  <div className="rounded-lg overflow-hidden bg-gray-50 border">
+                  <div className="rounded-xl overflow-hidden bg-neutral-50 border border-neutral-200">
                     <VideoEmbed url={item.video_url} />
                   </div>
                 </div>
@@ -218,10 +220,12 @@ const LibraryItemDetail: React.FC = () => {
               {item.embed_url && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Presentation className="h-5 w-5 text-purple-600" />
-                    <h2 className="text-lg font-semibold text-gray-900">Presentation</h2>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100">
+                      <Presentation className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-neutral-900">Presentation</h2>
                   </div>
-                  <div className="rounded-lg overflow-hidden bg-gray-50 border">
+                  <div className="rounded-xl overflow-hidden bg-neutral-50 border border-neutral-200">
                     {getEmbedContent(item.embed_url, item.embed_type)}
                   </div>
                 </div>
@@ -250,13 +254,13 @@ const LibraryItemDetail: React.FC = () => {
                           href={item.document_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
                         >
                           <Download className="h-4 w-4" />
                           Download PDF
                         </a>
                       ) : (
-                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gray-100 text-gray-500">
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 text-neutral-500">
                           <Download className="h-4 w-4" />
                           Download restricted
                         </span>
@@ -264,7 +268,7 @@ const LibraryItemDetail: React.FC = () => {
                     </div>
                     {/* PDF Viewer */}
                     {access.canDownload ? (
-                      <div className="border rounded-lg overflow-hidden">
+                      <div className="border border-neutral-200 rounded-xl overflow-hidden">
                         <iframe
                           src={item.document_url}
                           className="w-full h-[600px]"
@@ -272,7 +276,7 @@ const LibraryItemDetail: React.FC = () => {
                         />
                       </div>
                     ) : (
-                      <div className="border rounded-lg bg-gray-50 p-6 text-center text-sm text-gray-500">
+                      <div className="border border-neutral-200 rounded-xl bg-neutral-50 p-6 text-center text-sm text-neutral-500">
                         Upgrade your membership to view this document.
                       </div>
                     )}
@@ -283,45 +287,45 @@ const LibraryItemDetail: React.FC = () => {
               {/* Description */}
               {item.description && (
                 <div className="prose prose-gray max-w-none">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-3">Description</h2>
+                  <h2 className="text-xl font-semibold text-neutral-900 mb-3">Description</h2>
                   <SanitizedDescription
-                    className="text-gray-700 leading-relaxed"
+                    className="text-neutral-700 leading-relaxed"
                     html={getSanitizedDescription(item.description)}
                   />
                 </div>
               )}
 
               {/* Metadata */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Details</h3>
+              <div className="border-t border-neutral-200 pt-6">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-3">Details</h3>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Primary Type</dt>
-                    <dd className="mt-1 text-sm text-gray-900">
+                    <dt className="text-sm font-medium text-neutral-500">Primary Type</dt>
+                    <dd className="mt-1 text-sm text-neutral-900">
                       {item.embed_type ? 'Presentation' : item.file_type}
                     </dd>
                   </div>
                   {item.embed_type && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Embed Provider</dt>
-                      <dd className="mt-1 text-sm text-gray-900">
+                      <dt className="text-sm font-medium text-neutral-500">Embed Provider</dt>
+                      <dd className="mt-1 text-sm text-neutral-900">
                         {item.embed_type === 'google_slides' ? 'Google Slides' : item.embed_type}
                       </dd>
                     </div>
                   )}
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Published</dt>
-                    <dd className="mt-1 text-sm text-gray-900">
+                    <dt className="text-sm font-medium text-neutral-500">Published</dt>
+                    <dd className="mt-1 text-sm text-neutral-900">
                       {new Date(item.created_at).toLocaleString()}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Downloads</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{item.download_count ?? 0}</dd>
+                    <dt className="text-sm font-medium text-neutral-500">Downloads</dt>
+                    <dd className="mt-1 text-sm text-neutral-900">{item.download_count ?? 0}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Views</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{item.view_count ?? 0}</dd>
+                    <dt className="text-sm font-medium text-neutral-500">Views</dt>
+                    <dd className="mt-1 text-sm text-neutral-900">{item.view_count ?? 0}</dd>
                   </div>
                   {item.event_id && (
                     <div className="sm:col-span-2">

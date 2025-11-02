@@ -17,10 +17,17 @@ type SendInvitationEmailArgs = {
 
 const PLUNK_ENDPOINT = 'https://api.useplunk.com/v1/send';
 
+const escapeHtml = (input: string) =>
+  input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 export async function sendOtpEmail({ email, otp, ttlMinutes }: SendOtpEmailArgs) {
   if (!env.PLUNK_API_KEY || !env.PLUNK_API_KEY.startsWith('sk_')) {
-    console.warn('[plunk] Valid PLUNK_API_KEY missing; OTP email logged for debugging');
-    console.info(`[plunk] OTP for ${email}: ${otp} (expires in ${ttlMinutes} minutes)`);
+    console.warn('[plunk] Valid PLUNK_API_KEY missing; OTP email simulated (details redacted)');
     return;
   }
 
@@ -96,8 +103,14 @@ export async function sendInvitationEmail({
   const greetingName = firstName?.trim() ? firstName.trim() : 'there';
   const inviter = inviterName?.trim() || 'A TrafficMENA host';
   const subject = `${inviter} invited you to TrafficMENA`;
+  const safeCustomMessage =
+    customMessage && customMessage.trim().length > 0
+      ? escapeHtml(customMessage.trim()).replace(/\r?\n/g, '<br />')
+      : null;
 
-  const textBody = `Hi ${greetingName},\n\n${inviter} invited you to join TrafficMENA. Complete your profile and unlock the event and library experience using the secure link below.\n\nAccept your invitation: ${invitationLink}\n\nThe invitation expires on ${friendlyExpiry}.\n\n${customMessage ? `${customMessage}\n\n` : ''}— TrafficMENA team`;
+  const textBody = `Hi ${greetingName},\n\n${inviter} invited you to join TrafficMENA. Complete your profile and unlock the event and library experience using the secure link below.\n\nAccept your invitation: ${invitationLink}\n\nThe invitation expires on ${friendlyExpiry}.\n\n${
+    customMessage && customMessage.trim().length > 0 ? `${customMessage.trim()}\n\n` : ''
+  }— TrafficMENA team`;
 
   const htmlBody = `<!doctype html>
 <html>
@@ -117,7 +130,11 @@ export async function sendInvitationEmail({
       <h1>You're invited to TrafficMENA</h1>
       <p class="subtitle">Hi ${greetingName},</p>
       <p class="subtitle">${inviter} would like you to join the TrafficMENA community. Click below to confirm your account and access upcoming events and the knowledge library.</p>
-      ${customMessage ? `<blockquote class="subtitle" style="border-left: 3px solid #05ef62; margin: 24px 0; padding-left: 16px; font-style: italic;">${customMessage}</blockquote>` : ''}
+      ${
+        safeCustomMessage
+          ? `<blockquote class="subtitle" style="border-left: 3px solid #05ef62; margin: 24px 0; padding-left: 16px; font-style: italic;">${safeCustomMessage}</blockquote>`
+          : ''
+      }
       <a class="cta" href="${invitationLink}">Accept invitation</a>
       <p class="subtitle">This invitation expires on <strong>${friendlyExpiry}</strong>. If the button does not work, copy and paste this link into your browser:</p>
       <p class="subtitle" style="word-break: break-all;">${invitationLink}</p>
@@ -127,8 +144,9 @@ export async function sendInvitationEmail({
 </html>`;
 
   if (!env.PLUNK_API_KEY || !env.PLUNK_API_KEY.startsWith('sk_')) {
-    console.warn('[plunk] Valid PLUNK_API_KEY missing; invitation email logged for debugging');
-    console.info(`[plunk] Invitation for ${email}: ${invitationLink}`);
+    console.warn(
+      '[plunk] Valid PLUNK_API_KEY missing; invitation email simulated (details redacted)',
+    );
     return;
   }
 

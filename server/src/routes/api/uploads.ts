@@ -57,6 +57,14 @@ const scopeConfig: Record<UploadScope, ScopeConfig> = {
 const storageZone = env.BUNNY_STORAGE_ZONE;
 const storageAccessKey = env.BUNNY_STORAGE_ACCESS_KEY;
 
+const FILE_SIGNATURES: Record<string, number[][]> = {
+  jpg: [[0xff, 0xd8, 0xff]],
+  jpeg: [[0xff, 0xd8, 0xff]],
+  png: [[0x89, 0x50, 0x4e, 0x47]],
+  pdf: [[0x25, 0x50, 0x44, 0x46]],
+  webp: [[0x52, 0x49, 0x46, 0x46]],
+};
+
 function buildPublicUrl(storagePath: string) {
   if (env.BUNNY_STORAGE_CDN_URL) {
     return `${env.BUNNY_STORAGE_CDN_URL}/${storagePath}`
@@ -86,6 +94,20 @@ function getExtension(file: File, fallback = 'bin') {
     return file.type.split('/')[1];
   }
   return fallback;
+}
+
+async function validateFileSignature(file: File, extension: string) {
+  const expectedSignatures = FILE_SIGNATURES[extension];
+  if (!expectedSignatures || expectedSignatures.length === 0) {
+    return true;
+  }
+
+  const arrayBuffer = await file.slice(0, 8).arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  return expectedSignatures.some((signature) =>
+    signature.every((value, index) => bytes[index] === value),
+  );
 }
 
 async function handleUploadRequest(c: Context) {
@@ -157,6 +179,19 @@ async function handleUploadRequest(c: Context) {
         error: {
           code: 'UNSUPPORTED_TYPE',
           message: `${file.type} is not permitted for this upload type.`,
+        },
+      },
+      415,
+    );
+  }
+
+  const signatureValid = await validateFileSignature(file, extension);
+  if (!signatureValid) {
+    return c.json(
+      {
+        error: {
+          code: 'SIGNATURE_MISMATCH',
+          message: 'File contents do not match the declared file type.',
         },
       },
       415,

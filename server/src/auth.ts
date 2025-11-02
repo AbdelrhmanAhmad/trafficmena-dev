@@ -19,6 +19,18 @@ if (!authSecret || authSecret.length < 32) {
   );
 }
 
+const placeholderSecret = 'trafficmena-dev-secret-change-in-production-min-32-chars';
+if (isProduction && authSecret === placeholderSecret) {
+  throw new Error(
+    'BETTER_AUTH_SECRET is using the default placeholder. Generate a unique 32+ character secret before running in production.',
+  );
+}
+if (!isProduction && authSecret === placeholderSecret) {
+  console.warn(
+    '[auth] BETTER_AUTH_SECRET is using the default placeholder. Generate a unique secret before deploying to production.',
+  );
+}
+
 export const auth = betterAuth({
   secret: authSecret,
   url: env.BETTER_AUTH_ISSUER ?? 'http://localhost:3001',

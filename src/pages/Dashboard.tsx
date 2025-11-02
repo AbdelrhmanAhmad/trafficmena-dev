@@ -1,3 +1,4 @@
+import { Edit, Sparkles } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { SkillRecord } from '@/app/api/skills';
@@ -186,14 +187,22 @@ const Dashboard: React.FC = () => {
     <ProtectedRoute>
       <DashboardLayout>
         <div className="space-y-8">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-            <p className="text-muted-foreground">
-              Update your personal details and highlight the skills you&apos;re focused on.
-            </p>
+          <div className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#d5ffe9]/10 via-transparent to-[#f4fff9]/5 pointer-events-none"></div>
+            <div className="relative z-10 flex items-center gap-4 mb-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
+                <Edit className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-neutral-900">My Profile</h1>
+                <p className="text-neutral-700 mt-1">
+                  Update your personal details and highlight the skills you&apos;re focused on.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <Card>
+          <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <CardHeader>
               <CardTitle>Personal Information</CardTitle>
             </CardHeader>
@@ -270,17 +279,26 @@ const Dashboard: React.FC = () => {
               )}
 
               <div className="flex justify-end">
-                <Button onClick={handleSaveProfile} disabled={updateProfileMutation.isPending}>
+                <Button 
+                  onClick={handleSaveProfile} 
+                  disabled={updateProfileMutation.isPending}
+                  className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
+                >
                   {updateProfileMutation.isPending ? 'Saving…' : 'Save Changes'}
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <CardHeader className="flex flex-col gap-2">
-              <CardTitle>Skills Focus</CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-neutral-900">Skills Focus</CardTitle>
+              </div>
+              <p className="text-sm text-neutral-600 ml-13">
                 Highlight the skills you&apos;re actively developing to unlock relevant events and
                 resources.
               </p>
@@ -301,46 +319,69 @@ const Dashboard: React.FC = () => {
                       <label
                         key={skill.id}
                         htmlFor={checkboxId}
-                        className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:border-primary"
+                        className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg ${
+                          checked 
+                            ? 'border-[#05ef62]/40 bg-gradient-to-br from-[#d5ffe9]/20 to-[#f4fff9]/10 shadow-md' 
+                            : 'border-neutral-200 bg-white/80 backdrop-blur hover:border-neutral-300'
+                        }`}
                       >
                         <Checkbox
                           id={checkboxId}
                           checked={checked}
                           onCheckedChange={() => toggleSkill(skill.id)}
-                          className="mt-1"
+                          className="mt-0.5"
                         />
-                        <span>
-                          <span className="font-medium text-gray-900">{skill.name}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-neutral-900">{skill.name}</span>
+                            {checked && (
+                              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f]">
+                                <Sparkles className="h-2.5 w-2.5 text-white" />
+                              </div>
+                            )}
+                          </div>
                           {skill.category && (
-                            <Badge variant="outline" className="ml-2">
+                            <Badge 
+                              variant="outline" 
+                              className={`ml-2 mt-1 ${
+                                checked ? 'border-[#05ef62]/60 bg-[#05ef62]/10 text-[#05ef62]' : 'border-neutral-200 bg-neutral-50'
+                              }`}
+                            >
                               {skill.category}
                             </Badge>
                           )}
-                        </span>
+                        </div>
                       </label>
                     );
                   })}
                 </div>
               )}
 
-              <div className="rounded-lg border bg-muted/30 p-4">
-                <h3 className="mb-2 text-sm font-semibold text-gray-900">Add a custom skill</h3>
+              <div className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-neutral-900">Add a custom skill</h3>
+                </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
                     value={customSkill}
                     onChange={(event) => setCustomSkill(event.target.value)}
                     placeholder="e.g. Arabic copywriting"
                     disabled={createSkillMutation.isPending}
+                    className="rounded-xl border-neutral-200 bg-white/70 backdrop-blur"
                   />
                   <Button
                     type="button"
                     onClick={addCustomSkill}
                     disabled={createSkillMutation.isPending || !customSkill.trim()}
+                    className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
                   >
                     {createSkillMutation.isPending ? 'Adding…' : 'Add Skill'}
                   </Button>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">
+                <p className="mt-2 text-xs text-neutral-600">
                   We&apos;ll create this skill for the community and automatically add it to your
                   profile.
                 </p>

@@ -126,11 +126,6 @@ export async function fetchUsersAdmin(
   };
 }
 
-export async function checkEmailExists(email: string): Promise<{ exists: boolean }> {
-  const params = new URLSearchParams({ email });
-  return fetchJson<{ exists: boolean }>(`${API_BASE}/users/email-exists?${params.toString()}`);
-}
-
 export type UpdateCurrentUserPayload = Partial<{
   name: string;
   first_name: string;

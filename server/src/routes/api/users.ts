@@ -27,10 +27,6 @@ const updateUserRoleSchema = z.object({
   role: z.enum(roleValues),
 });
 
-const emailExistsSchema = z.object({
-  email: z.string().email(),
-});
-
 export function registerUserRoutes(app: Hono) {
   app.get('/users', async (c) => {
     const session = await getSessionFromRequest(c);
@@ -111,32 +107,6 @@ export function registerUserRoutes(app: Hono) {
         total: Number(totalResult[0]?.count ?? 0),
       },
     });
-  });
-
-  app.get('/users/email-exists', async (c) => {
-    const parsed = emailExistsSchema.safeParse({ email: c.req.query('email') });
-
-    if (!parsed.success) {
-      return c.json(
-        {
-          error: {
-            code: 'INVALID_QUERY',
-            message: parsed.error.message,
-          },
-        },
-        400,
-      );
-    }
-
-    const normalizedEmail = parsed.data.email.trim().toLowerCase();
-
-    const [match] = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, normalizedEmail))
-      .limit(1);
-
-    return c.json({ exists: Boolean(match) });
   });
 
   app.get('/users/me', async (c) => {
@@ -283,6 +253,18 @@ export function registerUserRoutes(app: Hono) {
     }
 
     const desiredRole = body.data.role;
+
+    if (desiredRole === 'owner' && actor.role !== 'owner') {
+      return c.json(
+        {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Only owners can grant owner access.',
+          },
+        },
+        403,
+      );
+    }
 
     const [target] = await db
       .select({ id: profiles.id, role: profiles.role })

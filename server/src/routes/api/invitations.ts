@@ -3,6 +3,7 @@ import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import { auth } from '../../auth.js';
+import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { invitations, profiles, users } from '../../db/schema/index.js';
 import {
@@ -13,8 +14,9 @@ import {
   sendBulkInvitations,
   sendSingleInvitation,
 } from '../../services/invitations.js';
+import { invitationRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { normalizeEmail } from './utils.js';
+import { getRequestIp, normalizeEmail } from './utils.js';
 
 const singleInviteSchema = z.object({
   email: z.string().email(),
@@ -101,6 +103,20 @@ export function registerInvitationRoutes(app: Hono) {
       async (c) => {
         const token = c.req.param('token');
         const payload = await parseJson(c, acceptSchema);
+        const requestIp = getRequestIp(c);
+        if (requestIp !== 'unknown') {
+          const rateCheck = invitationRateLimiter.consume(`invite:accept:${requestIp}`, {
+            limit: 5,
+            windowMs: 60 * 60 * 1000,
+          });
+          if (!rateCheck.allowed) {
+            throw new InvitationError(
+              'INVITATION_RATE_LIMITED',
+              'Too many attempts from this network. Please try again later.',
+              429,
+            );
+          }
+        }
         const { invitation, userId } = await acceptInvitation(token, payload);
         try {
           await auth.api.sendVerificationOTP({
@@ -476,12 +492,15 @@ async function activateInvitation(
   let sessionCreated = false;
   const setCookieValues: string[] = [];
 
-  if (inviteeUserId) {
+  if (inviteeUserId && env.INVITE_SESSION_SECRET) {
     try {
+      const headers = new Headers(c.req.raw.headers);
+      headers.set('x-invite-session-secret', env.INVITE_SESSION_SECRET);
+
       const sessionResponse = await auth.api.internalInviteSession({
         body: { userId: inviteeUserId },
         request: c.req.raw,
-        headers: c.req.raw.headers,
+        headers,
         asResponse: true,
       });
 
@@ -514,6 +533,8 @@ async function activateInvitation(
       sessionCreated = false;
       console.error('[invitations] auto session creation failed', error);
     }
+  } else if (!env.INVITE_SESSION_SECRET) {
+    console.warn('[invitations] invite session secret not configured; skipping auto session setup');
   }
 
   let updatedInvitation = existing;

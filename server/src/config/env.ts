@@ -31,6 +31,10 @@ const envSchema = z.object({
     .url()
     .optional()
     .transform((value) => value?.replace(/\/+$/, '')),
+  INVITE_SESSION_SECRET: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value.trim() : undefined)),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -56,6 +60,15 @@ if (corsAllowlist.length === 0) {
 if (corsAllowlist.includes('*')) {
   throw new Error(
     'CORS_ORIGIN cannot include "*" when credentials are required. Provide a comma-separated list of explicit origins instead.',
+  );
+}
+
+if (
+  parsed.data.NODE_ENV === 'production' &&
+  (!parsed.data.INVITE_SESSION_SECRET || parsed.data.INVITE_SESSION_SECRET.length < 16)
+) {
+  throw new Error(
+    'INVITE_SESSION_SECRET must be configured with a strong value (>=16 chars) in production.',
   );
 }
 

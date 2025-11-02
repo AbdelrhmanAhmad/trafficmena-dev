@@ -1,7 +1,10 @@
+import { and, count, eq, gte } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { auth } from '../../auth.js';
-import { otpRateLimiter } from '../../services/rateLimiter.js';
+import { db } from '../../db/client.js';
+import { authVerifications } from '../../db/schema/index.js';
+import { otpRateLimiter, otpVerificationRateLimiter } from '../../services/rateLimiter.js';
 import { getRequestIp, normalizeEmail } from './utils.js';
 
 const OTP_SHORT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -40,6 +43,55 @@ export function registerAuthRoutes(app: Hono) {
       const email = normalizeEmail(body.data.email);
       const type = body.data.type ?? 'sign-in';
       const clientIp = getRequestIp(c);
+      const now = Date.now();
+
+      const [recentOtpStats, dailyOtpStats] = await Promise.all([
+        db
+          .select({ total: count(authVerifications.id) })
+          .from(authVerifications)
+          .where(
+            and(
+              eq(authVerifications.identifier, email),
+              gte(authVerifications.createdAt, new Date(now - OTP_SHORT_WINDOW_MS)),
+            ),
+          ),
+        db
+          .select({ total: count(authVerifications.id) })
+          .from(authVerifications)
+          .where(
+            and(
+              eq(authVerifications.identifier, email),
+              gte(authVerifications.createdAt, new Date(now - OTP_DAILY_WINDOW_MS)),
+            ),
+          ),
+      ]);
+
+      const recentOtpCount = Number(recentOtpStats?.[0]?.total ?? 0);
+      if (recentOtpCount >= OTP_SHORT_LIMIT) {
+        return c.json(
+          {
+            error: {
+              code: 'OTP_RATE_LIMITED',
+              message: 'Too many OTP requests. Please wait a few minutes before trying again.',
+            },
+          },
+          429,
+        );
+      }
+
+      const dailyOtpCount = Number(dailyOtpStats?.[0]?.total ?? 0);
+      if (dailyOtpCount >= OTP_DAILY_LIMIT) {
+        return c.json(
+          {
+            error: {
+              code: 'OTP_RATE_LIMITED',
+              message:
+                'You have reached the maximum OTP requests for today. Please try again tomorrow.',
+            },
+          },
+          429,
+        );
+      }
 
       const shortWindow = otpRateLimiter.consume(`otp:email:short:${email}`, {
         limit: OTP_SHORT_LIMIT,
@@ -131,6 +183,23 @@ export function registerAuthRoutes(app: Hono) {
     try {
       const email = normalizeEmail(body.data.email);
 
+      const verificationWindow = otpVerificationRateLimiter.consume(`otp:verify:${email}`, {
+        limit: 5,
+        windowMs: 10 * 60 * 1000,
+      });
+
+      if (!verificationWindow.allowed) {
+        return c.json(
+          {
+            error: {
+              code: 'OTP_VERIFY_RATE_LIMITED',
+              message: 'Too many verification attempts. Please request a new code.',
+            },
+          },
+          429,
+        );
+      }
+
       const response = await auth.api.signInEmailOTP({
         body: {
           email,
@@ -140,6 +209,10 @@ export function registerAuthRoutes(app: Hono) {
         headers: c.req.raw.headers,
         asResponse: true,
       });
+
+      if (response.ok) {
+        otpVerificationRateLimiter.reset(`otp:verify:${email}`);
+      }
 
       return response;
     } catch (error) {

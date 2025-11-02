@@ -11,7 +11,7 @@
 - ✅ Legacy Supabase hooks/services removed; `@supabase/supabase-js` eliminated from dependencies.
 - ✅ Events and library views (member + admin read scenarios) are API-driven; admin invitations screen now lists live send/accept status.
 - ✅ Unified BunnyCDN upload flow serves events, library assets, and TipTap images (20 MB cap) with shared API + client helpers; admin deletions update immediately.
-- 🚧 Outstanding: invitation activation loop, dashboard metrics decision, smoke-test coverage, production logging, and Bunny asset cleanup guidance.
+- 🚧 Outstanding: dashboard metrics decision, smoke-test coverage, production logging, and Bunny asset cleanup guidance.
 
 **Launch Target:** Immediately after the remaining feature and QA tasks reach "done" (estimated 3–4 focused engineering days).
 
@@ -28,7 +28,7 @@
 | 🟠 | Enable request/error logging on Hono server | Backend | pino + stdout rotation for Hetzner deployment |
 | 🟢 | Admin CRUD workflow live | Product/Eng | Dashboard create/edit/delete shipped; runbook in `docs/admin-content-workflow.md` |
 | 🟢 | Update documentation & runbooks | Eng Enablement | Sync INVESTIGATION-RESULTS, warp-reviewed-plan, AGENTS, README-local-db |
-| 🟠 | Close the invitation activation loop | Backend/Frontend | Ensure accepted invites auto-create Better Auth sessions + dashboard confirmation |
+| ✅ | Close the invitation activation loop | Backend/Frontend | Invite acceptance now auto-continues onboarding, locks the invite email, and activates sessions before redirecting to the dashboard |
 | 🟡 | Plan BunnyCDN asset pruning | Platform | Decide on manual vs automated cleanup for deleted library files |
 
 ---
@@ -39,6 +39,7 @@
 - ✅ Invitation module trimmed to <500 lines with single send + CSV upload endpoints.
 - ✅ Admin dashboard updated with simple stats, CSV instructions, and daily limit messaging.
 - ✅ Bulk CSV parser hardened (quoted fields, optional headers, email validation) so custom messages no longer create invalid invite rows.
+- ✅ Invite acceptance now jumps directly into Step 1, locks the invitation email during onboarding, and attempts auto-activation before falling back to OTP.
 - ➡️ Monitor daily limit feedback and adjust thresholds if operators hit the guardrail.
 
 ### Phase B – Admin Workflow Decision (0.5 day)

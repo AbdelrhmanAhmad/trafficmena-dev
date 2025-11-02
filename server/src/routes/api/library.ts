@@ -3,6 +3,7 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { libraryAssets } from '../../db/schema/index.js';
+import { getSessionFromRequest } from '../../utils/session.js';
 import { requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -73,6 +74,19 @@ const updateAssetSchema = assetObjectSchema
 
 export function registerLibraryRoutes(app: Hono) {
   app.get('/library', async (c) => {
+    const session = await getSessionFromRequest(c);
+    if (!session || !session.user) {
+      return c.json(
+        {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required.',
+          },
+        },
+        401,
+      );
+    }
+
     const parsed = listQuerySchema.safeParse({
       page: c.req.query('page'),
       pageSize: c.req.query('pageSize'),
@@ -151,6 +165,19 @@ export function registerLibraryRoutes(app: Hono) {
   });
 
   app.get('/library/:id', async (c) => {
+    const session = await getSessionFromRequest(c);
+    if (!session || !session.user) {
+      return c.json(
+        {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Authentication required.',
+          },
+        },
+        401,
+      );
+    }
+
     const id = c.req.param('id');
 
     const asset = await db

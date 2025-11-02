@@ -116,3 +116,12 @@ Ship the event, publish the replay, learn faster. 🚀
 4. **After a rollback:** Post in `#trafficmena-ops` so the team knows to pause new invites until the issue is resolved.
 
 Remember to re-enable invite-only once the underlying issue is fixed so that new members continue through the invitation path.
+
+### Member Experience (Invite-Only ON)
+
+- Invite email → member confirms on `/invitation/:token` → they land directly on **Step 1** of the onboarding wizard (the “Continue with email” splash is skipped automatically).
+- The invite email is locked in **Step 2** so members can’t overwrite it; the wizard still collects phone, goals, and challenges as normal.
+- Step 5 attempts to activate the invite and create a Better Auth session. If activation falls back to OTP, the member continues through the same screen they would see in the open-signup flow.
+- Admin metrics transition `pending → accepted → activated` as these steps complete; use the dashboard counts to confirm nothing is stuck in “pending”.
+
+> If an invite was accepted previously and the member re-opens the link, the wizard resumes at Step 1 with their cached data so operations never lose the profile details gathered during onboarding.

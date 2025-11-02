@@ -1,4 +1,4 @@
-import { FileText } from 'lucide-react';
+import { FileText, Search } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
@@ -41,16 +41,30 @@ const DashboardLibrary: React.FC = () => {
     <ProtectedRoute>
       <DashboardLayout>
         <div className="max-w-6xl">
-          <h1 className="mb-8 text-3xl font-bold text-gray-900">My Library</h1>
+          <div className="relative mb-8 overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#d5ffe9]/10 via-transparent to-[#f4fff9]/5 pointer-events-none"></div>
+            <div className="relative z-10 flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#29cf9f] to-[#00fdc2] text-white">
+                <FileText className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-neutral-900">My Library</h1>
+                <p className="text-neutral-700 mt-1">
+                  Access your exclusive marketing resources and content
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Search Bar */}
-          <div className="mb-6">
+          <div className="mb-6 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
             <Input
               type="search"
               placeholder="Search library content..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-md"
+              className="max-w-md rounded-xl border-neutral-200 bg-white/80 backdrop-blur pl-10 pr-4 py-3 transition-all duration-300 focus:border-[#29cf9f] focus:shadow-md"
             />
           </div>
 
@@ -63,7 +77,7 @@ const DashboardLibrary: React.FC = () => {
 
           {/* Error State */}
           {isError && (
-            <Card>
+            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               <CardContent className="py-12 text-center">
                 <p className="text-red-600">
                   Failed to load library content. Please try again later.
@@ -74,11 +88,13 @@ const DashboardLibrary: React.FC = () => {
 
           {/* Empty State */}
           {!isLoading && !isError && filteredAssets.length === 0 && (
-            <Card>
+            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               <CardContent className="py-12 text-center">
-                <FileText className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-                <h3 className="mb-2 text-lg font-medium text-gray-900">No content available</h3>
-                <p className="text-gray-600">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#f4fff9]/40 to-[#d5ffe9]/20">
+                  <FileText className="h-6 w-6 text-[#29cf9f]" />
+                </div>
+                <h3 className="mb-2 text-lg font-medium text-neutral-900">No content available</h3>
+                <p className="text-neutral-600">
                   {searchQuery
                     ? 'No items match your search. Try different keywords.'
                     : 'Library content will appear here once available.'}

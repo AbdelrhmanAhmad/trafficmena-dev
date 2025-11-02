@@ -2,7 +2,6 @@ import { Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkEmailExists } from '@/app/api/users';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -105,22 +104,10 @@ const Step2: React.FC = () => {
 
     const normalized = email.trim().toLowerCase();
 
-    try {
-      const { exists } = await checkEmailExists(normalized);
-      if (exists) {
-        setError('This email already has an account. Please sign in instead.');
-        setIsLoading(false);
-        return;
-      }
-
-      updateFormData({ email: normalized });
-      navigate('/signup/step-3');
-    } catch (requestError) {
-      console.warn('[signup] email validation failed', requestError);
-      setApiError('Unable to verify this email right now. Please try again in a moment.');
-    } finally {
-      setIsLoading(false);
-    }
+    updateFormData({ email: normalized });
+    navigate('/signup/step-3');
+    setIsLoading(false);
+    return;
   };
 
   const handleBack = () => {

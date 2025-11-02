@@ -2,7 +2,7 @@ import { and, count, eq, gte, ilike, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { eventAttendees, events } from '../../db/schema/index.js';
+import { eventAttendees, events, profiles } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { requireAdmin, requireManager } from './utils.js';
 
@@ -171,8 +171,13 @@ export function registerEventRoutes(app: Hono) {
         .limit(pageSize)
         .offset(offset);
 
+      const sanitizedItems = items.map(({ meetingLink, ...rest }) => ({
+        ...rest,
+        meetingLink: null,
+      }));
+
       return c.json({
-        items,
+        items: sanitizedItems,
         pagination: {
           page,
           pageSize,
@@ -244,10 +249,33 @@ export function registerEventRoutes(app: Hono) {
       attending = existing.length > 0;
     }
 
+    let viewerRole: 'owner' | 'admin' | 'manager' | 'expert' | 'user' = 'user';
+    if (viewerId) {
+      const [profile] = await db
+        .select({ role: profiles.role })
+        .from(profiles)
+        .where(eq(profiles.id, viewerId))
+        .limit(1);
+      const normalizedRole = (profile?.role ?? 'user').toLowerCase();
+      if (
+        normalizedRole === 'owner' ||
+        normalizedRole === 'admin' ||
+        normalizedRole === 'manager'
+      ) {
+        viewerRole = normalizedRole;
+      } else if (normalizedRole === 'expert') {
+        viewerRole = 'expert';
+      }
+    }
+
+    const canAccessMeetingLink =
+      attending || viewerRole === 'owner' || viewerRole === 'admin' || viewerRole === 'manager';
+
     return c.json({
       ...event,
       attendeeCount: Number(attendeeCount ?? 0),
       attending,
+      meetingLink: canAccessMeetingLink ? event.meetingLink : null,
     });
   });
 

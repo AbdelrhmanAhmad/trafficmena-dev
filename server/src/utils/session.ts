@@ -27,11 +27,20 @@ export async function getSessionFromRequest(c: Context): Promise<AuthSessionResu
     });
 
     if (!result || !result.session || !result.user) {
+      const reason = !result ? 'no_result' : !result.session ? 'no_session' : 'no_user';
+      console.warn('[auth] session validation failed', {
+        path: c.req.path,
+        reason,
+      });
       return null;
     }
 
     return result as AuthSessionResult;
   } catch (error) {
+    console.error('[auth] session retrieval error', {
+      path: c.req.path,
+      message: error instanceof Error ? error.message : 'unknown_error',
+    });
     return null;
   }
 }

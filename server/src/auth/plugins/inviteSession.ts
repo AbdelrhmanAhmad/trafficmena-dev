@@ -2,6 +2,7 @@ import type { BetterAuthPlugin } from 'better-auth';
 import { APIError, createAuthEndpoint } from 'better-auth/api';
 import { setSessionCookie } from 'better-auth/cookies';
 import { z } from 'zod';
+import { env } from '../../config/env.js';
 
 export const inviteSessionPlugin = (): BetterAuthPlugin => ({
   id: 'invite-session',
@@ -16,6 +17,22 @@ export const inviteSessionPlugin = (): BetterAuthPlugin => ({
         requireHeaders: true,
       },
       async (ctx) => {
+        if (!env.INVITE_SESSION_SECRET) {
+          throw new APIError('SERVICE_UNAVAILABLE', {
+            message: 'Invite session provisioning is disabled.',
+          });
+        }
+
+        const providedSecret =
+          ctx.request?.headers?.get('x-invite-session-secret') ??
+          ctx.headers?.get?.('x-invite-session-secret');
+
+        if (providedSecret !== env.INVITE_SESSION_SECRET) {
+          throw new APIError('UNAUTHORIZED', {
+            message: 'Invalid invite session credentials.',
+          });
+        }
+
         const { userId } = ctx.body;
 
         const user = await ctx.context.internalAdapter.findUser(userId, ctx);
