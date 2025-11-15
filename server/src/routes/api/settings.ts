@@ -103,7 +103,7 @@ export function registerSettingsRoutes(app: Hono) {
         const [row] = await db
           .update(platformSettings)
           .set({
-            inviteOnlySignup: bodyResult.data.inviteOnly,
+            inviteOnlySignup: (bodyResult.data as any).inviteOnly,
             updatedAt: now,
             updatedBy: result.userId,
           })
@@ -119,7 +119,7 @@ export function registerSettingsRoutes(app: Hono) {
         const [row] = await db
           .insert(platformSettings)
           .values({
-            inviteOnlySignup: bodyResult.data.inviteOnly,
+            inviteOnlySignup: (bodyResult.data as any).inviteOnly,
             updatedAt: now,
             updatedBy: result.userId,
           })
@@ -133,7 +133,7 @@ export function registerSettingsRoutes(app: Hono) {
       }
 
       return c.json({
-        inviteOnly: updated?.inviteOnlySignup ?? bodyResult.data.inviteOnly,
+        inviteOnly: updated?.inviteOnlySignup ?? (bodyResult.data as any).inviteOnly,
         updatedAt: updated?.updatedAt ?? now,
         updatedBy: updated?.updatedBy ?? result.userId,
       });

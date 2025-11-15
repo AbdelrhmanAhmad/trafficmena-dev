@@ -497,7 +497,7 @@ async function activateInvitation(
       const headers = new Headers(c.req.raw.headers);
       headers.set('x-invite-session-secret', env.INVITE_SESSION_SECRET);
 
-      const sessionResponse = await auth.api.internalInviteSession({
+      const sessionResponse = await (auth.api as any).internalInviteSession({
         body: { userId: inviteeUserId },
         request: c.req.raw,
         headers,

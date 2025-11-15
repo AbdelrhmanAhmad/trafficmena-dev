@@ -75,10 +75,15 @@ export function createApp() {
       },
       xFrameOptions: 'DENY',
       referrerPolicy: 'strict-origin-when-cross-origin',
-      permissionsPolicy: 'camera=(), microphone=(), geolocation=()',
+      // permissionsPolicy: 'camera=(), microphone=(), geolocation=()',
+      permissionsPolicy: {
+          camera: [],
+          microphone: [],
+          geolocation: [],
+      },
       crossOriginOpenerPolicy: 'same-origin',
       crossOriginResourcePolicy: 'same-origin',
-      xPoweredBy: false,
+      removePoweredBy: true,
     }),
   );
 

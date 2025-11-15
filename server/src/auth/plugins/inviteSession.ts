@@ -35,7 +35,7 @@ export const inviteSessionPlugin = (): BetterAuthPlugin => ({
 
         const { userId } = ctx.body;
 
-        const user = await ctx.context.internalAdapter.findUser(userId, ctx);
+        const user = await (ctx.context.internalAdapter as any).findUser(userId, ctx);
         if (!user) {
           throw new APIError('NOT_FOUND', {
             message: 'User not found for provided invitation.',
