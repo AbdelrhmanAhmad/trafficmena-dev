@@ -56,9 +56,9 @@ const WelcomeDashboard: React.FC = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-gradient-to-br from-[#d5ffe9]/30 via-[#f4fff9]/20 to-[#00fdc2]/10 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-          <div className="pointer-events-none absolute -left-[25vw] top-[-15vh] -z-10 h-[35vh] w-[65vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/60 via-[#f4fff9]/40 to-transparent blur-3xl" />
-          <div className="pointer-events-none absolute -right-[28vw] bottom-[-15vh] -z-10 h-[35vh] w-[60vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
-          
+          <div className="pointer-events-none absolute -left-1/4 -top-1/4 -z-10 h-[40%] w-[60%] rounded-full bg-gradient-to-br from-[#d5ffe9]/50 via-[#f4fff9]/30 to-transparent blur-3xl" />
+          <div className="pointer-events-none absolute -right-1/4 -bottom-1/4 -z-10 h-[40%] w-[50%] rounded-full bg-gradient-to-tr from-[#00fdc2]/20 via-[#05ef62]/15 to-transparent blur-[100px]" />
+
           <div className="relative z-10 space-y-4 text-center">
             <div className="mb-4 flex items-center justify-center gap-2">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white animate-pulse">
@@ -100,9 +100,14 @@ const WelcomeDashboard: React.FC = () => {
                   </p>
                 ) : events.length > 0 ? (
                   events.map((event) => (
-                    <div key={event.id} className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#05ef62]/40">
+                    <div
+                      key={event.id}
+                      className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#05ef62]/40"
+                    >
                       <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">{event.title}</h3>
+                        <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">
+                          {event.title}
+                        </h3>
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20 flex-shrink-0 ml-2">
                           <Calendar className="h-4 w-4 text-[#05ef62]" />
                         </div>
@@ -135,9 +140,9 @@ const WelcomeDashboard: React.FC = () => {
                   </p>
                 )}
               </div>
-              <Button 
-                className="self-start rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95" 
-                variant="default" 
+              <Button
+                className="self-start rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
+                variant="default"
                 asChild
               >
                 <a href="/meetups">Browse Events</a>
@@ -168,9 +173,14 @@ const WelcomeDashboard: React.FC = () => {
                   </p>
                 ) : assets.length > 0 ? (
                   assets.map((asset) => (
-                    <div key={asset.id} className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#29cf9f]/40">
+                    <div
+                      key={asset.id}
+                      className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#29cf9f]/40"
+                    >
                       <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">{asset.title}</h3>
+                        <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">
+                          {asset.title}
+                        </h3>
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#f4fff9]/40 to-[#d5ffe9]/20 flex-shrink-0 ml-2">
                           <FileText className="h-4 w-4 text-[#29cf9f]" />
                         </div>
@@ -193,9 +203,9 @@ const WelcomeDashboard: React.FC = () => {
                   </p>
                 )}
               </div>
-              <Button 
-                className="self-start rounded-xl bg-gradient-to-r from-[#29cf9f] to-[#00fdc2] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95" 
-                variant="default" 
+              <Button
+                className="self-start rounded-xl bg-gradient-to-r from-[#29cf9f] to-[#00fdc2] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
+                variant="default"
                 asChild
               >
                 <a href="/dashboard/library">View Library</a>

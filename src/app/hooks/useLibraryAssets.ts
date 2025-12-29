@@ -13,6 +13,7 @@ const libraryListKey = (params: FetchLibraryParams & { page: number; pageSize: n
   params.pageSize,
   params.search ?? null,
   params.type ?? null,
+  params.excludeInTracks ?? null,
 ];
 
 export function useLibraryList(

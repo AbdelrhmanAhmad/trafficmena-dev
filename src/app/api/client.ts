@@ -1,8 +1,13 @@
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  code?: string;
+  extra?: Record<string, unknown>;
+
+  constructor(message: string, status: number, code?: string, extra?: Record<string, unknown>) {
     super(message);
     this.status = status;
+    this.code = code;
+    this.extra = extra;
   }
 }
 
@@ -20,10 +25,21 @@ export async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Prom
   const isJson = contentType.includes('application/json');
 
   if (!response.ok) {
-    const message = isJson
-      ? ((await response.json()).error?.message ?? response.statusText)
-      : response.statusText;
-    throw new ApiError(message, response.status);
+    let message = response.statusText;
+    let code: string | undefined;
+    let extra: Record<string, unknown> | undefined;
+
+    if (isJson) {
+      const body = await response.json();
+      if (body.error) {
+        message = body.error.message ?? message;
+        code = body.error.code;
+        // Extract any other properties from error logic as extra
+        const { message: _m, code: _c, ...rest } = body.error;
+        if (Object.keys(rest).length > 0) extra = rest;
+      }
+    }
+    throw new ApiError(message, response.status, code, extra);
   }
 
   if (!isJson) {

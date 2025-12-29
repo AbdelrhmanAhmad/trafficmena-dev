@@ -1,8 +1,8 @@
-import { and, count, eq, ilike } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, notInArray } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { libraryAssets } from '../../db/schema/index.js';
+import { libraryAssets, seriesAssets } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { requireAdmin, requireManager } from './utils.js';
 
@@ -11,6 +11,11 @@ const listQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(12),
   search: z.string().optional(),
   type: z.enum(['Document', 'Video', 'Presentation']).optional(),
+  eventIds: z.string().optional(), // Comma-separated UUIDs for filtering by event
+  excludeInTracks: z
+    .enum(['true', 'false', '1', '0'])
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
 });
 
 const optionalText = z.union([z.string().trim().max(8000), z.null()]).optional();
@@ -29,6 +34,7 @@ const assetObjectSchema = z.object({
   documentUrl: urlSchema,
   embedUrl: urlSchema,
   embedType: optionalShortString,
+  thumbnailUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
   eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
   fileSizeBytes: z
     .union([z.number().int().min(0), z.null()])
@@ -92,6 +98,8 @@ export function registerLibraryRoutes(app: Hono) {
       pageSize: c.req.query('pageSize'),
       search: c.req.query('search'),
       type: c.req.query('type'),
+      eventIds: c.req.query('eventIds'),
+      excludeInTracks: c.req.query('excludeInTracks'),
     });
 
     if (!parsed.success) {
@@ -106,7 +114,7 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
 
-    const { page, pageSize, search, type } = parsed.data;
+    const { page, pageSize, search, type, eventIds, excludeInTracks } = parsed.data;
     const filters: any[] = [];
 
     if (type) {
@@ -115,6 +123,20 @@ export function registerLibraryRoutes(app: Hono) {
 
     if (search) {
       filters.push(ilike(libraryAssets.title, `%${search}%`));
+    }
+
+    // Filter by event IDs (comma-separated UUIDs)
+    if (eventIds) {
+      const ids = eventIds.split(',').filter((id) => id.length === 36);
+      if (ids.length > 0) {
+        filters.push(inArray(libraryAssets.eventId, ids));
+      }
+    }
+
+    // Exclude assets that are in any series
+    if (excludeInTracks) {
+      const assetIdsInSeries = db.select({ assetId: seriesAssets.assetId }).from(seriesAssets);
+      filters.push(notInArray(libraryAssets.id, assetIdsInSeries));
     }
 
     const whereClause = filters.length ? and(...filters) : undefined;
@@ -139,6 +161,7 @@ export function registerLibraryRoutes(app: Hono) {
         documentUrl: libraryAssets.documentUrl,
         embedUrl: libraryAssets.embedUrl,
         embedType: libraryAssets.embedType,
+        thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
@@ -191,6 +214,7 @@ export function registerLibraryRoutes(app: Hono) {
         documentUrl: libraryAssets.documentUrl,
         embedUrl: libraryAssets.embedUrl,
         embedType: libraryAssets.embedType,
+        thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
@@ -248,6 +272,7 @@ export function registerLibraryRoutes(app: Hono) {
         documentUrl: payload.documentUrl ?? null,
         embedUrl: payload.embedUrl ?? null,
         embedType: payload.embedType ?? null,
+        thumbnailUrl: payload.thumbnailUrl || null,
         eventId: payload.eventId ?? null,
         fileSizeBytes: payload.fileSizeBytes ?? null,
       })
@@ -261,6 +286,7 @@ export function registerLibraryRoutes(app: Hono) {
         documentUrl: libraryAssets.documentUrl,
         embedUrl: libraryAssets.embedUrl,
         embedType: libraryAssets.embedType,
+        thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
@@ -301,6 +327,8 @@ export function registerLibraryRoutes(app: Hono) {
     if (updates.documentUrl !== undefined) updateValues.documentUrl = updates.documentUrl ?? null;
     if (updates.embedUrl !== undefined) updateValues.embedUrl = updates.embedUrl ?? null;
     if (updates.embedType !== undefined) updateValues.embedType = updates.embedType ?? null;
+    if (updates.thumbnailUrl !== undefined)
+      updateValues.thumbnailUrl = updates.thumbnailUrl || null;
     if (updates.eventId !== undefined) updateValues.eventId = updates.eventId ?? null;
     if (updates.fileSizeBytes !== undefined)
       updateValues.fileSizeBytes = updates.fileSizeBytes ?? null;
@@ -336,6 +364,7 @@ export function registerLibraryRoutes(app: Hono) {
         documentUrl: libraryAssets.documentUrl,
         embedUrl: libraryAssets.embedUrl,
         embedType: libraryAssets.embedType,
+        thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,

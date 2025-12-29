@@ -279,8 +279,8 @@ const Dashboard: React.FC = () => {
               )}
 
               <div className="flex justify-end">
-                <Button 
-                  onClick={handleSaveProfile} 
+                <Button
+                  onClick={handleSaveProfile}
                   disabled={updateProfileMutation.isPending}
                   className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
                 >
@@ -320,8 +320,8 @@ const Dashboard: React.FC = () => {
                         key={skill.id}
                         htmlFor={checkboxId}
                         className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg ${
-                          checked 
-                            ? 'border-[#05ef62]/40 bg-gradient-to-br from-[#d5ffe9]/20 to-[#f4fff9]/10 shadow-md' 
+                          checked
+                            ? 'border-[#05ef62]/40 bg-gradient-to-br from-[#d5ffe9]/20 to-[#f4fff9]/10 shadow-md'
                             : 'border-neutral-200 bg-white/80 backdrop-blur hover:border-neutral-300'
                         }`}
                       >
@@ -341,10 +341,12 @@ const Dashboard: React.FC = () => {
                             )}
                           </div>
                           {skill.category && (
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={`ml-2 mt-1 ${
-                                checked ? 'border-[#05ef62]/60 bg-[#05ef62]/10 text-[#05ef62]' : 'border-neutral-200 bg-neutral-50'
+                                checked
+                                  ? 'border-[#05ef62]/60 bg-[#05ef62]/10 text-[#05ef62]'
+                                  : 'border-neutral-200 bg-neutral-50'
                               }`}
                             >
                               {skill.category}

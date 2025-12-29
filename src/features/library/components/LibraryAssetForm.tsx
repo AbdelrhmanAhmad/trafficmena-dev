@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FileText, Link2, Video } from 'lucide-react';
+import { FileText, Link2, Upload, Video } from 'lucide-react';
 import { type ChangeEvent, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -40,6 +40,7 @@ const libraryAssetFormSchema = z
     documentUrl: z.string().trim().max(1000).optional(),
     embedUrl: z.string().trim().max(1000).optional(),
     embedType: z.string().trim().max(120).optional(),
+    thumbnailUrl: z.string().trim().max(1000).optional(),
     eventId: z.string().trim().uuid().optional(),
     fileSizeBytes: z
       .number({ invalid_type_error: 'Provide a valid file size.' })
@@ -110,6 +111,7 @@ export function LibraryAssetForm({
     embedUrl:
       asset?.embed_url ?? (asset?.file_type === 'Presentation' ? (asset?.file_url ?? '') : ''),
     embedType: asset?.embed_type ?? '',
+    thumbnailUrl: asset?.thumbnail_url ?? '',
     eventId: asset?.event_id ?? undefined,
     fileSizeBytes: asset?.file_size_bytes ?? null,
   };
@@ -124,6 +126,10 @@ export function LibraryAssetForm({
   const documentInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [documentUploadError, setDocumentUploadError] = useState<string | null>(null);
+
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const [thumbnailUploadError, setThumbnailUploadError] = useState<string | null>(null);
 
   const linkedEventTitle = useMemo(() => {
     if (!asset?.event_id) return null;
@@ -169,10 +175,29 @@ export function LibraryAssetForm({
     }
   };
 
+  const handleThumbnailFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setThumbnailUploadError(null);
+    setIsUploadingThumbnail(true);
+
+    try {
+      const { url } = await uploadFile({ file, scope: 'library' });
+      form.setValue('thumbnailUrl', url, { shouldDirty: true, shouldTouch: true });
+    } catch (error) {
+      setThumbnailUploadError(error instanceof Error ? error.message : 'Upload failed.');
+    } finally {
+      setIsUploadingThumbnail(false);
+      event.target.value = '';
+    }
+  };
+
   const handleSubmit = async (values: LibraryAssetFormValues) => {
     const videoUrl = normaliseUrl(values.videoUrl);
     const documentUrl = normaliseUrl(values.documentUrl);
     const embedUrl = normaliseUrl(values.embedUrl);
+    const thumbnailUrl = normaliseUrl(values.thumbnailUrl);
 
     const payload: CreateLibraryAssetPayload = {
       title: values.title.trim(),
@@ -182,6 +207,7 @@ export function LibraryAssetForm({
       documentUrl,
       embedUrl,
       embedType: values.embedType?.trim() ? values.embedType.trim() : null,
+      thumbnailUrl,
       eventId: values.eventId?.trim() ? values.eventId.trim() : null,
       fileSizeBytes: documentUrl ? (values.fileSizeBytes ?? null) : null,
     };
@@ -238,6 +264,38 @@ export function LibraryAssetForm({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="thumbnailUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Thumbnail Image</FormLabel>
+                  <FormControl>
+                    <div className="flex gap-2">
+                      <Input placeholder="https://example.com/thumbnail.jpg" {...field} />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="whitespace-nowrap"
+                        disabled={isUploadingThumbnail}
+                        onClick={() => thumbnailInputRef.current?.click()}
+                      >
+                        <Upload className="mr-2 h-4 w-4" />
+                        {isUploadingThumbnail ? 'Uploading…' : 'Upload'}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Recommended size: 1200×640px. Max 20 MB. JPEG, PNG, or WebP.
+                  </FormDescription>
+                  {thumbnailUploadError && (
+                    <p className="text-xs text-destructive">{thumbnailUploadError}</p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -325,6 +383,14 @@ export function LibraryAssetForm({
               accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/*"
               className="hidden"
               onChange={handleDocumentFileUpload}
+            />
+
+            <input
+              ref={thumbnailInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              className="hidden"
+              onChange={handleThumbnailFileUpload}
             />
 
             <FormField

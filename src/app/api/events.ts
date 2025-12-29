@@ -17,6 +17,14 @@ type ApiEvent = {
 
 type ApiEventDetail = ApiEvent & {
   attending?: boolean;
+  trackInfo?: {
+    id: string;
+    title: string;
+    trackBookingStart: string | null;
+    trackBookingEnd: string | null;
+    singleBookingStart: string | null;
+    singleBookingEnd: string | null;
+  } | null;
 };
 
 export type EventRecord = {
@@ -34,11 +42,21 @@ export type EventRecord = {
   guest_experts: { name: string }[];
 };
 
-export type EventDetailRecord = EventRecord & {
+export interface EventDetailRecord extends EventRecord {
+  attendeeCount: number;
   attending: boolean;
-};
+  meetingLink: string | null;
+  trackInfo?: {
+    id: string;
+    title: string;
+    trackBookingStart: Date | null;
+    trackBookingEnd: Date | null;
+    singleBookingStart: Date | null;
+    singleBookingEnd: Date | null;
+  } | null;
+}
 
-const mapEvent = (event: ApiEvent): EventRecord => ({
+const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
   id: event.id,
   title: event.title,
   description: event.eventDescription,
@@ -53,10 +71,32 @@ const mapEvent = (event: ApiEvent): EventRecord => ({
   guest_experts: [],
 });
 
-const mapEventDetail = (event: ApiEventDetail): EventDetailRecord => ({
-  ...mapEvent(event),
-  attending: Boolean(event.attending),
-});
+export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecord {
+  return {
+    ...mapApiEventToRecord(api),
+    attendeeCount: api.attendeeCount,
+    attending: api.attending,
+    meetingLink: api.meetingLink,
+    trackInfo: api.trackInfo
+      ? {
+          id: api.trackInfo.id,
+          title: api.trackInfo.title,
+          trackBookingStart: api.trackInfo.trackBookingStart
+            ? new Date(api.trackInfo.trackBookingStart)
+            : null,
+          trackBookingEnd: api.trackInfo.trackBookingEnd
+            ? new Date(api.trackInfo.trackBookingEnd)
+            : null,
+          singleBookingStart: api.trackInfo.singleBookingStart
+            ? new Date(api.trackInfo.singleBookingStart)
+            : null,
+          singleBookingEnd: api.trackInfo.singleBookingEnd
+            ? new Date(api.trackInfo.singleBookingEnd)
+            : null,
+        }
+      : null,
+  };
+}
 
 export type CreateEventPayload = {
   title: string;
@@ -100,7 +140,7 @@ export async function fetchEvents(
   });
 
   return {
-    items: (data.items ?? []).map(mapEvent),
+    items: (data.items ?? []).map(mapApiEventToRecord),
     pagination: data.pagination,
   };
 }
@@ -110,7 +150,7 @@ export async function fetchEventById(id: string): Promise<EventDetailRecord> {
     method: 'GET',
   });
 
-  return mapEventDetail(data);
+  return mapApiEventDetailToRecord(data);
 }
 
 export async function createEvent(payload: CreateEventPayload): Promise<EventDetailRecord> {
@@ -119,7 +159,7 @@ export async function createEvent(payload: CreateEventPayload): Promise<EventDet
     body: JSON.stringify(payload),
   });
 
-  return mapEventDetail(data.event);
+  return mapApiEventDetailToRecord(data.event);
 }
 
 export async function updateEvent(
@@ -131,7 +171,7 @@ export async function updateEvent(
     body: JSON.stringify(payload),
   });
 
-  return mapEventDetail(data.event);
+  return mapApiEventDetailToRecord(data.event);
 }
 
 export async function deleteEvent(id: string): Promise<void> {
@@ -155,4 +195,55 @@ export async function cancelEventRegistration(
   return fetchJson<{ success: boolean; message?: string }>(`${API_BASE}/events/${id}/register`, {
     method: 'DELETE',
   });
+}
+
+// --- Event Attendees ---
+
+type ApiEventAttendee = {
+  userId: string;
+  email: string;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  registeredAt: string;
+};
+
+export type EventAttendeeRecord = {
+  user_id: string;
+  email: string;
+  name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone_number: string | null;
+  registered_at: string;
+};
+
+export async function fetchEventAttendees(
+  eventId: string,
+  params: { page?: number; pageSize?: number } = {},
+): Promise<PaginatedResult<EventAttendeeRecord>> {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.pageSize) query.set('pageSize', String(params.pageSize));
+
+  const data = await fetchJson<{
+    items: ApiEventAttendee[];
+    pagination: PaginatedResult<ApiEventAttendee>['pagination'];
+  }>(`${API_BASE}/events/${eventId}/attendees${query.toString() ? `?${query.toString()}` : ''}`, {
+    method: 'GET',
+  });
+
+  return {
+    items: (data.items ?? []).map((item) => ({
+      user_id: item.userId,
+      email: item.email,
+      name: item.name,
+      first_name: item.firstName,
+      last_name: item.lastName,
+      phone_number: item.phoneNumber,
+      registered_at: item.registeredAt,
+    })),
+    pagination: data.pagination,
+  };
 }

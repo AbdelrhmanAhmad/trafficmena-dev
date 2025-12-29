@@ -293,8 +293,12 @@ const AdminDashboard: React.FC = () => {
                         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#05ef62] via-[#29cf9f] to-[#00fdc2]" />
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#05ef62] to-[#29cf9f]">
-                            <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4zm0-6a2 2 0 100-4 2 2 0 000 4z"/>
+                            <svg
+                              className="h-4 w-4 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4zm0-6a2 2 0 100-4 2 2 0 000 4z" />
                             </svg>
                           </div>
                           <div>
@@ -307,8 +311,12 @@ const AdminDashboard: React.FC = () => {
                         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#29cf9f] via-[#00fdc2] to-[#05ef62]" />
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#29cf9f] to-[#00fdc2]">
-                            <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6z"/>
+                            <svg
+                              className="h-4 w-4 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6z" />
                             </svg>
                           </div>
                           <div>
@@ -321,8 +329,12 @@ const AdminDashboard: React.FC = () => {
                         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#00fdc2] via-[#05ef62] to-[#29cf9f]" />
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#00fdc2] to-[#05ef62]">
-                            <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                            <svg
+                              className="h-4 w-4 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                             </svg>
                           </div>
                           <div>

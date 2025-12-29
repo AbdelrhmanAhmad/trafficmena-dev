@@ -114,6 +114,7 @@ export const libraryAssets = pgTable(
     documentUrl: text('document_url'),
     embedUrl: text('embed_url'),
     embedType: text('embed_type'),
+    thumbnailUrl: text('thumbnail_url'),
     eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
     viewCount: integer('view_count').default(0).notNull(),
     downloadCount: integer('download_count').default(0).notNull(),
@@ -124,6 +125,114 @@ export const libraryAssets = pgTable(
   },
   (table) => ({
     eventIdx: index('library_assets_event_idx').on(table.eventId),
+  }),
+);
+
+export const tracks = pgTable(
+  'tracks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    description: text('description'),
+    imageUrl: text('image_url'),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    isPublished: boolean('is_published').default(true).notNull(),
+    trackBookingStart: timestamp('track_booking_start', { withTimezone: true }),
+    trackBookingEnd: timestamp('track_booking_end', { withTimezone: true }),
+    singleBookingStart: timestamp('single_booking_start', { withTimezone: true }),
+    singleBookingEnd: timestamp('single_booking_end', { withTimezone: true }),
+    maxTrackBookings: integer('max_track_bookings'),
+    priceInCents: integer('price_in_cents'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    sortOrderIdx: index('tracks_sort_order_idx').on(table.sortOrder),
+    publishedIdx: index('tracks_is_published_idx').on(table.isPublished),
+  }),
+);
+
+export const trackEvents = pgTable(
+  'track_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    trackId: uuid('track_id')
+      .references(() => tracks.id, { onDelete: 'cascade' })
+      .notNull(),
+    eventId: uuid('event_id')
+      .references(() => events.id, { onDelete: 'cascade' })
+      .notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    addedAt: timestamp('added_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    trackIdx: index('track_events_track_idx').on(table.trackId),
+    eventIdx: index('track_events_event_idx').on(table.eventId),
+    uniqueTrackEvent: uniqueIndex('track_events_unique').on(table.trackId, table.eventId),
+    uniqueEventId: uniqueIndex('track_events_event_unique').on(table.eventId),
+  }),
+);
+
+export const trackBookings = pgTable(
+  'track_bookings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    trackId: uuid('track_id')
+      .references(() => tracks.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    bookedAt: timestamp('booked_at', { withTimezone: true }).defaultNow().notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    pricePaidCents: integer('price_paid_cents'),
+  },
+  (table) => ({
+    trackIdx: index('track_bookings_track_idx').on(table.trackId),
+    userIdx: index('track_bookings_user_idx').on(table.userId),
+    uniqueTrackUser: uniqueIndex('track_bookings_track_user_unique').on(
+      table.trackId,
+      table.userId,
+    ),
+  }),
+);
+
+// Content Series - Collections of library assets for content organization (separate from Event Tracks)
+export const series = pgTable(
+  'series',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    description: text('description'),
+    imageUrl: text('image_url'),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    isPublished: boolean('is_published').default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    sortOrderIdx: index('series_sort_order_idx').on(table.sortOrder),
+    publishedIdx: index('series_is_published_idx').on(table.isPublished),
+  }),
+);
+
+export const seriesAssets = pgTable(
+  'series_assets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    seriesId: uuid('series_id')
+      .references(() => series.id, { onDelete: 'cascade' })
+      .notNull(),
+    assetId: uuid('asset_id')
+      .references(() => libraryAssets.id, { onDelete: 'cascade' })
+      .notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    addedAt: timestamp('added_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    seriesIdx: index('series_assets_series_idx').on(table.seriesId),
+    assetIdx: index('series_assets_asset_idx').on(table.assetId),
+    uniqueSeriesAsset: uniqueIndex('series_assets_unique').on(table.seriesId, table.assetId),
   }),
 );
 

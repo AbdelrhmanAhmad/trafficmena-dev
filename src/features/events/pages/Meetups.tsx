@@ -1,7 +1,9 @@
-import { Calendar } from 'lucide-react';
+import { BookOpen, Calendar } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
+import { usePublicTracks } from '@/features/tracks/hooks/useTracks';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
@@ -19,9 +21,14 @@ const EventsPage: React.FC = () => {
 
   const itemsPerPage = 12;
   const { data, isLoading, error } = useEvents(currentPage, itemsPerPage, filters);
+  const { data: tracksData } = usePublicTracks(1, 6);
 
   const handleEventClick = (event: Event) => {
     navigate(`/meetups/${event.id}`);
+  };
+
+  const handleTrackClick = (trackId: string) => {
+    navigate(`/tracks/${trackId}`);
   };
 
   const toggleUpcomingFilter = () => {
@@ -68,6 +75,36 @@ const EventsPage: React.FC = () => {
               </Button>
             </div>
           </section>
+
+          {/* Learning Tracks Section */}
+          {tracksData && tracksData.items.length > 0 && (
+            <section className="relative w-full rounded-[28px] border border-neutral-200 bg-white/90 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
+              <div className="flex flex-col gap-3 text-center sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-neutral-500">
+                    <BookOpen className="h-3.5 w-3.5 text-purple-500" />
+                    Learning Tracks
+                  </span>
+                  <h2 className="mt-1 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+                    Multi-Session Programs
+                  </h2>
+                  <p className="mt-2 text-neutral-600">
+                    Book an entire learning track and get access to all sessions in the program.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {tracksData.items.map((track) => (
+                  <PublicTrackCard
+                    key={track.id}
+                    track={track}
+                    onClick={() => handleTrackClick(track.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Events Grid */}
           <section className="relative w-full rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">

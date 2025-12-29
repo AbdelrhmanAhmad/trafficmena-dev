@@ -8,6 +8,7 @@ import AdminMeetupsNew from '@/features/events/pages/admin/new';
 import DashboardMeetups from '@/features/events/pages/DashboardMeetups';
 import MeetupDetail from '@/features/events/pages/EventDetail';
 import Meetups from '@/features/events/pages/Meetups';
+import PublicTrackDetail from '@/features/tracks/pages/TrackDetail';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
@@ -24,11 +25,17 @@ import LibraryManagement from './pages/admin/library';
 import AdminLibraryItemDetail from './pages/admin/library/[id]';
 import EditLibraryItem from './pages/admin/library/edit-item';
 import NewLibraryItem from './pages/admin/library/new-item';
+import SeriesDetailPage from './pages/admin/library/series/[id]';
+import NewSeriesPage from './pages/admin/library/series/new';
+import TrackDetailPage from './pages/admin/library/tracks/[id]';
+import NewTrackPage from './pages/admin/library/tracks/new';
 import AdminSettingsPage from './pages/admin/settings';
 import UserManagement from './pages/admin/users';
 import CommunityComingSoon from './pages/Community';
 import Dashboard from './pages/Dashboard';
 import DashboardLibrary from './pages/DashboardLibrary';
+import DashboardSeriesDetail from './pages/DashboardSeriesDetail';
+import DashboardTrackDetail from './pages/DashboardTrackDetail';
 import Index from './pages/Index';
 import InviteOnlyPage from './pages/InviteOnly';
 import InvitationAcceptancePage from './pages/invitation/[token]';
@@ -192,6 +199,26 @@ const App = () => {
                   }
                 />
                 <Route
+                  path="/dashboard/library/tracks/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ErrorBoundary>
+                        <DashboardTrackDetail />
+                      </ErrorBoundary>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard/library/series/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ErrorBoundary>
+                        <DashboardSeriesDetail />
+                      </ErrorBoundary>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/meetups"
                   element={
                     <ErrorBoundary>
@@ -204,6 +231,14 @@ const App = () => {
                   element={
                     <ErrorBoundary>
                       <MeetupDetail />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/tracks/:id"
+                  element={
+                    <ErrorBoundary>
+                      <PublicTrackDetail />
                     </ErrorBoundary>
                   }
                 />
@@ -291,6 +326,46 @@ const App = () => {
                     <AdminProtectedRoute>
                       <ErrorBoundary>
                         <AdminLibraryItemDetail />
+                      </ErrorBoundary>
+                    </AdminProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/library/tracks/new"
+                  element={
+                    <AdminProtectedRoute>
+                      <ErrorBoundary>
+                        <NewTrackPage />
+                      </ErrorBoundary>
+                    </AdminProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/library/tracks/:id"
+                  element={
+                    <AdminProtectedRoute>
+                      <ErrorBoundary>
+                        <TrackDetailPage />
+                      </ErrorBoundary>
+                    </AdminProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/library/series/new"
+                  element={
+                    <AdminProtectedRoute>
+                      <ErrorBoundary>
+                        <NewSeriesPage />
+                      </ErrorBoundary>
+                    </AdminProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/library/series/:id"
+                  element={
+                    <AdminProtectedRoute>
+                      <ErrorBoundary>
+                        <SeriesDetailPage />
                       </ErrorBoundary>
                     </AdminProtectedRoute>
                   }

@@ -3,15 +3,20 @@ import type React from 'react';
 import { useState } from 'react';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
 import LibraryItemCard from '@/features/library/components/LibraryItemCard';
+import { SeriesGrid } from '@/features/series';
+import { useSeries } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import DashboardLayout from '@/shared/components/layout/DashboardLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 
 const DashboardLibrary: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: assetsData, isLoading, isError } = useLibraryList(1, 50);
+  const [activeTab, setActiveTab] = useState('series');
+  const { data: assetsData, isLoading, isError } = useLibraryList(1, 50, { excludeInTracks: true });
+  const { data: seriesData, isLoading: seriesLoading } = useSeries(1, 50);
 
   // Filter assets based on search query
   const filteredAssets =
@@ -56,61 +61,83 @@ const DashboardLibrary: React.FC = () => {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="mb-6 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-            <Input
-              type="search"
-              placeholder="Search library content..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-md rounded-xl border-neutral-200 bg-white/80 backdrop-blur pl-10 pr-4 py-3 transition-all duration-300 focus:border-[#29cf9f] focus:shadow-md"
-            />
-          </div>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="series">Series</TabsTrigger>
+              <TabsTrigger value="content">Single Content</TabsTrigger>
+            </TabsList>
 
-          {/* Loading State */}
-          {isLoading && (
-            <div className="flex justify-center py-12">
-              <LoadingSpinner size="lg" text="Loading library content..." />
-            </div>
-          )}
-
-          {/* Error State */}
-          {isError && (
-            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-              <CardContent className="py-12 text-center">
-                <p className="text-red-600">
-                  Failed to load library content. Please try again later.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Empty State */}
-          {!isLoading && !isError && filteredAssets.length === 0 && (
-            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-              <CardContent className="py-12 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#f4fff9]/40 to-[#d5ffe9]/20">
-                  <FileText className="h-6 w-6 text-[#29cf9f]" />
+            <TabsContent value="series">
+              {seriesLoading ? (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner size="lg" text="Loading series..." />
                 </div>
-                <h3 className="mb-2 text-lg font-medium text-neutral-900">No content available</h3>
-                <p className="text-neutral-600">
-                  {searchQuery
-                    ? 'No items match your search. Try different keywords.'
-                    : 'Library content will appear here once available.'}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <SeriesGrid series={seriesData?.items ?? []} basePath="/dashboard/library/series" />
+              )}
+            </TabsContent>
 
-          {/* Content Grid */}
-          {!isLoading && !isError && filteredAssets.length > 0 && (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {transformedItems.map((item) => (
-                <LibraryItemCard key={item.id} item={item} isAdmin={false} />
-              ))}
-            </div>
-          )}
+            <TabsContent value="content">
+              {/* Search Bar */}
+              <div className="mb-6 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <Input
+                  type="search"
+                  placeholder="Search library content..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-md rounded-xl border-neutral-200 bg-white/80 backdrop-blur pl-10 pr-4 py-3 transition-all duration-300 focus:border-[#29cf9f] focus:shadow-md"
+                />
+              </div>
+
+              {/* Loading State */}
+              {isLoading && (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner size="lg" text="Loading library content..." />
+                </div>
+              )}
+
+              {/* Error State */}
+              {isError && (
+                <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+                  <CardContent className="py-12 text-center">
+                    <p className="text-red-600">
+                      Failed to load library content. Please try again later.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Empty State */}
+              {!isLoading && !isError && filteredAssets.length === 0 && (
+                <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+                  <CardContent className="py-12 text-center">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#f4fff9]/40 to-[#d5ffe9]/20">
+                      <FileText className="h-6 w-6 text-[#29cf9f]" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-medium text-neutral-900">
+                      No content available
+                    </h3>
+                    <p className="text-neutral-600">
+                      {searchQuery
+                        ? 'No items match your search. Try different keywords.'
+                        : 'Library content will appear here once available.'}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Content Grid */}
+              {!isLoading && !isError && filteredAssets.length > 0 && (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {transformedItems.map((item) => (
+                    <LibraryItemCard key={item.id} item={item} isAdmin={false} />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </DashboardLayout>
     </ProtectedRoute>
