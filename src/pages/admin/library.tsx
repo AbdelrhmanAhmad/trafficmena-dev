@@ -1,13 +1,16 @@
-import { PlusCircle } from 'lucide-react';
+import { FolderPlus, PlusCircle } from 'lucide-react';
 import React, { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
 import LibraryGrid from '@/features/library/components/LibraryGrid';
 import { useDeleteLibraryAsset } from '@/features/library/hooks/useLibrary';
+import { SeriesGrid } from '@/features/series';
+import { useDeleteSeries, useSeries } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import { Button } from '@/shared/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 
@@ -32,11 +35,24 @@ interface LibraryItem {
 function LibraryManagement() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'series';
+  const setActiveTab = (tab: string) => setSearchParams({ tab });
   const deleteMutation = useDeleteLibraryAsset();
+  const deleteSeriesMutation = useDeleteSeries();
   const { canManageContent, canDeleteContent, loading: roleLoading } = useRolePermissions();
 
   // Query library assets (first 50 items; API caps pageSize at 50).
-  const { data: assetsData, isLoading, isError, error } = useLibraryList(1, 50);
+  // excludeInTracks: true filters out assets that are already part of a series
+  const {
+    data: assetsData,
+    isLoading,
+    isError,
+    error,
+  } = useLibraryList(1, 50, { excludeInTracks: true });
+
+  // Query series
+  const { data: seriesData, isLoading: seriesLoading } = useSeries(1, 50);
 
   // Show error toast if needed
   React.useEffect(() => {
@@ -123,7 +139,33 @@ function LibraryManagement() {
     navigate('/admin/library/new-item');
   };
 
-  if (isLoading) {
+  const handleEditSeries = (seriesId: string) => {
+    navigate(`/admin/library/series/${seriesId}`);
+  };
+
+  const handleDeleteSeries = (seriesId: string) => {
+    if (!canDeleteContent) {
+      toast({
+        title: 'Insufficient permissions',
+        description: 'Only owners and admins can delete series.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (deleteSeriesMutation.isPending) return;
+
+    const confirmed = window.confirm('Delete this series? Assets will remain in the library.');
+    if (!confirmed) return;
+
+    deleteSeriesMutation.mutate(seriesId);
+  };
+
+  const handleAddSeries = () => {
+    navigate('/admin/library/series/new');
+  };
+
+  if (isLoading || seriesLoading) {
     return (
       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
         <AdminLayout>
@@ -146,27 +188,59 @@ function LibraryManagement() {
               </p>
             </div>
 
-            <Button
-              onClick={handleAddNew}
-              className="flex items-center gap-2"
-              disabled={!canManageContent || roleLoading}
-            >
-              <PlusCircle className="h-4 w-4" />
-              Add asset
-            </Button>
+            <div className="flex items-center gap-3">
+              {activeTab === 'series' ? (
+                <Button
+                  onClick={handleAddSeries}
+                  className="flex items-center gap-2"
+                  disabled={!canManageContent || roleLoading}
+                >
+                  <FolderPlus className="h-4 w-4" />
+                  Create series
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleAddNew}
+                  className="flex items-center gap-2"
+                  disabled={!canManageContent || roleLoading}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  Add asset
+                </Button>
+              )}
+            </div>
           </div>
 
-          {/* Library Items Grid */}
-          <div className="max-w-6xl">
-            <LibraryGrid
-              items={transformedItems}
-              onEdit={handleEdit}
-              onDelete={canDeleteContent ? handleDelete : undefined}
-              onAddNew={handleAddNew}
-              canManage={canManageContent}
-              canDelete={canDeleteContent}
-            />
-          </div>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-6">
+              <TabsTrigger value="series">Series</TabsTrigger>
+              <TabsTrigger value="content">Single Content</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="series" className="max-w-6xl">
+              <SeriesGrid
+                series={seriesData?.items ?? []}
+                onEdit={handleEditSeries}
+                onDelete={canDeleteContent ? handleDeleteSeries : undefined}
+                onAddNew={handleAddSeries}
+                canManage={canManageContent}
+                canDelete={canDeleteContent}
+                basePath="/admin/library/series"
+              />
+            </TabsContent>
+
+            <TabsContent value="content" className="max-w-6xl">
+              <LibraryGrid
+                items={transformedItems}
+                onEdit={handleEdit}
+                onDelete={canDeleteContent ? handleDelete : undefined}
+                onAddNew={handleAddNew}
+                canManage={canManageContent}
+                canDelete={canDeleteContent}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </AdminLayout>
     </AdminProtectedRoute>

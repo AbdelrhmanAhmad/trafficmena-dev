@@ -1,61 +1,48 @@
-import { format } from 'date-fns';
-import { ArrowRight, Calendar, Clock, MapPin, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, Calendar, Sparkles } from 'lucide-react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
+import { usePublicTracks } from '@/features/tracks/hooks/useTracks';
 import DataLoader from '@/shared/components/DataLoader';
 import DashboardLayout from '@/shared/components/layout/DashboardLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
-import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
-import { stripHtmlTags } from '@/shared/utils/inputSanitization';
+import { EventCard } from '../components/EventCard';
 import { useUpcomingEventsList } from '../hooks/useEventBooking';
 
 const DashboardMeetups: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { data: upcoming, isLoading, error } = useUpcomingEventsList(6);
-
-  const formatEventDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy');
-    } catch {
-      return 'Date TBD';
-    }
-  };
-
-  const formatEventTime = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'h:mm a');
-    } catch {
-      return 'Time TBD';
-    }
-  };
+  const { data: upcoming, isLoading, error } = useUpcomingEventsList(9);
+  const { data: tracksData } = usePublicTracks(1, 6);
 
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        <div className="max-w-4xl">
-          <div className="relative mb-8 overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#d5ffe9]/10 via-transparent to-[#f4fff9]/5 pointer-events-none"></div>
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
-                  <Calendar className="h-6 w-6" />
+        <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-0">
+          {/* Hero Header */}
+          <div className="relative mb-8 overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#d5ffe9]/10 via-transparent to-[#f4fff9]/5" />
+            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white shadow-lg">
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold text-neutral-900">Upcoming Events</h1>
-                  <p className="text-neutral-700 mt-1">
-                    {user ? 'Here is what\'s coming up next for you' : 'Events you can join right now'}
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">
+                    Events & Tracks
+                  </h1>
+                  <p className="text-sm sm:text-base text-neutral-600 mt-0.5">
+                    Your learning journey starts here
                   </p>
                 </div>
               </div>
-              <Button 
-                onClick={() => navigate('/meetups')} 
-                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
+              <Button
+                onClick={() => navigate('/meetups')}
+                className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-2.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:brightness-95"
               >
-                Browse Events
+                Browse All
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
@@ -64,98 +51,136 @@ const DashboardMeetups: React.FC = () => {
           <DataLoader
             loading={isLoading}
             error={error ? 'Failed to load upcoming events' : null}
-            loadingText="Loading upcoming events..."
+            loadingText="Loading your events..."
           >
-            {upcoming && upcoming.items.length > 0 ? (
-              <div className="space-y-6">
-                <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-                  <CardHeader>
-                    <CardTitle>
-                      {user
-                        ? 'Here is what’s coming up next for the community'
-                        : 'Events you can join right now'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {upcoming.items.map((event) => (
-                      <div
-                        key={event.id}
-                        className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-5 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-lg hover:border-[#05ef62]/40"
-                      >
-                        <div className="flex-1">
-                          <div className="mb-2 flex items-start justify-between">
-                            <h3 className="text-lg font-semibold text-neutral-900 line-clamp-2">{event.title}</h3>
-                            <Badge className="ml-2 rounded-full border border-[#05ef62]/60 bg-[#05ef62]/10 text-[#05ef62]">
-                              {event.event_type || 'Event'}
-                            </Badge>
-                          </div>
+            <div className="space-y-8">
+              {/* Learning Tracks Section */}
+              {tracksData && tracksData.items.length > 0 && (
+                <section className="relative overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-gradient-to-br from-purple-50/80 via-white to-indigo-50/50 p-5 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.35)]">
+                  {/* Decorative elements */}
+                  <div className="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-gradient-to-br from-purple-200/30 to-indigo-200/20 blur-3xl" />
+                  <div className="pointer-events-none absolute -left-10 bottom-0 h-32 w-32 rounded-full bg-gradient-to-tr from-indigo-200/20 to-purple-200/10 blur-2xl" />
 
-                          <div className="grid grid-cols-1 gap-3 text-sm text-neutral-600 md:grid-cols-3">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-[#05ef62]" />
-                              <span>{formatEventDate(event.date)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-[#05ef62]" />
-                              <span>{formatEventTime(event.date)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-[#05ef62]" />
-                              <span className="truncate">{event.location || 'Online Event'}</span>
-                            </div>
-                          </div>
-
-                          {event.description ? (
-                            <p className="mt-3 line-clamp-2 text-sm text-neutral-600">
-                              {stripHtmlTags(event.description)}
-                            </p>
-                          ) : null}
+                  <div className="relative z-10">
+                    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-white/80 px-3 py-1 text-xs font-medium text-purple-700 shadow-sm">
+                            <Sparkles className="h-3 w-3" />
+                            Featured
+                          </span>
                         </div>
-
-                        <div className="ml-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/meetups/${event.id}`)}
-                            className="rounded-xl border-neutral-200 bg-white/70 backdrop-blur hover:bg-white/90 hover:border-[#05ef62]/40 transition-all duration-300"
-                          >
-                            View Details
-                          </Button>
-                        </div>
+                        <h2 className="text-xl sm:text-2xl font-bold text-neutral-900">
+                          Learning Tracks
+                        </h2>
+                        <p className="mt-1 text-sm text-neutral-600">
+                          Multi-session programs to master marketing skills
+                        </p>
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
-                      <Calendar className="h-5 w-5 text-neutral-400" />
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate('/meetups')}
+                        className="hidden sm:flex items-center gap-1.5 rounded-xl border-purple-200 bg-white/80 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-50 hover:border-purple-300"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                        View All Tracks
+                      </Button>
                     </div>
-                    <CardTitle className="text-neutral-900">No Events Yet</CardTitle>
+
+                    <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
+                      {tracksData.items.slice(0, 3).map((track) => (
+                        <PublicTrackCard
+                          key={track.id}
+                          track={track}
+                          onClick={() => navigate(`/tracks/${track.id}`)}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Mobile view all button */}
+                    <div className="mt-5 sm:hidden">
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate('/meetups')}
+                        className="flex w-full items-center justify-center gap-1.5 rounded-xl border-purple-200 bg-white/80 px-4 py-2.5 text-sm font-medium text-purple-700 hover:bg-purple-50"
+                      >
+                        <BookOpen className="h-4 w-4" />
+                        View All Tracks
+                      </Button>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent className="py-12 text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#f4fff9]/40 to-[#d5ffe9]/20">
-                    <Calendar className="h-8 w-8 text-[#05ef62]" />
+                </section>
+              )}
+
+              {/* Upcoming Events Section */}
+              {upcoming && upcoming.items.length > 0 ? (
+                <section className="relative overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 p-5 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.35)] backdrop-blur">
+                  {/* Subtle grid pattern */}
+                  <div className="pointer-events-none absolute inset-0 opacity-[0.03]">
+                    <div className="absolute left-1/4 top-0 bottom-0 w-px bg-neutral-900" />
+                    <div className="absolute right-1/4 top-0 bottom-0 w-px bg-neutral-900" />
+                    <div className="absolute left-0 right-0 top-1/3 h-px bg-neutral-900" />
+                    <div className="absolute left-0 right-0 bottom-1/3 h-px bg-neutral-900" />
                   </div>
-                  <h3 className="mb-2 text-lg font-medium text-gray-900">
-                    There are no new events to show right now
-                  </h3>
-                  <p className="mb-6 text-gray-600">
-                    Discover amazing marketing events and workshops designed for the MENA region.
-                  </p>
-                  <Button 
-                    onClick={() => navigate('/meetups')}
-                    className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
-                  >
-                    Browse Available Events
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+
+                  <div className="relative z-10">
+                    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#05ef62]/30 bg-gradient-to-r from-[#d5ffe9]/50 to-[#f4fff9]/50 px-3 py-1 text-xs font-medium text-[#0d7a3e] shadow-sm">
+                            <Calendar className="h-3 w-3" />
+                            Upcoming
+                          </span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-bold text-neutral-900">
+                          Community Events
+                        </h2>
+                        <p className="mt-1 text-sm text-neutral-600">
+                          {user
+                            ? "What's coming up next for the community"
+                            : 'Events you can join right now'}
+                        </p>
+                      </div>
+                      <p className="text-xs text-neutral-500 sm:text-sm">
+                        Showing {upcoming.items.length} upcoming{' '}
+                        {upcoming.items.length === 1 ? 'event' : 'events'}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
+                      {upcoming.items.map((event) => (
+                        <EventCard
+                          key={event.id}
+                          event={event}
+                          onViewDetails={(e) => navigate(`/meetups/${e.id}`)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                <section className="relative overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 p-5 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.35)] backdrop-blur">
+                  <div className="py-8 sm:py-12 text-center">
+                    <div className="mx-auto mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#f4fff9]/60 to-[#d5ffe9]/30">
+                      <Calendar className="h-7 w-7 sm:h-8 sm:w-8 text-[#05ef62]" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-semibold text-neutral-900">
+                      No Upcoming Events
+                    </h3>
+                    <p className="mx-auto mb-6 max-w-sm text-sm text-neutral-600">
+                      There are no upcoming events scheduled right now. Check back soon for new
+                      workshops and meetups.
+                    </p>
+                    <Button
+                      onClick={() => navigate('/meetups')}
+                      className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-2.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:brightness-95"
+                    >
+                      Browse All Events
+                    </Button>
+                  </div>
+                </section>
+              )}
+            </div>
           </DataLoader>
         </div>
       </DashboardLayout>

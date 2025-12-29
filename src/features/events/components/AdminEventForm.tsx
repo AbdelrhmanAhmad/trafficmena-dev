@@ -62,6 +62,11 @@ const eventFormSchema = z.object({
 
 export type AdminEventFormValues = z.infer<typeof eventFormSchema>;
 
+type TrackInfo = {
+  title: string;
+  maxTrackBookings: number | null;
+};
+
 type AdminEventFormProps = {
   event?: EventDetailRecord;
   onSubmit: (payload: CreateEventPayload) => Promise<void>;
@@ -70,6 +75,7 @@ type AdminEventFormProps = {
   onDelete?: () => Promise<void>;
   isDeleting?: boolean;
   canDelete?: boolean;
+  trackInfo?: TrackInfo;
 };
 
 function toDateTimeLocalString(input: string | Date | undefined) {
@@ -109,7 +115,15 @@ export function AdminEventForm({
   onDelete,
   isDeleting,
   canDelete = true,
+  trackInfo,
 }: AdminEventFormProps) {
+  // Auto-set capacity from track if creating event for a track
+  const defaultCapacity = event?.max_attendees
+    ? String(event.max_attendees)
+    : trackInfo?.maxTrackBookings
+      ? String(trackInfo.maxTrackBookings)
+      : '';
+
   const defaultValues: AdminEventFormValues = {
     title: event?.title ?? '',
     description: (event?.description ?? '').trim(),
@@ -117,7 +131,7 @@ export function AdminEventForm({
     eventType: event?.event_type ?? 'Event',
     location: event?.location ?? '',
     meetingLink: event?.meeting_link ?? '',
-    maxAttendees: event?.max_attendees ? String(event.max_attendees) : '',
+    maxAttendees: defaultCapacity,
     imageUrl: event?.image_url ?? '',
     tags: event?.tags?.length ? event.tags.join(', ') : '',
   };
@@ -294,10 +308,17 @@ export function AdminEventForm({
                   name="maxAttendees"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Capacity (optional)</FormLabel>
+                      <FormLabel>
+                        Capacity {trackInfo?.maxTrackBookings ? '(required)' : '(optional)'}
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="50" inputMode="numeric" {...field} />
                       </FormControl>
+                      {trackInfo?.maxTrackBookings ? (
+                        <FormDescription>
+                          Minimum {trackInfo.maxTrackBookings} (track requirement)
+                        </FormDescription>
+                      ) : null}
                       <FormMessage />
                     </FormItem>
                   )}

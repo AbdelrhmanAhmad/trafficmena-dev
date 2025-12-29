@@ -77,7 +77,7 @@ export function getRequestIp(c: Context) {
   return 'unknown';
 }
 
-function normalizeRole(value: string | null | undefined): UserRole {
+export function normalizeRole(value: string | null | undefined): UserRole {
   const normalized = (value ?? '').toLowerCase();
   if (normalized === 'owner' || normalized === 'admin' || normalized === 'manager') {
     return normalized;
@@ -85,6 +85,16 @@ function normalizeRole(value: string | null | undefined): UserRole {
   if (normalized === 'expert') return 'expert';
   if (normalized === 'member') return 'user';
   return 'user';
+}
+
+export async function getOptionalUserRole(userId: string): Promise<UserRole | null> {
+  const [record] = await db
+    .select({ role: profiles.role })
+    .from(profiles)
+    .where(eq(profiles.id, userId))
+    .limit(1);
+  if (!record?.role) return null;
+  return normalizeRole(record.role);
 }
 
 function isRoleAllowed(role: UserRole, allowed: UserRole[]) {

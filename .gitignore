@@ -37,3 +37,8 @@ local/postgres/
 
 # Local frontend env (do not commit secrets)
 web/.env
+
+# Security - never commit env archives
+*.env.zip
+server/*.zip
+Server*.zip

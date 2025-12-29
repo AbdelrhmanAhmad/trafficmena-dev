@@ -72,6 +72,40 @@ export const useAssetsByEventId = (eventId: string) => {
   });
 };
 
+// Batch fetch assets for multiple events (uses server-side filtering)
+export const useAssetsByEventIds = (eventIds: string[]) => {
+  // Create stable sorted copy to avoid mutating input array
+  const stableKey = [...eventIds].sort().join(',');
+
+  return useQuery({
+    queryKey: ['library', 'assets', 'events', stableKey],
+    queryFn: async () => {
+      if (eventIds.length === 0) return new Map<string, LibraryAsset[]>();
+
+      // Server-side filtering returns only assets matching these event IDs
+      const response = await fetchLibraryAssets({
+        page: 1,
+        pageSize: 50,
+        eventIds: eventIds.join(','),
+      });
+
+      // Group assets by event ID
+      const assetMap = new Map<string, LibraryAsset[]>();
+      for (const item of response.items) {
+        if (item.event_id) {
+          const existing = assetMap.get(item.event_id) || [];
+          existing.push(item);
+          assetMap.set(item.event_id, existing);
+        }
+      }
+      return assetMap;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    enabled: eventIds.length > 0,
+  });
+};
+
 // Admin hooks
 export const useAllLibraryAssets = () => {
   return useQuery({

@@ -37,7 +37,7 @@ const dashboardMenuItems = [
     description: 'Update your info',
   },
   {
-    title: 'My Events',
+    title: 'Events & Tracks',
     url: '/dashboard/meetups',
     icon: Calendar,
     description: 'Your events & bookings',
@@ -71,8 +71,7 @@ function DashboardSidebar() {
                   event.currentTarget.style.display = 'none';
                   const container = event.currentTarget.parentElement;
                   if (container) {
-                    container.innerHTML =
-                      '<span class="text-sm font-bold text-[#05ef62]">T</span>';
+                    container.innerHTML = '<span class="text-sm font-bold text-[#05ef62]">T</span>';
                   }
                 }}
               />
@@ -97,7 +96,11 @@ function DashboardSidebar() {
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.title} className="mb-2">
-                    <SidebarMenuButton asChild isActive={location.pathname === item.url} className="hover:bg-white/40 rounded-xl">
+                    <SidebarMenuButton
+                      asChild
+                      isActive={location.pathname === item.url}
+                      className="hover:bg-white/40 rounded-xl"
+                    >
                       <Link to={item.url} className="flex items-center gap-3 py-3">
                         <Icon className="h-4 w-4 shrink-0 text-neutral-700" />
                         <div className="flex flex-col items-start">
@@ -147,7 +150,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       case '/dashboard/profile':
         return 'Edit Profile';
       case '/dashboard/meetups':
-        return 'My Events';
+        return 'Events & Tracks';
       case '/dashboard/library':
         return 'Library';
       default:
@@ -167,9 +170,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </div>
             <UserProfileDropdown />
           </header>
-          <main className="relative flex-1">
-            <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/60 via-[#f4fff9]/40 to-transparent blur-3xl" />
-            <div className="pointer-events-none absolute -right-[48vw] top-[35vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+          <main className="relative flex-1 overflow-x-hidden overflow-y-auto">
+            <div className="pointer-events-none absolute -left-1/4 top-0 -z-10 h-[50vh] w-[60vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/50 via-[#f4fff9]/30 to-transparent blur-3xl" />
+            <div className="pointer-events-none absolute right-0 top-1/3 -z-10 h-[50vh] w-[50vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/20 via-[#05ef62]/15 to-transparent blur-[140px]" />
             <div className="relative p-6">{children}</div>
           </main>
         </SidebarInset>

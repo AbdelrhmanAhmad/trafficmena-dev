@@ -201,6 +201,14 @@ const EventDetail: React.FC = () => {
                     <span className="hidden rounded-full bg-neutral-900/90 px-3 py-1 text-[11px] font-semibold text-white lg:inline">
                       {event.event_type}
                     </span>
+                    {event.trackInfo && (
+                      <span
+                        className="hidden cursor-pointer items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700 transition-colors hover:bg-emerald-100 lg:inline-flex"
+                        onClick={() => navigate(`/tracks/${event.trackInfo!.id}`)}
+                      >
+                        Part of: {event.trackInfo.title}
+                      </span>
+                    )}
                     {event.tags[0] && (
                       <span className="hidden rounded-full bg-neutral-100 px-3 py-1 text-[11px] text-neutral-600 lg:inline">
                         {event.tags[0]}
@@ -291,13 +299,83 @@ const EventDetail: React.FC = () => {
                         </div>
                       </div>
 
-                      <Button
-                        className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] hover:brightness-95"
-                        onClick={event.attending ? handleCancel : handleRegister}
-                        disabled={isBooking || isCancelling}
-                      >
-                        {event.attending ? 'Cancel Registration' : 'Register for Event'}
-                      </Button>
+                      {(() => {
+                        const trackInfo = event.trackInfo;
+                        let canBookSingle = true;
+                        let bookingMessage: string | null = null;
+                        let showTrackBookingOnly = false;
+
+                        if (trackInfo && trackInfo.singleBookingStart) {
+                          const now = new Date();
+                          const start = new Date(trackInfo.singleBookingStart);
+                          const end = trackInfo.singleBookingEnd
+                            ? new Date(trackInfo.singleBookingEnd)
+                            : null;
+
+                          if (now < start) {
+                            // Before single booking opens - don't reveal the date
+                            canBookSingle = false;
+                            showTrackBookingOnly = true;
+                          } else if (end && now > end) {
+                            canBookSingle = false;
+                            bookingMessage = 'Individual registration has closed.';
+                          }
+                        } else if (trackInfo && !trackInfo.singleBookingStart) {
+                          // If in track but no single booking dates, direct to track
+                          if (trackInfo.trackBookingStart) {
+                            canBookSingle = false;
+                            showTrackBookingOnly = true;
+                          }
+                        }
+
+                        // Show track booking CTA when single booking not yet open
+                        if (showTrackBookingOnly && trackInfo && !event.attending) {
+                          return (
+                            <div className="space-y-3">
+                              <Button
+                                className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                                onClick={() => navigate(`/tracks/${trackInfo.id}`)}
+                              >
+                                Book Full Track
+                              </Button>
+                              <p className="text-center text-xs text-muted-foreground">
+                                This event is part of a learning track
+                              </p>
+                            </div>
+                          );
+                        }
+
+                        if (!canBookSingle && !event.attending && bookingMessage) {
+                          return (
+                            <div className="space-y-3">
+                              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                <p className="font-medium">Registration Closed</p>
+                                <p className="mt-1">{bookingMessage}</p>
+                                <Button
+                                  variant="link"
+                                  className="mt-2 h-auto p-0 text-amber-900 underline"
+                                  onClick={() => navigate(`/tracks/${trackInfo!.id}`)}
+                                >
+                                  View Full Track
+                                </Button>
+                              </div>
+                              <Button disabled className="w-full rounded-xl" variant="secondary">
+                                Registration Closed
+                              </Button>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <Button
+                            className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] hover:brightness-95"
+                            onClick={event.attending ? handleCancel : handleRegister}
+                            disabled={isBooking || isCancelling}
+                          >
+                            {event.attending ? 'Cancel Registration' : 'Register for Event'}
+                          </Button>
+                        );
+                      })()}
 
                       {event.attending && (
                         <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-2 text-sm font-medium text-green-700">

@@ -11,6 +11,7 @@ type ApiLibraryAsset = {
   documentUrl: string | null;
   embedUrl: string | null;
   embedType: string | null;
+  thumbnailUrl: string | null;
   eventId: string | null;
   viewCount: number | null;
   downloadCount: number | null;
@@ -28,6 +29,7 @@ export type LibraryAssetRecord = {
   document_url: string | null;
   embed_url: string | null;
   embed_type: string | null;
+  thumbnail_url: string | null;
   event_id: string | null;
   view_count: number;
   download_count: number;
@@ -45,6 +47,7 @@ const mapAsset = (asset: ApiLibraryAsset): LibraryAssetRecord => ({
   document_url: asset.documentUrl,
   embed_url: asset.embedUrl,
   embed_type: asset.embedType,
+  thumbnail_url: asset.thumbnailUrl,
   event_id: asset.eventId,
   view_count: Number(asset.viewCount ?? 0),
   download_count: Number(asset.downloadCount ?? 0),
@@ -57,6 +60,8 @@ export type FetchLibraryParams = {
   pageSize?: number;
   search?: string;
   type?: ApiLibraryAsset['fileType'];
+  eventIds?: string; // Comma-separated UUIDs for filtering by event
+  excludeInTracks?: boolean; // Exclude assets that are in any track
 };
 
 export type CreateLibraryAssetPayload = {
@@ -67,6 +72,7 @@ export type CreateLibraryAssetPayload = {
   documentUrl?: string | null;
   embedUrl?: string | null;
   embedType?: string | null;
+  thumbnailUrl?: string | null;
   eventId?: string | null;
   fileSizeBytes?: number | null;
 };
@@ -86,6 +92,8 @@ export async function fetchLibraryAssets(
   }
   if (params.search) query.set('search', params.search);
   if (params.type) query.set('type', params.type);
+  if (params.eventIds) query.set('eventIds', params.eventIds);
+  if (params.excludeInTracks) query.set('excludeInTracks', 'true');
 
   const data = await fetchJson<{
     items: ApiLibraryAsset[];

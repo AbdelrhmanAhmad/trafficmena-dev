@@ -8,6 +8,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { EventAttendeesList } from '../components/EventAttendeesList';
 import { useEvent } from '../hooks/useEvents';
 
 type SanitizedHtmlProps = {
@@ -113,22 +114,7 @@ const AdminEventDetail = () => {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Attendee Insights (Coming Soon)</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  Detailed attendee exports and analytics will return once the new Hono admin APIs
-                  are wired up. During the MVP we track registrations directly inside the event
-                  detail endpoint.
-                </p>
-                <p>
-                  Need attendee information today? Contact the engineering team and we can run a
-                  manual query for you while the automation is finishing up.
-                </p>
-              </CardContent>
-            </Card>
+            <EventAttendeesList eventId={event.id} />
           </div>
         ) : (
           <div className="rounded-md border border-dashed p-12 text-center text-sm text-muted-foreground">
