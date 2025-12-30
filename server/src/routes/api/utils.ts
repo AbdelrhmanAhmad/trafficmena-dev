@@ -159,3 +159,11 @@ export async function requireManager(c: Context): Promise<RoleGuardSuccess | Rol
 export function getRolePriority(role: UserRole): number {
   return ROLE_PRIORITY[role];
 }
+
+/**
+ * Escapes special characters in a string for safe use in SQL LIKE patterns.
+ * Prevents users from injecting wildcards (%, _) or escape characters (\).
+ */
+export function escapeLikePattern(input: string): string {
+  return input.replace(/[%_\\]/g, (char) => `\\${char}`);
+}

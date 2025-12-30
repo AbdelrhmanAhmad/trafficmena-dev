@@ -2,9 +2,9 @@ import { and, count, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { libraryAssets, series, seriesAssets } from '../../db/schema/index.js';
+import { eventAttendees, libraryAssets, series, seriesAssets } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
+import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -64,7 +64,7 @@ export function registerSeriesRoutes(app: Hono) {
       filters.push(eq(series.isPublished, true));
     }
     if (search) {
-      filters.push(ilike(series.title, `%${search}%`));
+      filters.push(ilike(series.title, `%${escapeLikePattern(search)}%`));
     }
 
     const whereClause = filters.length ? and(...filters) : undefined;
@@ -159,7 +159,7 @@ export function registerSeriesRoutes(app: Hono) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
     }
 
-    // Get assets in series
+    // Get assets in series with permission fields
     const seriesAssetsList = await db
       .select({
         assetId: seriesAssets.assetId,
@@ -176,6 +176,8 @@ export function registerSeriesRoutes(app: Hono) {
           embedType: libraryAssets.embedType,
           viewCount: libraryAssets.viewCount,
           createdAt: libraryAssets.createdAt,
+          eventId: libraryAssets.eventId,
+          isPublic: libraryAssets.isPublic,
         },
       })
       .from(seriesAssets)
@@ -183,20 +185,40 @@ export function registerSeriesRoutes(app: Hono) {
       .where(eq(seriesAssets.seriesId, id))
       .orderBy(seriesAssets.sortOrder);
 
-    const assets = seriesAssetsList.map((sa) => ({
-      id: sa.asset.id,
-      title: sa.asset.title,
-      description: sa.asset.description,
-      fileType: sa.asset.fileType,
-      thumbnailUrl: sa.asset.thumbnailUrl,
-      videoUrl: sa.asset.videoUrl,
-      documentUrl: sa.asset.documentUrl,
-      embedUrl: sa.asset.embedUrl,
-      embedType: sa.asset.embedType,
-      viewCount: sa.asset.viewCount,
-      createdAt: sa.asset.createdAt,
-      sortOrder: sa.sortOrder,
-    }));
+    // Get user's registered event IDs for permission checking
+    let userEventIds = new Set<string>();
+    if (!isStaff) {
+      const registrations = await db
+        .select({ eventId: eventAttendees.eventId })
+        .from(eventAttendees)
+        .where(eq(eventAttendees.userId, session.user.id));
+      userEventIds = new Set(registrations.map((r) => r.eventId));
+    }
+
+    // Map assets with access control
+    const assets = seriesAssetsList.map((sa) => {
+      const hasAccess =
+        isStaff || sa.asset.isPublic || !sa.asset.eventId || userEventIds.has(sa.asset.eventId);
+
+      return {
+        id: sa.asset.id,
+        title: sa.asset.title,
+        description: sa.asset.description,
+        fileType: sa.asset.fileType,
+        thumbnailUrl: sa.asset.thumbnailUrl,
+        // Only include content URLs if user has access
+        videoUrl: hasAccess ? sa.asset.videoUrl : null,
+        documentUrl: hasAccess ? sa.asset.documentUrl : null,
+        embedUrl: hasAccess ? sa.asset.embedUrl : null,
+        embedType: sa.asset.embedType,
+        viewCount: sa.asset.viewCount,
+        createdAt: sa.asset.createdAt,
+        sortOrder: sa.sortOrder,
+        eventId: sa.asset.eventId,
+        isPublic: sa.asset.isPublic,
+        hasAccess,
+      };
+    });
 
     return c.json({
       ...seriesRecord,

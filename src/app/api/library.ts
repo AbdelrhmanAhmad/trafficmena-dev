@@ -13,10 +13,12 @@ type ApiLibraryAsset = {
   embedType: string | null;
   thumbnailUrl: string | null;
   eventId: string | null;
+  isPublic: boolean;
   viewCount: number | null;
   downloadCount: number | null;
   fileSizeBytes: number | null;
   createdAt: string;
+  hasAccess?: boolean;
 };
 
 export type LibraryAssetRecord = {
@@ -31,10 +33,12 @@ export type LibraryAssetRecord = {
   embed_type: string | null;
   thumbnail_url: string | null;
   event_id: string | null;
+  is_public: boolean;
   view_count: number;
   download_count: number;
   file_size_bytes: number | null;
   created_at: string;
+  has_access: boolean;
 };
 
 const mapAsset = (asset: ApiLibraryAsset): LibraryAssetRecord => ({
@@ -49,10 +53,12 @@ const mapAsset = (asset: ApiLibraryAsset): LibraryAssetRecord => ({
   embed_type: asset.embedType,
   thumbnail_url: asset.thumbnailUrl,
   event_id: asset.eventId,
+  is_public: asset.isPublic ?? false,
   view_count: Number(asset.viewCount ?? 0),
   download_count: Number(asset.downloadCount ?? 0),
   file_size_bytes: asset.fileSizeBytes,
   created_at: asset.createdAt,
+  has_access: asset.hasAccess ?? true,
 });
 
 export type FetchLibraryParams = {
@@ -74,6 +80,7 @@ export type CreateLibraryAssetPayload = {
   embedType?: string | null;
   thumbnailUrl?: string | null;
   eventId?: string | null;
+  isPublic?: boolean;
   fileSizeBytes?: number | null;
 };
 
@@ -109,9 +116,30 @@ export async function fetchLibraryAssets(
 }
 
 export async function fetchLibraryAssetById(id: string): Promise<LibraryAssetRecord> {
-  const data = await fetchJson<ApiLibraryAsset>(`${API_BASE}/library/${id}`, {
+  const response = await fetch(`${API_BASE}/library/${id}`, {
     method: 'GET',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
   });
+
+  const contentType = response.headers.get('content-type') ?? '';
+  const isJson = contentType.includes('application/json');
+
+  if (!isJson) {
+    throw new Error('Invalid response format');
+  }
+
+  const data = await response.json();
+
+  // Handle 403 - returns partial data with hasAccess: false
+  if (response.status === 403 && data.hasAccess === false) {
+    return mapAsset({ ...data, isPublic: false } as ApiLibraryAsset);
+  }
+
+  if (!response.ok) {
+    throw new Error(data.error?.message ?? response.statusText);
+  }
+
   return mapAsset(data);
 }
 

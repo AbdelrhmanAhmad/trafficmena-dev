@@ -1,10 +1,10 @@
-import { and, count, eq, ilike, inArray, notInArray } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, notInArray, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { libraryAssets, seriesAssets } from '../../db/schema/index.js';
+import { eventAttendees, libraryAssets, seriesAssets } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { requireAdmin, requireManager } from './utils.js';
+import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -36,6 +36,7 @@ const assetObjectSchema = z.object({
   embedType: optionalShortString,
   thumbnailUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
   eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
+  isPublic: z.boolean().optional().default(false),
   fileSizeBytes: z
     .union([z.number().int().min(0), z.null()])
     .optional()
@@ -117,12 +118,32 @@ export function registerLibraryRoutes(app: Hono) {
     const { page, pageSize, search, type, eventIds, excludeInTracks } = parsed.data;
     const filters: any[] = [];
 
+    // Permission filtering: staff see all, users see accessible assets only
+    const role = await getOptionalUserRole(session.user.id);
+    const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
+
+    if (!isStaff) {
+      // User can access: isPublic=true OR eventId IS NULL OR registered for event
+      const userEventIds = db
+        .select({ eventId: eventAttendees.eventId })
+        .from(eventAttendees)
+        .where(eq(eventAttendees.userId, session.user.id));
+
+      filters.push(
+        sql`(
+          ${libraryAssets.isPublic} = true
+          OR ${libraryAssets.eventId} IS NULL
+          OR ${libraryAssets.eventId} IN (${userEventIds})
+        )`,
+      );
+    }
+
     if (type) {
       filters.push(eq(libraryAssets.fileType, type));
     }
 
     if (search) {
-      filters.push(ilike(libraryAssets.title, `%${search}%`));
+      filters.push(ilike(libraryAssets.title, `%${escapeLikePattern(search)}%`));
     }
 
     // Filter by event IDs (comma-separated UUIDs)
@@ -163,6 +184,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedType: libraryAssets.embedType,
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
+        isPublic: libraryAssets.isPublic,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
         fileSizeBytes: libraryAssets.fileSizeBytes,
@@ -216,6 +238,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedType: libraryAssets.embedType,
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
+        isPublic: libraryAssets.isPublic,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
         fileSizeBytes: libraryAssets.fileSizeBytes,
@@ -237,7 +260,43 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
 
-    return c.json(asset[0]);
+    // Permission check for restricted assets
+    if (asset[0].eventId && !asset[0].isPublic) {
+      const role = await getOptionalUserRole(session.user.id);
+      const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
+
+      if (!isStaff) {
+        const [registration] = await db
+          .select({ id: eventAttendees.id })
+          .from(eventAttendees)
+          .where(
+            and(
+              eq(eventAttendees.eventId, asset[0].eventId),
+              eq(eventAttendees.userId, session.user.id),
+            ),
+          )
+          .limit(1);
+
+        if (!registration) {
+          // Return metadata without content URLs
+          return c.json(
+            {
+              id: asset[0].id,
+              title: asset[0].title,
+              description: asset[0].description,
+              fileType: asset[0].fileType,
+              thumbnailUrl: asset[0].thumbnailUrl,
+              eventId: asset[0].eventId,
+              hasAccess: false,
+              error: { code: 'REGISTRATION_REQUIRED', message: 'Register for event to access.' },
+            },
+            403,
+          );
+        }
+      }
+    }
+
+    return c.json({ ...asset[0], hasAccess: true });
   });
 
   app.post('/library', async (c) => {
@@ -274,6 +333,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedType: payload.embedType ?? null,
         thumbnailUrl: payload.thumbnailUrl || null,
         eventId: payload.eventId ?? null,
+        isPublic: payload.isPublic ?? false,
         fileSizeBytes: payload.fileSizeBytes ?? null,
       })
       .returning({
@@ -288,6 +348,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedType: libraryAssets.embedType,
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
+        isPublic: libraryAssets.isPublic,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
         fileSizeBytes: libraryAssets.fileSizeBytes,
@@ -330,6 +391,7 @@ export function registerLibraryRoutes(app: Hono) {
     if (updates.thumbnailUrl !== undefined)
       updateValues.thumbnailUrl = updates.thumbnailUrl || null;
     if (updates.eventId !== undefined) updateValues.eventId = updates.eventId ?? null;
+    if (updates.isPublic !== undefined) updateValues.isPublic = updates.isPublic;
     if (updates.fileSizeBytes !== undefined)
       updateValues.fileSizeBytes = updates.fileSizeBytes ?? null;
 
@@ -366,6 +428,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedType: libraryAssets.embedType,
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
+        isPublic: libraryAssets.isPublic,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
         fileSizeBytes: libraryAssets.fileSizeBytes,

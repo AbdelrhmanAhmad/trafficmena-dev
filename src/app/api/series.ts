@@ -27,6 +27,9 @@ type ApiSeriesAsset = {
   viewCount: number;
   createdAt: string;
   sortOrder: number;
+  eventId: string | null;
+  isPublic: boolean;
+  hasAccess: boolean;
 };
 
 type ApiSeriesDetail = ApiSeries & {
@@ -58,6 +61,9 @@ export type SeriesAssetRecord = {
   view_count: number;
   created_at: string;
   sort_order: number;
+  event_id: string | null;
+  is_public: boolean;
+  has_access: boolean;
 };
 
 export type SeriesDetailRecord = SeriesRecord & {
@@ -90,6 +96,9 @@ const mapSeriesAsset = (asset: ApiSeriesAsset): SeriesAssetRecord => ({
   view_count: asset.viewCount,
   created_at: asset.createdAt,
   sort_order: asset.sortOrder,
+  event_id: asset.eventId,
+  is_public: asset.isPublic ?? false,
+  has_access: asset.hasAccess ?? true,
 });
 
 const mapSeriesDetail = (series: ApiSeriesDetail): SeriesDetailRecord => ({

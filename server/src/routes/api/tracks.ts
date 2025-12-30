@@ -6,13 +6,15 @@ import {
   eventAttendees,
   events,
   libraryAssets,
+  series,
+  seriesAssets,
   trackBookings,
   trackEvents,
   tracks,
 } from '../../db/schema/index.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
+import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -393,7 +395,7 @@ export function registerTrackRoutes(app: Hono) {
       filters.push(eq(tracks.isPublished, true));
     }
     if (search) {
-      filters.push(ilike(tracks.title, `%${search}%`));
+      filters.push(ilike(tracks.title, `%${escapeLikePattern(search)}%`));
     }
 
     const whereClause = filters.length ? and(...filters) : undefined;
@@ -468,18 +470,6 @@ export function registerTrackRoutes(app: Hono) {
     const id = c.req.param('id');
     const role = await getOptionalUserRole(session.user.id);
     const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
-
-    // Debug log for track fetch issues (remove after debugging)
-    console.log(
-      '[tracks:getById] userId:',
-      session.user.id,
-      'role:',
-      role,
-      'isStaff:',
-      isStaff,
-      'trackId:',
-      id,
-    );
 
     const [track] = await db
       .select({
@@ -624,20 +614,33 @@ export function registerTrackRoutes(app: Hono) {
           );
         }
 
-        const [created] = await db
-          .insert(tracks)
-          .values({
-            title: payload.title,
-            description: payload.description ?? null,
-            imageUrl: payload.imageUrl || null,
+        // Use transaction to ensure track + auto-created series are atomic
+        const created = await db.transaction(async (tx) => {
+          const [track] = await tx
+            .insert(tracks)
+            .values({
+              title: payload.title,
+              description: payload.description ?? null,
+              imageUrl: payload.imageUrl || null,
+              isPublished: false,
+              trackBookingStart: payload.trackBookingStart ?? null,
+              trackBookingEnd: payload.trackBookingEnd ?? null,
+              singleBookingStart: payload.singleBookingStart ?? null,
+              singleBookingEnd: payload.singleBookingEnd ?? null,
+              maxTrackBookings: payload.maxTrackBookings ?? null,
+            })
+            .returning();
+
+          // Auto-create Series for track recordings
+          await tx.insert(series).values({
+            title: `${payload.title} Recordings`,
+            description: `Session recordings and materials from ${payload.title}`,
+            trackId: track.id,
             isPublished: false,
-            trackBookingStart: payload.trackBookingStart ?? null,
-            trackBookingEnd: payload.trackBookingEnd ?? null,
-            singleBookingStart: payload.singleBookingStart ?? null,
-            singleBookingEnd: payload.singleBookingEnd ?? null,
-            maxTrackBookings: payload.maxTrackBookings ?? null,
-          })
-          .returning();
+          });
+
+          return track;
+        });
 
         return c.json({ track: created }, 201);
       },
@@ -873,6 +876,37 @@ export function registerTrackRoutes(app: Hono) {
               sortOrder: sortOrder++,
             })),
           );
+
+          // Link event assets to track's Series
+          const [trackSeries] = await db
+            .select({ id: series.id })
+            .from(series)
+            .where(eq(series.trackId, trackId))
+            .limit(1);
+
+          if (trackSeries) {
+            const eventAssets = await db
+              .select({ id: libraryAssets.id })
+              .from(libraryAssets)
+              .where(inArray(libraryAssets.eventId, toInsert));
+
+            if (eventAssets.length > 0) {
+              const [maxSeriesSort] = await db
+                .select({ maxOrder: sql<number>`COALESCE(MAX(${seriesAssets.sortOrder}), -1)` })
+                .from(seriesAssets)
+                .where(eq(seriesAssets.seriesId, trackSeries.id));
+
+              let assetSortOrder = (maxSeriesSort?.maxOrder ?? -1) + 1;
+
+              await db.insert(seriesAssets).values(
+                eventAssets.map((asset) => ({
+                  seriesId: trackSeries.id,
+                  assetId: asset.id,
+                  sortOrder: assetSortOrder++,
+                })),
+              );
+            }
+          }
         }
 
         return c.json({ success: true, addedCount: toInsert.length });

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FileText, Link2, Upload, Video } from 'lucide-react';
+import { FileText, Globe, HelpCircle, Link2, Upload, Video } from 'lucide-react';
 import { type ChangeEvent, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from '@/shared/components/ui/form';
 import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -30,6 +31,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { Switch } from '@/shared/components/ui/switch';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/shared/components/ui/tooltip';
 
 const libraryAssetFormSchema = z
   .object({
@@ -42,6 +50,7 @@ const libraryAssetFormSchema = z
     embedType: z.string().trim().max(120).optional(),
     thumbnailUrl: z.string().trim().max(1000).optional(),
     eventId: z.string().trim().uuid().optional(),
+    isPublic: z.boolean().optional(),
     fileSizeBytes: z
       .number({ invalid_type_error: 'Provide a valid file size.' })
       .int()
@@ -113,6 +122,7 @@ export function LibraryAssetForm({
     embedType: asset?.embed_type ?? '',
     thumbnailUrl: asset?.thumbnail_url ?? '',
     eventId: asset?.event_id ?? undefined,
+    isPublic: asset?.is_public ?? false,
     fileSizeBytes: asset?.file_size_bytes ?? null,
   };
 
@@ -209,6 +219,7 @@ export function LibraryAssetForm({
       embedType: values.embedType?.trim() ? values.embedType.trim() : null,
       thumbnailUrl,
       eventId: values.eventId?.trim() ? values.eventId.trim() : null,
+      isPublic: values.isPublic ?? false,
       fileSizeBytes: documentUrl ? (values.fileSizeBytes ?? null) : null,
     };
 
@@ -463,6 +474,48 @@ export function LibraryAssetForm({
                     </p>
                   )}
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isPublic"
+              render={({ field }) => (
+                <FormItem className="rounded-lg border p-4 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-emerald-600" />
+                      <Label htmlFor="isPublic" className="font-medium">
+                        Make publicly accessible
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger type="button">
+                            <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>
+                              When enabled, all authenticated users can access this content, even if
+                              they haven't registered for the associated event.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        id="isPublic"
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </div>
+                  <FormDescription className="mt-2 text-xs">
+                    {form.watch('eventId')
+                      ? 'By default, only users registered for the linked event can access this content.'
+                      : 'Content without a linked event is accessible to all users.'}
+                  </FormDescription>
                 </FormItem>
               )}
             />

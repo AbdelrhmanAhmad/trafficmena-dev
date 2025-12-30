@@ -116,6 +116,7 @@ export const libraryAssets = pgTable(
     embedType: text('embed_type'),
     thumbnailUrl: text('thumbnail_url'),
     eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
+    isPublic: boolean('is_public').default(false).notNull(),
     viewCount: integer('view_count').default(0).notNull(),
     downloadCount: integer('download_count').default(0).notNull(),
     durationSeconds: integer('duration_seconds'),
@@ -125,6 +126,7 @@ export const libraryAssets = pgTable(
   },
   (table) => ({
     eventIdx: index('library_assets_event_idx').on(table.eventId),
+    isPublicIdx: index('library_assets_is_public_idx').on(table.isPublic),
   }),
 );
 
@@ -207,12 +209,14 @@ export const series = pgTable(
     imageUrl: text('image_url'),
     sortOrder: integer('sort_order').default(0).notNull(),
     isPublished: boolean('is_published').default(true).notNull(),
+    trackId: uuid('track_id').references(() => tracks.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     sortOrderIdx: index('series_sort_order_idx').on(table.sortOrder),
     publishedIdx: index('series_is_published_idx').on(table.isPublished),
+    trackIdIdx: index('series_track_id_idx').on(table.trackId),
   }),
 );
 

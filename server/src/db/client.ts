@@ -1,6 +1,6 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import { env } from "../config/env.js";
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
+import { env } from '../config/env.js';
 
 // Resolve the database connection string with fallbacks to individual PG* vars in production
 function resolveDatabaseUrl(): string {
@@ -14,7 +14,7 @@ function resolveDatabaseUrl(): string {
     )}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
   }
   throw new Error(
-    "[db] DATABASE_URL is not set and PG* environment variables are incomplete. Provide DATABASE_URL or all of PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE.",
+    '[db] DATABASE_URL is not set and PG* environment variables are incomplete. Provide DATABASE_URL or all of PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE.',
   );
 }
 
@@ -23,14 +23,14 @@ const resolvedDatabaseUrl = resolveDatabaseUrl();
 // Mask password when logging
 try {
   const url = new URL(resolvedDatabaseUrl);
-  const masked = `${url.protocol}//${url.username ? "***" : ""}${url.username ? ":" : ""}${
-    url.password ? "***@" : ""
+  const masked = `${url.protocol}//${url.username ? '***' : ''}${url.username ? ':' : ''}${
+    url.password ? '***@' : ''
   }${url.host}${url.pathname}`;
   // eslint-disable-next-line no-console
-  console.log("[db] Using database connection:", masked);
+  console.log('[db] Using database connection:', masked);
 } catch {
   // eslint-disable-next-line no-console
-  console.log("[db] Using database connection (unparsed):", "***");
+  console.log('[db] Using database connection (unparsed):', '***');
 }
 
 const { Pool } = pg;
