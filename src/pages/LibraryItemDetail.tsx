@@ -1,8 +1,17 @@
 import DOMPurify from 'dompurify';
-import { ArrowLeft, Calendar, Download, FileText, Link2, Presentation, Video } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  Download,
+  FileText,
+  Link2,
+  Lock,
+  Presentation,
+  Video,
+} from 'lucide-react';
 import type React from 'react';
 import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLibraryAsset } from '@/features/library/hooks/useLibrary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import DashboardLayout from '@/shared/components/layout/DashboardLayout';
@@ -29,7 +38,8 @@ const LibraryItemDetail: React.FC = () => {
   const navigate = useNavigate();
   const { data, isLoading, error } = useLibraryAsset(id ?? '');
   const item = data ?? null;
-  const access = { canView: true, canDownload: true };
+  const hasAccess = item?.has_access ?? true;
+  const access = { canView: hasAccess, canDownload: hasAccess };
 
   useEffect(() => {
     if (!id) {
@@ -137,22 +147,78 @@ const LibraryItemDetail: React.FC = () => {
     );
   }
 
-  if (!item || !access.canView) {
-    const title = !access.canView ? 'Access Restricted' : 'Item not found';
-    const description = !access.canView
-      ? 'You do not have permission to view this library item.'
-      : 'The requested library item could not be found.';
-
+  if (!item) {
     return (
       <ProtectedRoute>
         <DashboardLayout>
           <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">{title}</h2>
-            <p className="text-gray-600 mb-4">{description}</p>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Item not found</h2>
+            <p className="text-gray-600 mb-4">The requested library item could not be found.</p>
             <Button onClick={() => navigate('/dashboard/library')}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Library
             </Button>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    );
+  }
+
+  // Restricted access - show metadata with registration CTA
+  if (!access.canView) {
+    return (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <div className="max-w-2xl mx-auto">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/dashboard/library')}
+              className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Library
+            </Button>
+
+            <Card className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+              <CardHeader className="text-center pb-2">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                  <Lock className="h-8 w-8 text-amber-600" />
+                </div>
+                <h1 className="text-2xl font-bold text-neutral-900">{item.title}</h1>
+              </CardHeader>
+              <CardContent className="text-center space-y-6 pt-4">
+                <p className="text-neutral-600">
+                  This content is exclusive to registered attendees. Register for the associated
+                  event to unlock access.
+                </p>
+
+                {item.description && (
+                  <div className="text-left border-t border-neutral-200 pt-6">
+                    <h3 className="text-sm font-semibold text-neutral-700 mb-2">
+                      About this content
+                    </h3>
+                    <SanitizedDescription
+                      className="text-sm text-neutral-600 leading-relaxed line-clamp-4"
+                      html={getSanitizedDescription(item.description)}
+                    />
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-3 pt-4">
+                  {item.event_id && (
+                    <Button
+                      asChild
+                      className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:shadow-xl"
+                    >
+                      <Link to={`/dashboard/events/${item.event_id}`}>Register for Event</Link>
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => navigate('/dashboard/events')}>
+                    Browse All Events
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </DashboardLayout>
       </ProtectedRoute>

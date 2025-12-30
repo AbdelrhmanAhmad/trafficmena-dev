@@ -1,4 +1,13 @@
-import { ArrowLeft, FileText, Loader2, Plus, Presentation, Trash2, Video } from 'lucide-react';
+import {
+  ArrowLeft,
+  FileText,
+  Loader2,
+  Pencil,
+  Plus,
+  Presentation,
+  Trash2,
+  Video,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { SeriesAssetSelector, SeriesForm } from '@/features/series';
@@ -218,16 +227,27 @@ function SeriesDetailPage() {
                             <span>{asset.file_type}</span>
                           </div>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleRemoveAsset(asset.id)}
-                          disabled={removeAssetMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            onClick={() => navigate(`/admin/library/edit/${asset.id}`)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleRemoveAsset(asset.id)}
+                            disabled={removeAssetMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

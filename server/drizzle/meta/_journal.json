@@ -92,6 +92,13 @@
       "when": 1767052800000,
       "tag": "0012_separate_tracks_series",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1767139200000,
+      "tag": "0013_content_permission_system",
+      "breakpoints": true
     }
   ]
 }

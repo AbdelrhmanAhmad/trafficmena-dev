@@ -1,7 +1,18 @@
 import DOMPurify from 'dompurify';
-import { Edit, FileText, Play, Presentation, Trash2, Video, Youtube } from 'lucide-react';
+import {
+  Edit,
+  FileText,
+  Globe,
+  Lock,
+  Play,
+  Presentation,
+  Trash2,
+  Video,
+  Youtube,
+} from 'lucide-react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -12,18 +23,21 @@ import {
 } from '@/shared/components/ui/card';
 
 interface LibraryItem {
-  id: string | number; // Allow both string and number for compatibility
+  id: string | number;
   title: string;
   description: string;
-  file_type: string; // Match database field name
-  video_url?: string | null; // Match database field name
-  document_url?: string | null; // Match database field name
-  embed_url?: string | null; // Match database field name
-  embed_type?: string | null; // Match database field name
-  file_url?: string | null; // Legacy field for backward compatibility
-  created_at: string; // Match database field name
+  file_type: string;
+  video_url?: string | null;
+  document_url?: string | null;
+  embed_url?: string | null;
+  embed_type?: string | null;
+  file_url?: string | null;
+  created_at: string;
   view_count?: number | null;
   download_count?: number | null;
+  event_id?: string | null;
+  is_public?: boolean;
+  has_access?: boolean;
 }
 
 interface LibraryItemCardProps {
@@ -135,8 +149,8 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
           </div>
         )}
 
-        {/* Play Overlay for Videos */}
-        {(item.file_type === 'Video' || videoUrl) && (
+        {/* Play Overlay for Videos (only if has access) */}
+        {(item.file_type === 'Video' || videoUrl) && item.has_access !== false && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="bg-white/90 rounded-full p-3">
               <Play className="h-8 w-8 text-gray-900 fill-current" />
@@ -144,11 +158,31 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
           </div>
         )}
 
+        {/* Lock Overlay for restricted content */}
+        {item.has_access === false && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+            <div className="text-center text-white">
+              <Lock className="h-8 w-8 mx-auto mb-2" />
+              <p className="text-sm font-medium">Register to access</p>
+            </div>
+          </div>
+        )}
+
         {/* Type Badge */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex gap-2">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/90 backdrop-blur-sm text-neutral-700 border border-white/50">
             {item.embed_type ? 'Presentation' : item.file_type}
           </span>
+          {/* Public Badge for event-linked assets that are made public */}
+          {item.event_id && item.is_public && (
+            <Badge
+              variant="secondary"
+              className="bg-emerald-100/90 text-emerald-700 backdrop-blur-sm border-emerald-200/50"
+            >
+              <Globe className="h-3 w-3 mr-1" />
+              Public
+            </Badge>
+          )}
         </div>
 
         {(canManage || canDelete) && (

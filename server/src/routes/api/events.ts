@@ -1,10 +1,11 @@
-import { and, count, desc, eq, gte, ilike, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
   events,
+  libraryAssets,
   profiles,
   trackEvents,
   tracks,
@@ -12,7 +13,7 @@ import {
 } from '../../db/schema/index.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
+import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -125,7 +126,7 @@ export function registerEventRoutes(app: Hono) {
       }
 
       if (search) {
-        filters.push(ilike(events.title, `%${search}%`));
+        filters.push(ilike(events.title, `%${escapeLikePattern(search)}%`));
       }
 
       // Hide events in unpublished tracks (unless staff)
@@ -388,32 +389,46 @@ export function registerEventRoutes(app: Hono) {
 
     const payload = parsed.data;
 
-    const [created] = await db
-      .insert(events)
-      .values({
-        title: payload.title,
-        eventDescription: normalizeDescription(payload.description),
-        date: new Date(payload.date),
-        location: payload.location ?? null,
-        meetingLink: payload.meetingLink ?? null,
-        maxAttendees: payload.maxAttendees === undefined ? null : payload.maxAttendees,
-        imageUrl: payload.imageUrl ?? null,
-        tags: payload.tags ?? [],
-        eventType: payload.eventType,
-        guestExperts: [],
-      })
-      .returning({
-        id: events.id,
-        title: events.title,
-        eventDescription: events.eventDescription,
-        date: events.date,
-        location: events.location,
-        maxAttendees: events.maxAttendees,
-        meetingLink: events.meetingLink,
-        imageUrl: events.imageUrl,
-        tags: events.tags,
-        eventType: events.eventType,
+    // Use transaction to ensure event + auto-created asset are atomic
+    const created = await db.transaction(async (tx) => {
+      const [event] = await tx
+        .insert(events)
+        .values({
+          title: payload.title,
+          eventDescription: normalizeDescription(payload.description),
+          date: new Date(payload.date),
+          location: payload.location ?? null,
+          meetingLink: payload.meetingLink ?? null,
+          maxAttendees: payload.maxAttendees === undefined ? null : payload.maxAttendees,
+          imageUrl: payload.imageUrl ?? null,
+          tags: payload.tags ?? [],
+          eventType: payload.eventType,
+          guestExperts: [],
+        })
+        .returning({
+          id: events.id,
+          title: events.title,
+          eventDescription: events.eventDescription,
+          date: events.date,
+          location: events.location,
+          maxAttendees: events.maxAttendees,
+          meetingLink: events.meetingLink,
+          imageUrl: events.imageUrl,
+          tags: events.tags,
+          eventType: events.eventType,
+        });
+
+      // Auto-create draft library asset for event recordings
+      await tx.insert(libraryAssets).values({
+        title: `${payload.title} - Recording`,
+        description: `Recording from ${payload.title}`,
+        fileType: 'Video',
+        eventId: event.id,
+        isPublic: false,
       });
+
+      return event;
+    });
 
     return c.json(
       {
