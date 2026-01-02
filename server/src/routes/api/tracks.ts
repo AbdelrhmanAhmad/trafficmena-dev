@@ -141,9 +141,9 @@ function validateBookingWindows(
   }
 
   // Validate date ordering
-  if (trackSetCount === 2) {
-    const tStart = new Date(merged.trackBookingStart!);
-    const tEnd = new Date(merged.trackBookingEnd!);
+  if (trackSetCount === 2 && merged.trackBookingStart !== null && merged.trackBookingEnd !== null) {
+    const tStart = new Date(merged.trackBookingStart);
+    const tEnd = new Date(merged.trackBookingEnd);
     if (!(tStart < tEnd)) {
       return {
         valid: false,
@@ -152,9 +152,14 @@ function validateBookingWindows(
     }
 
     // If individual booking is enabled and dates are set, validate full ordering
-    if (merged.allowIndividualBooking && individualSetCount === 2) {
-      const sStart = new Date(merged.singleBookingStart!);
-      const sEnd = new Date(merged.singleBookingEnd!);
+    if (
+      merged.allowIndividualBooking &&
+      individualSetCount === 2 &&
+      merged.singleBookingStart !== null &&
+      merged.singleBookingEnd !== null
+    ) {
+      const sStart = new Date(merged.singleBookingStart);
+      const sEnd = new Date(merged.singleBookingEnd);
       if (!(tEnd < sStart && sStart < sEnd)) {
         return {
           valid: false,
