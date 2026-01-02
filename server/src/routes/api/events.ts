@@ -644,9 +644,7 @@ export function registerEventRoutes(app: Hono) {
           const [existing] = await tx
             .select({ id: eventAttendees.id })
             .from(eventAttendees)
-            .where(
-              and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)),
-            )
+            .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)))
             .limit(1);
 
           if (existing) {

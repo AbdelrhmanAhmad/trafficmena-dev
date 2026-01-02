@@ -344,7 +344,8 @@ async function fetchInvitations(params: InvitationListParams) {
 
   const filters: any[] = [];
   if (params.status) filters.push(eq(invitations.status, params.status as any));
-  if (params.search) filters.push(ilike(invitations.email, `%${escapeLikePattern(params.search)}%`));
+  if (params.search)
+    filters.push(ilike(invitations.email, `%${escapeLikePattern(params.search)}%`));
 
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
 

@@ -54,7 +54,9 @@ const DashboardLibrary: React.FC = () => {
                 <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">My Library</h1>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">
+                  My Library
+                </h1>
                 <p className="text-sm sm:text-base text-neutral-600 mt-0.5">
                   Access your exclusive marketing resources and content
                 </p>
@@ -65,8 +67,18 @@ const DashboardLibrary: React.FC = () => {
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-4 sm:mb-6 rounded-xl bg-neutral-100 p-1">
-              <TabsTrigger value="series" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Series</TabsTrigger>
-              <TabsTrigger value="content" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Single Content</TabsTrigger>
+              <TabsTrigger
+                value="series"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              >
+                Series
+              </TabsTrigger>
+              <TabsTrigger
+                value="content"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              >
+                Single Content
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="series">

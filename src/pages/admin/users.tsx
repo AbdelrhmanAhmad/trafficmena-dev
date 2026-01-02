@@ -140,33 +140,35 @@ const AdminUsersPage = () => {
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin']}>
       <AdminLayout>
-        <Card>
-          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2 text-xl font-semibold">
-                <Shield className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-3 text-2xl font-semibold text-neutral-900">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                  <Shield className="h-5 w-5 text-[#05ef62]" />
+                </div>
                 Member Directory
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-neutral-600 mt-2 ml-[52px]">
                 View and filter community members. Owners can adjust roles. If you&apos;re the first
                 admin here, promote yourself to owner to unlock full controls.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search by name or email"
-                  className="pl-9"
+                  className="pl-9 rounded-xl border-neutral-200 bg-white/70 backdrop-blur"
                 />
               </div>
               <Select
                 value={roleFilter}
                 onValueChange={(value: typeof roleFilter) => setRoleFilter(value)}
               >
-                <SelectTrigger className="sm:w-40">
+                <SelectTrigger className="sm:w-40 rounded-xl border-neutral-200 bg-white/70 backdrop-blur">
                   <SelectValue placeholder="Role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -183,15 +185,15 @@ const AdminUsersPage = () => {
 
           <CardContent>
             {isLoading ? (
-              <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
+              <div className="flex min-h-[200px] items-center justify-center text-neutral-500">
                 Loading users…
               </div>
             ) : isError ? (
-              <div className="flex min-h-[200px] items-center justify-center text-destructive">
+              <div className="flex min-h-[200px] items-center justify-center text-red-600">
                 Unable to fetch users.
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="flex min-h-[200px] items-center justify-center text-muted-foreground">
+              <div className="flex min-h-[200px] items-center justify-center text-neutral-500">
                 No users match your filters.
               </div>
             ) : (
@@ -229,14 +231,20 @@ const AdminUsersPage = () => {
             )}
 
             <div className="mt-6 flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-neutral-500">
                 Showing {filteredUsers.length} of {data?.pagination.total ?? 0} members
               </p>
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="icon" onClick={handlePrev} disabled={page === 1}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handlePrev}
+                  disabled={page === 1}
+                  className="rounded-lg"
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-neutral-600">
                   Page {page} of {totalPages}
                 </span>
                 <Button
@@ -244,6 +252,7 @@ const AdminUsersPage = () => {
                   size="icon"
                   onClick={handleNext}
                   disabled={page >= totalPages}
+                  className="rounded-lg"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>

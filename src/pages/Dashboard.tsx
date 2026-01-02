@@ -195,7 +195,9 @@ const Dashboard: React.FC = () => {
                 <Edit className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">My Profile</h1>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">
+                  My Profile
+                </h1>
                 <p className="text-sm sm:text-base text-neutral-600 mt-0.5">
                   Update your personal details and highlight the skills you&apos;re focused on.
                 </p>
