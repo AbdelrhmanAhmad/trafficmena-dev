@@ -20,8 +20,8 @@ import {
   useUpdateSeries,
 } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -60,9 +60,9 @@ function SeriesDetailPage() {
   if (isLoading) {
     return (
       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-        <AdminLayout>
+        <AppLayout variant="admin">
           <LoadingSpinner size="lg" text="Loading series..." />
-        </AdminLayout>
+        </AppLayout>
       </AdminProtectedRoute>
     );
   }
@@ -70,14 +70,14 @@ function SeriesDetailPage() {
   if (isError || !series) {
     return (
       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-        <AdminLayout>
+        <AppLayout variant="admin">
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-lg text-muted-foreground">Series not found</p>
             <Button variant="outline" onClick={() => navigate('/admin/library')} className="mt-4">
               Back to Library
             </Button>
           </div>
-        </AdminLayout>
+        </AppLayout>
       </AdminProtectedRoute>
     );
   }
@@ -132,7 +132,7 @@ function SeriesDetailPage() {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -284,7 +284,7 @@ function SeriesDetailPage() {
           onSelect={handleAddAssets}
           isLoading={addAssetsMutation.isPending}
         />
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 }

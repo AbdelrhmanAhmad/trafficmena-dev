@@ -10,8 +10,8 @@ import {
   useInvitationStats,
   useInvitations,
 } from '@/app/hooks/useInvitations';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -178,7 +178,7 @@ export default function AdminInvitations() {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="space-y-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
@@ -451,7 +451,7 @@ export default function AdminInvitations() {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 }

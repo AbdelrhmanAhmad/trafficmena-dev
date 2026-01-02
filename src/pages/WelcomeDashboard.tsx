@@ -3,7 +3,7 @@ import { Calendar, FileText, Library, MapPin, Sparkles, Users } from 'lucide-rea
 import type React from 'react';
 import { fetchEvents } from '@/app/api/events';
 import { fetchLibraryAssets } from '@/app/api/library';
-import DashboardLayout from '@/shared/components/layout/DashboardLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -53,7 +53,7 @@ const WelcomeDashboard: React.FC = () => {
   };
 
   return (
-    <DashboardLayout>
+    <AppLayout variant="member">
       <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
         <section className="relative w-full overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-gradient-to-br from-[#d5ffe9]/30 via-[#f4fff9]/20 to-[#00fdc2]/10 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <div className="pointer-events-none absolute -left-1/4 -top-1/4 -z-10 h-[40%] w-[60%] rounded-full bg-gradient-to-br from-[#d5ffe9]/50 via-[#f4fff9]/30 to-transparent blur-3xl" />
@@ -218,7 +218,7 @@ const WelcomeDashboard: React.FC = () => {
           </Card>
         </div>
       </div>
-    </DashboardLayout>
+    </AppLayout>
   );
 };
 

@@ -15,7 +15,7 @@ import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDeleteLibraryAsset, useLibraryAsset } from '@/features/library/hooks/useLibrary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
 import VideoEmbed from '@/shared/components/VideoEmbed';
@@ -133,17 +133,17 @@ const AdminLibraryItemDetail: React.FC = () => {
 
   if (isLoading) {
     return (
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="flex justify-center py-12">
           <LoadingSpinner size="lg" text="Loading library item..." />
         </div>
-      </AdminLayout>
+      </AppLayout>
     );
   }
 
   if (error) {
     return (
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="text-center py-12">
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">Unable to load item</h2>
           <p className="text-gray-600 mb-4">
@@ -156,13 +156,13 @@ const AdminLibraryItemDetail: React.FC = () => {
             Back to Library Management
           </Button>
         </div>
-      </AdminLayout>
+      </AppLayout>
     );
   }
 
   if (!item) {
     return (
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="text-center py-12">
           <h2 className="text-2xl font-semibold text-gray-900 mb-2">Item not found</h2>
           <p className="text-gray-600 mb-4">The requested library item could not be found.</p>
@@ -171,12 +171,12 @@ const AdminLibraryItemDetail: React.FC = () => {
             Back to Library Management
           </Button>
         </div>
-      </AdminLayout>
+      </AppLayout>
     );
   }
 
   return (
-    <AdminLayout>
+    <AppLayout variant="admin">
       <div className="max-w-4xl mx-auto">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center justify-between mb-6">
@@ -357,7 +357,7 @@ const AdminLibraryItemDetail: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
+    </AppLayout>
   );
 };
 

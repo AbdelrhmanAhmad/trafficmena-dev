@@ -13,7 +13,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { SeriesAsset } from '@/features/series';
 import { useSeriesDetail } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
-import DashboardLayout from '@/shared/components/layout/DashboardLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
@@ -114,9 +114,9 @@ const DashboardSeriesDetail: React.FC = () => {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <DashboardLayout>
+        <AppLayout variant="member">
           <LoadingSpinner size="lg" text="Loading series..." />
-        </DashboardLayout>
+        </AppLayout>
       </ProtectedRoute>
     );
   }
@@ -124,7 +124,7 @@ const DashboardSeriesDetail: React.FC = () => {
   if (isError || !series) {
     return (
       <ProtectedRoute>
-        <DashboardLayout>
+        <AppLayout variant="member">
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-lg text-muted-foreground">Series not found</p>
             <Button
@@ -135,14 +135,14 @@ const DashboardSeriesDetail: React.FC = () => {
               Back to Library
             </Button>
           </div>
-        </DashboardLayout>
+        </AppLayout>
       </ProtectedRoute>
     );
   }
 
   return (
     <ProtectedRoute>
-      <DashboardLayout>
+      <AppLayout variant="member">
         <div className="max-w-4xl">
           {/* Header */}
           <div className="mb-8">
@@ -211,7 +211,7 @@ const DashboardSeriesDetail: React.FC = () => {
             </Card>
           )}
         </div>
-      </DashboardLayout>
+      </AppLayout>
     </ProtectedRoute>
   );
 };

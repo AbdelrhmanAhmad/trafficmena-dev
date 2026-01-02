@@ -14,7 +14,7 @@ import { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useLibraryAsset } from '@/features/library/hooks/useLibrary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
-import DashboardLayout from '@/shared/components/layout/DashboardLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
@@ -119,11 +119,11 @@ const LibraryItemDetail: React.FC = () => {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <DashboardLayout>
+        <AppLayout variant="member">
           <div className="flex justify-center py-12">
             <LoadingSpinner size="lg" text="Loading library item..." />
           </div>
-        </DashboardLayout>
+        </AppLayout>
       </ProtectedRoute>
     );
   }
@@ -131,7 +131,7 @@ const LibraryItemDetail: React.FC = () => {
   if (error) {
     return (
       <ProtectedRoute>
-        <DashboardLayout>
+        <AppLayout variant="member">
           <div className="text-center py-12">
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Unable to load item</h2>
             <p className="text-gray-600 mb-4">
@@ -142,7 +142,7 @@ const LibraryItemDetail: React.FC = () => {
               Back to Library
             </Button>
           </div>
-        </DashboardLayout>
+        </AppLayout>
       </ProtectedRoute>
     );
   }
@@ -150,7 +150,7 @@ const LibraryItemDetail: React.FC = () => {
   if (!item) {
     return (
       <ProtectedRoute>
-        <DashboardLayout>
+        <AppLayout variant="member">
           <div className="text-center py-12">
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Item not found</h2>
             <p className="text-gray-600 mb-4">The requested library item could not be found.</p>
@@ -159,7 +159,7 @@ const LibraryItemDetail: React.FC = () => {
               Back to Library
             </Button>
           </div>
-        </DashboardLayout>
+        </AppLayout>
       </ProtectedRoute>
     );
   }
@@ -168,7 +168,7 @@ const LibraryItemDetail: React.FC = () => {
   if (!access.canView) {
     return (
       <ProtectedRoute>
-        <DashboardLayout>
+        <AppLayout variant="member">
           <div className="max-w-2xl mx-auto">
             <Button
               variant="ghost"
@@ -220,14 +220,14 @@ const LibraryItemDetail: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-        </DashboardLayout>
+        </AppLayout>
       </ProtectedRoute>
     );
   }
 
   return (
     <ProtectedRoute>
-      <DashboardLayout>
+      <AppLayout variant="member">
         <div className="max-w-4xl mx-auto">
           {/* Breadcrumb Navigation */}
           <Button
@@ -393,7 +393,7 @@ const LibraryItemDetail: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      </DashboardLayout>
+      </AppLayout>
     </ProtectedRoute>
   );
 };

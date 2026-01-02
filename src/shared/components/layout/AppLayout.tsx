@@ -1,5 +1,18 @@
-import { Calendar, Edit, Home, Library, Shield, Sparkles } from 'lucide-react';
+import {
+  BarChart3,
+  BookOpen,
+  Calendar,
+  Edit,
+  Home,
+  Library,
+  Mail,
+  Settings,
+  Shield,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import type React from 'react';
+import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Badge } from '@/shared/components/ui/badge';
 import {
@@ -17,13 +30,15 @@ import {
   SidebarTrigger,
 } from '@/shared/components/ui/sidebar';
 import { useAuth } from '@/shared/context/AuthContext';
+import {
+  getRolePriority,
+  type UserRole,
+  useRolePermissions,
+} from '@/shared/hooks/custom/useRolePermissions';
 import UserProfileDropdown from './UserProfileDropdown';
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
-
-const dashboardMenuItems = [
+// Menu items for member dashboard
+const memberMenuItems = [
   {
     title: 'Dashboard',
     url: '/dashboard',
@@ -50,9 +65,115 @@ const dashboardMenuItems = [
   },
 ];
 
-function DashboardSidebar() {
+// Menu items for admin/manager dashboard with role requirements
+const adminMenuItems = [
+  {
+    title: 'Dashboard',
+    url: '/admin',
+    icon: BarChart3,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+    description: 'Analytics & overview',
+  },
+  {
+    title: 'General Settings',
+    url: '/admin/settings',
+    icon: Settings,
+    roles: ['owner', 'admin'] as UserRole[],
+    description: 'Control platform access',
+  },
+  {
+    title: 'User Management',
+    url: '/admin/users',
+    icon: Users,
+    roles: ['owner', 'admin'] as UserRole[],
+    description: 'Manage users & roles',
+  },
+  {
+    title: 'User Invitations',
+    url: '/admin/invitations',
+    icon: Mail,
+    roles: ['owner', 'admin'] as UserRole[],
+    description: 'Send & manage invitations',
+  },
+  {
+    title: 'Events & Tracks',
+    url: '/admin/meetups',
+    icon: Calendar,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+    description: 'Events & workshops',
+  },
+  {
+    title: 'Content Library',
+    url: '/admin/library',
+    icon: BookOpen,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+    description: 'Resources & assets',
+  },
+];
+
+type AppLayoutVariant = 'member' | 'admin';
+
+interface AppLayoutProps {
+  variant: AppLayoutVariant;
+  children: React.ReactNode;
+}
+
+// Unified sidebar component
+function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
   const location = useLocation();
   const { user } = useAuth();
+  const { loading, rank, isOwner, isAdmin, isManager } = useRolePermissions();
+
+  // Filter admin menu items based on user's role rank
+  const filteredAdminMenuItems = useMemo(() => {
+    return adminMenuItems.filter((item) => {
+      const minRank = Math.min(...item.roles.map((r) => getRolePriority(r)));
+      return rank >= minRank;
+    });
+  }, [rank]);
+
+  // Select menu items based on variant
+  const menuItems = variant === 'admin' ? filteredAdminMenuItems : memberMenuItems;
+
+  // Role badge label - always show actual role
+  const badgeLabel = loading
+    ? 'Loading'
+    : isOwner
+      ? 'Owner'
+      : isAdmin
+        ? 'Admin'
+        : isManager
+          ? 'Manager'
+          : 'Member';
+
+  // Badge styling based on role
+  const badgeVariant = isOwner || isAdmin ? 'destructive' : 'default';
+
+  // Panel label for sidebar group
+  const panelLabel =
+    variant === 'admin'
+      ? loading
+        ? 'Loading...'
+        : isOwner
+          ? 'Owner Panel'
+          : isAdmin
+            ? 'Admin Panel'
+            : isManager
+              ? 'Manager Panel'
+              : 'Dashboard'
+      : 'Member Dashboard';
+
+  // Access description for footer
+  const accessDescription =
+    variant === 'admin'
+      ? loading
+        ? 'Checking role permissions...'
+        : isOwner || isAdmin
+          ? 'Complete control over all platform features'
+          : isManager
+            ? 'Event and content management privileges'
+            : 'View-only access'
+      : 'Enjoy exclusive events, content, and community features';
 
   return (
     <Sidebar className="bg-white border-r border-neutral-200 shadow-[2px_0_12px_-4px_rgba(0,0,0,0.08)]">
@@ -81,7 +202,7 @@ function DashboardSidebar() {
               <span className="flex h-3 w-3 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-[#101010]">
                 <Sparkles className="h-2 w-2" />
               </span>
-              Member
+              {loading ? <span className="animate-pulse">...</span> : badgeLabel}
             </div>
           </div>
         </div>
@@ -89,10 +210,10 @@ function DashboardSidebar() {
       </SidebarHeader>
       <SidebarContent className="bg-white">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-neutral-700">Member Dashboard</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-neutral-700">{panelLabel}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {dashboardMenuItems.map((item) => {
+              {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <SidebarMenuItem key={item.title} className="mb-2">
@@ -116,7 +237,7 @@ function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Member Information */}
+        {/* Role/Access Information Footer */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-xs">
@@ -125,10 +246,10 @@ function DashboardSidebar() {
                   <Shield className="h-2.5 w-2.5 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium text-neutral-900">Member Access</p>
-                  <p className="mt-1 text-neutral-600">
-                    Enjoy exclusive events, content, and community features
+                  <p className="font-medium text-neutral-900">
+                    {variant === 'admin' ? panelLabel : 'Member Access'}
                   </p>
+                  <p className="mt-1 text-neutral-600">{accessDescription}</p>
                 </div>
               </div>
             </div>
@@ -139,28 +260,43 @@ function DashboardSidebar() {
   );
 }
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+// Main AppLayout component
+const AppLayout: React.FC<AppLayoutProps> = ({ variant, children }) => {
   const location = useLocation();
+  const { loading, isOwner, isAdmin, isManager } = useRolePermissions();
 
+  // Get page title based on current route
   const getPageTitle = () => {
-    switch (location.pathname) {
-      case '/dashboard':
-        return 'Member Dashboard';
-      case '/dashboard/profile':
-        return 'Edit Profile';
-      case '/dashboard/meetups':
-        return 'Events & Tracks';
-      case '/dashboard/library':
-        return 'Library';
-      default:
-        return 'Dashboard';
+    if (variant === 'member') {
+      switch (location.pathname) {
+        case '/dashboard':
+          return 'Member Dashboard';
+        case '/dashboard/profile':
+          return 'Edit Profile';
+        case '/dashboard/meetups':
+          return 'Events & Tracks';
+        case '/dashboard/library':
+          return 'Library';
+        default:
+          return 'Dashboard';
+      }
     }
+    // Admin variant
+    return loading
+      ? 'Loading...'
+      : isOwner
+        ? 'Owner Panel'
+        : isAdmin
+          ? 'Admin Panel'
+          : isManager
+            ? 'Manager Panel'
+            : 'Dashboard';
   };
 
   return (
     <SidebarProvider>
       <div className="relative flex min-h-screen w-full">
-        <DashboardSidebar />
+        <AppSidebar variant={variant} />
         <SidebarInset className="flex-1">
           <header className="relative flex h-16 shrink-0 items-center justify-between gap-2 border-b border-neutral-200/60 bg-white/90 backdrop-blur px-4">
             <div className="flex items-center gap-2">
@@ -180,4 +316,4 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   );
 };
 
-export default DashboardLayout;
+export default AppLayout;

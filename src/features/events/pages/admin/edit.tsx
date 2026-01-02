@@ -2,8 +2,8 @@ import { Calendar } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DataLoader from '@/shared/components/DataLoader';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 import { AdminEventForm } from '../../components/AdminEventForm';
@@ -29,7 +29,7 @@ const AdminMeetupEdit = () => {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="mx-auto max-w-5xl">
           <Card>
             <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -94,7 +94,7 @@ const AdminMeetupEdit = () => {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 };
