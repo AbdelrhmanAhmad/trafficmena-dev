@@ -298,6 +298,16 @@ function sanitizeEmbedUrl(
         sanitizedUrl.pathname = sanitizedUrl.pathname.replace('/view', '/embed');
       }
       break;
+
+    case 'bunny':
+      // Add responsive parameters for proper video scaling
+      if (!sanitizedUrl.searchParams.has('responsive')) {
+        sanitizedUrl.searchParams.set('responsive', 'true');
+      }
+      if (!sanitizedUrl.searchParams.has('preload')) {
+        sanitizedUrl.searchParams.set('preload', 'true');
+      }
+      break;
   }
 
   return sanitizedUrl.toString();
@@ -325,11 +335,17 @@ export function getSecureIframeAttributes(
   switch (embedType) {
     case 'youtube':
     case 'vimeo':
-    case 'bunny':
-      sandbox.push('allow-autoplay'); // Allow autoplay for video content
+      sandbox.push('allow-autoplay');
       baseAttributes.allow =
         'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
       break;
+
+    case 'bunny':
+      // Bunny CDN is a trusted source - skip sandbox to allow full player rendering
+      baseAttributes.allow =
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen';
+      // Return early without sandbox for bunny
+      return baseAttributes;
 
     case 'canva':
     case 'gamma':
