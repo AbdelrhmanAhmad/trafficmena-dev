@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import AdminEventDetail from '@/features/events/pages/AdminEventDetail';
 import AdminMeetups from '@/features/events/pages/AdminMeetups';
+import AdminTrackDetail from '@/features/tracks/pages/AdminTrackDetail';
 import EditMeetup from '@/features/events/pages/admin/edit';
 import AdminMeetupsNew from '@/features/events/pages/admin/new';
 import DashboardMeetups from '@/features/events/pages/DashboardMeetups';
@@ -406,6 +407,16 @@ const App = () => {
                     <AdminProtectedRoute>
                       <ErrorBoundary>
                         <AdminEventDetail />
+                      </ErrorBoundary>
+                    </AdminProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/tracks/:id"
+                  element={
+                    <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                      <ErrorBoundary>
+                        <AdminTrackDetail />
                       </ErrorBoundary>
                     </AdminProtectedRoute>
                   }

@@ -324,6 +324,14 @@ const AdminMeetups = () => {
                             </div>
                             <div className="flex flex-wrap gap-2 self-start sm:self-auto">
                               <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/admin/tracks/${track.id}`)}
+                              >
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                View Details
+                              </Button>
+                              <Button
                                 size="sm"
                                 onClick={() => navigate(`/admin/library/tracks/${track.id}`)}
                               >

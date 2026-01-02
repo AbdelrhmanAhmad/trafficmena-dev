@@ -228,6 +228,31 @@ export async function bookTrack(trackId: string): Promise<TrackBookingSuccess> {
   });
 }
 
+// Track attendees types
+export interface TrackAttendee {
+  userId: string;
+  email: string;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  bookedAt: string;
+}
+
+// Fetch track attendees (manager+ only)
+export async function fetchTrackAttendees(
+  trackId: string,
+  params: { page?: number; pageSize?: number } = {},
+): Promise<PaginatedResult<TrackAttendee>> {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
+
+  return fetchJson<PaginatedResult<TrackAttendee>>(
+    `${API_BASE}/tracks/${trackId}/attendees${query.toString() ? `?${query.toString()}` : ''}`,
+    { method: 'GET' },
+  );
+}
+
 // Public track types (for non-authenticated users)
 export interface PublicTrackRecord {
   id: string;

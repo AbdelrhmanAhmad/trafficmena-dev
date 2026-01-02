@@ -6,11 +6,13 @@ import {
   eventAttendees,
   events,
   libraryAssets,
+  profiles,
   series,
   seriesAssets,
   trackBookings,
   trackEvents,
   tracks,
+  users,
 } from '../../db/schema/index.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
@@ -577,6 +579,77 @@ export function registerTrackRoutes(app: Hono) {
           ? track.maxTrackBookings - Number(bookingStats?.value ?? 0)
           : null,
       userHasBooked,
+    });
+  });
+
+  // Get track attendees (users who booked this track)
+  app.get('/tracks/:id/attendees', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    // Validate trackId is a valid UUID
+    const trackIdParam = c.req.param('id');
+    const trackIdResult = z.string().uuid('Invalid track ID format').safeParse(trackIdParam);
+    if (!trackIdResult.success) {
+      return c.json({ error: { code: 'INVALID_ID', message: 'Invalid track ID format.' } }, 400);
+    }
+    const trackId = trackIdResult.data;
+
+    const parsed = listQuerySchema.safeParse({
+      page: c.req.query('page'),
+      pageSize: c.req.query('pageSize'),
+    });
+
+    if (!parsed.success) {
+      return c.json(
+        { error: { code: 'INVALID_QUERY', message: parsed.error.message } },
+        400,
+      );
+    }
+
+    const { page, pageSize } = parsed.data;
+    const offset = (page - 1) * pageSize;
+
+    // Verify track exists
+    const [trackExists] = await db
+      .select({ id: tracks.id })
+      .from(tracks)
+      .where(eq(tracks.id, trackId))
+      .limit(1);
+
+    if (!trackExists) {
+      return c.json({ error: { code: 'TRACK_NOT_FOUND', message: 'Track not found.' } }, 404);
+    }
+
+    const totalResult = await db
+      .select({ value: count(trackBookings.id) })
+      .from(trackBookings)
+      .where(eq(trackBookings.trackId, trackId));
+
+    const items = await db
+      .select({
+        userId: users.id,
+        email: users.email,
+        name: users.name,
+        firstName: profiles.firstName,
+        lastName: profiles.lastName,
+        bookedAt: trackBookings.bookedAt,
+      })
+      .from(trackBookings)
+      .leftJoin(users, eq(trackBookings.userId, users.id))
+      .leftJoin(profiles, eq(users.id, profiles.id))
+      .where(eq(trackBookings.trackId, trackId))
+      .orderBy(desc(trackBookings.bookedAt))
+      .limit(pageSize)
+      .offset(offset);
+
+    return c.json({
+      items,
+      pagination: {
+        page,
+        pageSize,
+        total: Number(totalResult?.[0]?.value ?? 0),
+      },
     });
   });
 
