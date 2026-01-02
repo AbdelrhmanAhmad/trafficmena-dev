@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, Calendar, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, Calendar, Layers, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TrackEventSelector from '@/features/tracks/components/TrackEventSelector';
@@ -137,12 +137,18 @@ function TrackDetailPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate('/admin/meetups?tab=tracks')}
+                className="rounded-xl"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold">{track.title}</h1>
-                <p className="text-muted-foreground">{track.event_count} events</p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                  <Layers className="h-5 w-5 text-[#05ef62]" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-neutral-900">{track.title}</h1>
+                  <p className="text-neutral-600">{track.event_count} events</p>
+                </div>
               </div>
             </div>
 
@@ -151,6 +157,7 @@ function TrackDetailPage() {
                 variant="destructive"
                 onClick={handleDeleteTrack}
                 disabled={deleteMutation.isPending}
+                className="rounded-xl"
               >
                 {deleteMutation.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -164,10 +171,12 @@ function TrackDetailPage() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Track Details */}
-            <Card>
+            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               <CardHeader>
-                <CardTitle>Track Details</CardTitle>
-                <CardDescription>Update the track information.</CardDescription>
+                <CardTitle className="text-lg text-neutral-900">Track Details</CardTitle>
+                <CardDescription className="text-neutral-600">
+                  Update the track information.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <TrackForm
@@ -180,12 +189,12 @@ function TrackDetailPage() {
             </Card>
 
             {/* Events in Track */}
-            <Card>
+            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Events in Track</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-lg text-neutral-900">Events in Track</CardTitle>
+                    <CardDescription className="text-neutral-600">
                       Events are displayed to members in the order shown below.
                     </CardDescription>
                   </div>
@@ -194,6 +203,7 @@ function TrackDetailPage() {
                       type="button"
                       size="sm"
                       onClick={() => navigate(`/admin/meetups/new?trackId=${track.id}`)}
+                      className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] font-medium shadow-sm hover:shadow-md hover:scale-105 transition-all"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Create Event
@@ -203,6 +213,7 @@ function TrackDetailPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => setShowEventSelector(true)}
+                      className="rounded-xl"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Existing

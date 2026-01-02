@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   FileText,
+  FolderOpen,
   Loader2,
   Pencil,
   Plus,
@@ -136,12 +137,22 @@ function SeriesDetailPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/admin/library')}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/admin/library')}
+                className="rounded-xl"
+              >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold">{series.title}</h1>
-                <p className="text-muted-foreground">{series.asset_count} assets</p>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                  <FolderOpen className="h-5 w-5 text-[#05ef62]" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-neutral-900">{series.title}</h1>
+                  <p className="text-neutral-600">{series.asset_count} assets</p>
+                </div>
               </div>
             </div>
 
@@ -150,6 +161,7 @@ function SeriesDetailPage() {
                 variant="destructive"
                 onClick={handleDeleteSeries}
                 disabled={deleteMutation.isPending}
+                className="rounded-xl"
               >
                 {deleteMutation.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -163,10 +175,12 @@ function SeriesDetailPage() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Series Details */}
-            <Card>
+            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               <CardHeader>
-                <CardTitle>Series Details</CardTitle>
-                <CardDescription>Update the series information.</CardDescription>
+                <CardTitle className="text-lg text-neutral-900">Series Details</CardTitle>
+                <CardDescription className="text-neutral-600">
+                  Update the series information.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <SeriesForm
@@ -179,17 +193,22 @@ function SeriesDetailPage() {
             </Card>
 
             {/* Assets in Series */}
-            <Card>
+            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Assets in Series</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-lg text-neutral-900">Assets in Series</CardTitle>
+                    <CardDescription className="text-neutral-600">
                       Library assets included in this series. Displayed to members in the order
                       shown below.
                     </CardDescription>
                   </div>
-                  <Button type="button" size="sm" onClick={() => setShowAssetSelector(true)}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setShowAssetSelector(true)}
+                    className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] font-medium shadow-sm hover:shadow-md hover:scale-105 transition-all"
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Add Assets
                   </Button>

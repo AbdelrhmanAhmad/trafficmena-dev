@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TrackForm from '@/features/tracks/components/TrackForm';
 import { useCreateTrack } from '@/features/tracks/hooks/useTracks';
@@ -51,21 +51,31 @@ function NewTrackPage() {
       <AdminLayout>
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/meetups')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/admin/meetups')}
+              className="rounded-xl"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold">Create Event Track</h1>
-              <p className="text-muted-foreground">
-                Bundle related events into a bookable track for members.
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                <Layers className="h-5 w-5 text-[#05ef62]" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-neutral-900">Create Event Track</h1>
+                <p className="text-neutral-600">
+                  Bundle related events into a bookable track for members.
+                </p>
+              </div>
             </div>
           </div>
 
-          <Card className="max-w-3xl">
+          <Card className="max-w-3xl rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <CardHeader>
-              <CardTitle>Track Details</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg text-neutral-900">Track Details</CardTitle>
+              <CardDescription className="text-neutral-600">
                 Enter the basic information for your new learning track.
               </CardDescription>
             </CardHeader>
