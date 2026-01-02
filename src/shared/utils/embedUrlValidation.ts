@@ -298,6 +298,16 @@ function sanitizeEmbedUrl(
         sanitizedUrl.pathname = sanitizedUrl.pathname.replace('/view', '/embed');
       }
       break;
+
+    case 'bunny':
+      // Add responsive parameters for proper video scaling
+      if (!sanitizedUrl.searchParams.has('responsive')) {
+        sanitizedUrl.searchParams.set('responsive', 'true');
+      }
+      if (!sanitizedUrl.searchParams.has('preload')) {
+        sanitizedUrl.searchParams.set('preload', 'true');
+      }
+      break;
   }
 
   return sanitizedUrl.toString();
