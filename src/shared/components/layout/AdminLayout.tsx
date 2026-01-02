@@ -123,8 +123,8 @@ function AdminSidebar() {
         : 'View-only access';
 
   return (
-    <Sidebar className="bg-white/95 backdrop-blur border-r border-neutral-200/40">
-      <SidebarHeader className="p-4 bg-white/80 backdrop-blur">
+    <Sidebar className="bg-white border-r border-neutral-200 shadow-[2px_0_12px_-4px_rgba(0,0,0,0.08)]">
+      <SidebarHeader className="p-4 bg-neutral-50/80">
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -160,7 +160,7 @@ function AdminSidebar() {
         </div>
         <p className="text-sm text-neutral-600">{user?.email}</p>
       </SidebarHeader>
-      <SidebarContent className="bg-white/60 backdrop-blur">
+      <SidebarContent className="bg-white">
         <SidebarGroup>
           <SidebarGroupLabel className="text-neutral-700">{panelLabel}</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -172,7 +172,7 @@ function AdminSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === item.url}
-                      className="hover:bg-white/40 rounded-xl"
+                      className="hover:bg-neutral-100 rounded-xl transition-colors"
                     >
                       <Link to={item.url} className="flex items-center gap-3 py-3">
                         <Icon className="h-4 w-4 shrink-0 text-neutral-700" />
@@ -192,7 +192,7 @@ function AdminSidebar() {
         {/* Role Information */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
-            <div className="rounded-2xl border border-neutral-200/60 bg-white/80 backdrop-blur p-3 text-xs">
+            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-xs">
               {loading ? (
                 <div className="space-y-2">
                   <div className="h-3 w-full animate-pulse rounded bg-neutral-100"></div>
