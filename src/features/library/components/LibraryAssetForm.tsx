@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FileText, Globe, HelpCircle, Link2, Upload, Video } from 'lucide-react';
-import { type ChangeEvent, useMemo, useRef, useState } from 'react';
+import { type ChangeEvent, useId, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type {
@@ -136,6 +136,7 @@ export function LibraryAssetForm({
   const documentInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [documentUploadError, setDocumentUploadError] = useState<string | null>(null);
+  const isPublicSwitchId = useId();
 
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
@@ -486,7 +487,7 @@ export function LibraryAssetForm({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Globe className="h-4 w-4 text-emerald-600" />
-                      <Label htmlFor="isPublic" className="font-medium">
+                      <Label htmlFor={isPublicSwitchId} className="font-medium">
                         Make publicly accessible
                       </Label>
                       <TooltipProvider>
@@ -505,7 +506,7 @@ export function LibraryAssetForm({
                     </div>
                     <FormControl>
                       <Switch
-                        id="isPublic"
+                        id={isPublicSwitchId}
                         checked={field.value ?? false}
                         onCheckedChange={field.onChange}
                       />

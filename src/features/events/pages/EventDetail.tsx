@@ -202,12 +202,13 @@ const EventDetail: React.FC = () => {
                       {event.event_type}
                     </span>
                     {event.trackInfo && (
-                      <span
+                      <button
+                        type="button"
                         className="hidden cursor-pointer items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700 transition-colors hover:bg-emerald-100 lg:inline-flex"
-                        onClick={() => navigate(`/tracks/${event.trackInfo!.id}`)}
+                        onClick={() => navigate(`/tracks/${event.trackInfo?.id}`)}
                       >
                         Part of: {event.trackInfo.title}
-                      </span>
+                      </button>
                     )}
                     {event.tags[0] && (
                       <span className="hidden rounded-full bg-neutral-100 px-3 py-1 text-[11px] text-neutral-600 lg:inline">
@@ -305,7 +306,7 @@ const EventDetail: React.FC = () => {
                         let bookingMessage: string | null = null;
                         let showTrackBookingOnly = false;
 
-                        if (trackInfo && trackInfo.singleBookingStart) {
+                        if (trackInfo?.singleBookingStart) {
                           const now = new Date();
                           const start = new Date(trackInfo.singleBookingStart);
                           const end = trackInfo.singleBookingEnd
@@ -354,7 +355,7 @@ const EventDetail: React.FC = () => {
                                 <Button
                                   variant="link"
                                   className="mt-2 h-auto p-0 text-amber-900 underline"
-                                  onClick={() => navigate(`/tracks/${trackInfo!.id}`)}
+                                  onClick={() => navigate(`/tracks/${trackInfo?.id}`)}
                                 >
                                   View Full Track
                                 </Button>

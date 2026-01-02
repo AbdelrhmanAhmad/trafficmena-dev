@@ -223,7 +223,7 @@ export const useBookTrack = () => {
 
   return useMutation({
     mutationFn: (trackId: string) => bookTrack(trackId),
-    onSuccess: (result, trackId) => {
+    onSuccess: (result, _trackId) => {
       queryClient.invalidateQueries({ queryKey: ['tracks'] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
       if (result.alreadyBooked) {

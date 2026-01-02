@@ -14,7 +14,6 @@ import {
 import type React from 'react';
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Badge } from '@/shared/components/ui/badge';
 import {
   Sidebar,
   SidebarContent,
@@ -145,9 +144,6 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
         : isManager
           ? 'Manager'
           : 'Member';
-
-  // Badge styling based on role
-  const badgeVariant = isOwner || isAdmin ? 'destructive' : 'default';
 
   // Panel label for sidebar group
   const panelLabel =

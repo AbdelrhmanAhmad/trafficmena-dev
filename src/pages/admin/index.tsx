@@ -1,4 +1,4 @@
-import { Activity, BadgeCheck, Clock, Sparkles, TrendingUp, UserCheck, Users } from 'lucide-react';
+import { Activity, BadgeCheck, Clock, TrendingUp, UserCheck, Users } from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
@@ -297,6 +297,7 @@ const AdminDashboard: React.FC = () => {
                               className="h-4 w-4 text-white"
                               fill="currentColor"
                               viewBox="0 0 20 20"
+                              aria-hidden="true"
                             >
                               <path d="M10 12a2 2 0 100-4 2 2 0 000 4zm0-6a2 2 0 100-4 2 2 0 000 4z" />
                             </svg>
@@ -315,6 +316,7 @@ const AdminDashboard: React.FC = () => {
                               className="h-4 w-4 text-white"
                               fill="currentColor"
                               viewBox="0 0 20 20"
+                              aria-hidden="true"
                             >
                               <path d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6z" />
                             </svg>
@@ -333,6 +335,7 @@ const AdminDashboard: React.FC = () => {
                               className="h-4 w-4 text-white"
                               fill="currentColor"
                               viewBox="0 0 20 20"
+                              aria-hidden="true"
                             >
                               <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                             </svg>
