@@ -1,4 +1,4 @@
-import { FolderPlus, PlusCircle } from 'lucide-react';
+import { BookOpen, FolderPlus, PlusCircle } from 'lucide-react';
 import React, { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
@@ -180,10 +180,15 @@ function LibraryManagement() {
       <AdminLayout>
         <div className="space-y-6">
           {/* Page Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-primary">Library Management</h1>
-              <p className="mt-2 text-gray-600">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                  <BookOpen className="h-5 w-5 text-[#05ef62]" />
+                </div>
+                <h1 className="text-3xl font-bold text-neutral-900">Library Management</h1>
+              </div>
+              <p className="text-neutral-600 ml-[52px]">
                 Publish recordings, templates, and resources so members can revisit every session.
               </p>
             </div>
@@ -192,19 +197,19 @@ function LibraryManagement() {
               {activeTab === 'series' ? (
                 <Button
                   onClick={handleAddSeries}
-                  className="flex items-center gap-2"
+                  className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-2.5 text-[#101010] font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                   disabled={!canManageContent || roleLoading}
                 >
-                  <FolderPlus className="h-4 w-4" />
+                  <FolderPlus className="h-4 w-4 mr-2" />
                   Create series
                 </Button>
               ) : (
                 <Button
                   onClick={handleAddNew}
-                  className="flex items-center gap-2"
+                  className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-2.5 text-[#101010] font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                   disabled={!canManageContent || roleLoading}
                 >
-                  <PlusCircle className="h-4 w-4" />
+                  <PlusCircle className="h-4 w-4 mr-2" />
                   Add asset
                 </Button>
               )}
@@ -213,9 +218,19 @@ function LibraryManagement() {
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="series">Series</TabsTrigger>
-              <TabsTrigger value="content">Single Content</TabsTrigger>
+            <TabsList className="mb-6 rounded-xl bg-neutral-100 p-1">
+              <TabsTrigger
+                value="series"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              >
+                Series
+              </TabsTrigger>
+              <TabsTrigger
+                value="content"
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+              >
+                Single Content
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="series" className="max-w-6xl">

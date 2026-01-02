@@ -182,10 +182,12 @@ export default function AdminInvitations() {
         <div className="space-y-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
-              <Users className="h-8 w-8 text-primary" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                <Users className="h-5 w-5 text-[#05ef62]" />
+              </div>
               <div>
-                <h1 className="text-3xl font-bold text-primary">Invitations</h1>
-                <p className="text-gray-600">
+                <h1 className="text-3xl font-bold text-neutral-900">Invitations</h1>
+                <p className="text-neutral-600">
                   Invite prospects directly from the dashboard. Send a single invite or upload a
                   small CSV for quick batches.
                 </p>
@@ -194,10 +196,12 @@ export default function AdminInvitations() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[420px,1fr]">
-            <Card>
+            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5 text-primary" />
+                <CardTitle className="flex items-center gap-2 text-lg text-neutral-900">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                    <Mail className="h-4 w-4 text-[#05ef62]" />
+                  </div>
                   Send a new invitation
                 </CardTitle>
               </CardHeader>
@@ -212,6 +216,7 @@ export default function AdminInvitations() {
                       {...form.register('email')}
                       required
                       autoComplete="email"
+                      className="rounded-xl border-neutral-200 bg-white/70 backdrop-blur"
                     />
                     {form.formState.errors.email && (
                       <p className="text-sm text-rose-600">{form.formState.errors.email.message}</p>
@@ -259,7 +264,7 @@ export default function AdminInvitations() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-primary-green to-primary-gradient text-white hover:from-primary-gradient hover:to-secondary-teal"
+                    className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-[#101010] font-medium shadow-lg hover:shadow-xl hover:scale-105 transition-all"
                     disabled={createInvitationMutation.isPending}
                   >
                     {createInvitationMutation.isPending ? (
@@ -276,18 +281,23 @@ export default function AdminInvitations() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               <CardHeader>
-                <CardTitle>Team activity & bulk upload</CardTitle>
+                <CardTitle className="text-lg text-neutral-900">
+                  Team activity & bulk upload
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                   {metricCards.map((metric) => (
-                    <div key={metric.label} className="rounded-lg border bg-muted/40 p-3">
-                      <p className="text-xs text-muted-foreground">{metric.label}</p>
+                    <div
+                      key={metric.label}
+                      className="rounded-xl border border-neutral-200 bg-white/80 backdrop-blur p-3"
+                    >
+                      <p className="text-xs text-neutral-500">{metric.label}</p>
                       <div className="mt-2 flex items-center gap-2">
                         {statsLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <Loader2 className="h-4 w-4 animate-spin text-[#05ef62]" />
                         ) : (
                           <span className={cn('text-2xl font-semibold', metric.accent)}>
                             {metric.value.toLocaleString()}
@@ -378,9 +388,14 @@ export default function AdminInvitations() {
             </Card>
           </div>
 
-          <Card>
+          <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <CardHeader>
-              <CardTitle>Invitation log</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-lg text-neutral-900">
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                  <Mail className="h-4 w-4 text-[#05ef62]" />
+                </div>
+                Invitation log
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (

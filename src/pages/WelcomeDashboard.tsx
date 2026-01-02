@@ -83,7 +83,9 @@ const WelcomeDashboard: React.FC = () => {
                 <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white shadow-lg">
                   <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <CardTitle className="text-lg sm:text-xl text-neutral-900">Upcoming Events</CardTitle>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">
+                  Upcoming Events
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col justify-between space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">
@@ -156,7 +158,9 @@ const WelcomeDashboard: React.FC = () => {
                 <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#29cf9f] to-[#00fdc2] text-white shadow-lg">
                   <Library className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <CardTitle className="text-lg sm:text-xl text-neutral-900">Latest Learning Resources</CardTitle>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">
+                  Latest Learning Resources
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col justify-between space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">

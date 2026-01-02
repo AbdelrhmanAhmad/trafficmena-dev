@@ -120,14 +120,20 @@ function validateBookingWindows(
 
   // maxTrackBookings required when track dates are set
   if (trackSetCount > 0 && merged.maxTrackBookings === null) {
-    return { valid: false, error: 'maxTrackBookings is required when track booking period is set.' };
+    return {
+      valid: false,
+      error: 'maxTrackBookings is required when track booking period is set.',
+    };
   }
 
   if (merged.isPublished) {
     const hadPeriods =
       current.trackBookingStart !== null && current.trackBookingStart !== undefined;
     if (hadPeriods && trackSetCount === 0) {
-      return { valid: false, error: 'Cannot clear track booking periods while track is published.' };
+      return {
+        valid: false,
+        error: 'Cannot clear track booking periods while track is published.',
+      };
     }
     if (current.maxTrackBookings !== null && merged.maxTrackBookings === null) {
       return { valid: false, error: 'Cannot clear maxTrackBookings while track is published.' };
@@ -171,7 +177,10 @@ const reorderEventsSchema = z.object({
 
 const uuidSchema = z.string().uuid('Invalid ID format');
 
-function validateUuid(value: string, paramName = 'id'): { valid: true; value: string } | { valid: false; error: { code: string; message: string } } {
+function validateUuid(
+  value: string,
+  paramName = 'id',
+): { valid: true; value: string } | { valid: false; error: { code: string; message: string } } {
   const result = uuidSchema.safeParse(value);
   if (!result.success) {
     return { valid: false, error: { code: 'INVALID_ID', message: `Invalid ${paramName} format.` } };
@@ -646,10 +655,7 @@ export function registerTrackRoutes(app: Hono) {
     });
 
     if (!parsed.success) {
-      return c.json(
-        { error: { code: 'INVALID_QUERY', message: parsed.error.message } },
-        400,
-      );
+      return c.json({ error: { code: 'INVALID_QUERY', message: parsed.error.message } }, 400);
     }
 
     const { page, pageSize } = parsed.data;
