@@ -276,7 +276,7 @@ const LibraryItemDetail: React.FC = () => {
                     </div>
                     <h2 className="text-lg font-semibold text-neutral-900">Video Content</h2>
                   </div>
-                  <div className="rounded-xl overflow-hidden bg-neutral-50 border border-neutral-200">
+                  <div className="w-full rounded-xl overflow-hidden bg-neutral-900">
                     <VideoEmbed url={item.video_url} />
                   </div>
                 </div>
@@ -297,21 +297,23 @@ const LibraryItemDetail: React.FC = () => {
                 </div>
               )}
 
-              {/* Document Section */}
+              {/* Document Section - Download Only */}
               {item.document_url && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-gray-600" />
                     <h2 className="text-lg font-semibold text-gray-900">Document</h2>
                   </div>
-                  <div className="rounded-lg border bg-gray-50 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-10 w-10 text-gray-600" />
+                  <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white shadow-sm border border-neutral-200">
+                          <FileText className="h-6 w-6 text-neutral-600" />
+                        </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900">PDF Document Available</h3>
-                          <p className="text-sm text-gray-600">
-                            Click to download or view the attached document
+                          <h3 className="font-semibold text-neutral-900">Document Attached</h3>
+                          <p className="text-sm text-neutral-500">
+                            Download the file to view its contents
                           </p>
                         </div>
                       </div>
@@ -320,32 +322,19 @@ const LibraryItemDetail: React.FC = () => {
                           href={item.document_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
+                          download
+                          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] font-medium shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-0.5 active:scale-95"
                         >
                           <Download className="h-4 w-4" />
-                          Download PDF
+                          Download
                         </a>
                       ) : (
-                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 text-neutral-500">
+                        <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-100 text-neutral-400 font-medium cursor-not-allowed">
                           <Download className="h-4 w-4" />
-                          Download restricted
+                          Restricted
                         </span>
                       )}
                     </div>
-                    {/* PDF Viewer */}
-                    {access.canDownload ? (
-                      <div className="border border-neutral-200 rounded-xl overflow-hidden">
-                        <iframe
-                          src={item.document_url}
-                          className="w-full h-[600px]"
-                          title="PDF Document"
-                        />
-                      </div>
-                    ) : (
-                      <div className="border border-neutral-200 rounded-xl bg-neutral-50 p-6 text-center text-sm text-neutral-500">
-                        Upgrade your membership to view this document.
-                      </div>
-                    )}
                   </div>
                 </div>
               )}

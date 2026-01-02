@@ -325,11 +325,17 @@ export function getSecureIframeAttributes(
   switch (embedType) {
     case 'youtube':
     case 'vimeo':
-    case 'bunny':
-      sandbox.push('allow-autoplay'); // Allow autoplay for video content
+      sandbox.push('allow-autoplay');
       baseAttributes.allow =
         'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
       break;
+
+    case 'bunny':
+      // Bunny CDN is a trusted source - skip sandbox to allow full player rendering
+      baseAttributes.allow =
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen';
+      // Return early without sandbox for bunny
+      return baseAttributes;
 
     case 'canva':
     case 'gamma':
