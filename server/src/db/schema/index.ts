@@ -143,6 +143,7 @@ export const tracks = pgTable(
     trackBookingEnd: timestamp('track_booking_end', { withTimezone: true }),
     singleBookingStart: timestamp('single_booking_start', { withTimezone: true }),
     singleBookingEnd: timestamp('single_booking_end', { withTimezone: true }),
+    allowIndividualBooking: boolean('allow_individual_booking').default(false).notNull(),
     maxTrackBookings: integer('max_track_bookings'),
     priceInCents: integer('price_in_cents'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

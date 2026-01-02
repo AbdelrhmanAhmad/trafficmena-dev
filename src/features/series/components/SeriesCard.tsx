@@ -77,22 +77,18 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
           </div>
         )}
 
-        {/* Series Badge */}
-        <div className="absolute top-3 left-3">
+        {/* Badges Container */}
+        <div className="absolute top-3 left-3 flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/90 backdrop-blur-sm text-white">
             <FolderOpen className="h-3 w-3" />
             Series
           </span>
-        </div>
-
-        {/* Draft Badge */}
-        {!series.is_published && (
-          <div className="absolute top-3 left-20">
+          {!series.is_published && (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-500/90 text-white">
               Draft
             </span>
-          </div>
-        )}
+          )}
+        </div>
 
         {(canManage || canDelete) && (
           <div className="absolute top-3 right-3 z-10 flex gap-2">

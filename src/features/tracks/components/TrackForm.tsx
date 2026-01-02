@@ -29,42 +29,49 @@ const trackFormSchema = z
     maxTrackBookings: z.coerce.number().int().positive('Must be positive').nullable().optional(),
     trackBookingStart: z.string().optional().nullable(),
     trackBookingEnd: z.string().optional().nullable(),
+    allowIndividualBooking: z.boolean(),
     singleBookingStart: z.string().optional().nullable(),
     singleBookingEnd: z.string().optional().nullable(),
   })
   .refine(
     (data) => {
-      const dates = [
-        data.trackBookingStart,
-        data.trackBookingEnd,
-        data.singleBookingStart,
-        data.singleBookingEnd,
-      ].filter(Boolean);
-      if (dates.length > 0 && dates.length < 4) {
+      // Track dates must be set together
+      const trackDates = [data.trackBookingStart, data.trackBookingEnd].filter(Boolean);
+      if (trackDates.length === 1) {
         return false;
       }
       return true;
     },
     {
-      message: 'All 4 booking dates must be set together, or none.',
-      path: ['trackBookingStart'], // Attach error to first date field
+      message: 'Track booking start and end must be set together.',
+      path: ['trackBookingStart'],
     },
   )
   .refine(
     (data) => {
-      if (
-        (data.trackBookingStart ||
-          data.trackBookingEnd ||
-          data.singleBookingStart ||
-          data.singleBookingEnd) &&
-        !data.maxTrackBookings
-      ) {
+      // Individual dates must be set together when toggle is enabled
+      if (data.allowIndividualBooking) {
+        const individualDates = [data.singleBookingStart, data.singleBookingEnd].filter(Boolean);
+        if (individualDates.length === 1) {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message: 'Individual booking start and end must be set together.',
+      path: ['singleBookingStart'],
+    },
+  )
+  .refine(
+    (data) => {
+      if ((data.trackBookingStart || data.trackBookingEnd) && !data.maxTrackBookings) {
         return false;
       }
       return true;
     },
     {
-      message: 'Max bookings is required when booking periods are set.',
+      message: 'Max bookings is required when track booking period is set.',
       path: ['maxTrackBookings'],
     },
   );
@@ -103,6 +110,7 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
       maxTrackBookings: track?.max_track_bookings ?? null,
       trackBookingStart: formatDateForInput(track?.track_booking_start),
       trackBookingEnd: formatDateForInput(track?.track_booking_end),
+      allowIndividualBooking: track?.allow_individual_booking ?? false,
       singleBookingStart: formatDateForInput(track?.single_booking_start),
       singleBookingEnd: formatDateForInput(track?.single_booking_end),
     },
@@ -280,53 +288,74 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
             </div>
           </div>
 
-          {/* Single Event Booking Period */}
-          <div className="space-y-4 rounded-lg border bg-background p-5">
-            <div>
-              <h4 className="font-medium">Individual Event Booking Period</h4>
-              <p className="text-xs text-muted-foreground">
-                When members can book single events (after track booking closes).
-              </p>
+          {/* Allow Individual Booking Toggle */}
+          <FormField
+            control={form.control}
+            name="allowIndividualBooking"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Allow Individual Event Booking</FormLabel>
+                  <FormDescription>
+                    When enabled, members can book individual events after track booking closes.
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {/* Single Event Booking Period - only shown when toggle is enabled */}
+          {form.watch('allowIndividualBooking') && (
+            <div className="space-y-4 rounded-lg border bg-background p-5">
+              <div>
+                <h4 className="font-medium">Individual Event Booking Period</h4>
+                <p className="text-xs text-muted-foreground">
+                  When members can book single events (after track booking closes).
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="singleBookingStart"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Opens</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="datetime-local"
+                          className="w-full"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="singleBookingEnd"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Closes</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="datetime-local"
+                          className="w-full"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="singleBookingStart"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Opens</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="datetime-local"
-                        className="w-full"
-                        {...field}
-                        value={field.value ?? ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="singleBookingEnd"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Closes</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="datetime-local"
-                        className="w-full"
-                        {...field}
-                        value={field.value ?? ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
+          )}
         </div>
 
         <FormField

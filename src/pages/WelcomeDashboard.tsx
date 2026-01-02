@@ -54,8 +54,8 @@ const WelcomeDashboard: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-gradient-to-br from-[#d5ffe9]/30 via-[#f4fff9]/20 to-[#00fdc2]/10 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+      <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
+        <section className="relative w-full overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-gradient-to-br from-[#d5ffe9]/30 via-[#f4fff9]/20 to-[#00fdc2]/10 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <div className="pointer-events-none absolute -left-1/4 -top-1/4 -z-10 h-[40%] w-[60%] rounded-full bg-gradient-to-br from-[#d5ffe9]/50 via-[#f4fff9]/30 to-transparent blur-3xl" />
           <div className="pointer-events-none absolute -right-1/4 -bottom-1/4 -z-10 h-[40%] w-[50%] rounded-full bg-gradient-to-tr from-[#00fdc2]/20 via-[#05ef62]/15 to-transparent blur-[100px]" />
 
@@ -77,16 +77,16 @@ const WelcomeDashboard: React.FC = () => {
         </section>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="flex flex-col rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-            <CardHeader>
+          <Card className="flex flex-col rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <CardHeader className="p-5 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
-                  <Calendar className="h-5 w-5" />
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white shadow-lg">
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <CardTitle className="text-neutral-900">Upcoming Events</CardTitle>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">Upcoming Events</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-1 flex-col justify-between space-y-4">
+            <CardContent className="flex flex-1 flex-col justify-between space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">
               <div className="space-y-3">
                 {eventsLoading ? (
                   <div className="space-y-2">
@@ -150,16 +150,16 @@ const WelcomeDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-            <CardHeader>
+          <Card className="flex flex-col rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <CardHeader className="p-5 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#29cf9f] to-[#00fdc2] text-white">
-                  <Library className="h-5 w-5" />
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#29cf9f] to-[#00fdc2] text-white shadow-lg">
+                  <Library className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <CardTitle className="text-neutral-900">Latest Learning Resources</CardTitle>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">Latest Learning Resources</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-1 flex-col justify-between space-y-4">
+            <CardContent className="flex flex-1 flex-col justify-between space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">
               <div className="space-y-3">
                 {assetsLoading ? (
                   <div className="space-y-2">

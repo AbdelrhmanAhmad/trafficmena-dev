@@ -573,6 +573,8 @@ export function registerEventRoutes(app: Hono) {
           throw new ApiError('UNAUTHORIZED', 'Authentication required.', 401);
         }
 
+        const userId = session.user.id;
+
         const bodyParse = registerBodySchema.safeParse(await c.req.json().catch(() => ({})));
         if (!bodyParse.success) {
           throw new ApiError('INVALID_REQUEST', bodyParse.error.message, 400);
@@ -596,6 +598,7 @@ export function registerEventRoutes(app: Hono) {
           const [trackEvent] = await tx
             .select({
               trackId: tracks.id,
+              allowIndividualBooking: tracks.allowIndividualBooking,
               singleBookingStart: tracks.singleBookingStart,
               singleBookingEnd: tracks.singleBookingEnd,
             })
@@ -605,10 +608,16 @@ export function registerEventRoutes(app: Hono) {
 
           // Enforce booking periods if in a track
           if (trackEvent) {
+            // Check if individual booking is allowed for this track
+            if (!trackEvent.allowIndividualBooking) {
+              throw new ApiError(
+                'INDIVIDUAL_BOOKING_DISABLED',
+                'Individual event booking is not available for this track.',
+                400,
+              );
+            }
+
             if (!trackEvent.singleBookingStart || !trackEvent.singleBookingEnd) {
-              // If internal logic requires single bookings to be enabled explicitly
-              // or if it falls back to always allowed if not set?
-              // Requirement says: "If single booking is not configured, block."
               throw new ApiError(
                 'BOOKING_NOT_OPEN',
                 'Single event booking is not enabled for this track.',
@@ -636,7 +645,7 @@ export function registerEventRoutes(app: Hono) {
             .select({ id: eventAttendees.id })
             .from(eventAttendees)
             .where(
-              and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, session.user.id)),
+              and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)),
             )
             .limit(1);
 
@@ -655,7 +664,7 @@ export function registerEventRoutes(app: Hono) {
 
           await tx.insert(eventAttendees).values({
             eventId,
-            userId: session.user.id,
+            userId,
           });
 
           return { success: true, message: 'registered' };

@@ -55,39 +55,39 @@ function DashboardSidebar() {
   const { user } = useAuth();
 
   return (
-    <Sidebar className="bg-white/95 backdrop-blur border-r border-neutral-200/40">
-      <SidebarHeader className="p-4 bg-white/80 backdrop-blur">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              to="/"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/90 shadow-sm transition-all duration-300 hover:border-[#05ef62]/60 hover:shadow-md hover:scale-105"
-            >
-              <img
-                src="/favicon-96x96.png"
-                alt="TrafficMENA Logo"
-                className="h-6 w-6 rounded-full object-cover"
-                onError={(event) => {
-                  event.currentTarget.style.display = 'none';
-                  const container = event.currentTarget.parentElement;
-                  if (container) {
-                    container.innerHTML = '<span class="text-sm font-bold text-[#05ef62]">T</span>';
-                  }
-                }}
-              />
-            </Link>
+    <Sidebar className="bg-white border-r border-neutral-200 shadow-[2px_0_12px_-4px_rgba(0,0,0,0.08)]">
+      <SidebarHeader className="p-4 bg-neutral-50/80">
+        <div className="mb-2 flex items-center gap-3">
+          <Link
+            to="/"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/60 bg-white/90 shadow-sm transition-all duration-300 hover:border-[#05ef62]/60 hover:shadow-md hover:scale-105"
+          >
+            <img
+              src="/favicon-96x96.png"
+              alt="TrafficMENA Logo"
+              className="h-6 w-6 rounded-full object-cover"
+              onError={(event) => {
+                event.currentTarget.style.display = 'none';
+                const container = event.currentTarget.parentElement;
+                if (container) {
+                  container.innerHTML = '<span class="text-sm font-bold text-[#05ef62]">T</span>';
+                }
+              }}
+            />
+          </Link>
+          <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold text-neutral-900">TrafficMENA</h2>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/70 px-3 py-1 text-xs font-medium text-neutral-700 backdrop-blur">
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-[#101010]">
-              <Sparkles className="h-2.5 w-2.5" />
-            </span>
-            Member
+            <div className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-2 py-0.5 text-[10px] font-medium text-neutral-700 shadow-sm">
+              <span className="flex h-3 w-3 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-[#101010]">
+                <Sparkles className="h-2 w-2" />
+              </span>
+              Member
+            </div>
           </div>
         </div>
-        <p className="text-sm text-neutral-600">{user?.email}</p>
+        <p className="text-sm text-neutral-600 truncate">{user?.email}</p>
       </SidebarHeader>
-      <SidebarContent className="bg-white/60 backdrop-blur">
+      <SidebarContent className="bg-white">
         <SidebarGroup>
           <SidebarGroupLabel className="text-neutral-700">Member Dashboard</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -99,9 +99,9 @@ function DashboardSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === item.url}
-                      className="hover:bg-white/40 rounded-xl"
+                      className="hover:bg-neutral-100 rounded-xl transition-colors"
                     >
-                      <Link to={item.url} className="flex items-center gap-3 py-3">
+                      <Link to={item.url} className="flex items-center gap-3 py-3.5">
                         <Icon className="h-4 w-4 shrink-0 text-neutral-700" />
                         <div className="flex flex-col items-start">
                           <span className="font-medium text-neutral-900">{item.title}</span>
@@ -119,7 +119,7 @@ function DashboardSidebar() {
         {/* Member Information */}
         <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
-            <div className="rounded-2xl border border-neutral-200/60 bg-white/80 backdrop-blur p-3 text-xs">
+            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 text-xs">
               <div className="flex items-start gap-2">
                 <div className="mt-0.5 h-4 w-4 shrink-0 rounded-lg bg-gradient-to-br from-[#05ef62] to-[#29cf9f] p-1">
                   <Shield className="h-2.5 w-2.5 text-white" />
@@ -141,7 +141,6 @@ function DashboardSidebar() {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const location = useLocation();
-  const { user } = useAuth();
 
   const getPageTitle = () => {
     switch (location.pathname) {
