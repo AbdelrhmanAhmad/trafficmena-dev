@@ -1,4 +1,4 @@
-import AdminLayout from '@/shared/components/layout/AdminLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
 import { InviteOnlySettingsCard } from './components/InviteOnlySettingsCard';
 
@@ -6,7 +6,7 @@ const AdminSettingsPage = () => {
   const { isAdmin } = useIsAdmin();
 
   return (
-    <AdminLayout>
+    <AppLayout variant="admin">
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold text-primary">General Settings</h1>
@@ -17,7 +17,7 @@ const AdminSettingsPage = () => {
 
         <InviteOnlySettingsCard canEdit={isAdmin} />
       </div>
-    </AdminLayout>
+    </AppLayout>
   );
 };
 

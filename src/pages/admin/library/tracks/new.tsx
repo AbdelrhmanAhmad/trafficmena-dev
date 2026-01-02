@@ -2,8 +2,8 @@ import { ArrowLeft, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TrackForm from '@/features/tracks/components/TrackForm';
 import { useCreateTrack } from '@/features/tracks/hooks/useTracks';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -48,7 +48,7 @@ function NewTrackPage() {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="space-y-6">
           <div className="flex items-center gap-4">
             <Button
@@ -88,7 +88,7 @@ function NewTrackPage() {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 }

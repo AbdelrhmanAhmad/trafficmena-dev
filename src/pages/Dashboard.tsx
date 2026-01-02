@@ -10,7 +10,7 @@ import {
   useSkills,
   useUserSkills,
 } from '@/app/hooks/useSkills';
-import DashboardLayout from '@/shared/components/layout/DashboardLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -185,7 +185,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <ProtectedRoute>
-      <DashboardLayout>
+      <AppLayout variant="member">
         <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
           {/* Hero Header */}
           <div className="relative w-full overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
@@ -394,7 +394,7 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      </DashboardLayout>
+      </AppLayout>
     </ProtectedRoute>
   );
 };

@@ -4,8 +4,8 @@ import { useMemo, useState } from 'react';
 import type { AdminUserRecord, UserRoleValue } from '@/app/api/users';
 import { deleteUser, fetchUsersAdmin, updateUserRole } from '@/app/api/users';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -139,7 +139,7 @@ const AdminUsersPage = () => {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -292,7 +292,7 @@ const AdminUsersPage = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 };

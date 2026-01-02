@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify';
 import { CalendarDays, Clock, MapPin, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DataLoader from '@/shared/components/DataLoader';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -34,7 +34,7 @@ const AdminEventDetail = () => {
     : 'This event does not have a description yet.';
 
   return (
-    <AdminLayout>
+    <AppLayout variant="admin">
       <DataLoader
         loading={isLoading}
         error={error ? 'Unable to load this event.' : null}
@@ -122,7 +122,7 @@ const AdminEventDetail = () => {
           </div>
         )}
       </DataLoader>
-    </AdminLayout>
+    </AppLayout>
   );
 };
 

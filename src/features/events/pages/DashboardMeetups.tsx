@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
 import { usePublicTracks } from '@/features/tracks/hooks/useTracks';
 import DataLoader from '@/shared/components/DataLoader';
-import DashboardLayout from '@/shared/components/layout/DashboardLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -19,7 +19,7 @@ const DashboardMeetups: React.FC = () => {
 
   return (
     <ProtectedRoute>
-      <DashboardLayout>
+      <AppLayout variant="member">
         <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-0">
           {/* Hero Header */}
           <div className="relative mb-8 overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
@@ -183,7 +183,7 @@ const DashboardMeetups: React.FC = () => {
             </div>
           </DataLoader>
         </div>
-      </DashboardLayout>
+      </AppLayout>
     </ProtectedRoute>
   );
 };

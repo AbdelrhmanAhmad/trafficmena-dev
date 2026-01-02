@@ -7,8 +7,8 @@ import {
   useUpdateLibraryAsset,
 } from '@/features/library/hooks/useLibrary';
 import DataLoader from '@/shared/components/DataLoader';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 
@@ -23,7 +23,7 @@ const EditLibraryItemPage = () => {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <Card className="mx-auto max-w-4xl">
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
@@ -80,7 +80,7 @@ const EditLibraryItemPage = () => {
             </DataLoader>
           </CardContent>
         </Card>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 };

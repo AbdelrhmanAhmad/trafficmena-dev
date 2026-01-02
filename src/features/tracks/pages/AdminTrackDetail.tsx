@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { CalendarDays, ExternalLink, GraduationCap, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DataLoader from '@/shared/components/DataLoader';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -26,7 +26,7 @@ const AdminTrackDetail = () => {
   };
 
   return (
-    <AdminLayout>
+    <AppLayout variant="admin">
       <DataLoader
         loading={isLoading}
         error={error ? 'Unable to load this track.' : null}
@@ -104,7 +104,7 @@ const AdminTrackDetail = () => {
           </div>
         )}
       </DataLoader>
-    </AdminLayout>
+    </AppLayout>
   );
 };
 

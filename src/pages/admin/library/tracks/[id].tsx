@@ -11,8 +11,8 @@ import {
   useUpdateTrack,
 } from '@/features/tracks/hooks/useTracks';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -40,9 +40,9 @@ function TrackDetailPage() {
   if (isLoading) {
     return (
       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-        <AdminLayout>
+        <AppLayout variant="admin">
           <LoadingSpinner size="lg" text="Loading track..." />
-        </AdminLayout>
+        </AppLayout>
       </AdminProtectedRoute>
     );
   }
@@ -50,7 +50,7 @@ function TrackDetailPage() {
   if (isError || !track) {
     return (
       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-        <AdminLayout>
+        <AppLayout variant="admin">
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-lg text-muted-foreground">Track not found</p>
             <Button
@@ -61,7 +61,7 @@ function TrackDetailPage() {
               Back to Events & Tracks
             </Button>
           </div>
-        </AdminLayout>
+        </AppLayout>
       </AdminProtectedRoute>
     );
   }
@@ -128,7 +128,7 @@ function TrackDetailPage() {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -294,7 +294,7 @@ function TrackDetailPage() {
           onSelect={handleAddEvents}
           isLoading={addEventsMutation.isPending}
         />
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 }

@@ -1,8 +1,8 @@
 import { CalendarPlus, FolderOpen } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAddEventsToTrack, useTrack } from '@/features/tracks/hooks/useTracks';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { AdminEventForm } from '../../components/AdminEventForm';
@@ -53,7 +53,7 @@ const AdminMeetupsNew = () => {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="mx-auto flex max-w-5xl flex-col gap-6">
           {/* Track context banner */}
           {track && (
@@ -110,7 +110,7 @@ const AdminMeetupsNew = () => {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 };

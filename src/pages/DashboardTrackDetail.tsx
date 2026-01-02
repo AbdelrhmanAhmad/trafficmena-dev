@@ -7,7 +7,7 @@ import type { LibraryAsset } from '@/features/library/types';
 import { TrackBookingButton } from '@/features/tracks/components/TrackBookingButton';
 import { useTrack } from '@/features/tracks/hooks/useTracks';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
-import DashboardLayout from '@/shared/components/layout/DashboardLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -94,9 +94,9 @@ const DashboardTrackDetail: React.FC = () => {
   if (isLoading) {
     return (
       <ProtectedRoute>
-        <DashboardLayout>
+        <AppLayout variant="member">
           <LoadingSpinner size="lg" text="Loading track..." />
-        </DashboardLayout>
+        </AppLayout>
       </ProtectedRoute>
     );
   }
@@ -104,7 +104,7 @@ const DashboardTrackDetail: React.FC = () => {
   if (isError || !track) {
     return (
       <ProtectedRoute>
-        <DashboardLayout>
+        <AppLayout variant="member">
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-lg text-muted-foreground">Track not found</p>
             <Button
@@ -115,14 +115,14 @@ const DashboardTrackDetail: React.FC = () => {
               Back to Library
             </Button>
           </div>
-        </DashboardLayout>
+        </AppLayout>
       </ProtectedRoute>
     );
   }
 
   return (
     <ProtectedRoute>
-      <DashboardLayout>
+      <AppLayout variant="member">
         <div className="max-w-4xl">
           {/* Header */}
           <div className="mb-8">
@@ -235,7 +235,7 @@ const DashboardTrackDetail: React.FC = () => {
             </div>
           )}
         </div>
-      </DashboardLayout>
+      </AppLayout>
     </ProtectedRoute>
   );
 };

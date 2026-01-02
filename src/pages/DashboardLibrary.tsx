@@ -6,7 +6,7 @@ import LibraryItemCard from '@/features/library/components/LibraryItemCard';
 import { SeriesGrid } from '@/features/series';
 import { useSeries } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
-import DashboardLayout from '@/shared/components/layout/DashboardLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Card, CardContent } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
@@ -44,7 +44,7 @@ const DashboardLibrary: React.FC = () => {
 
   return (
     <ProtectedRoute>
-      <DashboardLayout>
+      <AppLayout variant="member">
         <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
           {/* Hero Header */}
           <div className="relative w-full overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
@@ -152,7 +152,7 @@ const DashboardLibrary: React.FC = () => {
             </TabsContent>
           </Tabs>
         </div>
-      </DashboardLayout>
+      </AppLayout>
     </ProtectedRoute>
   );
 };

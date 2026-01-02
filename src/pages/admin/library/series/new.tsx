@@ -2,8 +2,8 @@ import { ArrowLeft, FolderPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SeriesForm } from '@/features/series';
 import { useCreateSeries } from '@/features/series/hooks/useSeries';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -38,7 +38,7 @@ function NewSeriesPage() {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="space-y-6">
           <div className="flex items-center gap-4">
             <Button
@@ -78,7 +78,7 @@ function NewSeriesPage() {
             </CardContent>
           </Card>
         </div>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 }

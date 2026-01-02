@@ -2,8 +2,8 @@ import { BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { LibraryAssetForm } from '@/features/library/components/LibraryAssetForm';
 import { useCreateLibraryAsset } from '@/features/library/hooks/useLibrary';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 
 const NewLibraryItemPage = () => {
@@ -12,7 +12,7 @@ const NewLibraryItemPage = () => {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <Card className="mx-auto max-w-4xl rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
@@ -51,7 +51,7 @@ const NewLibraryItemPage = () => {
             />
           </CardContent>
         </Card>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 };

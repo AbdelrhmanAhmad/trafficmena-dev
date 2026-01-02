@@ -3,8 +3,8 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useInvitations } from '@/app/hooks/useInvitations';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -92,7 +92,7 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="space-y-8">
           {/* Header Section */}
           <div className="flex items-center justify-between">
@@ -373,7 +373,7 @@ const AdminDashboard: React.FC = () => {
             </div>
           )}
         </div>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 };

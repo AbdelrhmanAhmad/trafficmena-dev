@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeleteTrack, useTracks } from '@/features/tracks/hooks/useTracks';
 import DataLoader from '@/shared/components/DataLoader';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -52,7 +52,7 @@ const AdminMeetups = () => {
   };
 
   return (
-    <AdminLayout>
+    <AppLayout variant="admin">
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -364,7 +364,7 @@ const AdminMeetups = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
+    </AppLayout>
   );
 };
 

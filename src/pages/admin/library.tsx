@@ -7,8 +7,8 @@ import { useDeleteLibraryAsset } from '@/features/library/hooks/useLibrary';
 import { SeriesGrid } from '@/features/series';
 import { useDeleteSeries, useSeries } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
-import AdminLayout from '@/shared/components/layout/AdminLayout';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
+import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { useToast } from '@/shared/hooks/custom/use-toast';
@@ -168,16 +168,16 @@ function LibraryManagement() {
   if (isLoading || seriesLoading) {
     return (
       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-        <AdminLayout>
+        <AppLayout variant="admin">
           <LoadingSpinner size="lg" text="Loading library items..." />
-        </AdminLayout>
+        </AppLayout>
       </AdminProtectedRoute>
     );
   }
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-      <AdminLayout>
+      <AppLayout variant="admin">
         <div className="space-y-6">
           {/* Page Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -257,7 +257,7 @@ function LibraryManagement() {
             </TabsContent>
           </Tabs>
         </div>
-      </AdminLayout>
+      </AppLayout>
     </AdminProtectedRoute>
   );
 }
