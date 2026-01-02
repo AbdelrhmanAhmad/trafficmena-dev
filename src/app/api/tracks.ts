@@ -17,6 +17,7 @@ export interface ApiTrack {
   trackBookingEnd?: string | null;
   singleBookingStart?: string | null;
   singleBookingEnd?: string | null;
+  allowIndividualBooking?: boolean;
   maxTrackBookings?: number | null;
   bookingsCount?: number;
   trackBookingSpotsRemaining?: number | null;
@@ -53,6 +54,7 @@ export interface TrackRecord {
   track_booking_end: Date | null;
   single_booking_start: Date | null;
   single_booking_end: Date | null;
+  allow_individual_booking: boolean;
   max_track_bookings: number | null;
   bookings_count: number;
   track_booking_spots_remaining: number | null;
@@ -97,6 +99,7 @@ const mapTrack = (api: ApiTrack): TrackRecord => ({
   track_booking_end: api.trackBookingEnd ? new Date(api.trackBookingEnd) : null,
   single_booking_start: api.singleBookingStart ? new Date(api.singleBookingStart) : null,
   single_booking_end: api.singleBookingEnd ? new Date(api.singleBookingEnd) : null,
+  allow_individual_booking: api.allowIndividualBooking ?? false,
   max_track_bookings: api.maxTrackBookings ?? null,
   bookings_count: api.bookingsCount ?? 0,
   track_booking_spots_remaining: api.trackBookingSpotsRemaining ?? null,
@@ -136,6 +139,7 @@ export type CreateTrackPayload = {
   trackBookingEnd?: string | null;
   singleBookingStart?: string | null;
   singleBookingEnd?: string | null;
+  allowIndividualBooking?: boolean;
   maxTrackBookings?: number | null;
 };
 

@@ -21,7 +21,7 @@ import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(12),
-  search: z.string().optional(),
+  search: z.string().max(200).optional(),
 });
 
 const createTrackSchema = z.object({
@@ -33,6 +33,7 @@ const createTrackSchema = z.object({
   trackBookingEnd: z.coerce.date().nullable().optional(),
   singleBookingStart: z.coerce.date().nullable().optional(),
   singleBookingEnd: z.coerce.date().nullable().optional(),
+  allowIndividualBooking: z.boolean().default(false),
   maxTrackBookings: z.number().int().positive().nullable().optional(),
 });
 
@@ -47,6 +48,7 @@ const updateTrackSchema = z
     trackBookingEnd: z.coerce.date().nullable().optional(),
     singleBookingStart: z.coerce.date().nullable().optional(),
     singleBookingEnd: z.coerce.date().nullable().optional(),
+    allowIndividualBooking: z.boolean().optional(),
     maxTrackBookings: z.number().int().positive().nullable().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
@@ -56,6 +58,7 @@ type BookingFields = {
   trackBookingEnd: Date | null;
   singleBookingStart: Date | null;
   singleBookingEnd: Date | null;
+  allowIndividualBooking: boolean;
   maxTrackBookings: number | null;
   isPublished: boolean;
 };
@@ -81,6 +84,10 @@ function validateBookingWindows(
       payload.singleBookingEnd !== undefined
         ? payload.singleBookingEnd
         : (current.singleBookingEnd ?? null),
+    allowIndividualBooking:
+      payload.allowIndividualBooking !== undefined
+        ? payload.allowIndividualBooking
+        : (current.allowIndividualBooking ?? false),
     maxTrackBookings:
       payload.maxTrackBookings !== undefined
         ? payload.maxTrackBookings
@@ -89,46 +96,65 @@ function validateBookingWindows(
       payload.isPublished !== undefined ? payload.isPublished : (current.isPublished ?? false),
   };
 
-  const fields = [
-    merged.trackBookingStart,
-    merged.trackBookingEnd,
-    merged.singleBookingStart,
-    merged.singleBookingEnd,
-  ];
-  const setCount = fields.filter((f) => f !== null).length;
-
-  if (setCount !== 0 && setCount !== 4) {
+  // Track dates must be set together
+  const trackDates = [merged.trackBookingStart, merged.trackBookingEnd];
+  const trackSetCount = trackDates.filter((f) => f !== null).length;
+  if (trackSetCount !== 0 && trackSetCount !== 2) {
     return {
       valid: false,
-      error: 'All 4 booking period fields must be set together, or all left empty.',
+      error: 'Track booking start and end must be set together, or both left empty.',
     };
   }
 
-  if (setCount > 0 && merged.maxTrackBookings === null) {
-    return { valid: false, error: 'maxTrackBookings is required when any booking period is set.' };
+  // Individual dates must be set together (only if allowIndividualBooking is true)
+  const individualDates = [merged.singleBookingStart, merged.singleBookingEnd];
+  const individualSetCount = individualDates.filter((f) => f !== null).length;
+  if (merged.allowIndividualBooking) {
+    if (individualSetCount !== 0 && individualSetCount !== 2) {
+      return {
+        valid: false,
+        error: 'Individual booking start and end must be set together when enabled.',
+      };
+    }
+  }
+
+  // maxTrackBookings required when track dates are set
+  if (trackSetCount > 0 && merged.maxTrackBookings === null) {
+    return { valid: false, error: 'maxTrackBookings is required when track booking period is set.' };
   }
 
   if (merged.isPublished) {
     const hadPeriods =
       current.trackBookingStart !== null && current.trackBookingStart !== undefined;
-    if (hadPeriods && setCount === 0) {
-      return { valid: false, error: 'Cannot clear booking periods while track is published.' };
+    if (hadPeriods && trackSetCount === 0) {
+      return { valid: false, error: 'Cannot clear track booking periods while track is published.' };
     }
     if (current.maxTrackBookings !== null && merged.maxTrackBookings === null) {
       return { valid: false, error: 'Cannot clear maxTrackBookings while track is published.' };
     }
   }
 
-  if (setCount === 4) {
+  // Validate date ordering
+  if (trackSetCount === 2) {
     const tStart = new Date(merged.trackBookingStart!);
     const tEnd = new Date(merged.trackBookingEnd!);
-    const sStart = new Date(merged.singleBookingStart!);
-    const sEnd = new Date(merged.singleBookingEnd!);
-    if (!(tStart < tEnd && tEnd < sStart && sStart < sEnd)) {
+    if (!(tStart < tEnd)) {
       return {
         valid: false,
-        error: 'Periods must be ordered: trackStart < trackEnd < singleStart < singleEnd.',
+        error: 'Track booking start must be before track booking end.',
       };
+    }
+
+    // If individual booking is enabled and dates are set, validate full ordering
+    if (merged.allowIndividualBooking && individualSetCount === 2) {
+      const sStart = new Date(merged.singleBookingStart!);
+      const sEnd = new Date(merged.singleBookingEnd!);
+      if (!(tEnd < sStart && sStart < sEnd)) {
+        return {
+          valid: false,
+          error: 'Periods must be ordered: trackEnd < singleStart < singleEnd.',
+        };
+      }
     }
   }
 
@@ -142,6 +168,16 @@ const addEventsSchema = z.object({
 const reorderEventsSchema = z.object({
   eventIds: z.array(z.string().uuid()),
 });
+
+const uuidSchema = z.string().uuid('Invalid ID format');
+
+function validateUuid(value: string, paramName = 'id'): { valid: true; value: string } | { valid: false; error: { code: string; message: string } } {
+  const result = uuidSchema.safeParse(value);
+  if (!result.success) {
+    return { valid: false, error: { code: 'INVALID_ID', message: `Invalid ${paramName} format.` } };
+  }
+  return { valid: true, value: result.data };
+}
 
 export function registerTrackRoutes(app: Hono) {
   // Public tracks list (no auth required) - returns only published tracks
@@ -255,7 +291,11 @@ export function registerTrackRoutes(app: Hono) {
 
   // Public track detail (no auth required for published tracks)
   app.get('/tracks/:id/public', async (c) => {
-    const id = c.req.param('id');
+    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    if (!idValidation.valid) {
+      return c.json({ error: idValidation.error }, 400);
+    }
+    const id = idValidation.value;
     const session = await getSessionFromRequest(c);
 
     const [track] = await db
@@ -269,6 +309,7 @@ export function registerTrackRoutes(app: Hono) {
         trackBookingEnd: tracks.trackBookingEnd,
         singleBookingStart: tracks.singleBookingStart,
         singleBookingEnd: tracks.singleBookingEnd,
+        allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
       })
       .from(tracks)
@@ -424,6 +465,7 @@ export function registerTrackRoutes(app: Hono) {
         trackBookingEnd: tracks.trackBookingEnd,
         singleBookingStart: tracks.singleBookingStart,
         singleBookingEnd: tracks.singleBookingEnd,
+        allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
       })
       .from(tracks)
@@ -469,7 +511,11 @@ export function registerTrackRoutes(app: Hono) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
     }
 
-    const id = c.req.param('id');
+    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    if (!idValidation.valid) {
+      return c.json({ error: idValidation.error }, 400);
+    }
+    const id = idValidation.value;
     const role = await getOptionalUserRole(session.user.id);
     const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
 
@@ -487,6 +533,7 @@ export function registerTrackRoutes(app: Hono) {
         trackBookingEnd: tracks.trackBookingEnd,
         singleBookingStart: tracks.singleBookingStart,
         singleBookingEnd: tracks.singleBookingEnd,
+        allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
       })
       .from(tracks)
@@ -587,13 +634,11 @@ export function registerTrackRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    // Validate trackId is a valid UUID
-    const trackIdParam = c.req.param('id');
-    const trackIdResult = z.string().uuid('Invalid track ID format').safeParse(trackIdParam);
-    if (!trackIdResult.success) {
-      return c.json({ error: { code: 'INVALID_ID', message: 'Invalid track ID format.' } }, 400);
+    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    if (!idValidation.valid) {
+      return c.json({ error: idValidation.error }, 400);
     }
-    const trackId = trackIdResult.data;
+    const trackId = idValidation.value;
 
     const parsed = listQuerySchema.safeParse({
       page: c.req.query('page'),
@@ -700,6 +745,7 @@ export function registerTrackRoutes(app: Hono) {
               trackBookingEnd: payload.trackBookingEnd ?? null,
               singleBookingStart: payload.singleBookingStart ?? null,
               singleBookingEnd: payload.singleBookingEnd ?? null,
+              allowIndividualBooking: payload.allowIndividualBooking ?? false,
               maxTrackBookings: payload.maxTrackBookings ?? null,
             })
             .returning();
@@ -731,7 +777,11 @@ export function registerTrackRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const id = c.req.param('id');
+        const idValidation = validateUuid(c.req.param('id'), 'track ID');
+        if (!idValidation.valid) {
+          throw new ApiError('INVALID_ID', idValidation.error.message, 400);
+        }
+        const id = idValidation.value;
         const body = await c.req.json().catch(() => ({}));
         const parsed = updateTrackSchema.safeParse(body);
 
@@ -756,6 +806,8 @@ export function registerTrackRoutes(app: Hono) {
           updateValues.singleBookingStart = updates.singleBookingStart ?? null;
         if (updates.singleBookingEnd !== undefined)
           updateValues.singleBookingEnd = updates.singleBookingEnd ?? null;
+        if (updates.allowIndividualBooking !== undefined)
+          updateValues.allowIndividualBooking = updates.allowIndividualBooking;
         if (updates.maxTrackBookings !== undefined)
           updateValues.maxTrackBookings = updates.maxTrackBookings ?? null;
 
@@ -782,13 +834,14 @@ export function registerTrackRoutes(app: Hono) {
           if (Number(eventCount) === 0) {
             throw new ApiError('EMPTY_TRACK', 'Cannot publish track without events.', 400);
           }
-          const mergedHasPeriods =
-            (updates.trackBookingStart ?? currentTrack.trackBookingStart) !== null;
+          const mergedHasTrackPeriod =
+            (updates.trackBookingStart ?? currentTrack.trackBookingStart) !== null &&
+            (updates.trackBookingEnd ?? currentTrack.trackBookingEnd) !== null;
           const mergedMax = updates.maxTrackBookings ?? currentTrack.maxTrackBookings;
-          if (!mergedHasPeriods || mergedMax === null) {
+          if (!mergedHasTrackPeriod || mergedMax === null) {
             throw new ApiError(
               'PERIODS_REQUIRED',
-              'Published tracks must have all booking periods and maxTrackBookings configured.',
+              'Published tracks must have track booking period and maxTrackBookings configured.',
               400,
             );
           }
@@ -847,7 +900,11 @@ export function registerTrackRoutes(app: Hono) {
     const admin = await requireAdmin(c);
     if ('response' in admin) return admin.response;
 
-    const id = c.req.param('id');
+    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    if (!idValidation.valid) {
+      return c.json({ error: idValidation.error }, 400);
+    }
+    const id = idValidation.value;
     const deleted = await db.delete(tracks).where(eq(tracks.id, id)).returning({ id: tracks.id });
 
     if (deleted.length === 0) {
@@ -865,7 +922,11 @@ export function registerTrackRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const trackId = c.req.param('id');
+        const idValidation = validateUuid(c.req.param('id'), 'track ID');
+        if (!idValidation.valid) {
+          throw new ApiError('INVALID_ID', idValidation.error.message, 400);
+        }
+        const trackId = idValidation.value;
         const body = await c.req.json().catch(() => ({}));
         const parsed = addEventsSchema.safeParse(body);
 
@@ -998,8 +1059,17 @@ export function registerTrackRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const trackId = c.req.param('id');
-        const eventId = c.req.param('eventId');
+        const trackIdValidation = validateUuid(c.req.param('id'), 'track ID');
+        if (!trackIdValidation.valid) {
+          throw new ApiError('INVALID_ID', trackIdValidation.error.message, 400);
+        }
+        const trackId = trackIdValidation.value;
+
+        const eventIdValidation = validateUuid(c.req.param('eventId'), 'event ID');
+        if (!eventIdValidation.valid) {
+          throw new ApiError('INVALID_ID', eventIdValidation.error.message, 400);
+        }
+        const eventId = eventIdValidation.value;
 
         const [{ count: bookingCount }] = await db
           .select({ count: count(trackBookings.id) })
@@ -1035,7 +1105,11 @@ export function registerTrackRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    const trackId = c.req.param('id');
+    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    if (!idValidation.valid) {
+      return c.json({ error: idValidation.error }, 400);
+    }
+    const trackId = idValidation.value;
     const body = await c.req.json().catch(() => ({}));
     const parsed = reorderEventsSchema.safeParse(body);
 
@@ -1070,7 +1144,11 @@ export function registerTrackRoutes(app: Hono) {
           throw new ApiError('UNAUTHORIZED', 'Authentication required.', 401);
         }
 
-        const trackId = c.req.param('id');
+        const idValidation = validateUuid(c.req.param('id'), 'track ID');
+        if (!idValidation.valid) {
+          throw new ApiError('INVALID_ID', idValidation.error.message, 400);
+        }
+        const trackId = idValidation.value;
         const userId = session.user.id;
 
         const result = await db.transaction(async (tx) => {
@@ -1116,19 +1194,13 @@ export function registerTrackRoutes(app: Hono) {
             return { success: true, message: 'Already booked.', alreadyBooked: true };
           }
 
-          const [{ count: currentBookings }] = await tx
-            .select({ count: count(trackBookings.id) })
-            .from(trackBookings)
-            .where(eq(trackBookings.trackId, trackId));
-          if (
-            track.maxTrackBookings !== null &&
-            Number(currentBookings) >= track.maxTrackBookings
-          ) {
-            throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
-          }
-
+          // Atomic CTE: check track capacity + register for events + insert track booking
+          // This prevents race conditions where concurrent bookings could exceed maxTrackBookings
           const atomicResult = await tx.execute(sql`
-          WITH locked_events AS (
+          WITH track_booking_check AS (
+            SELECT COUNT(*) AS current_count FROM track_bookings WHERE track_id = ${trackId}
+          ),
+          locked_events AS (
             SELECT e.id, e.max_attendees
             FROM track_events te
             JOIN events e ON e.id = te.event_id
@@ -1158,16 +1230,27 @@ export function registerTrackRoutes(app: Hono) {
             FROM eligible
             WHERE event_id NOT IN (SELECT event_id FROM existing)
           ),
-          inserted AS (
+          inserted_attendees AS (
             INSERT INTO event_attendees (event_id, user_id)
             SELECT event_id, ${userId} FROM to_insert
             RETURNING event_id
+          ),
+          inserted_booking AS (
+            INSERT INTO track_bookings (track_id, user_id)
+            SELECT ${trackId}, ${userId}
+            WHERE (SELECT current_count FROM track_booking_check) < ${track.maxTrackBookings ?? 2147483647}
+              AND (SELECT COUNT(*) FROM locked_events) > 0
+              AND (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) = 0
+              AND (SELECT COUNT(*) FROM existing) + (SELECT COUNT(*) FROM inserted_attendees) >= (SELECT COUNT(*) FROM locked_events)
+            RETURNING id
           )
           SELECT
             (SELECT COUNT(*) FROM locked_events) AS total_events,
             (SELECT COUNT(*) FROM existing) AS existing_count,
-            (SELECT COUNT(*) FROM inserted) AS inserted_count,
-            (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) AS null_capacity_count
+            (SELECT COUNT(*) FROM inserted_attendees) AS inserted_count,
+            (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) AS null_capacity_count,
+            (SELECT current_count FROM track_booking_check) AS current_bookings,
+            (SELECT COUNT(*) FROM inserted_booking) AS booking_inserted
         `);
 
           const row = atomicResult.rows[0] as {
@@ -1175,11 +1258,15 @@ export function registerTrackRoutes(app: Hono) {
             existing_count: string;
             inserted_count: string;
             null_capacity_count: string;
+            current_bookings: string;
+            booking_inserted: string;
           };
           const totalEvents = Number(row.total_events);
           const existingCount = Number(row.existing_count);
           const insertedCount = Number(row.inserted_count);
           const nullCapacityCount = Number(row.null_capacity_count);
+          const currentBookings = Number(row.current_bookings);
+          const bookingInserted = Number(row.booking_inserted);
 
           if (totalEvents === 0) {
             throw new ApiError('TRACK_EMPTY', 'Track has no events.', 400);
@@ -1194,8 +1281,12 @@ export function registerTrackRoutes(app: Hono) {
               409,
             );
           }
-
-          await tx.insert(trackBookings).values({ trackId, userId });
+          if (bookingInserted === 0) {
+            // Track capacity was reached between checks (race condition prevented)
+            if (track.maxTrackBookings !== null && currentBookings >= track.maxTrackBookings) {
+              throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
+            }
+          }
 
           return {
             success: true,

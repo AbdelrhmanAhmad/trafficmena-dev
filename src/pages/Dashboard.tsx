@@ -186,27 +186,28 @@ const Dashboard: React.FC = () => {
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        <div className="space-y-8">
-          <div className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#d5ffe9]/10 via-transparent to-[#f4fff9]/5 pointer-events-none"></div>
-            <div className="relative z-10 flex items-center gap-4 mb-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
-                <Edit className="h-6 w-6" />
+        <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
+          {/* Hero Header */}
+          <div className="relative w-full overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#d5ffe9]/10 via-transparent to-[#f4fff9]/5" />
+            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white shadow-lg">
+                <Edit className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold text-neutral-900">My Profile</h1>
-                <p className="text-neutral-700 mt-1">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">My Profile</h1>
+                <p className="text-sm sm:text-base text-neutral-600 mt-0.5">
                   Update your personal details and highlight the skills you&apos;re focused on.
                 </p>
               </div>
             </div>
           </div>
 
-          <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
+          <Card className="rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <CardHeader className="p-5 sm:p-6">
+              <CardTitle className="text-lg sm:text-xl">Personal Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-5 pt-0 sm:p-6 sm:pt-0">
               {isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading your profile…</p>
               ) : (
@@ -290,20 +291,20 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
-            <CardHeader className="flex flex-col gap-2">
+          <Card className="rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <CardHeader className="flex flex-col gap-2 p-5 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
-                  <Sparkles className="h-5 w-5" />
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white shadow-lg">
+                  <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <CardTitle className="text-neutral-900">Skills Focus</CardTitle>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">Skills Focus</CardTitle>
               </div>
-              <p className="text-sm text-neutral-600 ml-13">
+              <p className="text-sm text-neutral-600 ml-0 sm:ml-[60px]">
                 Highlight the skills you&apos;re actively developing to unlock relevant events and
                 resources.
               </p>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-5 pt-0 sm:p-6 sm:pt-0">
               {skillsLoading ? (
                 <p className="text-sm text-muted-foreground">Loading available skills…</p>
               ) : allSkills.length === 0 ? (
