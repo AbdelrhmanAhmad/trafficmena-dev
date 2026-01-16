@@ -29,6 +29,7 @@ import { getSessionFromRequest } from '../../utils/session.js';
 const CHECKOUT_RATE_LIMIT = { limit: 5, windowMs: 60_000 }; // 5 checkouts per minute
 const VERIFY_RATE_LIMIT = { limit: 30, windowMs: 60_000 }; // 30 verifications per minute
 const METHODS_RATE_LIMIT = { limit: 60, windowMs: 60_000 }; // 60 method fetches per minute
+const WEBHOOK_RATE_LIMIT = { limit: 100, windowMs: 60_000 }; // 100 webhooks per minute per IP
 
 // --- Schemas ---
 
@@ -197,21 +198,23 @@ async function calculatePrice(
   itemType: 'event' | 'track' | 'subscription',
   itemId: string | null,
 ): Promise<{ amountCents: number; itemName: string }> {
-  // Get subscription status
-  const [subscription] = await db
-    .select()
-    .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.userId, userId),
-        eq(subscriptions.status, 'active'),
-        gte(subscriptions.endsAt, new Date()),
+  // Parallel fetch: subscription status + platform settings (independent queries)
+  const [subscriptionResult, settingsResult] = await Promise.all([
+    db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.userId, userId),
+          eq(subscriptions.status, 'active'),
+          gte(subscriptions.endsAt, new Date()),
+        ),
       ),
-    );
+    db.select().from(platformSettings).limit(1),
+  ]);
+  const [subscription] = subscriptionResult;
+  const [settings] = settingsResult;
   const isSubscriber = !!subscription;
-
-  // Get global discount percentage
-  const [settings] = await db.select().from(platformSettings).limit(1);
   const discountPercent = settings?.subscriberDiscountPercent ?? 0;
 
   if (itemType === 'subscription') {
@@ -229,18 +232,29 @@ async function calculatePrice(
   }
 
   if (itemType === 'event' && itemId) {
-    const [event] = await db.select().from(events).where(eq(events.id, itemId));
-    if (!event) throw new ApiError('NOT_FOUND', 'Event not found', 404);
+    // Parallel fetch: event details + track event info + existing registration (all use itemId/userId)
+    const [eventResult, trackEventResult, existingRegResult] = await Promise.all([
+      db.select().from(events).where(eq(events.id, itemId)),
+      db
+        .select({
+          allowIndividualBooking: tracks.allowIndividualBooking,
+          singleBookingStart: tracks.singleBookingStart,
+          singleBookingEnd: tracks.singleBookingEnd,
+        })
+        .from(trackEvents)
+        .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
+        .where(eq(trackEvents.eventId, itemId)),
+      db
+        .select()
+        .from(eventAttendees)
+        .where(and(eq(eventAttendees.eventId, itemId), eq(eventAttendees.userId, userId))),
+    ]);
 
-    const [trackEvent] = await db
-      .select({
-        allowIndividualBooking: tracks.allowIndividualBooking,
-        singleBookingStart: tracks.singleBookingStart,
-        singleBookingEnd: tracks.singleBookingEnd,
-      })
-      .from(trackEvents)
-      .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
-      .where(eq(trackEvents.eventId, itemId));
+    const [event] = eventResult;
+    const [trackEvent] = trackEventResult;
+    const [existingReg] = existingRegResult;
+
+    if (!event) throw new ApiError('NOT_FOUND', 'Event not found', 404);
 
     if (trackEvent) {
       if (!trackEvent.allowIndividualBooking) {
@@ -268,15 +282,11 @@ async function calculatePrice(
       }
     }
 
-    // Check if already registered
-    const [existingReg] = await db
-      .select()
-      .from(eventAttendees)
-      .where(and(eq(eventAttendees.eventId, itemId), eq(eventAttendees.userId, userId)));
     if (existingReg) {
       throw new ApiError('ALREADY_REGISTERED', 'Already registered for this event', 400);
     }
 
+    // Capacity check - sequential since it depends on event.maxAttendees
     if (event.maxAttendees) {
       const [countResult] = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -306,7 +316,18 @@ async function calculatePrice(
   }
 
   if (itemType === 'track' && itemId) {
-    const [track] = await db.select().from(tracks).where(eq(tracks.id, itemId));
+    // Parallel fetch: track details + existing booking (both use itemId/userId)
+    const [trackResult, existingBookingResult] = await Promise.all([
+      db.select().from(tracks).where(eq(tracks.id, itemId)),
+      db
+        .select()
+        .from(trackBookings)
+        .where(and(eq(trackBookings.trackId, itemId), eq(trackBookings.userId, userId))),
+    ]);
+
+    const [track] = trackResult;
+    const [existingBooking] = existingBookingResult;
+
     if (!track) throw new ApiError('NOT_FOUND', 'Track not found', 404);
     if (!track.isPublished) {
       throw new ApiError('TRACK_NOT_FOUND', 'Track not found', 404);
@@ -323,11 +344,6 @@ async function calculatePrice(
       throw new ApiError('BOOKING_PERIOD_CLOSED', 'Track booking period closed.', 400);
     }
 
-    // Check if already booked
-    const [existingBooking] = await db
-      .select()
-      .from(trackBookings)
-      .where(and(eq(trackBookings.trackId, itemId), eq(trackBookings.userId, userId)));
     if (existingBooking?.paidAt) {
       throw new ApiError('ALREADY_BOOKED', 'Already booked this track', 400);
     }
@@ -739,6 +755,7 @@ export function registerPaymentRoutes(app: Hono) {
           successUrl: `${env.APP_BASE_URL}/payment/success`,
           failUrl: `${env.APP_BASE_URL}/payment/failed`,
           pendingUrl: `${env.APP_BASE_URL}/payment/pending`,
+          webhookUrl: env.API_BASE_URL ? `${env.API_BASE_URL}/api/payments/webhook` : undefined,
         },
         payload: { paymentId: payment.id },
       });
@@ -949,6 +966,20 @@ export function registerPaymentRoutes(app: Hono) {
   // POST /payments/webhook - Fawaterk webhook for server-to-server payment confirmation
   // This endpoint is NOT authenticated via session - uses HMAC signature verification
   app.post('/payments/webhook', async (c) => {
+    // IP-based rate limiting to prevent DoS attacks
+    const clientIp =
+      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+      c.req.header('x-real-ip') ||
+      'unknown';
+    const { allowed, resetAt } = paymentRateLimiter.consume(
+      `webhook:${clientIp}`,
+      WEBHOOK_RATE_LIMIT,
+    );
+    if (!allowed) {
+      c.header('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
+      return c.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, 429);
+    }
+
     const body = await c.req.json();
     const result = webhookSchema.safeParse(body);
     if (!result.success) {
@@ -973,6 +1004,12 @@ export function registerPaymentRoutes(app: Hono) {
     if (!payment) {
       console.error('[payments/webhook] Payment not found for invoice:', webhookData.invoice_id);
       return c.json({ error: { code: 'PAYMENT_NOT_FOUND' } }, 404);
+    }
+
+    // SECURITY: Verify invoice key matches stored value
+    if (payment.fawaterkInvoiceKey !== webhookData.invoice_key) {
+      console.error('[payments/webhook] Invoice key mismatch');
+      return c.json({ error: { code: 'INVALID_INVOICE_KEY' } }, 401);
     }
 
     // Skip if already processed

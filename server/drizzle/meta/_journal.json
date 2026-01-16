@@ -127,6 +127,13 @@
       "when": 1767734400000,
       "tag": "0017_track_bookings_payment_id",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1767820800000,
+      "tag": "0018_payment_expiration_index",
+      "breakpoints": true
     }
   ]
 }
