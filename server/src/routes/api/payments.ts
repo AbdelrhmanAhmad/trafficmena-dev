@@ -1,5 +1,5 @@
-import { and, desc, eq, gte, sql } from 'drizzle-orm';
-import type { Hono } from 'hono';
+import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import { env } from '../../config/env.js';
@@ -37,6 +37,7 @@ const checkoutSchema = z.object({
   itemType: z.enum(['event', 'track', 'subscription']),
   itemId: z.string().uuid().optional(),
   paymentMethodId: z.number().int().positive(),
+  forceNewCode: z.boolean().optional(),
 });
 
 const verifySchema = z.object({
@@ -215,7 +216,11 @@ async function calculatePrice(
   const [subscription] = subscriptionResult;
   const [settings] = settingsResult;
   const isSubscriber = !!subscription;
-  const discountPercent = settings?.subscriberDiscountPercent ?? 0;
+  const rawDiscount = settings?.subscriberDiscountPercent;
+  const discountPercent =
+    rawDiscount !== null && rawDiscount !== undefined && rawDiscount >= 1 && rawDiscount <= 99
+      ? rawDiscount
+      : 20;
 
   if (itemType === 'subscription') {
     if (isSubscriber) {
@@ -363,173 +368,168 @@ async function calculatePrice(
 }
 
 async function processSuccessfulPayment(paymentId: string) {
-  // CRITICAL: Entire payment processing must be in a single transaction
-  // to ensure atomicity - if fulfillment fails, payment stays pending
-  return db.transaction(async (tx) => {
-    // Step 1: Atomic lock and status update - only succeeds if status is still 'pending'
-    // This prevents race conditions between webhook and polling
-    const [updated] = await tx
-      .update(payments)
-      .set({ status: 'paid', paidAt: new Date() })
-      .where(and(eq(payments.id, paymentId), eq(payments.status, 'pending')))
-      .returning();
+  // CRITICAL: Fulfillment happens before status is marked paid so failures persist.
+  const result = await db.transaction(async (tx) => {
+    const [payment] = await tx
+      .select()
+      .from(payments)
+      .where(eq(payments.id, paymentId))
+      .for('update')
+      .limit(1);
 
-    if (!updated) {
-      // Either already processed or doesn't exist
-      const [existing] = await tx.select().from(payments).where(eq(payments.id, paymentId));
-      if (existing?.status === 'paid') {
-        return { alreadyProcessed: true };
-      }
+    if (!payment) {
       throw new Error('Payment not found or invalid state');
+    }
+
+    if (payment.status === 'paid') {
+      return { alreadyProcessed: true, status: 'paid' };
+    }
+
+    if (payment.status !== 'pending') {
+      return { status: payment.status };
     }
 
     let itemName = 'Purchase';
     const paidAt = new Date();
 
-    if (updated.itemType === 'event' && updated.itemId) {
-      // Check capacity AFTER payment is marked paid
-      const [event] = await tx.select().from(events).where(eq(events.id, updated.itemId));
-      if (!event) {
-        await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-        throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
-      }
-      itemName = event.title ?? 'Event';
+    try {
+      if (payment.itemType === 'event' && payment.itemId) {
+        const [event] = await tx.select().from(events).where(eq(events.id, payment.itemId));
+        if (!event) {
+          throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
+        }
+        itemName = event.title ?? 'Event';
 
-      const [trackEvent] = await tx
-        .select({
-          allowIndividualBooking: tracks.allowIndividualBooking,
-          singleBookingStart: tracks.singleBookingStart,
-          singleBookingEnd: tracks.singleBookingEnd,
-        })
-        .from(trackEvents)
-        .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
-        .where(eq(trackEvents.eventId, updated.itemId));
+        const [trackEvent] = await tx
+          .select({
+            allowIndividualBooking: tracks.allowIndividualBooking,
+            singleBookingStart: tracks.singleBookingStart,
+            singleBookingEnd: tracks.singleBookingEnd,
+          })
+          .from(trackEvents)
+          .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
+          .where(eq(trackEvents.eventId, payment.itemId));
 
-      if (trackEvent) {
-        if (!trackEvent.allowIndividualBooking) {
-          await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-          throw new ApiError(
-            'INDIVIDUAL_BOOKING_DISABLED',
-            'Individual event booking is not available for this track.',
-            400,
-          );
+        if (trackEvent) {
+          if (!trackEvent.allowIndividualBooking) {
+            throw new ApiError(
+              'INDIVIDUAL_BOOKING_DISABLED',
+              'Individual event booking is not available for this track.',
+              400,
+            );
+          }
+
+          if (!trackEvent.singleBookingStart || !trackEvent.singleBookingEnd) {
+            throw new ApiError(
+              'BOOKING_NOT_OPEN',
+              'Single event booking is not enabled for this track.',
+              400,
+            );
+          }
+
+          const now = new Date();
+          if (now < trackEvent.singleBookingStart) {
+            throw new ApiError('BOOKING_NOT_OPEN', 'Single booking period has not started.', 400);
+          }
+          if (now > trackEvent.singleBookingEnd) {
+            throw new ApiError('BOOKING_PERIOD_CLOSED', 'Single booking period has ended.', 400);
+          }
         }
 
-        if (!trackEvent.singleBookingStart || !trackEvent.singleBookingEnd) {
-          await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-          throw new ApiError(
-            'BOOKING_NOT_OPEN',
-            'Single event booking is not enabled for this track.',
-            400,
-          );
+        if (event.maxAttendees) {
+          const [countResult] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(eventAttendees)
+            .where(eq(eventAttendees.eventId, payment.itemId));
+
+          if (Number(countResult.count) >= event.maxAttendees) {
+            throw new ApiError('EVENT_FULL', 'Event full. Refund will be processed.', 409);
+          }
+        }
+
+        await tx
+          .insert(eventAttendees)
+          .values({
+            eventId: payment.itemId,
+            userId: payment.userId,
+            paidAt,
+            pricePaidCents: payment.amountCents,
+            paymentId: payment.id,
+          })
+          .onConflictDoNothing();
+      }
+
+      if (payment.itemType === 'track' && payment.itemId) {
+        const [track] = await tx
+          .select({
+            id: tracks.id,
+            title: tracks.title,
+            isPublished: tracks.isPublished,
+            trackBookingStart: tracks.trackBookingStart,
+            trackBookingEnd: tracks.trackBookingEnd,
+            maxTrackBookings: tracks.maxTrackBookings,
+          })
+          .from(tracks)
+          .where(eq(tracks.id, payment.itemId))
+          .for('update')
+          .limit(1);
+
+        if (!track || !track.isPublished) {
+          throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
+        }
+
+        itemName = track.title ?? 'Track';
+
+        if (track.trackBookingStart === null || track.trackBookingEnd === null) {
+          throw new ApiError('BOOKING_NOT_CONFIGURED', 'Track booking not configured.', 400);
         }
 
         const now = new Date();
-        if (now < trackEvent.singleBookingStart) {
-          await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-          throw new ApiError('BOOKING_NOT_OPEN', 'Single booking period has not started.', 400);
+        if (now < new Date(track.trackBookingStart)) {
+          throw new ApiError('BOOKING_NOT_OPEN', 'Track booking not yet open.', 400);
         }
-        if (now > trackEvent.singleBookingEnd) {
-          await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-          throw new ApiError('BOOKING_PERIOD_CLOSED', 'Single booking period has ended.', 400);
+        if (now > new Date(track.trackBookingEnd)) {
+          throw new ApiError('BOOKING_PERIOD_CLOSED', 'Track booking period closed.', 400);
         }
-      }
 
-      if (event.maxAttendees) {
-        const [countResult] = await tx
-          .select({ count: sql<number>`count(*)::int` })
-          .from(eventAttendees)
-          .where(eq(eventAttendees.eventId, updated.itemId));
-
-        if (Number(countResult.count) >= event.maxAttendees) {
-          // Mark payment as failed - needs manual refund
-          await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-          throw new ApiError('EVENT_FULL', 'Event full. Refund will be processed.', 409);
-        }
-      }
-
-      await tx
-        .insert(eventAttendees)
-        .values({
-          eventId: updated.itemId,
-          userId: updated.userId,
+        const bookingResult = await executeAtomicTrackBooking(tx, {
+          trackId: payment.itemId,
+          userId: payment.userId,
+          paymentId: payment.id,
+          pricePaidCents: payment.amountCents,
+          maxTrackBookings: track.maxTrackBookings,
           paidAt,
-          pricePaidCents: updated.amountCents,
-          paymentId: updated.id,
-        })
-        .onConflictDoNothing();
-    }
+        });
 
-    if (updated.itemType === 'track' && updated.itemId) {
-      const [track] = await tx
-        .select({
-          id: tracks.id,
-          title: tracks.title,
-          isPublished: tracks.isPublished,
-          trackBookingStart: tracks.trackBookingStart,
-          trackBookingEnd: tracks.trackBookingEnd,
-          maxTrackBookings: tracks.maxTrackBookings,
-        })
-        .from(tracks)
-        .where(eq(tracks.id, updated.itemId))
-        .for('update')
-        .limit(1);
-
-      if (!track || !track.isPublished) {
-        await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-        throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
-      }
-
-      itemName = track.title ?? 'Track';
-
-      if (track.trackBookingStart === null || track.trackBookingEnd === null) {
-        await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-        throw new ApiError('BOOKING_NOT_CONFIGURED', 'Track booking not configured.', 400);
-      }
-
-      const now = new Date();
-      if (now < new Date(track.trackBookingStart)) {
-        await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-        throw new ApiError('BOOKING_NOT_OPEN', 'Track booking not yet open.', 400);
-      }
-      if (now > new Date(track.trackBookingEnd)) {
-        await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-        throw new ApiError('BOOKING_PERIOD_CLOSED', 'Track booking period closed.', 400);
-      }
-
-      const bookingResult = await executeAtomicTrackBooking(tx, {
-        trackId: updated.itemId,
-        userId: updated.userId,
-        paymentId: updated.id,
-        pricePaidCents: updated.amountCents,
-        maxTrackBookings: track.maxTrackBookings,
-        paidAt,
-      });
-
-      // Validate and mark payment as failed if booking couldn't complete
-      try {
         validateTrackBookingResult(bookingResult, track.maxTrackBookings);
-      } catch (error) {
-        await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-        throw error;
       }
+
+      if (payment.itemType === 'subscription') {
+        itemName = 'Annual Subscription';
+
+        await tx.insert(subscriptions).values({
+          userId: payment.userId,
+          status: 'active',
+          startsAt: paidAt,
+          endsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
+          pricePaidCents: payment.amountCents,
+          paymentId: payment.id,
+        });
+      }
+
+      await tx.update(payments).set({ status: 'paid', paidAt }).where(eq(payments.id, paymentId));
+      return { success: true, itemName };
+    } catch (error) {
+      await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
+      return { error };
     }
-
-    if (updated.itemType === 'subscription') {
-      itemName = 'Annual Subscription';
-
-      await tx.insert(subscriptions).values({
-        userId: updated.userId,
-        status: 'active',
-        startsAt: paidAt,
-        endsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
-        pricePaidCents: updated.amountCents,
-        paymentId: updated.id,
-      });
-    }
-
-    return { success: true, itemName };
   });
+
+  if ('error' in result) {
+    throw result.error;
+  }
+
+  return result;
 }
 
 // --- Routes ---
@@ -587,7 +587,7 @@ export function registerPaymentRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: result.error.message } }, 400);
     }
 
-    const { itemType, itemId, paymentMethodId } = result.data;
+    const { itemType, itemId, paymentMethodId, forceNewCode } = result.data;
 
     // Validate subscription doesn't need itemId
     if (itemType === 'subscription' && itemId) {
@@ -615,40 +615,44 @@ export function registerPaymentRoutes(app: Hono) {
 
       // Note: Stale payment expiration moved to background job (see jobs/paymentExpiration.ts)
 
-      if (itemType === 'subscription') {
-        const [existingPending] = await db
-          .select()
-          .from(payments)
-          .where(
-            and(
+      const pendingWhere =
+        itemType === 'subscription'
+          ? and(
               eq(payments.userId, userId),
               eq(payments.itemType, 'subscription'),
               eq(payments.status, 'pending'),
-            ),
-          )
-          .orderBy(desc(payments.createdAt))
-          .limit(1);
-
-        if (existingPending) {
-          if (existingPending.fawaterkInvoiceId) {
-            return c.json(
-              {
-                error: {
-                  code: 'PENDING_PAYMENT',
-                  message: 'A pending subscription payment already exists.',
-                  paymentId: existingPending.id,
-                  invoiceId: existingPending.fawaterkInvoiceId,
-                },
-              },
-              409,
+            )
+          : and(
+              eq(payments.userId, userId),
+              eq(payments.itemType, itemType),
+              itemId ? eq(payments.itemId, itemId) : isNull(payments.itemId),
+              eq(payments.status, 'pending'),
             );
-          }
 
-          await db
-            .update(payments)
-            .set({ status: 'expired' })
-            .where(eq(payments.id, existingPending.id));
+      const [existingPending] = await db
+        .select()
+        .from(payments)
+        .where(pendingWhere)
+        .orderBy(desc(payments.createdAt))
+        .limit(1);
+
+      if (existingPending) {
+        const hasInvoice = Boolean(existingPending.fawaterkInvoiceId);
+        if (!forceNewCode && hasInvoice) {
+          return c.json(
+            {
+              error: {
+                code: 'PENDING_PAYMENT',
+                message: 'A pending payment already exists.',
+                paymentId: existingPending.id,
+                invoiceId: existingPending.fawaterkInvoiceId,
+              },
+            },
+            409,
+          );
         }
+
+        await db.update(payments).set({ status: 'expired' }).where(pendingWhere);
       }
 
       // Calculate price and validate
@@ -755,7 +759,9 @@ export function registerPaymentRoutes(app: Hono) {
           successUrl: `${env.APP_BASE_URL}/payment/success`,
           failUrl: `${env.APP_BASE_URL}/payment/failed`,
           pendingUrl: `${env.APP_BASE_URL}/payment/pending`,
-          webhookUrl: env.API_BASE_URL ? `${env.API_BASE_URL}/api/payments/webhook` : undefined,
+          webhookUrl: env.API_BASE_URL
+            ? `${env.API_BASE_URL}/api/payments/webhook_json`
+            : undefined,
         },
         payload: { paymentId: payment.id },
       });
@@ -775,6 +781,9 @@ export function registerPaymentRoutes(app: Hono) {
           invoiceId: invoiceResult.invoiceId,
           redirectUrl: invoiceResult.paymentData.redirectTo,
           fawryCode: invoiceResult.paymentData.fawryCode,
+          meezaReference: invoiceResult.paymentData.meezaReference,
+          amanCode: invoiceResult.paymentData.amanCode,
+          masaryCode: invoiceResult.paymentData.masaryCode,
         },
       });
     } catch (error) {
@@ -963,9 +972,9 @@ export function registerPaymentRoutes(app: Hono) {
     }
   });
 
-  // POST /payments/webhook - Fawaterk webhook for server-to-server payment confirmation
+  // POST /payments/webhook(_json) - Fawaterk webhook for server-to-server payment confirmation
   // This endpoint is NOT authenticated via session - uses HMAC signature verification
-  app.post('/payments/webhook', async (c) => {
+  const handleWebhook = async (c: Context) => {
     // IP-based rate limiting to prevent DoS attacks
     const clientIp =
       c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -1037,5 +1046,8 @@ export function registerPaymentRoutes(app: Hono) {
       console.error('[payments/webhook] Processing failed:', error);
       return c.json({ error: { code: 'PROCESSING_FAILED' } }, 500);
     }
-  });
+  };
+
+  app.post('/payments/webhook', handleWebhook);
+  app.post('/payments/webhook_json', handleWebhook);
 }

@@ -10,10 +10,17 @@ import { requireAdmin, requireManager } from './utils.js';
 // Rate limit for public subscription info endpoint: 60 requests per minute per IP
 const PUBLIC_INFO_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 
+const DEFAULT_SUBSCRIBER_DISCOUNT = 20;
+
 const updateSettingsSchema = z.object({
   annualSubscriptionPriceCents: z.number().int().min(0).nullable().optional(),
-  subscriberDiscountPercent: z.number().int().min(0).max(100).nullable().optional(),
+  subscriberDiscountPercent: z.number().int().min(1).max(99).nullable().optional(),
 });
+
+const getEffectiveDiscountPercent = (value: number | null | undefined) =>
+  value !== null && value !== undefined && value >= 1 && value <= 99
+    ? value
+    : DEFAULT_SUBSCRIBER_DISCOUNT;
 
 export function registerSubscriptionRoutes(app: Hono) {
   // GET /subscriptions/current - Get user's active subscription
@@ -69,7 +76,7 @@ export function registerSubscriptionRoutes(app: Hono) {
     return c.json({
       data: {
         annualSubscriptionPriceCents: settings?.annualSubscriptionPriceCents ?? null,
-        subscriberDiscountPercent: settings?.subscriberDiscountPercent ?? 20,
+        subscriberDiscountPercent: getEffectiveDiscountPercent(settings?.subscriberDiscountPercent),
       },
     });
   });
@@ -113,7 +120,7 @@ export function registerSubscriptionRoutes(app: Hono) {
     return c.json({
       data: {
         annualSubscriptionPriceCents: updated?.annualSubscriptionPriceCents ?? null,
-        subscriberDiscountPercent: updated?.subscriberDiscountPercent ?? 20,
+        subscriberDiscountPercent: getEffectiveDiscountPercent(updated?.subscriberDiscountPercent),
       },
     });
   });
@@ -150,11 +157,11 @@ export function registerSubscriptionRoutes(app: Hono) {
         priceEgp: settings?.annualSubscriptionPriceCents
           ? settings.annualSubscriptionPriceCents / 100
           : null,
-        discountPercent: settings?.subscriberDiscountPercent ?? 20,
+        discountPercent: getEffectiveDiscountPercent(settings?.subscriberDiscountPercent),
         benefits: [
           'Free access to all online events',
-          `${settings?.subscriberDiscountPercent ?? 20}% discount on offline events`,
-          `${settings?.subscriberDiscountPercent ?? 20}% discount on track bundles`,
+          `${getEffectiveDiscountPercent(settings?.subscriberDiscountPercent)}% discount on offline events`,
+          `${getEffectiveDiscountPercent(settings?.subscriberDiscountPercent)}% discount on track bundles`,
           'Full access to the knowledge library',
         ],
       },

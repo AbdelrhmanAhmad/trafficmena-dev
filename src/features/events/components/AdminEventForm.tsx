@@ -58,6 +58,14 @@ const eventFormSchema = z.object({
     ),
   imageUrl: z.string().trim().max(500).optional(),
   tags: z.string().optional(),
+  priceEgp: z
+    .string()
+    .optional()
+    .refine(
+      (value) =>
+        !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
+      'Price must be between 0 and 100,000 EGP.',
+    ),
 });
 
 export type AdminEventFormValues = z.infer<typeof eventFormSchema>;
@@ -134,6 +142,7 @@ export function AdminEventForm({
     maxAttendees: defaultCapacity,
     imageUrl: event?.image_url ?? '',
     tags: event?.tags?.length ? event.tags.join(', ') : '',
+    priceEgp: event?.price_in_cents ? String(event.price_in_cents / 100) : '',
   };
 
   const form = useForm<AdminEventFormValues>({
@@ -206,6 +215,7 @@ export function AdminEventForm({
             .map((tag) => tag.toLowerCase())
             .slice(0, 12)
         : undefined,
+      priceInCents: formValues.priceEgp ? Math.round(Number(formValues.priceEgp) * 100) : null,
     };
 
     await onSubmit(payload);
@@ -359,6 +369,24 @@ export function AdminEventForm({
                 accept="image/*"
                 className="hidden"
                 onChange={handleImageFileChange}
+              />
+
+              <FormField
+                control={form.control}
+                name="priceEgp"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price (EGP)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0 for free" inputMode="decimal" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Leave empty or set to 0 for free events. Subscribers get discounts on paid
+                      events.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
 
               <FormField

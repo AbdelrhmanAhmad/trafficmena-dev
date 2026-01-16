@@ -22,6 +22,7 @@ export interface ApiTrack {
   bookingsCount?: number;
   trackBookingSpotsRemaining?: number | null;
   userHasBooked?: boolean;
+  priceInCents?: number | null;
 }
 
 type ApiTrackEvent = {
@@ -59,6 +60,7 @@ export interface TrackRecord {
   bookings_count: number;
   track_booking_spots_remaining: number | null;
   user_has_booked: boolean;
+  price_in_cents: number | null;
 }
 
 export interface TrackBookingSuccess {
@@ -104,6 +106,7 @@ const mapTrack = (api: ApiTrack): TrackRecord => ({
   bookings_count: api.bookingsCount ?? 0,
   track_booking_spots_remaining: api.trackBookingSpotsRemaining ?? null,
   user_has_booked: api.userHasBooked ?? false,
+  price_in_cents: api.priceInCents ?? null,
 });
 
 const mapTrackEvent = (event: ApiTrackEvent): TrackEventRecord => ({
@@ -141,6 +144,7 @@ export type CreateTrackPayload = {
   singleBookingEnd?: string | null;
   allowIndividualBooking?: boolean;
   maxTrackBookings?: number | null;
+  priceInCents?: number | null;
 };
 
 export type UpdateTrackPayload = Partial<CreateTrackPayload> & {
@@ -268,6 +272,7 @@ export interface PublicTrackRecord {
   track_booking_start: Date | null;
   track_booking_end: Date | null;
   spots_remaining: number | null;
+  price_in_cents: number | null;
 }
 
 export interface PublicTrackDetailRecord {
@@ -284,6 +289,7 @@ export interface PublicTrackDetailRecord {
   spots_remaining: number | null;
   event_count: number;
   user_has_booked: boolean;
+  price_in_cents: number | null;
 }
 
 export interface PublicTrackEventRecord {
@@ -316,6 +322,7 @@ export async function fetchPublicTracks(
     trackBookingStart: string | null;
     trackBookingEnd: string | null;
     spotsRemaining: number | null;
+    priceInCents: number | null;
   };
 
   const data = await fetchJson<{
@@ -337,6 +344,7 @@ export async function fetchPublicTracks(
       track_booking_start: t.trackBookingStart ? new Date(t.trackBookingStart) : null,
       track_booking_end: t.trackBookingEnd ? new Date(t.trackBookingEnd) : null,
       spots_remaining: t.spotsRemaining,
+      price_in_cents: t.priceInCents ?? null,
     })),
     pagination: data.pagination,
   };
@@ -361,6 +369,7 @@ export async function fetchPublicTrackById(
       spots_remaining: number | null;
       event_count: number;
       user_has_booked: boolean;
+      price_in_cents: number | null;
     };
     events: PublicTrackEventRecord[];
   }>(`${API_BASE}/tracks/${id}/public`, {

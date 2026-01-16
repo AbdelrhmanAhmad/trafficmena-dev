@@ -42,7 +42,7 @@ export const inviteSessionPlugin = (): BetterAuthPlugin => ({
           });
         }
 
-        const session = await ctx.context.internalAdapter.createSession(userId, ctx);
+        const session = await ctx.context.internalAdapter.createSession(userId, false);
         if (!session) {
           throw new APIError('INTERNAL_SERVER_ERROR', {
             message: 'Unable to create session.',

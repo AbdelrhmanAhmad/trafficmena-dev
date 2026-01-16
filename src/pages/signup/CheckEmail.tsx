@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
+import { getPostSignupRedirectUrl } from '@/shared/utils/postSignupRedirect';
 import { persistSignupProfile } from './persistProfile';
 
 const CheckEmail: React.FC = () => {
@@ -61,7 +62,9 @@ const CheckEmail: React.FC = () => {
         title: 'Welcome to TrafficMENA',
         description: 'You are now signed in.',
       });
-      navigate('/dashboard');
+      // Use centralized redirect logic (subscription > event > dashboard)
+      const redirectUrl = getPostSignupRedirectUrl();
+      navigate(redirectUrl);
     } catch (error) {
       const appError = handleError(error);
       toast({

@@ -4,6 +4,7 @@ import type React from 'react';
 import { fetchEvents } from '@/app/api/events';
 import { fetchLibraryAssets } from '@/app/api/library';
 import AppLayout from '@/shared/components/layout/AppLayout';
+import { SubscriptionStatusBadge } from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -73,6 +74,9 @@ const WelcomeDashboard: React.FC = () => {
               Glad to have you here. Explore upcoming events and dive into the knowledge library to
               sharpen your marketing edge across the MENA region.
             </p>
+            <div className="flex justify-center pt-2">
+              <SubscriptionStatusBadge />
+            </div>
           </div>
         </section>
 

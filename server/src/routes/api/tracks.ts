@@ -24,6 +24,14 @@ const listQuerySchema = z.object({
   search: z.string().max(200).optional(),
 });
 
+const priceInCentsSchema = z
+  .union([
+    z.coerce.number().int().min(0, 'Price cannot be negative.').max(10000000, 'Price too large.'),
+    z.null(),
+  ])
+  .optional()
+  .transform((value) => (value === undefined ? undefined : value));
+
 const createTrackSchema = z.object({
   title: z.string().trim().min(3, 'Title is required.').max(180),
   description: z.union([z.string().trim().max(4000), z.null()]).optional(),
@@ -35,6 +43,7 @@ const createTrackSchema = z.object({
   singleBookingEnd: z.coerce.date().nullable().optional(),
   allowIndividualBooking: z.boolean().default(false),
   maxTrackBookings: z.number().int().positive().nullable().optional(),
+  priceInCents: priceInCentsSchema,
 });
 
 const updateTrackSchema = z
@@ -50,6 +59,7 @@ const updateTrackSchema = z
     singleBookingEnd: z.coerce.date().nullable().optional(),
     allowIndividualBooking: z.boolean().optional(),
     maxTrackBookings: z.number().int().positive().nullable().optional(),
+    priceInCents: priceInCentsSchema,
   })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
@@ -224,6 +234,7 @@ export function registerTrackRoutes(app: Hono) {
         trackBookingStart: tracks.trackBookingStart,
         trackBookingEnd: tracks.trackBookingEnd,
         maxTrackBookings: tracks.maxTrackBookings,
+        priceInCents: tracks.priceInCents,
       })
       .from(tracks)
       .where(eq(tracks.isPublished, true))
@@ -286,6 +297,7 @@ export function registerTrackRoutes(app: Hono) {
         trackBookingStart: t.trackBookingStart,
         trackBookingEnd: t.trackBookingEnd,
         spotsRemaining: t.maxTrackBookings !== null ? t.maxTrackBookings - currentBookings : null,
+        priceInCents: t.priceInCents,
       };
     });
 
@@ -325,6 +337,7 @@ export function registerTrackRoutes(app: Hono) {
         singleBookingEnd: tracks.singleBookingEnd,
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
+        priceInCents: tracks.priceInCents,
       })
       .from(tracks)
       .where(eq(tracks.id, id))
@@ -421,6 +434,7 @@ export function registerTrackRoutes(app: Hono) {
             : null,
         event_count: trackEvents_formatted.length,
         user_has_booked: userHasBooked,
+        price_in_cents: track.priceInCents,
       },
       events: trackEvents_formatted,
     });
@@ -481,6 +495,7 @@ export function registerTrackRoutes(app: Hono) {
         singleBookingEnd: tracks.singleBookingEnd,
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
+        priceInCents: tracks.priceInCents,
       })
       .from(tracks)
       .where(whereClause)
@@ -549,6 +564,7 @@ export function registerTrackRoutes(app: Hono) {
         singleBookingEnd: tracks.singleBookingEnd,
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
+        priceInCents: tracks.priceInCents,
       })
       .from(tracks)
       .where(eq(tracks.id, id))
@@ -758,6 +774,7 @@ export function registerTrackRoutes(app: Hono) {
               singleBookingEnd: payload.singleBookingEnd ?? null,
               allowIndividualBooking: payload.allowIndividualBooking ?? false,
               maxTrackBookings: payload.maxTrackBookings ?? null,
+              priceInCents: payload.priceInCents ?? null,
             })
             .returning();
 
@@ -821,6 +838,8 @@ export function registerTrackRoutes(app: Hono) {
           updateValues.allowIndividualBooking = updates.allowIndividualBooking;
         if (updates.maxTrackBookings !== undefined)
           updateValues.maxTrackBookings = updates.maxTrackBookings ?? null;
+        if (updates.priceInCents !== undefined)
+          updateValues.priceInCents = updates.priceInCents ?? null;
 
         const [currentTrack] = await db.select().from(tracks).where(eq(tracks.id, id)).limit(1);
         if (!currentTrack) {
@@ -1171,6 +1190,7 @@ export function registerTrackRoutes(app: Hono) {
               trackBookingEnd: tracks.trackBookingEnd,
               maxTrackBookings: tracks.maxTrackBookings,
               isPublished: tracks.isPublished,
+              priceInCents: tracks.priceInCents,
             })
             .from(tracks)
             .where(eq(tracks.id, trackId))
@@ -1179,6 +1199,14 @@ export function registerTrackRoutes(app: Hono) {
 
           if (!track || !track.isPublished) {
             throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
+          }
+
+          if (track.priceInCents && track.priceInCents > 0) {
+            throw new ApiError(
+              'PAYMENT_REQUIRED',
+              'This track requires payment. Use the checkout flow.',
+              402,
+            );
           }
 
           if (track.trackBookingStart === null || track.trackBookingEnd === null) {

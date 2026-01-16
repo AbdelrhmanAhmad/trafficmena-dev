@@ -1,11 +1,14 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
 import { Calendar, CheckCircle, Clock, MapPin, Sparkles, Users, Video } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { usePricePreview } from '@/app/hooks/usePayments';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
+import { PaymentCheckoutDialog, PriceDisplayCard } from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -85,11 +88,19 @@ const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
 const EventDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const { data: event, isLoading, error } = useEvent(id);
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { bookEvent, cancelBooking, isBooking, isCancelling } = useEventBooking();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+
+  // Get price preview for logged-in users
+  const { data: pricePreview } = usePricePreview(user && id ? 'event' : undefined, id);
+
+  const isPaidEvent = !!(event?.price_in_cents && event.price_in_cents > 0);
+  const needsPayment = isPaidEvent && (!pricePreview || pricePreview.amountCents > 0);
 
   useEffect(() => {
     if (!id || !event) return;
@@ -136,6 +147,13 @@ const EventDetail: React.FC = () => {
       return;
     }
 
+    // If event requires payment, open payment dialog
+    if (needsPayment) {
+      setShowPaymentDialog(true);
+      return;
+    }
+
+    // Free event or subscriber with free access - register directly
     bookEvent({ event_id: id });
   };
 
@@ -144,8 +162,14 @@ const EventDetail: React.FC = () => {
     cancelBooking({ eventId: id });
   };
 
-  const sanitizedDescription = event?.description ? DOMPurify.sanitize(event.description) : null;
-  const summaryText = event?.description ? stripHtmlTags(event.description) : '';
+  const sanitizedDescription = useMemo(
+    () => (event?.description ? DOMPurify.sanitize(event.description) : null),
+    [event?.description],
+  );
+  const summaryText = useMemo(
+    () => (event?.description ? stripHtmlTags(event.description) : ''),
+    [event?.description],
+  );
   const eventImageUrl =
     event?.image_url && event.image_url.trim().length > 0
       ? event.image_url.trim()
@@ -298,6 +322,15 @@ const EventDetail: React.FC = () => {
                             </p>
                           </div>
                         </div>
+
+                        {/* Price display */}
+                        {isPaidEvent && (
+                          <PriceDisplayCard
+                            itemType="event"
+                            basePriceCents={event.price_in_cents}
+                            pricePreview={pricePreview}
+                          />
+                        )}
                       </div>
 
                       {(() => {
@@ -444,6 +477,22 @@ const EventDetail: React.FC = () => {
           </div>
         )}
       </DataLoader>
+
+      {/* Payment dialog for paid events */}
+      {event && id && (
+        <PaymentCheckoutDialog
+          open={showPaymentDialog}
+          onOpenChange={setShowPaymentDialog}
+          itemType="event"
+          itemId={id}
+          itemName={event.title}
+          onSuccess={() => {
+            // Refresh the event data after successful payment
+            queryClient.invalidateQueries({ queryKey: ['event', id] });
+            setShowPaymentDialog(false);
+          }}
+        />
+      )}
     </Layout>
   );
 };

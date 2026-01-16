@@ -234,6 +234,48 @@ This project uses OpenSpec for change proposals. When working on new features, b
 *   **User Management:** Service layer ready, UI needs updates.
 *   **Products/Subscriptions:** **REMOVED** from MVP scope.
 
+## AI Agent Operational Guidelines
+
+### Agent Behavior Principles
+- Prefer end-to-end verification; if blocked, state what's missing
+- New dependencies: quick health check (recent releases/commits, community adoption)
+- Web research: search early; quote exact errors; prefer 2024-2025 sources
+- Keep files <~500 LOC; split and refactor when exceeded
+- Use Conventional Commits format (`feat|fix|refactor|build|ci|chore|docs|style|perf|test`)
+- Add regression tests when fixing bugs (when it fits the scope)
+- Use `trash` for file deletions (never `rm` directly)
+- Style: telegraph mode for AGENTS.md updates; minimize token usage
+
+### Git Safety Rules
+- Safe by default: `git status/diff/log` are always ok; push only when user requests
+- `git checkout` only for PR review or explicit user request
+- Branch changes require user consent
+- Destructive operations forbidden unless explicitly requested (`reset --hard`, `clean`, `rm`)
+- Don't delete/rename unexpected files; stop and ask
+- No repo-wide search-and-replace scripts; keep edits small and reviewable
+- Avoid manual `git stash` (auto-stash during pull/rebase is fine)
+- No commit amend unless explicitly asked
+- Multi-agent awareness: check `git status/diff` before edits; ship small commits
+
+### Critical Thinking Protocol
+- Fix root cause, not symptoms (no band-aids)
+- Unsure: read more code; if still stuck, ask with short options
+- Conflicts: call out explicitly; pick the safer path
+- Unrecognized changes: assume other agent made them; focus on your changes; if blocking, stop and ask
+- Leave breadcrumb notes in conversation thread
+
+### Documentation Practices
+- Read relevant docs before coding
+- Follow doc links until the domain makes full sense
+- Keep notes short; update docs when behavior/API changes (no ship without updated docs)
+
+### Quality Gates
+- Use repo's package manager/runtime; no swaps without user approval
+- Before handoff: run full gate (lint, typecheck, tests, docs)
+- CI failures: view, fix, push, repeat until green
+- Keep work observable (logs, console output, tail commands)
+
+
 ## Ultracite Enforcement Rules
 
 ### Accessibility (a11y)
