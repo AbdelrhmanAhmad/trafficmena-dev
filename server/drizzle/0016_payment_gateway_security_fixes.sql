@@ -17,6 +17,11 @@ ALTER TABLE "subscriptions"
 ADD CONSTRAINT "subscriptions_price_positive" CHECK (price_paid_cents >= 0);
 
 -- Add CHECK constraint for valid discount percentage on platform_settings
+UPDATE "platform_settings"
+SET "subscriber_discount_percent" = 20
+WHERE "subscriber_discount_percent" IS NOT NULL
+  AND ("subscriber_discount_percent" < 1 OR "subscriber_discount_percent" > 99);
+
 ALTER TABLE "platform_settings"
 ADD CONSTRAINT "platform_settings_discount_valid"
 CHECK (subscriber_discount_percent IS NULL OR (subscriber_discount_percent >= 1 AND subscriber_discount_percent <= 99));

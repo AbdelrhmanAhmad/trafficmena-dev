@@ -261,31 +261,25 @@ const App = () => {
                 <Route
                   path="/payment/success"
                   element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <PaymentSuccessPage />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <PaymentSuccessPage />
+                    </ErrorBoundary>
                   }
                 />
                 <Route
                   path="/payment/failed"
                   element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <PaymentFailedPage />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <PaymentFailedPage />
+                    </ErrorBoundary>
                   }
                 />
                 <Route
                   path="/payment/pending"
                   element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <PaymentPendingPage />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <PaymentPendingPage />
+                    </ErrorBoundary>
                   }
                 />
                 <Route

@@ -1,9 +1,10 @@
-import { and, count, desc, eq, gte, ilike, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, gte, ilike, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  eventReservations,
   events,
   libraryAssets,
   profiles,
@@ -701,7 +702,20 @@ export function registerEventRoutes(app: Hono) {
             .from(eventAttendees)
             .where(eq(eventAttendees.eventId, eventId));
 
-          if (event.maxAttendees !== null && Number(currentAttendees) >= event.maxAttendees) {
+          const [{ count: reservedCount }] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(eventReservations)
+            .where(
+              and(
+                eq(eventReservations.eventId, eventId),
+                gt(eventReservations.expiresAt, new Date()),
+              ),
+            );
+
+          if (
+            event.maxAttendees !== null &&
+            Number(currentAttendees) + Number(reservedCount) >= event.maxAttendees
+          ) {
             throw new ApiError('EVENT_FULL', 'Event capacity reached.', 409);
           }
 

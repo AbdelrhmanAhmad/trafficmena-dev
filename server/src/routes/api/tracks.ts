@@ -1239,6 +1239,12 @@ export function registerTrackRoutes(app: Hono) {
           WITH track_booking_check AS (
             SELECT COUNT(*) AS current_count FROM track_bookings WHERE track_id = ${trackId}
           ),
+          track_reservation_check AS (
+            SELECT COUNT(*) AS reservation_count
+            FROM track_reservations
+            WHERE track_id = ${trackId}
+              AND expires_at > NOW()
+          ),
           locked_events AS (
             SELECT e.id, e.max_attendees
             FROM track_events te
@@ -1258,11 +1264,19 @@ export function registerTrackRoutes(app: Hono) {
             WHERE event_id IN (SELECT id FROM locked_events)
             GROUP BY event_id
           ),
+          reservation_counts AS (
+            SELECT event_id, COUNT(*) AS reservation_count
+            FROM event_reservations
+            WHERE event_id IN (SELECT id FROM locked_events)
+              AND expires_at > NOW()
+            GROUP BY event_id
+          ),
           eligible AS (
             SELECT le.id AS event_id
             FROM locked_events le
             LEFT JOIN attendee_counts ac ON ac.event_id = le.id
-            WHERE COALESCE(ac.attendee_count, 0) < le.max_attendees
+            LEFT JOIN reservation_counts rc ON rc.event_id = le.id
+            WHERE COALESCE(ac.attendee_count, 0) + COALESCE(rc.reservation_count, 0) < le.max_attendees
           ),
           to_insert AS (
             SELECT event_id
@@ -1277,7 +1291,9 @@ export function registerTrackRoutes(app: Hono) {
           inserted_booking AS (
             INSERT INTO track_bookings (track_id, user_id)
             SELECT ${trackId}, ${userId}
-            WHERE (SELECT current_count FROM track_booking_check) < ${track.maxTrackBookings ?? 2147483647}
+            WHERE (SELECT current_count FROM track_booking_check)
+              + (SELECT reservation_count FROM track_reservation_check)
+              < ${track.maxTrackBookings ?? 2147483647}
               AND (SELECT COUNT(*) FROM locked_events) > 0
               AND (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) = 0
               AND (SELECT COUNT(*) FROM existing) + (SELECT COUNT(*) FROM inserted_attendees) >= (SELECT COUNT(*) FROM locked_events)
@@ -1289,6 +1305,7 @@ export function registerTrackRoutes(app: Hono) {
             (SELECT COUNT(*) FROM inserted_attendees) AS inserted_count,
             (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) AS null_capacity_count,
             (SELECT current_count FROM track_booking_check) AS current_bookings,
+            (SELECT reservation_count FROM track_reservation_check) AS reserved_bookings,
             (SELECT COUNT(*) FROM inserted_booking) AS booking_inserted
         `);
 
@@ -1298,6 +1315,7 @@ export function registerTrackRoutes(app: Hono) {
             inserted_count: string;
             null_capacity_count: string;
             current_bookings: string;
+            reserved_bookings: string;
             booking_inserted: string;
           };
           const totalEvents = Number(row.total_events);
@@ -1305,6 +1323,7 @@ export function registerTrackRoutes(app: Hono) {
           const insertedCount = Number(row.inserted_count);
           const nullCapacityCount = Number(row.null_capacity_count);
           const currentBookings = Number(row.current_bookings);
+          const reservedBookings = Number(row.reserved_bookings);
           const bookingInserted = Number(row.booking_inserted);
 
           if (totalEvents === 0) {
@@ -1322,7 +1341,10 @@ export function registerTrackRoutes(app: Hono) {
           }
           if (bookingInserted === 0) {
             // Track capacity was reached between checks (race condition prevented)
-            if (track.maxTrackBookings !== null && currentBookings >= track.maxTrackBookings) {
+            if (
+              track.maxTrackBookings !== null &&
+              currentBookings + reservedBookings >= track.maxTrackBookings
+            ) {
               throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
             }
           }

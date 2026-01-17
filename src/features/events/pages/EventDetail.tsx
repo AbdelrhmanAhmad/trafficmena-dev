@@ -100,7 +100,8 @@ const EventDetail: React.FC = () => {
   const { data: pricePreview } = usePricePreview(user && id ? 'event' : undefined, id);
 
   const isPaidEvent = !!(event?.price_in_cents && event.price_in_cents > 0);
-  const needsPayment = isPaidEvent && (!pricePreview || pricePreview.amountCents > 0);
+  const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
+  const needsPayment = isPaidEvent && !(pricePreview?.isSubscriber && isOnlineEvent);
 
   useEffect(() => {
     if (!id || !event) return;

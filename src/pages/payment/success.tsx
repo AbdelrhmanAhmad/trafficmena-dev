@@ -2,7 +2,7 @@ import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useVerifyPayment } from '@/app/hooks/usePayments';
-import AppLayout from '@/shared/components/layout/AppLayout';
+import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -11,27 +11,32 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui/card';
+import { useAuth } from '@/shared/context/AuthContext';
 
 export default function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
   const invoiceId = searchParams.get('invoice_id');
+  const { user } = useAuth();
   const verifyPayment = useVerifyPayment();
   const [verificationAttempted, setVerificationAttempted] = useState(false);
 
   useEffect(() => {
-    if (invoiceId && !verificationAttempted) {
+    if (invoiceId && user && !verificationAttempted) {
       setVerificationAttempted(true);
       verifyPayment.mutate({ invoiceId: Number(invoiceId) });
     }
-  }, [invoiceId, verificationAttempted, verifyPayment]);
+  }, [invoiceId, user, verificationAttempted, verifyPayment]);
 
   const isVerifying = verifyPayment.isPending;
+  const hasInvoice = Boolean(invoiceId);
+  const canVerify = Boolean(user && invoiceId);
   const isSuccess = verifyPayment.data?.status === 'paid';
-  const isError =
-    verifyPayment.isError || (verifyPayment.data && verifyPayment.data.status !== 'paid');
+  const isError = canVerify
+    ? verifyPayment.isError || (verifyPayment.data && verifyPayment.data.status !== 'paid')
+    : false;
 
   return (
-    <AppLayout>
+    <Layout>
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <Card className="w-full max-w-md rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <CardHeader className="text-center">
@@ -72,7 +77,17 @@ export default function PaymentSuccessPage() {
               </>
             )}
 
-            {!invoiceId && !isVerifying && (
+            {hasInvoice && !canVerify && (
+              <>
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                  <CheckCircle2 className="h-10 w-10 text-amber-600" />
+                </div>
+                <CardTitle className="text-2xl text-amber-700">Payment Received</CardTitle>
+                <CardDescription>Sign in to verify your payment status.</CardDescription>
+              </>
+            )}
+
+            {!hasInvoice && !isVerifying && (
               <>
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                   <CheckCircle2 className="h-10 w-10 text-green-600" />
@@ -94,6 +109,6 @@ export default function PaymentSuccessPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </Layout>
   );
 }

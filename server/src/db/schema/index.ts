@@ -107,6 +107,33 @@ export const eventAttendees = pgTable(
   }),
 );
 
+export const eventReservations = pgTable(
+  'event_reservations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    eventId: uuid('event_id')
+      .references(() => events.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    paymentId: uuid('payment_id')
+      .references(() => payments.id, { onDelete: 'cascade' })
+      .notNull(),
+    reservedAt: timestamp('reserved_at', { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    eventIdx: index('event_reservations_event_idx').on(table.eventId),
+    eventUserUnique: uniqueIndex('event_reservations_event_user_unique').on(
+      table.eventId,
+      table.userId,
+    ),
+    paymentIdx: index('event_reservations_payment_idx').on(table.paymentId),
+    expiresIdx: index('event_reservations_expires_idx').on(table.expiresAt),
+  }),
+);
+
 export const libraryAssets = pgTable(
   'library_assets',
   {
@@ -205,6 +232,33 @@ export const trackBookings = pgTable(
       table.userId,
     ),
     paymentIdx: index('track_bookings_payment_id_idx').on(table.paymentId),
+  }),
+);
+
+export const trackReservations = pgTable(
+  'track_reservations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    trackId: uuid('track_id')
+      .references(() => tracks.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    paymentId: uuid('payment_id')
+      .references(() => payments.id, { onDelete: 'cascade' })
+      .notNull(),
+    reservedAt: timestamp('reserved_at', { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    trackIdx: index('track_reservations_track_idx').on(table.trackId),
+    trackUserUnique: uniqueIndex('track_reservations_track_user_unique').on(
+      table.trackId,
+      table.userId,
+    ),
+    paymentUnique: uniqueIndex('track_reservations_payment_unique').on(table.paymentId),
+    expiresIdx: index('track_reservations_expires_idx').on(table.expiresAt),
   }),
 );
 

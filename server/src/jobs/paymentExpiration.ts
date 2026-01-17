@@ -1,6 +1,6 @@
-import { and, eq, lte } from 'drizzle-orm';
+import { and, eq, inArray, lte } from 'drizzle-orm';
 import { db } from '../db/client.js';
-import { payments } from '../db/schema/index.js';
+import { eventReservations, payments, trackReservations } from '../db/schema/index.js';
 
 // 72 hours expiry (matching the constant in payments.ts)
 const PENDING_PAYMENT_EXPIRY_MS = 72 * 60 * 60 * 1000;
@@ -22,6 +22,13 @@ export async function expireAllStalePendingPayments(): Promise<number> {
     .returning({ id: payments.id });
 
   if (result.length > 0) {
+    const expiredPaymentIds = result.map((row) => row.id);
+    await db
+      .delete(eventReservations)
+      .where(inArray(eventReservations.paymentId, expiredPaymentIds));
+    await db
+      .delete(trackReservations)
+      .where(inArray(trackReservations.paymentId, expiredPaymentIds));
     console.log(`[payment-expiration] Expired ${result.length} stale pending payments`);
   }
 

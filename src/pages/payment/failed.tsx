@@ -1,6 +1,6 @@
 import { XCircle } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import AppLayout from '@/shared/components/layout/AppLayout';
+import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -15,7 +15,7 @@ export default function PaymentFailedPage() {
   const errorMessage = searchParams.get('error');
 
   return (
-    <AppLayout>
+    <Layout>
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <Card className="w-full max-w-md rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <CardHeader className="text-center">
@@ -49,6 +49,6 @@ export default function PaymentFailedPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </Layout>
   );
 }

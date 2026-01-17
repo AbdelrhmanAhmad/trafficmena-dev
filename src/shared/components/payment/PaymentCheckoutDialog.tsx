@@ -43,10 +43,16 @@ export function PaymentCheckoutDialog({
     invoiceId?: number;
     fawryCode?: string;
     meezaReference?: number;
+    meezaQrCode?: string;
     amanCode?: string;
     masaryCode?: string;
     paymentMethodId?: number | null;
   }) => {
+    const maxQrLength = 1024;
+    const safeMeezaQr =
+      payload.meezaQrCode && payload.meezaQrCode.length <= maxQrLength
+        ? payload.meezaQrCode
+        : undefined;
     const params = new URLSearchParams();
     if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
     if (payload.fawryCode) params.set('fawry_code', payload.fawryCode);
@@ -59,7 +65,9 @@ export function PaymentCheckoutDialog({
       params.set('method_id', String(payload.paymentMethodId));
     }
     const query = params.toString();
-    navigate(`/payment/pending${query ? `?${query}` : ''}`);
+    navigate(`/payment/pending${query ? `?${query}` : ''}`, {
+      state: safeMeezaQr ? { meezaQrCode: safeMeezaQr } : undefined,
+    });
   };
 
   const handleCheckout = async () => {
@@ -98,6 +106,7 @@ export function PaymentCheckoutDialog({
         result.invoiceId ||
         result.fawryCode ||
         result.meezaReference ||
+        result.meezaQrCode ||
         result.amanCode ||
         result.masaryCode
       ) {
@@ -105,6 +114,7 @@ export function PaymentCheckoutDialog({
           invoiceId: result.invoiceId,
           fawryCode: result.fawryCode,
           meezaReference: result.meezaReference,
+          meezaQrCode: result.meezaQrCode,
           amanCode: result.amanCode,
           masaryCode: result.masaryCode,
           paymentMethodId: selectedMethodId,
@@ -115,13 +125,15 @@ export function PaymentCheckoutDialog({
         const invoiceId = error.extra?.invoiceId as number | undefined;
         const fawryCode = error.extra?.fawryCode as string | undefined;
         const meezaReference = error.extra?.meezaReference as number | undefined;
+        const meezaQrCode = error.extra?.meezaQrCode as string | undefined;
         const amanCode = error.extra?.amanCode as string | undefined;
         const masaryCode = error.extra?.masaryCode as string | undefined;
-        if (invoiceId || fawryCode || meezaReference || amanCode || masaryCode) {
+        if (invoiceId || fawryCode || meezaReference || meezaQrCode || amanCode || masaryCode) {
           goToPending({
             invoiceId,
             fawryCode,
             meezaReference,
+            meezaQrCode,
             amanCode,
             masaryCode,
             paymentMethodId: selectedMethodId,

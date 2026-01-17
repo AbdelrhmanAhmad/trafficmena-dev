@@ -113,7 +113,7 @@ const TrackDetail: React.FC = () => {
   const { data: pricePreview } = usePricePreview(user && id ? 'track' : undefined, id);
 
   const isPaidTrack = !!(track?.price_in_cents && track.price_in_cents > 0);
-  const needsPayment = isPaidTrack && (!pricePreview || pricePreview.amountCents > 0);
+  const needsPayment = isPaidTrack;
 
   const sanitizedDescription = useMemo(
     () => (track?.description ? DOMPurify.sanitize(track.description) : null),

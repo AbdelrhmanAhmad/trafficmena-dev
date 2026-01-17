@@ -20,8 +20,8 @@ if (!adminUrl) {
 
 export default defineConfig({
   dialect: 'postgresql',
-  out: './drizzle',
-  schema: './src/db/schema',
+  out: resolve(currentDir, 'drizzle'),
+  schema: resolve(currentDir, 'src/db/schema'),
   dbCredentials: {
     url: adminUrl ?? appUrl ?? '',
   },

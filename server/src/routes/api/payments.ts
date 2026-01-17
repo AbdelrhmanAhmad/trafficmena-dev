@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, isNull, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -6,12 +6,15 @@ import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  eventReservations,
   events,
   payments,
   platformSettings,
+  profiles,
   subscriptions,
   trackBookings,
   trackEvents,
+  trackReservations,
   tracks,
   users,
 } from '../../db/schema/index.js';
@@ -30,6 +33,7 @@ const CHECKOUT_RATE_LIMIT = { limit: 5, windowMs: 60_000 }; // 5 checkouts per m
 const VERIFY_RATE_LIMIT = { limit: 30, windowMs: 60_000 }; // 30 verifications per minute
 const METHODS_RATE_LIMIT = { limit: 60, windowMs: 60_000 }; // 60 method fetches per minute
 const WEBHOOK_RATE_LIMIT = { limit: 100, windowMs: 60_000 }; // 100 webhooks per minute per IP
+const RESERVATION_TTL_MS = 72 * 60 * 60 * 1000;
 
 // --- Schemas ---
 
@@ -369,36 +373,61 @@ async function calculatePrice(
 
 async function processSuccessfulPayment(paymentId: string) {
   // CRITICAL: Fulfillment happens before status is marked paid so failures persist.
-  const result = await db.transaction(async (tx) => {
-    const [payment] = await tx
-      .select()
-      .from(payments)
-      .where(eq(payments.id, paymentId))
-      .for('update')
-      .limit(1);
+  try {
+    return await db.transaction(async (tx) => {
+      const [payment] = await tx
+        .select()
+        .from(payments)
+        .where(eq(payments.id, paymentId))
+        .for('update')
+        .limit(1);
 
-    if (!payment) {
-      throw new Error('Payment not found or invalid state');
-    }
+      if (!payment) {
+        throw new Error('Payment not found or invalid state');
+      }
 
-    if (payment.status === 'paid') {
-      return { alreadyProcessed: true, status: 'paid' };
-    }
+      if (payment.status === 'paid') {
+        return { alreadyProcessed: true, status: 'paid' };
+      }
 
-    if (payment.status !== 'pending') {
-      return { status: payment.status };
-    }
+      if (payment.status !== 'pending') {
+        return { status: payment.status };
+      }
 
-    let itemName = 'Purchase';
-    const paidAt = new Date();
+      let itemName = 'Purchase';
+      const paidAt = new Date();
 
-    try {
       if (payment.itemType === 'event' && payment.itemId) {
-        const [event] = await tx.select().from(events).where(eq(events.id, payment.itemId));
+        const [event] = await tx
+          .select()
+          .from(events)
+          .where(eq(events.id, payment.itemId))
+          .for('update');
         if (!event) {
           throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
         }
         itemName = event.title ?? 'Event';
+
+        const [eventReservation] = await tx
+          .select({
+            expiresAt: eventReservations.expiresAt,
+          })
+          .from(eventReservations)
+          .where(
+            and(
+              eq(eventReservations.paymentId, payment.id),
+              eq(eventReservations.eventId, payment.itemId),
+            ),
+          )
+          .limit(1);
+
+        if (eventReservation && eventReservation.expiresAt <= paidAt) {
+          throw new ApiError(
+            'RESERVATION_EXPIRED',
+            'This reservation has expired. Please request a new code.',
+            409,
+          );
+        }
 
         const [trackEvent] = await tx
           .select({
@@ -436,14 +465,24 @@ async function processSuccessfulPayment(paymentId: string) {
           }
         }
 
-        if (event.maxAttendees) {
+        if (event.maxAttendees && !eventReservation) {
           const [countResult] = await tx
             .select({ count: sql<number>`count(*)::int` })
             .from(eventAttendees)
             .where(eq(eventAttendees.eventId, payment.itemId));
 
-          if (Number(countResult.count) >= event.maxAttendees) {
-            throw new ApiError('EVENT_FULL', 'Event full. Refund will be processed.', 409);
+          const [reservationCount] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(eventReservations)
+            .where(
+              and(
+                eq(eventReservations.eventId, payment.itemId),
+                gt(eventReservations.expiresAt, paidAt),
+              ),
+            );
+
+          if (Number(countResult.count) + Number(reservationCount.count) >= event.maxAttendees) {
+            throw new ApiError('EVENT_FULL', 'Event is at capacity. Please contact support.', 409);
           }
         }
 
@@ -456,7 +495,16 @@ async function processSuccessfulPayment(paymentId: string) {
             pricePaidCents: payment.amountCents,
             paymentId: payment.id,
           })
-          .onConflictDoNothing();
+          .onConflictDoUpdate({
+            target: [eventAttendees.eventId, eventAttendees.userId],
+            set: {
+              paidAt,
+              pricePaidCents: payment.amountCents,
+              paymentId: payment.id,
+            },
+          });
+
+        await tx.delete(eventReservations).where(eq(eventReservations.paymentId, payment.id));
       }
 
       if (payment.itemType === 'track' && payment.itemId) {
@@ -478,13 +526,76 @@ async function processSuccessfulPayment(paymentId: string) {
           throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
         }
 
+        const now = new Date();
+        const [trackReservation] = await tx
+          .select({
+            expiresAt: trackReservations.expiresAt,
+          })
+          .from(trackReservations)
+          .where(eq(trackReservations.paymentId, payment.id))
+          .limit(1);
+
+        if (trackReservation && trackReservation.expiresAt <= now) {
+          throw new ApiError(
+            'RESERVATION_EXPIRED',
+            'This reservation has expired. Please request a new code.',
+            409,
+          );
+        }
+
+        const trackEventRows = await tx
+          .select({ eventId: trackEvents.eventId })
+          .from(trackEvents)
+          .where(eq(trackEvents.trackId, payment.itemId));
+
+        if (trackEventRows.length === 0) {
+          throw new ApiError('TRACK_EMPTY', 'Track has no events.', 400);
+        }
+
+        if (trackReservation) {
+          const eventIds = trackEventRows.map((row) => row.eventId);
+          const existingEventRows = await tx
+            .select({ eventId: eventAttendees.eventId })
+            .from(eventAttendees)
+            .where(
+              and(
+                eq(eventAttendees.userId, payment.userId),
+                inArray(eventAttendees.eventId, eventIds),
+              ),
+            );
+
+          const reservedEventRows = await tx
+            .select({
+              eventId: eventReservations.eventId,
+              expiresAt: eventReservations.expiresAt,
+            })
+            .from(eventReservations)
+            .where(eq(eventReservations.paymentId, payment.id));
+
+          const existingEventIds = new Set(existingEventRows.map((row) => row.eventId));
+          const reservedEventIds = new Set(
+            reservedEventRows.filter((row) => row.expiresAt > now).map((row) => row.eventId),
+          );
+
+          const missingReservation = eventIds.some(
+            (eventId) => !existingEventIds.has(eventId) && !reservedEventIds.has(eventId),
+          );
+
+          if (missingReservation) {
+            throw new ApiError(
+              'RESERVATION_EXPIRED',
+              'This reservation has expired. Please request a new code.',
+              409,
+            );
+          }
+        }
+
         itemName = track.title ?? 'Track';
 
         if (track.trackBookingStart === null || track.trackBookingEnd === null) {
           throw new ApiError('BOOKING_NOT_CONFIGURED', 'Track booking not configured.', 400);
         }
 
-        const now = new Date();
         if (now < new Date(track.trackBookingStart)) {
           throw new ApiError('BOOKING_NOT_OPEN', 'Track booking not yet open.', 400);
         }
@@ -502,6 +613,9 @@ async function processSuccessfulPayment(paymentId: string) {
         });
 
         validateTrackBookingResult(bookingResult, track.maxTrackBookings);
+
+        await tx.delete(eventReservations).where(eq(eventReservations.paymentId, payment.id));
+        await tx.delete(trackReservations).where(eq(trackReservations.paymentId, payment.id));
       }
 
       if (payment.itemType === 'subscription') {
@@ -519,17 +633,16 @@ async function processSuccessfulPayment(paymentId: string) {
 
       await tx.update(payments).set({ status: 'paid', paidAt }).where(eq(payments.id, paymentId));
       return { success: true, itemName };
-    } catch (error) {
-      await tx.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
-      return { error };
-    }
-  });
-
-  if ('error' in result) {
-    throw result.error;
+    });
+  } catch (error) {
+    await db
+      .update(payments)
+      .set({ status: 'failed' })
+      .where(and(eq(payments.id, paymentId), eq(payments.status, 'pending')));
+    await db.delete(eventReservations).where(eq(eventReservations.paymentId, paymentId));
+    await db.delete(trackReservations).where(eq(trackReservations.paymentId, paymentId));
+    throw error;
   }
-
-  return result;
 }
 
 // --- Routes ---
@@ -646,13 +759,30 @@ export function registerPaymentRoutes(app: Hono) {
                 message: 'A pending payment already exists.',
                 paymentId: existingPending.id,
                 invoiceId: existingPending.fawaterkInvoiceId,
+                itemType,
+                itemId,
+                paymentMethodId,
               },
             },
             409,
           );
         }
 
-        await db.update(payments).set({ status: 'expired' }).where(pendingWhere);
+        const expiredPayments = await db
+          .update(payments)
+          .set({ status: 'expired' })
+          .where(pendingWhere)
+          .returning({ id: payments.id });
+
+        if (expiredPayments.length > 0) {
+          const expiredPaymentIds = expiredPayments.map((row) => row.id);
+          await db
+            .delete(eventReservations)
+            .where(inArray(eventReservations.paymentId, expiredPaymentIds));
+          await db
+            .delete(trackReservations)
+            .where(inArray(trackReservations.paymentId, expiredPaymentIds));
+        }
       }
 
       // Calculate price and validate
@@ -716,55 +846,379 @@ export function registerPaymentRoutes(app: Hono) {
       }
 
       // Get user info for Fawaterk
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      const [user] = await db
+        .select({
+          name: users.name,
+          email: users.email,
+          profileFirstName: profiles.firstName,
+          profileLastName: profiles.lastName,
+          phoneNumber: profiles.phoneNumber,
+        })
+        .from(users)
+        .leftJoin(profiles, eq(profiles.id, users.id))
+        .where(eq(users.id, userId));
       if (!user) {
         return c.json({ error: { code: 'USER_NOT_FOUND', message: 'User not found' } }, 404);
       }
 
-      // Create pending payment record
-      const [payment] = await db
-        .insert(payments)
-        .values({
-          userId,
-          status: 'pending',
-          amountCents,
-          currency: 'EGP',
-          itemType,
-          itemId: itemId ?? null,
-        })
-        .returning();
+      const methods = await getPaymentMethods();
+      const selectedMethod = methods.find((method) => method.paymentId === paymentMethodId);
+      if (!selectedMethod) {
+        throw new ApiError('PAYMENT_METHOD_NOT_FOUND', 'Payment method not available.', 400);
+      }
+
+      const methodName = (selectedMethod.name_en ?? '').toLowerCase();
+      const normalizedMethodName = methodName.replace(/[^a-z0-9]/g, '');
+      const requiresPhone = normalizedMethodName.includes('mobilewallet');
+      const phoneNumber = user.phoneNumber?.trim();
+      if (requiresPhone && !phoneNumber) {
+        throw new ApiError(
+          'PHONE_REQUIRED',
+          'Phone number is required for mobile wallet payments. Please update your profile.',
+          400,
+        );
+      }
+
+      const reservedAt = new Date();
+      const expiresAt = new Date(reservedAt.getTime() + RESERVATION_TTL_MS);
+      let paymentId: string;
+
+      if (itemType === 'event' && itemId) {
+        paymentId = await db.transaction(async (tx) => {
+          const [event] = await tx
+            .select({
+              id: events.id,
+              title: events.title,
+              maxAttendees: events.maxAttendees,
+            })
+            .from(events)
+            .where(eq(events.id, itemId))
+            .for('update')
+            .limit(1);
+
+          if (!event) {
+            throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
+          }
+
+          const [existingRegistration] = await tx
+            .select({ id: eventAttendees.id })
+            .from(eventAttendees)
+            .where(and(eq(eventAttendees.eventId, itemId), eq(eventAttendees.userId, userId)))
+            .limit(1);
+
+          if (existingRegistration) {
+            throw new ApiError('ALREADY_REGISTERED', 'Already registered for this event.', 400);
+          }
+
+          const [trackEvent] = await tx
+            .select({
+              allowIndividualBooking: tracks.allowIndividualBooking,
+              singleBookingStart: tracks.singleBookingStart,
+              singleBookingEnd: tracks.singleBookingEnd,
+            })
+            .from(trackEvents)
+            .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
+            .where(eq(trackEvents.eventId, itemId));
+
+          if (trackEvent) {
+            if (!trackEvent.allowIndividualBooking) {
+              throw new ApiError(
+                'INDIVIDUAL_BOOKING_DISABLED',
+                'Individual event booking is not available for this track.',
+                400,
+              );
+            }
+
+            if (!trackEvent.singleBookingStart || !trackEvent.singleBookingEnd) {
+              throw new ApiError(
+                'BOOKING_NOT_OPEN',
+                'Single event booking is not enabled for this track.',
+                400,
+              );
+            }
+
+            if (reservedAt < trackEvent.singleBookingStart) {
+              throw new ApiError('BOOKING_NOT_OPEN', 'Single booking period has not started.', 400);
+            }
+            if (reservedAt > trackEvent.singleBookingEnd) {
+              throw new ApiError('BOOKING_PERIOD_CLOSED', 'Single booking period has ended.', 400);
+            }
+          }
+
+          if (event.maxAttendees !== null) {
+            const [attendeeCount] = await tx
+              .select({ count: sql<number>`count(*)::int` })
+              .from(eventAttendees)
+              .where(eq(eventAttendees.eventId, itemId));
+
+            const [reservationCount] = await tx
+              .select({ count: sql<number>`count(*)::int` })
+              .from(eventReservations)
+              .where(
+                and(
+                  eq(eventReservations.eventId, itemId),
+                  gt(eventReservations.expiresAt, reservedAt),
+                ),
+              );
+
+            if (
+              Number(attendeeCount.count) + Number(reservationCount.count) >=
+              event.maxAttendees
+            ) {
+              throw new ApiError('EVENT_FULL', 'Event capacity reached.', 409);
+            }
+          }
+
+          const [payment] = await tx
+            .insert(payments)
+            .values({
+              userId,
+              status: 'pending',
+              amountCents,
+              currency: 'EGP',
+              itemType,
+              itemId,
+            })
+            .returning({ id: payments.id });
+
+          await tx.insert(eventReservations).values({
+            eventId: itemId,
+            userId,
+            paymentId: payment.id,
+            reservedAt,
+            expiresAt,
+          });
+
+          return payment.id;
+        });
+      } else if (itemType === 'track' && itemId) {
+        paymentId = await db.transaction(async (tx) => {
+          const [track] = await tx
+            .select({
+              id: tracks.id,
+              title: tracks.title,
+              isPublished: tracks.isPublished,
+              trackBookingStart: tracks.trackBookingStart,
+              trackBookingEnd: tracks.trackBookingEnd,
+              maxTrackBookings: tracks.maxTrackBookings,
+            })
+            .from(tracks)
+            .where(eq(tracks.id, itemId))
+            .for('update')
+            .limit(1);
+
+          if (!track || !track.isPublished) {
+            throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
+          }
+
+          if (track.trackBookingStart === null || track.trackBookingEnd === null) {
+            throw new ApiError('BOOKING_NOT_CONFIGURED', 'Track booking not configured.', 400);
+          }
+
+          if (reservedAt < new Date(track.trackBookingStart)) {
+            throw new ApiError('BOOKING_NOT_OPEN', 'Track booking not yet open.', 400);
+          }
+          if (reservedAt > new Date(track.trackBookingEnd)) {
+            throw new ApiError('BOOKING_PERIOD_CLOSED', 'Track booking period closed.', 400);
+          }
+
+          const [existingBooking] = await tx
+            .select({ id: trackBookings.id })
+            .from(trackBookings)
+            .where(and(eq(trackBookings.trackId, itemId), eq(trackBookings.userId, userId)))
+            .limit(1);
+
+          if (existingBooking) {
+            throw new ApiError('ALREADY_BOOKED', 'Already booked this track', 400);
+          }
+
+          const trackEventRows = await tx
+            .select({ eventId: events.id, maxAttendees: events.maxAttendees })
+            .from(trackEvents)
+            .innerJoin(events, eq(events.id, trackEvents.eventId))
+            .where(eq(trackEvents.trackId, itemId))
+            .for('update');
+
+          if (trackEventRows.length === 0) {
+            throw new ApiError('TRACK_EMPTY', 'Track has no events.', 400);
+          }
+
+          if (trackEventRows.some((row) => row.maxAttendees === null)) {
+            throw new ApiError('CAPACITY_NOT_SET', 'Some events have no capacity set.', 400);
+          }
+
+          const eventIds = trackEventRows.map((row) => row.eventId);
+
+          const existingEventRows = await tx
+            .select({ eventId: eventAttendees.eventId })
+            .from(eventAttendees)
+            .where(
+              and(eq(eventAttendees.userId, userId), inArray(eventAttendees.eventId, eventIds)),
+            );
+          const existingEventIds = new Set(existingEventRows.map((row) => row.eventId));
+
+          const attendeeCounts = await tx
+            .select({
+              eventId: eventAttendees.eventId,
+              count: sql<number>`count(*)::int`,
+            })
+            .from(eventAttendees)
+            .where(inArray(eventAttendees.eventId, eventIds))
+            .groupBy(eventAttendees.eventId);
+          const reservationCounts = await tx
+            .select({
+              eventId: eventReservations.eventId,
+              count: sql<number>`count(*)::int`,
+            })
+            .from(eventReservations)
+            .where(
+              and(
+                inArray(eventReservations.eventId, eventIds),
+                gt(eventReservations.expiresAt, reservedAt),
+              ),
+            )
+            .groupBy(eventReservations.eventId);
+
+          const attendeeCountMap = new Map(
+            attendeeCounts.map((row) => [row.eventId, Number(row.count)]),
+          );
+          const reservationCountMap = new Map(
+            reservationCounts.map((row) => [row.eventId, Number(row.count)]),
+          );
+
+          for (const row of trackEventRows) {
+            if (existingEventIds.has(row.eventId)) {
+              continue;
+            }
+            const attendeeCount = attendeeCountMap.get(row.eventId) ?? 0;
+            const reservationCount = reservationCountMap.get(row.eventId) ?? 0;
+            if (attendeeCount + reservationCount >= (row.maxAttendees ?? 0)) {
+              throw new ApiError(
+                'EVENT_FULL',
+                'One or more events in this track are at capacity.',
+                409,
+              );
+            }
+          }
+
+          const [bookingCount] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(trackBookings)
+            .where(eq(trackBookings.trackId, itemId));
+          const [trackReservationCount] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(trackReservations)
+            .where(
+              and(
+                eq(trackReservations.trackId, itemId),
+                gt(trackReservations.expiresAt, reservedAt),
+              ),
+            );
+
+          if (
+            track.maxTrackBookings !== null &&
+            Number(bookingCount.count) + Number(trackReservationCount.count) >=
+              track.maxTrackBookings
+          ) {
+            throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
+          }
+
+          const [payment] = await tx
+            .insert(payments)
+            .values({
+              userId,
+              status: 'pending',
+              amountCents,
+              currency: 'EGP',
+              itemType,
+              itemId,
+            })
+            .returning({ id: payments.id });
+
+          await tx.insert(trackReservations).values({
+            trackId: itemId,
+            userId,
+            paymentId: payment.id,
+            reservedAt,
+            expiresAt,
+          });
+
+          const reservationValues = trackEventRows
+            .filter((row) => !existingEventIds.has(row.eventId))
+            .map((row) => ({
+              eventId: row.eventId,
+              userId,
+              paymentId: payment.id,
+              reservedAt,
+              expiresAt,
+            }));
+
+          if (reservationValues.length > 0) {
+            await tx.insert(eventReservations).values(reservationValues);
+          }
+
+          return payment.id;
+        });
+      } else {
+        const [payment] = await db
+          .insert(payments)
+          .values({
+            userId,
+            status: 'pending',
+            amountCents,
+            currency: 'EGP',
+            itemType,
+            itemId: itemId ?? null,
+          })
+          .returning({ id: payments.id });
+        paymentId = payment.id;
+      }
 
       // Create Fawaterk invoice
       const nameParts = (user.name ?? 'User').split(' ');
-      const firstName = nameParts[0] ?? 'User';
-      const lastName = nameParts.slice(1).join(' ') || 'Customer';
+      const firstName = user.profileFirstName ?? nameParts[0] ?? 'User';
+      const lastName = user.profileLastName ?? (nameParts.slice(1).join(' ') || 'Customer');
+      const pendingParams = new URLSearchParams();
+      pendingParams.set('item_type', itemType);
+      if (itemId) {
+        pendingParams.set('item_id', itemId);
+      }
+      pendingParams.set('method_id', String(paymentMethodId));
+      const pendingUrl = `${env.APP_BASE_URL}/payment/pending?${pendingParams.toString()}`;
 
-      const invoiceResult = await invoiceInitPay({
-        paymentMethodId,
-        cartTotal: amountCents / 100, // Convert cents to EGP
-        currency: 'EGP',
-        customer: {
-          first_name: firstName,
-          last_name: lastName,
-          email: user.email,
-        },
-        cartItems: [
-          {
-            name: itemName,
-            price: (amountCents / 100).toFixed(2),
-            quantity: '1',
+      let invoiceResult: Awaited<ReturnType<typeof invoiceInitPay>>;
+      try {
+        invoiceResult = await invoiceInitPay({
+          paymentMethodId,
+          invoiceNumber: paymentId,
+          cartTotal: amountCents / 100, // Convert cents to EGP
+          currency: 'EGP',
+          customer: {
+            first_name: firstName,
+            last_name: lastName,
+            email: user.email,
+            phone: phoneNumber || undefined,
           },
-        ],
-        redirectionUrls: {
-          successUrl: `${env.APP_BASE_URL}/payment/success`,
-          failUrl: `${env.APP_BASE_URL}/payment/failed`,
-          pendingUrl: `${env.APP_BASE_URL}/payment/pending`,
-          webhookUrl: env.API_BASE_URL
-            ? `${env.API_BASE_URL}/api/payments/webhook_json`
-            : undefined,
-        },
-        payload: { paymentId: payment.id },
-      });
+          cartItems: [
+            {
+              name: itemName,
+              price: (amountCents / 100).toFixed(2),
+              quantity: '1',
+            },
+          ],
+          redirectionUrls: {
+            successUrl: `${env.APP_BASE_URL}/payment/success`,
+            failUrl: `${env.APP_BASE_URL}/payment/failed`,
+            pendingUrl,
+          },
+          payload: { paymentId },
+        });
+      } catch (error) {
+        await db.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
+        await db.delete(eventReservations).where(eq(eventReservations.paymentId, paymentId));
+        await db.delete(trackReservations).where(eq(trackReservations.paymentId, paymentId));
+        throw error;
+      }
 
       // Update payment with Fawaterk invoice info
       await db
@@ -773,15 +1227,16 @@ export function registerPaymentRoutes(app: Hono) {
           fawaterkInvoiceId: invoiceResult.invoiceId,
           fawaterkInvoiceKey: invoiceResult.invoiceKey,
         })
-        .where(eq(payments.id, payment.id));
+        .where(eq(payments.id, paymentId));
 
       return c.json({
         data: {
-          paymentId: payment.id,
+          paymentId,
           invoiceId: invoiceResult.invoiceId,
           redirectUrl: invoiceResult.paymentData.redirectTo,
           fawryCode: invoiceResult.paymentData.fawryCode,
           meezaReference: invoiceResult.paymentData.meezaReference,
+          meezaQrCode: invoiceResult.paymentData.meezaQrCode,
           amanCode: invoiceResult.paymentData.amanCode,
           masaryCode: invoiceResult.paymentData.masaryCode,
         },
@@ -792,6 +1247,31 @@ export function registerPaymentRoutes(app: Hono) {
           { error: { code: error.code, message: error.message } },
           error.status as ContentfulStatusCode,
         );
+      }
+      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+        const [pendingPayment] = await db
+          .select()
+          .from(payments)
+          .where(pendingWhere)
+          .orderBy(desc(payments.createdAt))
+          .limit(1);
+
+        if (pendingPayment) {
+          return c.json(
+            {
+              error: {
+                code: 'PENDING_PAYMENT',
+                message: 'A pending payment already exists.',
+                paymentId: pendingPayment.id,
+                invoiceId: pendingPayment.fawaterkInvoiceId,
+                itemType,
+                itemId,
+                paymentMethodId,
+              },
+            },
+            409,
+          );
+        }
       }
       console.error('[payments/checkout] Error:', error);
       return c.json({ error: { code: 'PAYMENT_ERROR', message: 'Failed to create payment' } }, 500);

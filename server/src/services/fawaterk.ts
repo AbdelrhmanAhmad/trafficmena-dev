@@ -100,6 +100,7 @@ type FawaterkRedirectionUrls = {
 
 type InitiatePaymentArgs = {
   paymentMethodId: number;
+  invoiceNumber?: string;
   cartTotal: number;
   currency: string;
   customer: FawaterkCustomer;
@@ -164,6 +165,7 @@ const invoiceInitPayResponseSchema = z
         redirectTo: z.string().optional(),
         fawryCode: z.string().optional(),
         meezaReference: z.number().optional(),
+        meezaQrCode: z.string().optional(),
         amanCode: z.string().optional(),
         masaryCode: z.string().optional(),
       })
@@ -210,6 +212,7 @@ export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
     redirectTo?: string;
     fawryCode?: string;
     meezaReference?: number;
+    meezaQrCode?: string;
     amanCode?: string;
     masaryCode?: string;
   };
@@ -226,13 +229,13 @@ export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
     },
     body: JSON.stringify({
       payment_method_id: args.paymentMethodId,
+      invoice_number: args.invoiceNumber,
       cartTotal: args.cartTotal.toString(),
       currency: args.currency,
       customer: args.customer,
       cartItems: args.cartItems,
       redirectionUrls: args.redirectionUrls,
       payLoad: args.payload,
-      redirectOption: true,
     }),
   });
 

@@ -1,10 +1,11 @@
 import { Clock, Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import * as QRCode from 'qrcode';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import type { PaymentItemType } from '@/app/api/payments';
 import { useCreateCheckout, useVerifyPayment } from '@/app/hooks/usePayments';
-import AppLayout from '@/shared/components/layout/AppLayout';
+import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -13,18 +14,28 @@ import {
   CardHeader,
   CardTitle,
 } from '@/shared/components/ui/card';
+import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 
 export default function PaymentPendingPage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const verifyPayment = useVerifyPayment();
   const createCheckout = useCreateCheckout();
   const fawryCode = searchParams.get('fawry_code');
   const meezaReference = searchParams.get('meeza_reference');
   const amanCode = searchParams.get('aman_code');
   const masaryCode = searchParams.get('masary_code');
+  const meezaQrParam = searchParams.get('meeza_qr');
+  const rawMeezaQrCode =
+    meezaQrParam ?? (location.state as { meezaQrCode?: string } | null)?.meezaQrCode ?? undefined;
+  const maxMeezaQrLength = 1024;
+  const meezaQrCode =
+    rawMeezaQrCode && rawMeezaQrCode.length <= maxMeezaQrLength ? rawMeezaQrCode : undefined;
+  const isMeezaQrTooLarge = Boolean(rawMeezaQrCode && !meezaQrCode);
   const invoiceIdParam = searchParams.get('invoice_id');
   const invoiceId = invoiceIdParam ? Number(invoiceIdParam) : null;
   const itemTypeParam = searchParams.get('item_type');
@@ -38,7 +49,9 @@ export default function PaymentPendingPage() {
   const isInvoiceIdValid = invoiceId !== null && !Number.isNaN(invoiceId);
   const isMethodIdValid = paymentMethodId !== null && !Number.isNaN(paymentMethodId);
   const hasItemContext = itemType && (itemType === 'subscription' || Boolean(itemId));
-  const canRequestNewCode = Boolean(hasItemContext && isMethodIdValid);
+  const canRequestNewCode = Boolean(user && hasItemContext && isMethodIdValid);
+  const canVerifyPayment = Boolean(user && isInvoiceIdValid);
+  const [meezaQrDataUrl, setMeezaQrDataUrl] = useState<string | null>(null);
 
   const referenceCodes = [
     {
@@ -65,9 +78,43 @@ export default function PaymentPendingPage() {
       code: meezaReference,
       instructions: 'Use this reference in Meeza payment channels to complete your payment.',
     },
+    {
+      key: 'meeza-qr',
+      label: 'Meeza QR payload',
+      code: meezaQrCode,
+      instructions: 'Scan this payload with your Meeza wallet to complete your payment.',
+    },
   ];
 
   const availableCodes = referenceCodes.filter((entry) => entry.code);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!meezaQrCode) {
+      setMeezaQrDataUrl(null);
+      return undefined;
+    }
+
+    QRCode.toDataURL(meezaQrCode, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 220,
+    })
+      .then((url) => {
+        if (isMounted) {
+          setMeezaQrDataUrl(url);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setMeezaQrDataUrl(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [meezaQrCode]);
 
   useEffect(() => {
     if (verifyPayment.data?.status === 'paid' && invoiceIdParam) {
@@ -76,7 +123,7 @@ export default function PaymentPendingPage() {
   }, [verifyPayment.data?.status, invoiceIdParam, navigate]);
 
   const handleVerify = () => {
-    if (!isInvoiceIdValid || invoiceId === null) return;
+    if (!user || !isInvoiceIdValid || invoiceId === null) return;
     verifyPayment.mutate({ invoiceId });
   };
 
@@ -84,9 +131,14 @@ export default function PaymentPendingPage() {
     invoiceId?: number;
     fawryCode?: string;
     meezaReference?: number;
+    meezaQrCode?: string;
     amanCode?: string;
     masaryCode?: string;
   }) => {
+    const safeMeezaQr =
+      payload.meezaQrCode && payload.meezaQrCode.length <= maxMeezaQrLength
+        ? payload.meezaQrCode
+        : undefined;
     const params = new URLSearchParams();
     if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
     if (payload.fawryCode) params.set('fawry_code', payload.fawryCode);
@@ -99,7 +151,10 @@ export default function PaymentPendingPage() {
       params.set('method_id', String(paymentMethodId));
     }
     const query = params.toString();
-    navigate(`/payment/pending${query ? `?${query}` : ''}`, { replace: true });
+    navigate(`/payment/pending${query ? `?${query}` : ''}`, {
+      replace: true,
+      state: safeMeezaQr ? { meezaQrCode: safeMeezaQr } : undefined,
+    });
   };
 
   const handleRequestNewCode = async () => {
@@ -133,6 +188,7 @@ export default function PaymentPendingPage() {
         result.invoiceId ||
         result.fawryCode ||
         result.meezaReference ||
+        result.meezaQrCode ||
         result.amanCode ||
         result.masaryCode
       ) {
@@ -140,6 +196,7 @@ export default function PaymentPendingPage() {
           invoiceId: result.invoiceId,
           fawryCode: result.fawryCode,
           meezaReference: result.meezaReference,
+          meezaQrCode: result.meezaQrCode,
           amanCode: result.amanCode,
           masaryCode: result.masaryCode,
         });
@@ -164,7 +221,7 @@ export default function PaymentPendingPage() {
   };
 
   return (
-    <AppLayout>
+    <Layout>
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <Card className="w-full max-w-md rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <CardHeader className="text-center">
@@ -183,12 +240,30 @@ export default function PaymentPendingPage() {
                     className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-4 text-center"
                   >
                     <p className="text-sm text-muted-foreground">{entry.label}</p>
-                    <p className="mt-1 font-mono text-2xl font-bold text-primary">
+                    {entry.key === 'meeza-qr' && meezaQrDataUrl && (
+                      <img
+                        src={meezaQrDataUrl}
+                        alt="Meeza QR code"
+                        className="mx-auto mt-3 h-40 w-40 rounded-md border border-primary/20 bg-white p-2"
+                      />
+                    )}
+                    <p
+                      className={
+                        entry.key === 'meeza-qr'
+                          ? 'mt-2 break-all font-mono text-xs text-primary'
+                          : 'mt-1 font-mono text-2xl font-bold text-primary'
+                      }
+                    >
                       {String(entry.code)}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">{entry.instructions}</p>
                   </div>
                 ))}
+                {isMeezaQrTooLarge && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                    Meeza QR payload is too large to render. Please request a new code.
+                  </div>
+                )}
               </div>
             ) : (
               <div className="rounded-lg bg-muted/50 p-4 text-center text-sm text-muted-foreground">
@@ -201,7 +276,7 @@ export default function PaymentPendingPage() {
               <Button
                 className="w-full"
                 onClick={handleVerify}
-                disabled={!isInvoiceIdValid || verifyPayment.isPending}
+                disabled={!canVerifyPayment || verifyPayment.isPending}
               >
                 {verifyPayment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Check payment status
@@ -217,7 +292,9 @@ export default function PaymentPendingPage() {
               </Button>
               {!canRequestNewCode && (
                 <p className="text-center text-xs text-muted-foreground">
-                  Start a new checkout to get a fresh reference code.
+                  {user
+                    ? 'Start a new checkout to get a fresh reference code.'
+                    : 'Sign in to check status or request a new code.'}
                 </p>
               )}
               <Button asChild className="w-full">
@@ -230,6 +307,6 @@ export default function PaymentPendingPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </Layout>
   );
 }

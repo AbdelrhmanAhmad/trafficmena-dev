@@ -38,7 +38,7 @@ const envSchema = z.object({
   // Fawaterk Payment Gateway
   FAWATERK_API_KEY: z.string().optional(),
   FAWATERK_ENV: z.enum(['staging', 'live']).optional().default('staging'),
-  // API base URL for webhook callbacks (defaults to APP_BASE_URL if not set)
+  // Optional API base URL for webhook callbacks (dashboard configuration preferred)
   API_BASE_URL: z.string().url().optional(),
 });
 
@@ -80,10 +80,6 @@ if (
 // SECURITY: Fawaterk API key is required for payment processing in production
 if (parsed.data.NODE_ENV === 'production' && !parsed.data.FAWATERK_API_KEY) {
   throw new Error('FAWATERK_API_KEY is required in production for payment processing.');
-}
-
-if (parsed.data.NODE_ENV === 'production' && !parsed.data.API_BASE_URL) {
-  throw new Error('API_BASE_URL is required in production for payment webhooks.');
 }
 
 data.CORS_ORIGIN = corsAllowlist[0];

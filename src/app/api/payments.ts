@@ -27,6 +27,7 @@ export type CheckoutResponse = {
   redirectUrl?: string;
   fawryCode?: string;
   meezaReference?: number;
+  meezaQrCode?: string;
   amanCode?: string;
   masaryCode?: string;
   free?: boolean;
