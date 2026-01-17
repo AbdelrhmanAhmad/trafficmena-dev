@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -72,6 +73,7 @@ export const events = pgTable(
     tags: text('tags').array(),
     eventType: eventTypeEnum('event_type').default('Event').notNull(),
     guestExperts: jsonb('guest_experts'),
+    priceInCents: integer('price_in_cents'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -91,6 +93,9 @@ export const eventAttendees = pgTable(
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
     registeredAt: timestamp('registered_at', { withTimezone: true }).defaultNow().notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    pricePaidCents: integer('price_paid_cents'),
+    paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
   },
   (table) => ({
     eventIdx: index('event_attendees_event_idx').on(table.eventId),
@@ -99,6 +104,33 @@ export const eventAttendees = pgTable(
       table.eventId,
       table.userId,
     ),
+  }),
+);
+
+export const eventReservations = pgTable(
+  'event_reservations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    eventId: uuid('event_id')
+      .references(() => events.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    paymentId: uuid('payment_id')
+      .references(() => payments.id, { onDelete: 'cascade' })
+      .notNull(),
+    reservedAt: timestamp('reserved_at', { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    eventIdx: index('event_reservations_event_idx').on(table.eventId),
+    eventUserUnique: uniqueIndex('event_reservations_event_user_unique').on(
+      table.eventId,
+      table.userId,
+    ),
+    paymentIdx: index('event_reservations_payment_idx').on(table.paymentId),
+    expiresIdx: index('event_reservations_expires_idx').on(table.expiresAt),
   }),
 );
 
@@ -166,6 +198,7 @@ export const trackEvents = pgTable(
       .references(() => events.id, { onDelete: 'cascade' })
       .notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
+    singlePriceInCents: integer('single_price_in_cents'),
     addedAt: timestamp('added_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
@@ -189,6 +222,7 @@ export const trackBookings = pgTable(
     bookedAt: timestamp('booked_at', { withTimezone: true }).defaultNow().notNull(),
     paidAt: timestamp('paid_at', { withTimezone: true }),
     pricePaidCents: integer('price_paid_cents'),
+    paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
   },
   (table) => ({
     trackIdx: index('track_bookings_track_idx').on(table.trackId),
@@ -197,6 +231,34 @@ export const trackBookings = pgTable(
       table.trackId,
       table.userId,
     ),
+    paymentIdx: index('track_bookings_payment_id_idx').on(table.paymentId),
+  }),
+);
+
+export const trackReservations = pgTable(
+  'track_reservations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    trackId: uuid('track_id')
+      .references(() => tracks.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    paymentId: uuid('payment_id')
+      .references(() => payments.id, { onDelete: 'cascade' })
+      .notNull(),
+    reservedAt: timestamp('reserved_at', { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    trackIdx: index('track_reservations_track_idx').on(table.trackId),
+    trackUserUnique: uniqueIndex('track_reservations_track_user_unique').on(
+      table.trackId,
+      table.userId,
+    ),
+    paymentUnique: uniqueIndex('track_reservations_payment_unique').on(table.paymentId),
+    expiresIdx: index('track_reservations_expires_idx').on(table.expiresAt),
   }),
 );
 
@@ -317,6 +379,8 @@ export const userActivities = pgTable(
 export const platformSettings = pgTable('platform_settings', {
   id: uuid('id').primaryKey().defaultRandom(),
   inviteOnlySignup: boolean('invite_only_signup').notNull().default(false),
+  annualSubscriptionPriceCents: integer('annual_subscription_price_cents'),
+  subscriberDiscountPercent: integer('subscriber_discount_percent').default(20),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
 });
@@ -386,3 +450,68 @@ export const authVerifications = pgTable('auth_verifications', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+// --- Payment Tables -----------------------------------------------------------
+
+export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'expired']);
+
+export const paymentItemTypeEnum = pgEnum('payment_item_type', ['event', 'track', 'subscription']);
+
+export const payments = pgTable(
+  'payments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    status: paymentStatusEnum('status').default('pending').notNull(),
+    amountCents: integer('amount_cents').notNull(),
+    currency: text('currency').default('EGP').notNull(),
+    itemType: paymentItemTypeEnum('item_type').notNull(),
+    itemId: uuid('item_id'),
+    fawaterkInvoiceId: integer('fawaterk_invoice_id'),
+    fawaterkInvoiceKey: text('fawaterk_invoice_key'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+  },
+  (table) => ({
+    userIdx: index('payments_user_idx').on(table.userId),
+    statusIdx: index('payments_status_idx').on(table.status),
+    invoiceIdx: index('payments_fawaterk_invoice_idx').on(table.fawaterkInvoiceId),
+    uniquePendingPayment: uniqueIndex('payments_unique_pending')
+      .on(table.userId, table.itemType, table.itemId)
+      .where(sql`status = 'pending'`),
+    uniquePendingSubscription: uniqueIndex('payments_unique_pending_subscription')
+      .on(table.userId)
+      .where(sql`status = 'pending' AND item_type = 'subscription'`),
+  }),
+);
+
+export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'expired']);
+
+export const subscriptions = pgTable(
+  'subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    status: subscriptionStatusEnum('subscription_status').default('active').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    pricePaidCents: integer('price_paid_cents').notNull(),
+    paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index('subscriptions_user_idx').on(table.userId),
+    statusIdx: index('subscriptions_status_idx').on(table.status),
+    endsAtIdx: index('subscriptions_ends_at_idx').on(table.endsAt),
+    // Composite index for common subscription lookup pattern
+    activeLookupIdx: index('subscriptions_active_lookup_idx').on(
+      table.userId,
+      table.status,
+      table.endsAt,
+    ),
+  }),
+);

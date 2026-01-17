@@ -1,12 +1,15 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
 import { BookOpen, Calendar, CheckCircle, Loader2, MapPin, Sparkles, Users } from 'lucide-react';
 import type React from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { PublicTrackEventRecord } from '@/app/api/tracks';
+import { usePricePreview } from '@/app/hooks/usePayments';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
+import { PaymentCheckoutDialog, PriceDisplayCard } from '@/shared/components/payment';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
 import { stripHtmlTags } from '@/shared/utils/inputSanitization';
@@ -97,15 +100,29 @@ function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
 const TrackDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data, isLoading, error } = usePublicTrack(id || '');
   const bookMutation = useBookTrack();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const track = data?.track;
   const events = data?.events ?? [];
 
-  const sanitizedDescription = track?.description ? DOMPurify.sanitize(track.description) : null;
-  const summaryText = track?.description ? stripHtmlTags(track.description) : '';
+  // Get price preview for logged-in users
+  const { data: pricePreview } = usePricePreview(user && id ? 'track' : undefined, id);
+
+  const isPaidTrack = !!(track?.price_in_cents && track.price_in_cents > 0);
+  const needsPayment = isPaidTrack;
+
+  const sanitizedDescription = useMemo(
+    () => (track?.description ? DOMPurify.sanitize(track.description) : null),
+    [track?.description],
+  );
+  const summaryText = useMemo(
+    () => (track?.description ? stripHtmlTags(track.description) : ''),
+    [track?.description],
+  );
 
   const trackImageUrl =
     track?.image_url && track.image_url.trim().length > 0
@@ -150,6 +167,13 @@ const TrackDetail: React.FC = () => {
       return;
     }
 
+    // If track requires payment, open payment dialog
+    if (needsPayment) {
+      setShowPaymentDialog(true);
+      return;
+    }
+
+    // Free track - book directly
     bookMutation.mutate(id);
   };
 
@@ -303,6 +327,15 @@ const TrackDetail: React.FC = () => {
                             </p>
                           </div>
                         </div>
+
+                        {/* Price display */}
+                        {isPaidTrack && (
+                          <PriceDisplayCard
+                            itemType="track"
+                            basePriceCents={track.price_in_cents}
+                            pricePreview={pricePreview}
+                          />
+                        )}
                       </div>
 
                       {track.user_has_booked ? (
@@ -358,6 +391,22 @@ const TrackDetail: React.FC = () => {
           </div>
         )}
       </DataLoader>
+
+      {/* Payment dialog for paid tracks */}
+      {track && id && (
+        <PaymentCheckoutDialog
+          open={showPaymentDialog}
+          onOpenChange={setShowPaymentDialog}
+          itemType="track"
+          itemId={id}
+          itemName={track.title}
+          onSuccess={() => {
+            // Refresh the track data after successful payment
+            queryClient.invalidateQueries({ queryKey: ['tracks', 'public', 'detail', id] });
+            setShowPaymentDialog(false);
+          }}
+        />
+      )}
     </Layout>
   );
 };

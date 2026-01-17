@@ -1,12 +1,14 @@
-import { and, count, desc, eq, gte, ilike, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, gte, ilike, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  eventReservations,
   events,
   libraryAssets,
   profiles,
+  subscriptions,
   trackEvents,
   tracks,
   users,
@@ -78,6 +80,18 @@ const normalizeDescription = (description: string) =>
     ? `${description.slice(0, MAX_DESCRIPTION_LENGTH - 1)}…`
     : description;
 
+const priceInCentsSchema = z
+  .union([
+    z.coerce
+      .number()
+      .int()
+      .min(0, 'Price cannot be negative.')
+      .max(10000000, 'Price too large.'), // Max 100,000 EGP
+    z.null(),
+  ])
+  .optional()
+  .transform((value) => (value === undefined ? undefined : value));
+
 const baseEventSchema = z.object({
   title: z.string().trim().min(3, 'Title is required.').max(180),
   description: z.string().trim().min(1, 'Description is required.').max(8000),
@@ -88,6 +102,7 @@ const baseEventSchema = z.object({
   imageUrl: imageUrlSchema,
   tags: tagsSchema,
   eventType: z.enum(['Event', 'Meetup', 'Mastermind', 'Retreat']).default('Event'),
+  priceInCents: priceInCentsSchema,
 });
 
 const createEventSchema = baseEventSchema;
@@ -176,6 +191,7 @@ export function registerEventRoutes(app: Hono) {
           imageUrl: events.imageUrl,
           tags: events.tags,
           eventType: events.eventType,
+          priceInCents: events.priceInCents,
           attendeeCount: sql<number>`COALESCE(COUNT(${eventAttendees.id}), 0)`,
         })
         .from(events)
@@ -229,6 +245,7 @@ export function registerEventRoutes(app: Hono) {
         imageUrl: events.imageUrl,
         tags: events.tags,
         eventType: events.eventType,
+        priceInCents: events.priceInCents,
       })
       .from(events)
       .where(eq(events.id, eventId))
@@ -403,6 +420,7 @@ export function registerEventRoutes(app: Hono) {
           imageUrl: payload.imageUrl ?? null,
           tags: payload.tags ?? [],
           eventType: payload.eventType,
+          priceInCents: payload.priceInCents ?? null,
           guestExperts: [],
         })
         .returning({
@@ -416,6 +434,7 @@ export function registerEventRoutes(app: Hono) {
           imageUrl: events.imageUrl,
           tags: events.tags,
           eventType: events.eventType,
+          priceInCents: events.priceInCents,
         });
 
       // Auto-create draft library asset for event recordings
@@ -469,6 +488,7 @@ export function registerEventRoutes(app: Hono) {
         if (updates.imageUrl !== undefined) updateValues.imageUrl = updates.imageUrl ?? null;
         if (updates.tags !== undefined) updateValues.tags = updates.tags ?? [];
         if (updates.eventType !== undefined) updateValues.eventType = updates.eventType;
+        if (updates.priceInCents !== undefined) updateValues.priceInCents = updates.priceInCents;
 
         // If reducing capacity, verify it's valid
         if (updates.maxAttendees !== undefined) {
@@ -521,6 +541,7 @@ export function registerEventRoutes(app: Hono) {
             imageUrl: events.imageUrl,
             tags: events.tags,
             eventType: events.eventType,
+            priceInCents: events.priceInCents,
           });
 
         if (!updated) {
@@ -585,6 +606,9 @@ export function registerEventRoutes(app: Hono) {
             .select({
               id: events.id,
               maxAttendees: events.maxAttendees,
+              meetingLink: events.meetingLink,
+              location: events.location,
+              priceInCents: events.priceInCents,
             })
             .from(events)
             .where(eq(events.id, eventId))
@@ -641,6 +665,28 @@ export function registerEventRoutes(app: Hono) {
             }
           }
 
+          const [subscription] = await tx
+            .select()
+            .from(subscriptions)
+            .where(
+              and(
+                eq(subscriptions.userId, userId),
+                eq(subscriptions.status, 'active'),
+                gte(subscriptions.endsAt, new Date()),
+              ),
+            );
+          const isSubscriber = !!subscription;
+          const isOnline = event.meetingLink && !event.location;
+          const requiresPayment = (event.priceInCents ?? 0) > 0 && !(isSubscriber && isOnline);
+
+          if (requiresPayment) {
+            throw new ApiError(
+              'PAYMENT_REQUIRED',
+              'This event requires payment. Use the checkout flow.',
+              402,
+            );
+          }
+
           const [existing] = await tx
             .select({ id: eventAttendees.id })
             .from(eventAttendees)
@@ -656,7 +702,20 @@ export function registerEventRoutes(app: Hono) {
             .from(eventAttendees)
             .where(eq(eventAttendees.eventId, eventId));
 
-          if (event.maxAttendees !== null && Number(currentAttendees) >= event.maxAttendees) {
+          const [{ count: reservedCount }] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(eventReservations)
+            .where(
+              and(
+                eq(eventReservations.eventId, eventId),
+                gt(eventReservations.expiresAt, new Date()),
+              ),
+            );
+
+          if (
+            event.maxAttendees !== null &&
+            Number(currentAttendees) + Number(reservedCount) >= event.maxAttendees
+          ) {
             throw new ApiError('EVENT_FULL', 'Event capacity reached.', 409);
           }
 

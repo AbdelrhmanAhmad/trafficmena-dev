@@ -35,6 +35,11 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? value.trim() : undefined)),
+  // Fawaterk Payment Gateway
+  FAWATERK_API_KEY: z.string().optional(),
+  FAWATERK_ENV: z.enum(['staging', 'live']).optional().default('staging'),
+  // Optional API base URL for webhook callbacks (dashboard configuration preferred)
+  API_BASE_URL: z.string().url().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -70,6 +75,11 @@ if (
   throw new Error(
     'INVITE_SESSION_SECRET must be configured with a strong value (>=16 chars) in production.',
   );
+}
+
+// SECURITY: Fawaterk API key is required for payment processing in production
+if (parsed.data.NODE_ENV === 'production' && !parsed.data.FAWATERK_API_KEY) {
+  throw new Error('FAWATERK_API_KEY is required in production for payment processing.');
 }
 
 data.CORS_ORIGIN = corsAllowlist[0];

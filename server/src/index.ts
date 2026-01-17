@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { connectionPool } from './db/client.js';
+import { startPaymentExpirationJob } from './jobs/paymentExpiration.js';
 
 // Log environment configuration at startup
 console.log('[trafficmena] Environment Configuration:');
@@ -43,3 +44,6 @@ serve({
 });
 
 console.log(`[trafficmena] ✅ Server listening on http://localhost:${port}`);
+
+// Start background jobs
+startPaymentExpirationJob();

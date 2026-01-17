@@ -2,6 +2,7 @@ import {
   BarChart3,
   BookOpen,
   Calendar,
+  Crown,
   Edit,
   Home,
   Library,
@@ -14,6 +15,7 @@ import {
 import type React from 'react';
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import {
   Sidebar,
   SidebarContent,
@@ -122,6 +124,8 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
   const location = useLocation();
   const { user } = useAuth();
   const { loading, rank, isOwner, isAdmin, isManager } = useRolePermissions();
+  const { data: subscription } = useCurrentSubscription({ enabled: !!user });
+  const hasActiveSubscription = subscription?.status === 'active';
 
   // Filter admin menu items based on user's role rank
   const filteredAdminMenuItems = useMemo(() => {
@@ -229,6 +233,23 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                   </SidebarMenuItem>
                 );
               })}
+              {variant === 'member' && !hasActiveSubscription && (
+                <SidebarMenuItem className="mb-2">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/dashboard/subscribe'}
+                    className="hover:bg-amber-50 rounded-xl transition-colors border border-amber-200 bg-amber-50/50"
+                  >
+                    <Link to="/dashboard/subscribe" className="flex items-center gap-3 py-3.5">
+                      <Crown className="h-4 w-4 shrink-0 text-amber-600" />
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium text-amber-700">Subscribe</span>
+                        <span className="text-xs text-amber-600">Unlock premium content</span>
+                      </div>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

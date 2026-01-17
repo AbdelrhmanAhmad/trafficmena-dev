@@ -8,6 +8,23 @@ type Bucket = {
   expiresAt: number;
 };
 
+/**
+ * In-memory rate limiter for request throttling.
+ *
+ * IMPORTANT: SINGLE-INSTANCE LIMITATION
+ * =====================================
+ * This rate limiter stores state in local memory and is NOT shared across
+ * server instances. Before horizontal scaling:
+ *
+ * 1. Migrate to Redis-backed rate limiting (e.g., rate-limiter-flexible)
+ * 2. Or use a load balancer with sticky sessions
+ *
+ * Current behavior with multiple instances:
+ * - Rate limit: 5 requests/minute per user
+ * - With 3 instances: Effective limit becomes 15 requests/minute
+ *
+ * For MVP with single instance, this implementation is acceptable.
+ */
 export class InMemoryRateLimiter {
   private readonly buckets = new Map<string, Bucket>();
   private readonly cleanupInterval: NodeJS.Timeout;
@@ -66,3 +83,6 @@ export class InMemoryRateLimiter {
 export const otpRateLimiter = new InMemoryRateLimiter();
 export const invitationRateLimiter = new InMemoryRateLimiter();
 export const otpVerificationRateLimiter = new InMemoryRateLimiter();
+// Payment-specific rate limiter instance
+// See class documentation for scaling limitations
+export const paymentRateLimiter = new InMemoryRateLimiter();

@@ -76,6 +76,7 @@ function TrackDetailPage() {
     trackBookingEnd?: string | null;
     singleBookingStart?: string | null;
     singleBookingEnd?: string | null;
+    priceEgp?: string;
   }) => {
     await updateMutation.mutateAsync({
       id: track.id,
@@ -89,6 +90,7 @@ function TrackDetailPage() {
         trackBookingEnd: values.trackBookingEnd || null,
         singleBookingStart: values.singleBookingStart || null,
         singleBookingEnd: values.singleBookingEnd || null,
+        priceInCents: values.priceEgp ? Math.round(Number(values.priceEgp) * 100) : null,
       },
     });
   };

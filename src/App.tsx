@@ -37,13 +37,18 @@ import Dashboard from './pages/Dashboard';
 import DashboardLibrary from './pages/DashboardLibrary';
 import DashboardSeriesDetail from './pages/DashboardSeriesDetail';
 import DashboardTrackDetail from './pages/DashboardTrackDetail';
+import DashboardSubscribePage from './pages/dashboard/Subscribe';
 import Index from './pages/Index';
 import InviteOnlyPage from './pages/InviteOnly';
 import InvitationAcceptancePage from './pages/invitation/[token]';
 import LibraryComingSoon from './pages/Library';
 import LibraryItemDetail from './pages/LibraryItemDetail';
 import NotFound from './pages/NotFound';
+import PaymentFailedPage from './pages/payment/failed';
+import PaymentPendingPage from './pages/payment/pending';
+import PaymentSuccessPage from './pages/payment/success';
 import SignIn from './pages/SignIn';
+import SubscribeLanding from './pages/SubscribeLanding';
 import CheckEmail from './pages/signup/CheckEmail';
 import Step0 from './pages/signup/Step0';
 import Step1 from './pages/signup/Step1';
@@ -220,6 +225,16 @@ const App = () => {
                   }
                 />
                 <Route
+                  path="/dashboard/subscribe"
+                  element={
+                    <ProtectedRoute>
+                      <ErrorBoundary>
+                        <DashboardSubscribePage />
+                      </ErrorBoundary>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/meetups"
                   element={
                     <ErrorBoundary>
@@ -240,6 +255,38 @@ const App = () => {
                   element={
                     <ErrorBoundary>
                       <PublicTrackDetail />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/payment/success"
+                  element={
+                    <ErrorBoundary>
+                      <PaymentSuccessPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/payment/failed"
+                  element={
+                    <ErrorBoundary>
+                      <PaymentFailedPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/payment/pending"
+                  element={
+                    <ErrorBoundary>
+                      <PaymentPendingPage />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/subscribe"
+                  element={
+                    <ErrorBoundary>
+                      <SubscribeLanding />
                     </ErrorBoundary>
                   }
                 />

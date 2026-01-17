@@ -27,6 +27,7 @@ function NewTrackPage() {
     trackBookingEnd?: string | null;
     singleBookingStart?: string | null;
     singleBookingEnd?: string | null;
+    priceEgp?: string;
   }) => {
     await createMutation.mutateAsync({
       title: values.title,
@@ -38,6 +39,7 @@ function NewTrackPage() {
       trackBookingEnd: values.trackBookingEnd || null,
       singleBookingStart: values.singleBookingStart || null,
       singleBookingEnd: values.singleBookingEnd || null,
+      priceInCents: values.priceEgp ? Math.round(Number(values.priceEgp) * 100) : null,
     });
     navigate('/admin/meetups?tab=tracks');
   };

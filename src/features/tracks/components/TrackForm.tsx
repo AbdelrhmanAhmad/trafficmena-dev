@@ -32,6 +32,15 @@ const trackFormSchema = z
     allowIndividualBooking: z.boolean(),
     singleBookingStart: z.string().optional().nullable(),
     singleBookingEnd: z.string().optional().nullable(),
+    // Pricing
+    priceEgp: z
+      .string()
+      .optional()
+      .refine(
+        (value) =>
+          !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
+        'Price must be between 0 and 100,000 EGP.',
+      ),
   })
   .refine(
     (data) => {
@@ -113,6 +122,7 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
       allowIndividualBooking: track?.allow_individual_booking ?? false,
       singleBookingStart: formatDateForInput(track?.single_booking_start),
       singleBookingEnd: formatDateForInput(track?.single_booking_end),
+      priceEgp: track?.price_in_cents ? String(track.price_in_cents / 100) : '',
     },
   });
 
@@ -202,6 +212,23 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
                 Recommended size: 1200×640px. Max 20 MB. JPEG, PNG, or WebP.
               </FormDescription>
               {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="priceEgp"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Price (EGP)</FormLabel>
+              <FormControl>
+                <Input placeholder="0 for free" inputMode="decimal" {...field} />
+              </FormControl>
+              <FormDescription>
+                Leave empty or set to 0 for free tracks. Subscribers get discounts on paid tracks.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

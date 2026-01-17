@@ -1,7 +1,8 @@
-import { LayoutDashboard, Library, LogOut, Settings, Shield } from 'lucide-react';
+import { Crown, LayoutDashboard, Library, LogOut, Settings, Shield } from 'lucide-react';
 import type React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
+import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import {
   DropdownMenu,
@@ -18,7 +19,10 @@ const UserProfileDropdown: React.FC = () => {
   const navigate = useNavigate();
   const { canAccessAdmin, isOwner, isAdmin, isManager } = useRolePermissions();
   const { data: currentUser } = useCurrentUser();
+  const { data: subscription } = useCurrentSubscription({ enabled: !!user });
   const profile = currentUser?.profile;
+
+  const hasActiveSubscription = subscription?.status === 'active';
 
   const handleSignOut = async () => {
     try {
@@ -114,6 +118,18 @@ const UserProfileDropdown: React.FC = () => {
             <span>Content Library</span>
           </Link>
         </DropdownMenuItem>
+
+        {!hasActiveSubscription && (
+          <DropdownMenuItem asChild>
+            <Link
+              to="/dashboard/subscribe"
+              className="flex cursor-pointer items-center text-amber-700"
+            >
+              <Crown className="mr-2 h-4 w-4" />
+              <span>Subscribe</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
 
         {canAccessAdmin && (
           <DropdownMenuItem asChild>

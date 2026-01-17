@@ -24,6 +24,14 @@ const listQuerySchema = z.object({
   search: z.string().max(200).optional(),
 });
 
+const priceInCentsSchema = z
+  .union([
+    z.coerce.number().int().min(0, 'Price cannot be negative.').max(10000000, 'Price too large.'),
+    z.null(),
+  ])
+  .optional()
+  .transform((value) => (value === undefined ? undefined : value));
+
 const createTrackSchema = z.object({
   title: z.string().trim().min(3, 'Title is required.').max(180),
   description: z.union([z.string().trim().max(4000), z.null()]).optional(),
@@ -35,6 +43,7 @@ const createTrackSchema = z.object({
   singleBookingEnd: z.coerce.date().nullable().optional(),
   allowIndividualBooking: z.boolean().default(false),
   maxTrackBookings: z.number().int().positive().nullable().optional(),
+  priceInCents: priceInCentsSchema,
 });
 
 const updateTrackSchema = z
@@ -50,6 +59,7 @@ const updateTrackSchema = z
     singleBookingEnd: z.coerce.date().nullable().optional(),
     allowIndividualBooking: z.boolean().optional(),
     maxTrackBookings: z.number().int().positive().nullable().optional(),
+    priceInCents: priceInCentsSchema,
   })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
@@ -224,6 +234,7 @@ export function registerTrackRoutes(app: Hono) {
         trackBookingStart: tracks.trackBookingStart,
         trackBookingEnd: tracks.trackBookingEnd,
         maxTrackBookings: tracks.maxTrackBookings,
+        priceInCents: tracks.priceInCents,
       })
       .from(tracks)
       .where(eq(tracks.isPublished, true))
@@ -286,6 +297,7 @@ export function registerTrackRoutes(app: Hono) {
         trackBookingStart: t.trackBookingStart,
         trackBookingEnd: t.trackBookingEnd,
         spotsRemaining: t.maxTrackBookings !== null ? t.maxTrackBookings - currentBookings : null,
+        priceInCents: t.priceInCents,
       };
     });
 
@@ -325,6 +337,7 @@ export function registerTrackRoutes(app: Hono) {
         singleBookingEnd: tracks.singleBookingEnd,
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
+        priceInCents: tracks.priceInCents,
       })
       .from(tracks)
       .where(eq(tracks.id, id))
@@ -421,6 +434,7 @@ export function registerTrackRoutes(app: Hono) {
             : null,
         event_count: trackEvents_formatted.length,
         user_has_booked: userHasBooked,
+        price_in_cents: track.priceInCents,
       },
       events: trackEvents_formatted,
     });
@@ -481,6 +495,7 @@ export function registerTrackRoutes(app: Hono) {
         singleBookingEnd: tracks.singleBookingEnd,
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
+        priceInCents: tracks.priceInCents,
       })
       .from(tracks)
       .where(whereClause)
@@ -549,6 +564,7 @@ export function registerTrackRoutes(app: Hono) {
         singleBookingEnd: tracks.singleBookingEnd,
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
+        priceInCents: tracks.priceInCents,
       })
       .from(tracks)
       .where(eq(tracks.id, id))
@@ -758,6 +774,7 @@ export function registerTrackRoutes(app: Hono) {
               singleBookingEnd: payload.singleBookingEnd ?? null,
               allowIndividualBooking: payload.allowIndividualBooking ?? false,
               maxTrackBookings: payload.maxTrackBookings ?? null,
+              priceInCents: payload.priceInCents ?? null,
             })
             .returning();
 
@@ -821,6 +838,8 @@ export function registerTrackRoutes(app: Hono) {
           updateValues.allowIndividualBooking = updates.allowIndividualBooking;
         if (updates.maxTrackBookings !== undefined)
           updateValues.maxTrackBookings = updates.maxTrackBookings ?? null;
+        if (updates.priceInCents !== undefined)
+          updateValues.priceInCents = updates.priceInCents ?? null;
 
         const [currentTrack] = await db.select().from(tracks).where(eq(tracks.id, id)).limit(1);
         if (!currentTrack) {
@@ -1171,6 +1190,7 @@ export function registerTrackRoutes(app: Hono) {
               trackBookingEnd: tracks.trackBookingEnd,
               maxTrackBookings: tracks.maxTrackBookings,
               isPublished: tracks.isPublished,
+              priceInCents: tracks.priceInCents,
             })
             .from(tracks)
             .where(eq(tracks.id, trackId))
@@ -1179,6 +1199,14 @@ export function registerTrackRoutes(app: Hono) {
 
           if (!track || !track.isPublished) {
             throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
+          }
+
+          if (track.priceInCents && track.priceInCents > 0) {
+            throw new ApiError(
+              'PAYMENT_REQUIRED',
+              'This track requires payment. Use the checkout flow.',
+              402,
+            );
           }
 
           if (track.trackBookingStart === null || track.trackBookingEnd === null) {
@@ -1211,6 +1239,12 @@ export function registerTrackRoutes(app: Hono) {
           WITH track_booking_check AS (
             SELECT COUNT(*) AS current_count FROM track_bookings WHERE track_id = ${trackId}
           ),
+          track_reservation_check AS (
+            SELECT COUNT(*) AS reservation_count
+            FROM track_reservations
+            WHERE track_id = ${trackId}
+              AND expires_at > NOW()
+          ),
           locked_events AS (
             SELECT e.id, e.max_attendees
             FROM track_events te
@@ -1230,11 +1264,19 @@ export function registerTrackRoutes(app: Hono) {
             WHERE event_id IN (SELECT id FROM locked_events)
             GROUP BY event_id
           ),
+          reservation_counts AS (
+            SELECT event_id, COUNT(*) AS reservation_count
+            FROM event_reservations
+            WHERE event_id IN (SELECT id FROM locked_events)
+              AND expires_at > NOW()
+            GROUP BY event_id
+          ),
           eligible AS (
             SELECT le.id AS event_id
             FROM locked_events le
             LEFT JOIN attendee_counts ac ON ac.event_id = le.id
-            WHERE COALESCE(ac.attendee_count, 0) < le.max_attendees
+            LEFT JOIN reservation_counts rc ON rc.event_id = le.id
+            WHERE COALESCE(ac.attendee_count, 0) + COALESCE(rc.reservation_count, 0) < le.max_attendees
           ),
           to_insert AS (
             SELECT event_id
@@ -1249,7 +1291,9 @@ export function registerTrackRoutes(app: Hono) {
           inserted_booking AS (
             INSERT INTO track_bookings (track_id, user_id)
             SELECT ${trackId}, ${userId}
-            WHERE (SELECT current_count FROM track_booking_check) < ${track.maxTrackBookings ?? 2147483647}
+            WHERE (SELECT current_count FROM track_booking_check)
+              + (SELECT reservation_count FROM track_reservation_check)
+              < ${track.maxTrackBookings ?? 2147483647}
               AND (SELECT COUNT(*) FROM locked_events) > 0
               AND (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) = 0
               AND (SELECT COUNT(*) FROM existing) + (SELECT COUNT(*) FROM inserted_attendees) >= (SELECT COUNT(*) FROM locked_events)
@@ -1261,6 +1305,7 @@ export function registerTrackRoutes(app: Hono) {
             (SELECT COUNT(*) FROM inserted_attendees) AS inserted_count,
             (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) AS null_capacity_count,
             (SELECT current_count FROM track_booking_check) AS current_bookings,
+            (SELECT reservation_count FROM track_reservation_check) AS reserved_bookings,
             (SELECT COUNT(*) FROM inserted_booking) AS booking_inserted
         `);
 
@@ -1270,6 +1315,7 @@ export function registerTrackRoutes(app: Hono) {
             inserted_count: string;
             null_capacity_count: string;
             current_bookings: string;
+            reserved_bookings: string;
             booking_inserted: string;
           };
           const totalEvents = Number(row.total_events);
@@ -1277,6 +1323,7 @@ export function registerTrackRoutes(app: Hono) {
           const insertedCount = Number(row.inserted_count);
           const nullCapacityCount = Number(row.null_capacity_count);
           const currentBookings = Number(row.current_bookings);
+          const reservedBookings = Number(row.reserved_bookings);
           const bookingInserted = Number(row.booking_inserted);
 
           if (totalEvents === 0) {
@@ -1294,7 +1341,10 @@ export function registerTrackRoutes(app: Hono) {
           }
           if (bookingInserted === 0) {
             // Track capacity was reached between checks (race condition prevented)
-            if (track.maxTrackBookings !== null && currentBookings >= track.maxTrackBookings) {
+            if (
+              track.maxTrackBookings !== null &&
+              currentBookings + reservedBookings >= track.maxTrackBookings
+            ) {
               throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
             }
           }
