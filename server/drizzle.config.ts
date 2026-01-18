@@ -1,12 +1,12 @@
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { config } from 'dotenv';
-import { defineConfig } from 'drizzle-kit';
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { config } from "dotenv";
+import { defineConfig } from "drizzle-kit";
 
-const currentDir = fileURLToPath(new URL('.', import.meta.url));
+const currentDir = fileURLToPath(new URL(".", import.meta.url));
 
 config({
-  path: resolve(currentDir, '.env'),
+  path: resolve(currentDir, ".env"),
 });
 
 function resolveDatabaseUrl() {
@@ -27,16 +27,16 @@ const appUrl = resolveDatabaseUrl();
 
 if (!adminUrl) {
   console.warn(
-    '[drizzle.config] DATABASE_ADMIN_URL is not set. Falling back to DATABASE_URL – migrations may fail if this user lacks schema permissions.',
+    "[drizzle.config] DATABASE_ADMIN_URL is not set. Falling back to DATABASE_URL – migrations may fail if this user lacks schema permissions.",
   );
 }
 
 export default defineConfig({
-  dialect: 'postgresql',
-  out: resolve(currentDir, 'drizzle'),
-  schema: resolve(currentDir, 'src/db/schema'),
+  dialect: "postgresql",
+  out: resolve(currentDir, "drizzle"),
+  schema: resolve(currentDir, "src/db/schema"),
   dbCredentials: {
-    url: adminUrl ?? appUrl ?? '',
+    url: adminUrl ?? appUrl ?? "",
   },
   verbose: true,
   strict: true,
