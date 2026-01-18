@@ -9,8 +9,21 @@ config({
   path: resolve(currentDir, '.env'),
 });
 
+function resolveDatabaseUrl() {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
+  const { PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE } = process.env;
+  if (PGHOST && PGPORT && PGUSER && PGPASSWORD && PGDATABASE) {
+    return `postgres://${encodeURIComponent(PGUSER)}:${encodeURIComponent(
+      PGPASSWORD,
+    )}@${PGHOST}:${PGPORT}/${PGDATABASE}`;
+  }
+  return undefined;
+}
+
 const adminUrl = process.env.DATABASE_ADMIN_URL;
-const appUrl = process.env.DATABASE_URL;
+const appUrl = resolveDatabaseUrl();
 
 if (!adminUrl) {
   console.warn(
