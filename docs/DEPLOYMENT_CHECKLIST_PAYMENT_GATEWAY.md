@@ -1,8 +1,8 @@
-# Payment Gateway Staging Deployment Checklist
+# Payment Gateway Deployment Checklist
 
-**Branch:** `feat/payment-gateway-mvp`
-**Target:** staging.trafficmena.com
-**Payment Gateway:** Fawaterk Staging
+**Branch:** `main` (merged from `feat/payment-gateway-mvp`)
+**Target:** staging.trafficmena.com / trafficmena.com
+**Payment Gateway:** Fawaterk
 
 ---
 
@@ -39,14 +39,14 @@ CORS_ORIGIN=https://staging.trafficmena.com
 
 ```bash
 # 1. Pull the code
-git checkout feat/payment-gateway-mvp
-git pull origin feat/payment-gateway-mvp
+git checkout main
+git pull origin main
 
 # 2. Install dependencies
 npm install
 npm --prefix server install
 
-# 3. Run database migrations
+# 3. Run database migrations (includes payment tables)
 npm --prefix server run db:migrate
 
 # 4. Build and restart server
@@ -54,9 +54,93 @@ npm --prefix server run build
 # Restart your server process (pm2, systemd, etc.)
 ```
 
+### Database Migrations Applied
+
+The payment gateway includes these migrations:
+- `0016_payment_gateway_security_fixes.sql` - Core payment tables
+- `0019_payment_reservations.sql` - Capacity reservation system
+
 ---
 
-## 3. Configure Platform Settings (Admin UI)
+## 3. Configure Fawaterk Webhook (CRITICAL)
+
+The webhook is how Fawaterk notifies your server when a payment is completed. **Without this, payments will stay in "pending" status forever.**
+
+### Webhook Endpoint
+
+Your server exposes two equivalent webhook endpoints (Fawaterk sends to both):
+
+| Endpoint | URL |
+|----------|-----|
+| Primary | `https://your-domain.com/api/payments/webhook` |
+| Alternative | `https://your-domain.com/api/payments/webhook_json` |
+
+### Configure in Fawaterk Dashboard
+
+1. **Staging:** Go to https://staging.fawaterk.com
+   **Production:** Go to https://app.fawaterk.com
+
+2. Login to your merchant account
+
+3. Navigate to **Settings** → **Webhooks** (or **API Settings**)
+
+4. Set the webhook URL:
+   - **Staging:** `https://staging.trafficmena.com/api/payments/webhook`
+   - **Production:** `https://trafficmena.com/api/payments/webhook`
+
+5. Enable webhook notifications for payment events
+
+6. **Save** the settings
+
+### Webhook Security
+
+The webhook is secured by:
+- **HMAC-SHA256 signature verification** - Fawaterk signs each webhook using your API key
+- **Invoice key double-check** - The invoice key must match what was stored during checkout
+- **Rate limiting** - 100 webhooks/minute per IP to prevent DoS
+- **Timing-safe comparison** - Prevents timing attacks on signature verification
+
+### Webhook Payload Format
+
+Fawaterk sends this JSON payload:
+
+```json
+{
+  "invoice_id": 12345,
+  "invoice_key": "abc123xyz",
+  "payment_method": "Visa-Mastercard",
+  "hashKey": "hmac_sha256_signature_here"
+}
+```
+
+### Test Webhook Manually
+
+```bash
+# This will fail signature verification (expected) but confirms endpoint is reachable
+curl -X POST "https://staging.trafficmena.com/api/payments/webhook" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "invoice_id": 1,
+    "invoice_key": "test",
+    "payment_method": "test",
+    "hashKey": "invalid"
+  }'
+
+# Expected response (401 - invalid signature is correct behavior):
+# {"error":{"code":"INVALID_SIGNATURE"}}
+```
+
+### Verify Webhook is Working
+
+After a test payment:
+
+1. Check server logs for `[payments/webhook]` entries
+2. Payment status should change from `pending` to `paid`
+3. User should receive their subscription/event access
+
+---
+
+## 4. Configure Platform Settings (Admin UI)
 
 After deployment, login as admin and configure subscription pricing:
 
@@ -79,7 +163,7 @@ curl -X PUT "https://staging.trafficmena.com/api/settings" \
 
 ---
 
-## 4. Verify Deployment
+## 5. Verify Deployment
 
 ### Check Payment Methods Load
 
@@ -117,7 +201,7 @@ curl -s "https://staging.trafficmena.com/api/subscriptions/info" | jq .
 
 ---
 
-## 5. Test Payment Flow
+## 6. Test Payment Flow
 
 ### Test Cards (Fawaterk Staging Only)
 
@@ -171,16 +255,71 @@ curl -s "https://staging.trafficmena.com/api/subscriptions/info" | jq .
 
 ### "Payment service temporarily unavailable"
 - Check `FAWATERK_API_KEY` is set correctly
-- Check `FAWATERK_ENV` is `staging`
+- Check `FAWATERK_ENV` is `staging` or `live`
 - Check server logs for Fawaterk API errors
+- Circuit breaker may be open after 5 consecutive failures (auto-resets after 30s)
 
 ### Payment redirect goes to wrong URL
-- Verify `APP_BASE_URL` is set to your staging domain
+- Verify `APP_BASE_URL` is set to your staging/production domain
 - Must include `https://`
 
 ### CORS errors
-- Verify `CORS_ORIGIN` includes your staging frontend URL
+- Verify `CORS_ORIGIN` includes your frontend URL
 
 ### Cannot see subscription price
-- Configure platform settings (step 3 above)
+- Configure platform settings (step 4 above)
 - Price must be set before users can subscribe
+
+### Payment stays in "pending" status (WEBHOOK ISSUE)
+This is the most common issue. Check:
+
+1. **Webhook URL configured in Fawaterk dashboard?**
+   - Go to Fawaterk Settings → Webhooks
+   - URL must be: `https://your-domain.com/api/payments/webhook`
+
+2. **Webhook endpoint reachable?**
+   ```bash
+   curl -X POST "https://your-domain.com/api/payments/webhook" \
+     -H "Content-Type: application/json" \
+     -d '{"invoice_id":1,"invoice_key":"test","payment_method":"test","hashKey":"test"}'
+   ```
+   - Should return `{"error":{"code":"INVALID_SIGNATURE"}}` (401)
+   - If connection refused/timeout, check firewall/nginx
+
+3. **Check server logs:**
+   ```bash
+   grep "payments/webhook" /var/log/your-app.log
+   ```
+   - Look for `Invalid signature` → Webhook is reaching server, signature issue
+   - Look for `Payment not found` → Invoice ID doesn't match any pending payment
+   - No logs? → Webhook not reaching server
+
+4. **API key mismatch?**
+   - The same API key must be used for:
+     - Creating the invoice (`invoiceInitPay`)
+     - Verifying the webhook signature
+   - If you rotated keys, pending payments from old key won't verify
+
+### Webhook returns 401 "INVALID_SIGNATURE"
+- Ensure `FAWATERK_API_KEY` in your server matches the key in Fawaterk dashboard
+- The API key is used as the HMAC secret for webhook signatures
+- Don't confuse staging and production keys
+
+### Non-redirect payment methods (Fawry, Aman, Masary)
+These payment methods return a **code** instead of redirecting:
+
+1. User receives a code (e.g., Fawry reference number)
+2. User pays at any Fawry outlet using the code
+3. Fawaterk sends webhook when payment is confirmed
+4. **Webhook is critical** - without it, payment never completes
+
+### Rate limit errors (429)
+Rate limits by endpoint:
+- `/payments/checkout`: 5/min per user
+- `/payments/webhook`: 100/min per IP
+- `/payments/verify`: 30/min per user
+
+If hitting limits in production, check for:
+- Duplicate webhook sends from Fawaterk
+- Bot traffic
+- Stuck payment loops in frontend
