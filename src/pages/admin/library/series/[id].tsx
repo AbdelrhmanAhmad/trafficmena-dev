@@ -87,6 +87,7 @@ function SeriesDetailPage() {
     description?: string;
     imageUrl?: string;
     isPublished: boolean;
+    isPremium: boolean;
   }) => {
     await updateMutation.mutateAsync({
       id: series.id,
@@ -95,6 +96,7 @@ function SeriesDetailPage() {
         description: values.description || null,
         imageUrl: values.imageUrl || null,
         isPublished: values.isPublished,
+        isPremium: values.isPremium,
       },
     });
   };

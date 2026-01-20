@@ -42,3 +42,7 @@ web/.env
 *.env.zip
 server/*.zip
 Server*.zip
+
+# Local scripts (do not commit)
+deploy.sh
+check-db-config.sh

@@ -272,6 +272,7 @@ export const series = pgTable(
     imageUrl: text('image_url'),
     sortOrder: integer('sort_order').default(0).notNull(),
     isPublished: boolean('is_published').default(true).notNull(),
+    isPremium: boolean('is_premium').default(false).notNull(),
     trackId: uuid('track_id').references(() => tracks.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

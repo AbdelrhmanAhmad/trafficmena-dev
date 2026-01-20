@@ -725,6 +725,7 @@ export function registerPaymentRoutes(app: Hono) {
 
     const userId = session.user.id;
 
+    // Build pending payment query (defined outside try for catch block access)
     const pendingWhere =
       itemType === 'subscription'
         ? and(
@@ -1347,48 +1348,8 @@ export function registerPaymentRoutes(app: Hono) {
     }
   });
 
-  // GET /payments/:id - Get payment status
-  app.get('/payments/:id', async (c) => {
-    const session = await getSessionFromRequest(c);
-    if (!session?.user?.id) {
-      return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
-    }
-
-    const paymentId = c.req.param('id');
-
-    // Validate UUID format
-    const uuidResult = z.string().uuid().safeParse(paymentId);
-    if (!uuidResult.success) {
-      return c.json(
-        { error: { code: 'INVALID_INPUT', message: 'Invalid payment ID format' } },
-        400,
-      );
-    }
-
-    const [payment] = await db
-      .select()
-      .from(payments)
-      .where(and(eq(payments.id, paymentId), eq(payments.userId, session.user.id)));
-
-    if (!payment) {
-      return c.json({ error: { code: 'NOT_FOUND', message: 'Payment not found' } }, 404);
-    }
-
-    return c.json({
-      data: {
-        id: payment.id,
-        status: payment.status,
-        amountCents: payment.amountCents,
-        currency: payment.currency,
-        itemType: payment.itemType,
-        itemId: payment.itemId,
-        createdAt: payment.createdAt,
-        paidAt: payment.paidAt,
-      },
-    });
-  });
-
   // GET /payments/price-preview - Preview price for an item
+  // NOTE: Must be registered BEFORE /payments/:id to avoid route conflict
   app.get('/payments/price-preview', async (c) => {
     const session = await getSessionFromRequest(c);
     if (!session?.user?.id) {
@@ -1450,6 +1411,47 @@ export function registerPaymentRoutes(app: Hono) {
       console.error('[payments/price-preview] Error:', error);
       return c.json({ error: { code: 'PRICE_ERROR', message: 'Failed to calculate price' } }, 500);
     }
+  });
+
+  // GET /payments/:id - Get payment status
+  app.get('/payments/:id', async (c) => {
+    const session = await getSessionFromRequest(c);
+    if (!session?.user?.id) {
+      return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
+    }
+
+    const paymentId = c.req.param('id');
+
+    // Validate UUID format
+    const uuidResult = z.string().uuid().safeParse(paymentId);
+    if (!uuidResult.success) {
+      return c.json(
+        { error: { code: 'INVALID_INPUT', message: 'Invalid payment ID format' } },
+        400,
+      );
+    }
+
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.id, paymentId), eq(payments.userId, session.user.id)));
+
+    if (!payment) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Payment not found' } }, 404);
+    }
+
+    return c.json({
+      data: {
+        id: payment.id,
+        status: payment.status,
+        amountCents: payment.amountCents,
+        currency: payment.currency,
+        itemType: payment.itemType,
+        itemId: payment.itemId,
+        createdAt: payment.createdAt,
+        paidAt: payment.paidAt,
+      },
+    });
   });
 
   // POST /payments/webhook(_json) - Fawaterk webhook for server-to-server payment confirmation

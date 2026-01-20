@@ -22,12 +22,14 @@ function NewSeriesPage() {
     description?: string;
     imageUrl?: string;
     isPublished: boolean;
+    isPremium: boolean;
   }) => {
     await createMutation.mutateAsync({
       title: values.title,
       description: values.description || null,
       imageUrl: values.imageUrl || null,
       isPublished: values.isPublished,
+      isPremium: values.isPremium,
     });
     navigate('/admin/library?tab=series');
   };

@@ -1,8 +1,14 @@
-import { and, count, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, inArray, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { eventAttendees, libraryAssets, series, seriesAssets } from '../../db/schema/index.js';
+import {
+  eventAttendees,
+  libraryAssets,
+  series,
+  seriesAssets,
+  subscriptions,
+} from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
@@ -17,6 +23,7 @@ const createSeriesSchema = z.object({
   description: z.union([z.string().trim().max(4000), z.null()]).optional(),
   imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
   isPublished: z.boolean().default(true),
+  isPremium: z.boolean().default(false),
 });
 
 const updateSeriesSchema = z
@@ -25,6 +32,7 @@ const updateSeriesSchema = z
     description: z.union([z.string().trim().max(4000), z.null()]).optional(),
     imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
     isPublished: z.boolean().optional(),
+    isPremium: z.boolean().optional(),
     sortOrder: z.number().int().min(0).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
@@ -36,6 +44,22 @@ const addAssetsSchema = z.object({
 const reorderAssetsSchema = z.object({
   assetIds: z.array(z.string().uuid()),
 });
+
+const hasActiveSubscription = async (userId: string): Promise<boolean> => {
+  const [subscription] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, 'active'),
+        gte(subscriptions.endsAt, new Date()),
+      ),
+    )
+    .limit(1);
+
+  return subscription !== undefined;
+};
 
 export function registerSeriesRoutes(app: Hono) {
   // List series (users see published only, staff see all)
@@ -86,6 +110,7 @@ export function registerSeriesRoutes(app: Hono) {
         imageUrl: series.imageUrl,
         sortOrder: series.sortOrder,
         isPublished: series.isPublished,
+        isPremium: series.isPremium,
         createdAt: series.createdAt,
       })
       .from(series)
@@ -143,6 +168,7 @@ export function registerSeriesRoutes(app: Hono) {
         imageUrl: series.imageUrl,
         sortOrder: series.sortOrder,
         isPublished: series.isPublished,
+        isPremium: series.isPremium,
         createdAt: series.createdAt,
         updatedAt: series.updatedAt,
       })
@@ -157,6 +183,20 @@ export function registerSeriesRoutes(app: Hono) {
     // Non-staff can only see published series
     if (!isStaff && !seriesRecord.isPublished) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
+    }
+
+    let hasAccess = true;
+    if (seriesRecord.isPremium && !isStaff) {
+      hasAccess = await hasActiveSubscription(session.user.id);
+    }
+
+    if (!hasAccess) {
+      return c.json({
+        ...seriesRecord,
+        assetCount: 0,
+        assets: [],
+        hasAccess: false,
+      });
     }
 
     // Get assets in series with permission fields
@@ -224,6 +264,7 @@ export function registerSeriesRoutes(app: Hono) {
       ...seriesRecord,
       assetCount: assets.length,
       assets,
+      hasAccess: true,
     });
   });
 
@@ -248,6 +289,7 @@ export function registerSeriesRoutes(app: Hono) {
         description: payload.description ?? null,
         imageUrl: payload.imageUrl || null,
         isPublished: payload.isPublished,
+        isPremium: payload.isPremium,
       })
       .returning();
 
@@ -274,6 +316,7 @@ export function registerSeriesRoutes(app: Hono) {
     if (updates.description !== undefined) updateValues.description = updates.description ?? null;
     if (updates.imageUrl !== undefined) updateValues.imageUrl = updates.imageUrl || null;
     if (updates.isPublished !== undefined) updateValues.isPublished = updates.isPublished;
+    if (updates.isPremium !== undefined) updateValues.isPremium = updates.isPremium;
     if (updates.sortOrder !== undefined) updateValues.sortOrder = updates.sortOrder;
 
     const [updated] = await db

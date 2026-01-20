@@ -186,7 +186,25 @@ const DashboardSeriesDetail: React.FC = () => {
           </div>
 
           {/* Resources */}
-          {series.assets.length > 0 ? (
+          {series.has_access === false ? (
+            <Card className="rounded-2xl border border-neutral-200 bg-white/95 shadow-sm">
+              <CardContent className="py-12 text-center">
+                <FolderOpen className="mx-auto h-12 w-12 text-neutral-300" />
+                <h3 className="mt-4 text-lg font-semibold text-neutral-900">
+                  Premium series
+                </h3>
+                <p className="mt-2 text-sm text-neutral-600">
+                  Subscribe to unlock the full series content.
+                </p>
+                <Button
+                  className="mt-6 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
+                  onClick={() => navigate('/dashboard/subscribe')}
+                >
+                  View subscription options
+                </Button>
+              </CardContent>
+            </Card>
+          ) : series.assets.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-semibold">Resources</h2>

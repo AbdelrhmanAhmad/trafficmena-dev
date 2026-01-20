@@ -9,6 +9,7 @@ export interface ApiSeries {
   imageUrl: string | null;
   sortOrder: number;
   isPublished: boolean;
+  isPremium: boolean;
   createdAt: string;
   updatedAt?: string;
   assetCount: number;
@@ -34,6 +35,7 @@ type ApiSeriesAsset = {
 
 type ApiSeriesDetail = ApiSeries & {
   assets: ApiSeriesAsset[];
+  hasAccess?: boolean;
 };
 
 // Frontend types (snake_case for consistency)
@@ -44,6 +46,7 @@ export interface SeriesRecord {
   image_url: string | null;
   sort_order: number;
   is_published: boolean;
+  is_premium: boolean;
   asset_count: number;
   created_at: Date;
 }
@@ -69,6 +72,7 @@ export type SeriesAssetRecord = {
 export type SeriesDetailRecord = SeriesRecord & {
   updated_at: string;
   assets: SeriesAssetRecord[];
+  has_access: boolean;
 };
 
 // Mappers
@@ -79,6 +83,7 @@ const mapSeries = (api: ApiSeries): SeriesRecord => ({
   image_url: api.imageUrl,
   sort_order: api.sortOrder,
   is_published: api.isPublished,
+  is_premium: api.isPremium ?? false,
   asset_count: api.assetCount ?? 0,
   created_at: new Date(api.createdAt),
 });
@@ -105,6 +110,7 @@ const mapSeriesDetail = (series: ApiSeriesDetail): SeriesDetailRecord => ({
   ...mapSeries(series),
   updated_at: series.updatedAt ?? series.createdAt,
   assets: (series.assets ?? []).map(mapSeriesAsset),
+  has_access: series.hasAccess ?? true,
 });
 
 // Params and payloads
@@ -119,6 +125,7 @@ export type CreateSeriesPayload = {
   description?: string | null;
   imageUrl?: string | null;
   isPublished?: boolean;
+  isPremium?: boolean;
 };
 
 export type UpdateSeriesPayload = Partial<CreateSeriesPayload> & {

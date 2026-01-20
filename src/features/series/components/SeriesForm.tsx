@@ -24,6 +24,7 @@ const seriesFormSchema = z.object({
   description: z.string().max(4000).optional(),
   imageUrl: z.string().url('Enter a valid URL').or(z.literal('')).optional(),
   isPublished: z.boolean(),
+  isPremium: z.boolean(),
 });
 
 type SeriesFormValues = z.infer<typeof seriesFormSchema>;
@@ -43,6 +44,7 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
       description: series?.description || '',
       imageUrl: series?.image_url || '',
       isPublished: series?.is_published ?? true,
+      isPremium: series?.is_premium ?? false,
     },
   });
 
@@ -169,6 +171,22 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
               <div className="space-y-0.5">
                 <FormLabel>Published</FormLabel>
                 <FormDescription>Make this series visible to members.</FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="isPremium"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel>Premium Content</FormLabel>
+                <FormDescription>Require an active subscription to access.</FormDescription>
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />
