@@ -57,7 +57,8 @@ if (!adminUrl && !appUrl) {
 
 export default defineConfig({
   dialect: "postgresql",
-  out: resolve(currentDir, "drizzle"),
+  // drizzle-kit expects `out` to be a relative path (it prefixes with `./` internally)
+  out: "drizzle",
   schema: resolve(currentDir, "src/db/schema"),
   dbCredentials: {
     url: adminUrl ?? appUrl ?? "",
