@@ -190,9 +190,7 @@ const DashboardSeriesDetail: React.FC = () => {
             <Card className="rounded-2xl border border-neutral-200 bg-white/95 shadow-sm">
               <CardContent className="py-12 text-center">
                 <FolderOpen className="mx-auto h-12 w-12 text-neutral-300" />
-                <h3 className="mt-4 text-lg font-semibold text-neutral-900">
-                  Premium series
-                </h3>
+                <h3 className="mt-4 text-lg font-semibold text-neutral-900">Premium series</h3>
                 <p className="mt-2 text-sm text-neutral-600">
                   Subscribe to unlock the full series content.
                 </p>
