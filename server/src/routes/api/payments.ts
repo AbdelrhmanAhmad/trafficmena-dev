@@ -723,24 +723,24 @@ export function registerPaymentRoutes(app: Hono) {
       );
     }
 
+    const userId = session.user.id;
+
+    const pendingWhere =
+      itemType === 'subscription'
+        ? and(
+            eq(payments.userId, userId),
+            eq(payments.itemType, 'subscription'),
+            eq(payments.status, 'pending'),
+          )
+        : and(
+            eq(payments.userId, userId),
+            eq(payments.itemType, itemType),
+            itemId ? eq(payments.itemId, itemId) : isNull(payments.itemId),
+            eq(payments.status, 'pending'),
+          );
+
     try {
-      const userId = session.user.id;
-
       // Note: Stale payment expiration moved to background job (see jobs/paymentExpiration.ts)
-
-      const pendingWhere =
-        itemType === 'subscription'
-          ? and(
-              eq(payments.userId, userId),
-              eq(payments.itemType, 'subscription'),
-              eq(payments.status, 'pending'),
-            )
-          : and(
-              eq(payments.userId, userId),
-              eq(payments.itemType, itemType),
-              itemId ? eq(payments.itemId, itemId) : isNull(payments.itemId),
-              eq(payments.status, 'pending'),
-            );
 
       const [existingPending] = await db
         .select()
