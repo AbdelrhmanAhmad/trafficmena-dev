@@ -37,6 +37,7 @@ interface LibraryItem {
   download_count?: number | null;
   event_id?: string | null;
   is_public?: boolean;
+  is_premium?: boolean;
   has_access?: boolean;
 }
 
@@ -56,6 +57,10 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
   canDelete = false,
 }) => {
   const navigate = useNavigate();
+  const isPremium = item.is_premium ?? false;
+  const hasAccess = item.has_access !== false;
+  const showPremiumOverlay = !canManage && isPremium && !hasAccess;
+  const showRegistrationOverlay = !showPremiumOverlay && !hasAccess;
   const getIcon = (fileType: string, videoUrl?: string | null, embedType?: string | null) => {
     if (fileType === 'Presentation' || embedType) {
       return <Presentation className="h-5 w-5 text-purple-600" />;
@@ -115,6 +120,10 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
+    if (showPremiumOverlay) {
+      navigate('/dashboard/subscribe');
+      return;
+    }
     // Navigate based on context - admin stays in admin, users stay in dashboard
     const basePath = canManage ? '/admin/library' : '/dashboard/library';
     navigate(`${basePath}/${item.id}`);
@@ -158,8 +167,18 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
           </div>
         )}
 
+        {/* Premium overlay for restricted premium content */}
+        {showPremiumOverlay && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/10">
+            <div className="flex flex-col items-center gap-2 text-neutral-900/60">
+              <Lock className="h-12 w-12" />
+              <span className="text-lg font-semibold">Premium</span>
+            </div>
+          </div>
+        )}
+
         {/* Lock Overlay for restricted content */}
-        {item.has_access === false && (
+        {showRegistrationOverlay && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
             <div className="text-center text-white">
               <Lock className="h-8 w-8 mx-auto mb-2" />
@@ -185,8 +204,14 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
           )}
         </div>
 
-        {(canManage || canDelete) && (
-          <div className="absolute top-3 right-3 z-10 flex gap-2">
+        {(isPremium || canManage || canDelete) && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+            {isPremium && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/90 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                <Lock className="h-3 w-3" />
+                Premium
+              </span>
+            )}
             {canManage && onEdit && (
               <Button
                 variant="ghost"

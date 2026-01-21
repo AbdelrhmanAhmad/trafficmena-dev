@@ -14,6 +14,7 @@ type ApiLibraryAsset = {
   thumbnailUrl: string | null;
   eventId: string | null;
   isPublic: boolean;
+  isPremium: boolean;
   viewCount: number | null;
   downloadCount: number | null;
   fileSizeBytes: number | null;
@@ -34,6 +35,7 @@ export type LibraryAssetRecord = {
   thumbnail_url: string | null;
   event_id: string | null;
   is_public: boolean;
+  is_premium: boolean;
   view_count: number;
   download_count: number;
   file_size_bytes: number | null;
@@ -54,6 +56,7 @@ const mapAsset = (asset: ApiLibraryAsset): LibraryAssetRecord => ({
   thumbnail_url: asset.thumbnailUrl,
   event_id: asset.eventId,
   is_public: asset.isPublic ?? false,
+  is_premium: asset.isPremium ?? false,
   view_count: Number(asset.viewCount ?? 0),
   download_count: Number(asset.downloadCount ?? 0),
   file_size_bytes: asset.fileSizeBytes,
@@ -81,6 +84,7 @@ export type CreateLibraryAssetPayload = {
   thumbnailUrl?: string | null;
   eventId?: string | null;
   isPublic?: boolean;
+  isPremium?: boolean;
   fileSizeBytes?: number | null;
 };
 

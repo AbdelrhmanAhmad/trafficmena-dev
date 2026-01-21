@@ -26,6 +26,10 @@ interface LibraryItem {
   embed_type?: string | null;
   file_url?: string | null; // Legacy field
   created_at: string;
+  event_id?: string | null;
+  is_public?: boolean;
+  is_premium?: boolean;
+  has_access?: boolean;
 }
 
 /**
@@ -82,6 +86,10 @@ function LibraryManagement() {
         created_at: item.created_at,
         view_count: item.view_count,
         download_count: item.download_count,
+        event_id: item.event_id,
+        is_public: item.is_public,
+        is_premium: item.is_premium,
+        has_access: item.has_access,
       })),
     [assetsData?.items],
   );

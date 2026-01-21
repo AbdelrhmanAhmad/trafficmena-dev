@@ -40,6 +40,10 @@ const DashboardLibrary: React.FC = () => {
     created_at: item.created_at,
     view_count: item.view_count,
     download_count: item.download_count,
+    event_id: item.event_id,
+    is_public: item.is_public,
+    is_premium: item.is_premium,
+    has_access: item.has_access,
   }));
 
   return (
@@ -145,7 +149,7 @@ const DashboardLibrary: React.FC = () => {
               {!isLoading && !isError && filteredAssets.length > 0 && (
                 <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {transformedItems.map((item) => (
-                    <LibraryItemCard key={item.id} item={item} isAdmin={false} />
+                    <LibraryItemCard key={item.id} item={item} />
                   ))}
                 </div>
               )}

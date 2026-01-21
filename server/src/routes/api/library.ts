@@ -1,8 +1,13 @@
-import { and, count, eq, ilike, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, count, eq, gte, ilike, inArray, notInArray, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { eventAttendees, libraryAssets, seriesAssets } from '../../db/schema/index.js';
+import {
+  eventAttendees,
+  libraryAssets,
+  seriesAssets,
+  subscriptions,
+} from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
@@ -37,6 +42,7 @@ const assetObjectSchema = z.object({
   thumbnailUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
   eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
   isPublic: z.boolean().optional().default(false),
+  isPremium: z.boolean().optional().default(false),
   fileSizeBytes: z
     .union([z.number().int().min(0), z.null()])
     .optional()
@@ -79,6 +85,22 @@ const updateAssetSchema = assetObjectSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
+const hasActiveSubscription = async (userId: string): Promise<boolean> => {
+  const [subscription] = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, 'active'),
+        gte(subscriptions.endsAt, new Date()),
+      ),
+    )
+    .limit(1);
+
+  return subscription !== undefined;
+};
+
 export function registerLibraryRoutes(app: Hono) {
   app.get('/library', async (c) => {
     const session = await getSessionFromRequest(c);
@@ -118,12 +140,13 @@ export function registerLibraryRoutes(app: Hono) {
     const { page, pageSize, search, type, eventIds, excludeInTracks } = parsed.data;
     const filters: any[] = [];
 
-    // Permission filtering: staff see all, users see accessible assets only
+    // Permission filtering: staff/subscribers see all, free users see accessible + premium assets
     const role = await getOptionalUserRole(session.user.id);
     const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
+    const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
+    let registeredEventIds = new Set<string>();
 
-    if (!isStaff) {
-      // User can access: isPublic=true OR eventId IS NULL OR registered for event
+    if (!isStaff && !isSubscriber) {
       const userEventIds = db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
@@ -131,11 +154,18 @@ export function registerLibraryRoutes(app: Hono) {
 
       filters.push(
         sql`(
-          ${libraryAssets.isPublic} = true
+          ${libraryAssets.isPremium} = true
+          OR ${libraryAssets.isPublic} = true
           OR ${libraryAssets.eventId} IS NULL
           OR ${libraryAssets.eventId} IN (${userEventIds})
         )`,
       );
+
+      const registrations = await db
+        .select({ eventId: eventAttendees.eventId })
+        .from(eventAttendees)
+        .where(eq(eventAttendees.userId, session.user.id));
+      registeredEventIds = new Set(registrations.map((r) => r.eventId));
     }
 
     if (type) {
@@ -185,6 +215,7 @@ export function registerLibraryRoutes(app: Hono) {
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
         isPublic: libraryAssets.isPublic,
+        isPremium: libraryAssets.isPremium,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
         fileSizeBytes: libraryAssets.fileSizeBytes,
@@ -199,8 +230,30 @@ export function registerLibraryRoutes(app: Hono) {
       .limit(pageSize)
       .offset(offset);
 
+    const mappedItems = items.map((item) => {
+      const hasAccess =
+        isStaff || isSubscriber
+          ? true
+          : item.isPremium
+            ? false
+            : item.isPublic || !item.eventId || registeredEventIds.has(item.eventId);
+
+      if (hasAccess) {
+        return { ...item, hasAccess };
+      }
+
+      return {
+        ...item,
+        fileUrl: null,
+        videoUrl: null,
+        documentUrl: null,
+        embedUrl: null,
+        hasAccess: false,
+      };
+    });
+
     return c.json({
-      items,
+      items: mappedItems,
       pagination: {
         page,
         pageSize,
@@ -239,6 +292,7 @@ export function registerLibraryRoutes(app: Hono) {
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
         isPublic: libraryAssets.isPublic,
+        isPremium: libraryAssets.isPremium,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
         fileSizeBytes: libraryAssets.fileSizeBytes,
@@ -260,12 +314,29 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
 
-    // Permission check for restricted assets
-    if (asset[0].eventId && !asset[0].isPublic) {
-      const role = await getOptionalUserRole(session.user.id);
-      const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
+    const role = await getOptionalUserRole(session.user.id);
+    const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
+    const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
 
-      if (!isStaff) {
+    if (!isStaff && !isSubscriber) {
+      if (asset[0].isPremium) {
+        return c.json(
+          {
+            id: asset[0].id,
+            title: asset[0].title,
+            description: asset[0].description,
+            fileType: asset[0].fileType,
+            thumbnailUrl: asset[0].thumbnailUrl,
+            eventId: asset[0].eventId,
+            isPremium: asset[0].isPremium,
+            hasAccess: false,
+            error: { code: 'SUBSCRIPTION_REQUIRED', message: 'Subscribe to access this content.' },
+          },
+          403,
+        );
+      }
+
+      if (asset[0].eventId && !asset[0].isPublic) {
         const [registration] = await db
           .select({ id: eventAttendees.id })
           .from(eventAttendees)
@@ -287,6 +358,7 @@ export function registerLibraryRoutes(app: Hono) {
               fileType: asset[0].fileType,
               thumbnailUrl: asset[0].thumbnailUrl,
               eventId: asset[0].eventId,
+              isPremium: asset[0].isPremium,
               hasAccess: false,
               error: { code: 'REGISTRATION_REQUIRED', message: 'Register for event to access.' },
             },
@@ -334,6 +406,7 @@ export function registerLibraryRoutes(app: Hono) {
         thumbnailUrl: payload.thumbnailUrl || null,
         eventId: payload.eventId ?? null,
         isPublic: payload.isPublic ?? false,
+        isPremium: payload.isPremium ?? false,
         fileSizeBytes: payload.fileSizeBytes ?? null,
       })
       .returning({
@@ -349,6 +422,7 @@ export function registerLibraryRoutes(app: Hono) {
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
         isPublic: libraryAssets.isPublic,
+        isPremium: libraryAssets.isPremium,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
         fileSizeBytes: libraryAssets.fileSizeBytes,
@@ -392,6 +466,7 @@ export function registerLibraryRoutes(app: Hono) {
       updateValues.thumbnailUrl = updates.thumbnailUrl || null;
     if (updates.eventId !== undefined) updateValues.eventId = updates.eventId ?? null;
     if (updates.isPublic !== undefined) updateValues.isPublic = updates.isPublic;
+    if (updates.isPremium !== undefined) updateValues.isPremium = updates.isPremium;
     if (updates.fileSizeBytes !== undefined)
       updateValues.fileSizeBytes = updates.fileSizeBytes ?? null;
 
@@ -429,6 +504,7 @@ export function registerLibraryRoutes(app: Hono) {
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
         isPublic: libraryAssets.isPublic,
+        isPremium: libraryAssets.isPremium,
         viewCount: libraryAssets.viewCount,
         downloadCount: libraryAssets.downloadCount,
         fileSizeBytes: libraryAssets.fileSizeBytes,

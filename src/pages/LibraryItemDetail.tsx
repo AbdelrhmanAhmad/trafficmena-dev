@@ -39,6 +39,7 @@ const LibraryItemDetail: React.FC = () => {
   const { data, isLoading, error } = useLibraryAsset(id ?? '');
   const item = data ?? null;
   const hasAccess = item?.has_access ?? true;
+  const isPremium = item?.is_premium ?? false;
   const access = { canView: hasAccess, canDownload: hasAccess };
 
   useEffect(() => {
@@ -188,8 +189,9 @@ const LibraryItemDetail: React.FC = () => {
               </CardHeader>
               <CardContent className="text-center space-y-6 pt-4">
                 <p className="text-neutral-600">
-                  This content is exclusive to registered attendees. Register for the associated
-                  event to unlock access.
+                  {isPremium
+                    ? 'This content is premium. Subscribe to unlock access.'
+                    : 'This content is exclusive to registered attendees. Register for the associated event to unlock access.'}
                 </p>
 
                 {item.description && (
@@ -205,17 +207,28 @@ const LibraryItemDetail: React.FC = () => {
                 )}
 
                 <div className="flex flex-col gap-3 pt-4">
-                  {item.event_id && (
+                  {isPremium ? (
                     <Button
                       asChild
                       className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:shadow-xl"
                     >
-                      <Link to={`/dashboard/events/${item.event_id}`}>Register for Event</Link>
+                      <Link to="/dashboard/subscribe">View subscription options</Link>
                     </Button>
+                  ) : (
+                    <>
+                      {item.event_id && (
+                        <Button
+                          asChild
+                          className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:shadow-xl"
+                        >
+                          <Link to={`/dashboard/events/${item.event_id}`}>Register for Event</Link>
+                        </Button>
+                      )}
+                      <Button variant="outline" onClick={() => navigate('/dashboard/events')}>
+                        Browse All Events
+                      </Button>
+                    </>
                   )}
-                  <Button variant="outline" onClick={() => navigate('/dashboard/events')}>
-                    Browse All Events
-                  </Button>
                 </div>
               </CardContent>
             </Card>

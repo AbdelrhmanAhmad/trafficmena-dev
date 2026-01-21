@@ -16,6 +16,10 @@ interface LibraryItem {
   created_at: string; // Match database field name
   view_count?: number | null;
   download_count?: number | null;
+  event_id?: string | null;
+  is_public?: boolean;
+  is_premium?: boolean;
+  has_access?: boolean;
 }
 
 interface LibraryGridProps {

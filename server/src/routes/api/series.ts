@@ -185,19 +185,8 @@ export function registerSeriesRoutes(app: Hono) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
     }
 
-    let hasAccess = true;
-    if (seriesRecord.isPremium && !isStaff) {
-      hasAccess = await hasActiveSubscription(session.user.id);
-    }
-
-    if (!hasAccess) {
-      return c.json({
-        ...seriesRecord,
-        assetCount: 0,
-        assets: [],
-        hasAccess: false,
-      });
-    }
+    const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
+    const isPremiumLocked = seriesRecord.isPremium && !isStaff && !isSubscriber;
 
     // Get assets in series with permission fields
     const seriesAssetsList = await db
@@ -218,6 +207,7 @@ export function registerSeriesRoutes(app: Hono) {
           createdAt: libraryAssets.createdAt,
           eventId: libraryAssets.eventId,
           isPublic: libraryAssets.isPublic,
+          isPremium: libraryAssets.isPremium,
         },
       })
       .from(seriesAssets)
@@ -227,7 +217,7 @@ export function registerSeriesRoutes(app: Hono) {
 
     // Get user's registered event IDs for permission checking
     let userEventIds = new Set<string>();
-    if (!isStaff) {
+    if (!isStaff && !isSubscriber && !isPremiumLocked) {
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
@@ -237,8 +227,13 @@ export function registerSeriesRoutes(app: Hono) {
 
     // Map assets with access control
     const assets = seriesAssetsList.map((sa) => {
+      const isAssetPremiumLocked = sa.asset.isPremium && !isStaff && !isSubscriber;
       const hasAccess =
-        isStaff || sa.asset.isPublic || !sa.asset.eventId || userEventIds.has(sa.asset.eventId);
+        isStaff || isSubscriber
+          ? true
+          : isPremiumLocked || isAssetPremiumLocked
+            ? false
+            : sa.asset.isPublic || !sa.asset.eventId || userEventIds.has(sa.asset.eventId);
 
       return {
         id: sa.asset.id,
@@ -256,6 +251,7 @@ export function registerSeriesRoutes(app: Hono) {
         sortOrder: sa.sortOrder,
         eventId: sa.asset.eventId,
         isPublic: sa.asset.isPublic,
+        isPremium: sa.asset.isPremium,
         hasAccess,
       };
     });
@@ -264,7 +260,7 @@ export function registerSeriesRoutes(app: Hono) {
       ...seriesRecord,
       assetCount: assets.length,
       assets,
-      hasAccess: true,
+      hasAccess: !isPremiumLocked,
     });
   });
 

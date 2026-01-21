@@ -149,6 +149,7 @@ export const libraryAssets = pgTable(
     thumbnailUrl: text('thumbnail_url'),
     eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
     isPublic: boolean('is_public').default(false).notNull(),
+    isPremium: boolean('is_premium').default(false).notNull(),
     viewCount: integer('view_count').default(0).notNull(),
     downloadCount: integer('download_count').default(0).notNull(),
     durationSeconds: integer('duration_seconds'),

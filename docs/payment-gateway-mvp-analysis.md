@@ -50,6 +50,8 @@ User selects item (Event/Track/Subscription)
     (eventAttendees, trackBookings, subscriptions)
 ```
 
+**Reviewer note:** Subscription creation happens in payment fulfillment. When `itemType = 'subscription'`, `processSuccessfulPayment()` inserts a row into `subscriptions` (status, startsAt/endsAt, pricePaidCents, paymentId). See `server/src/routes/api/payments.ts`.
+
 ---
 
 ## Component Status Breakdown

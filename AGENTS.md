@@ -170,6 +170,8 @@ GET  /api/settings             # Platform settings
 PUT  /api/settings             # Update settings (admin)
 ```
 
+Note: There is no standalone “create subscription” endpoint. Subscriptions are created during payment fulfillment when `itemType = subscription` in `server/src/routes/api/payments.ts`.
+
 ## Environment Configuration
 
 Copy `server/.env.example` to `server/.env`. Key variables:
@@ -440,4 +442,3 @@ This project uses OpenSpec for change proposals. When working on new features, b
 - `npx ultracite lint` - Check for issues without fixing
 - `npm run lint` - Run lint check via npm script
 - `npm run format` - Format all files via npm script
-

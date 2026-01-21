@@ -30,6 +30,7 @@ type ApiSeriesAsset = {
   sortOrder: number;
   eventId: string | null;
   isPublic: boolean;
+  isPremium: boolean;
   hasAccess: boolean;
 };
 
@@ -66,6 +67,7 @@ export type SeriesAssetRecord = {
   sort_order: number;
   event_id: string | null;
   is_public: boolean;
+  is_premium: boolean;
   has_access: boolean;
 };
 
@@ -103,6 +105,7 @@ const mapSeriesAsset = (asset: ApiSeriesAsset): SeriesAssetRecord => ({
   sort_order: asset.sortOrder,
   event_id: asset.eventId,
   is_public: asset.isPublic ?? false,
+  is_premium: asset.isPremium ?? false,
   has_access: asset.hasAccess ?? true,
 });
 

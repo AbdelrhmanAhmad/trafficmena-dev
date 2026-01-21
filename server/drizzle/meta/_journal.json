@@ -15,6 +15,13 @@
       "when": 1768939239324,
       "tag": "0001_aromatic_morlun",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769026810734,
+      "tag": "0002_shallow_malice",
+      "breakpoints": true
     }
   ]
 }

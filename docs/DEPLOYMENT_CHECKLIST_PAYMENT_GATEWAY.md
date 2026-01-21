@@ -138,6 +138,8 @@ After a test payment:
 2. Payment status should change from `pending` to `paid`
 3. User should receive their subscription/event access
 
+Note: The subscription record is created during payment fulfillment (when `itemType=subscription`) inside `server/src/routes/api/payments.ts` after webhook/verify succeeds.
+
 ---
 
 ## 4. Configure Platform Settings (Admin UI)

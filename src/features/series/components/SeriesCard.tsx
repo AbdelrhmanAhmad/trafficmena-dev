@@ -1,5 +1,5 @@
 import DOMPurify from 'dompurify';
-import { BookOpen, Edit, FolderOpen, Trash2 } from 'lucide-react';
+import { BookOpen, Edit, FolderOpen, Lock, Trash2 } from 'lucide-react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/components/ui/button';
@@ -30,6 +30,7 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
   basePath = '/dashboard/library/series',
 }) => {
   const navigate = useNavigate();
+  const isPremium = series.is_premium ?? false;
 
   const sanitizeConfig = {
     ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u'],
@@ -90,8 +91,14 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
           )}
         </div>
 
-        {(canManage || canDelete) && (
-          <div className="absolute top-3 right-3 z-10 flex gap-2">
+        {(isPremium || canManage || canDelete) && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+            {isPremium && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/90 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                <Lock className="h-3 w-3" />
+                Premium
+              </span>
+            )}
             {canManage && onEdit && (
               <Button
                 variant="ghost"

@@ -3,6 +3,7 @@ import {
   BookOpen,
   FileText,
   FolderOpen,
+  Lock,
   Play,
   Presentation,
   Video,
@@ -49,16 +50,29 @@ const getAssetTypeStyles = (fileType: string, embedType?: string | null) => {
   }
 };
 
-const SeriesResourceCard: React.FC<{ asset: SeriesAsset }> = ({ asset }) => {
+const SeriesResourceCard: React.FC<{
+  asset: SeriesAsset;
+  isSeriesPremium: boolean;
+}> = ({ asset, isSeriesPremium }) => {
   const navigate = useNavigate();
   const isVideo =
     asset.file_type === 'Video' || asset.embed_type?.toLowerCase().includes('youtube');
   const styles = getAssetTypeStyles(asset.file_type, asset.embed_type);
+  const isPremium = isSeriesPremium || asset.is_premium;
+  const hasAccess = asset.has_access !== false;
+  const showPremiumOverlay = isPremium && !hasAccess;
+  const showPremiumBadge = isPremium;
 
   return (
     <button
       type="button"
-      onClick={() => navigate(`/dashboard/library/${asset.id}`)}
+      onClick={() => {
+        if (showPremiumOverlay) {
+          navigate('/dashboard/subscribe');
+          return;
+        }
+        navigate(`/dashboard/library/${asset.id}`);
+      }}
       className="group cursor-pointer rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl overflow-hidden"
     >
       {/* Thumbnail Area */}
@@ -68,7 +82,7 @@ const SeriesResourceCard: React.FC<{ asset: SeriesAsset }> = ({ asset }) => {
         {asset.thumbnail_url && (
           <img
             src={asset.thumbnail_url}
-            alt=""
+            alt={asset.title}
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         )}
@@ -89,6 +103,15 @@ const SeriesResourceCard: React.FC<{ asset: SeriesAsset }> = ({ asset }) => {
           </div>
         )}
 
+        {showPremiumOverlay && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/10">
+            <div className="flex flex-col items-center gap-2 text-neutral-900/60">
+              <Lock className="h-12 w-12" />
+              <span className="text-lg font-semibold">Premium</span>
+            </div>
+          </div>
+        )}
+
         <div className="absolute left-3 top-3">
           <span
             className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${styles.badgeColor} backdrop-blur-sm`}
@@ -96,6 +119,15 @@ const SeriesResourceCard: React.FC<{ asset: SeriesAsset }> = ({ asset }) => {
             {asset.embed_type || asset.file_type}
           </span>
         </div>
+
+        {showPremiumBadge && (
+          <div className="absolute right-3 top-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/90 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+              <Lock className="h-3 w-3" />
+              Premium
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="p-4">
@@ -159,7 +191,11 @@ const DashboardSeriesDetail: React.FC = () => {
             <div className="relative overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
               {series.image_url && (
                 <div className="absolute inset-0 opacity-10">
-                  <img src={series.image_url} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={series.image_url}
+                    alt={series.title}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               )}
               <div className="relative z-10">
@@ -186,23 +222,7 @@ const DashboardSeriesDetail: React.FC = () => {
           </div>
 
           {/* Resources */}
-          {series.has_access === false ? (
-            <Card className="rounded-2xl border border-neutral-200 bg-white/95 shadow-sm">
-              <CardContent className="py-12 text-center">
-                <FolderOpen className="mx-auto h-12 w-12 text-neutral-300" />
-                <h3 className="mt-4 text-lg font-semibold text-neutral-900">Premium series</h3>
-                <p className="mt-2 text-sm text-neutral-600">
-                  Subscribe to unlock the full series content.
-                </p>
-                <Button
-                  className="mt-6 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
-                  onClick={() => navigate('/dashboard/subscribe')}
-                >
-                  View subscription options
-                </Button>
-              </CardContent>
-            </Card>
-          ) : series.assets.length > 0 ? (
+          {series.assets.length > 0 ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-semibold">Resources</h2>
@@ -212,7 +232,11 @@ const DashboardSeriesDetail: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {series.assets.map((asset) => (
-                  <SeriesResourceCard key={asset.id} asset={asset} />
+                  <SeriesResourceCard
+                    key={asset.id}
+                    asset={asset}
+                    isSeriesPremium={series.is_premium}
+                  />
                 ))}
               </div>
             </div>

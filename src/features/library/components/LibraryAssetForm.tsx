@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FileText, Globe, HelpCircle, Link2, Upload, Video } from 'lucide-react';
+import { FileText, Globe, HelpCircle, Link2, Lock, Upload, Video } from 'lucide-react';
 import { type ChangeEvent, useId, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -51,6 +51,7 @@ const libraryAssetFormSchema = z
     thumbnailUrl: z.string().trim().max(1000).optional(),
     eventId: z.string().trim().uuid().optional(),
     isPublic: z.boolean().optional(),
+    isPremium: z.boolean().optional(),
     fileSizeBytes: z
       .number({ invalid_type_error: 'Provide a valid file size.' })
       .int()
@@ -123,6 +124,7 @@ export function LibraryAssetForm({
     thumbnailUrl: asset?.thumbnail_url ?? '',
     eventId: asset?.event_id ?? undefined,
     isPublic: asset?.is_public ?? false,
+    isPremium: asset?.is_premium ?? false,
     fileSizeBytes: asset?.file_size_bytes ?? null,
   };
 
@@ -137,6 +139,7 @@ export function LibraryAssetForm({
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [documentUploadError, setDocumentUploadError] = useState<string | null>(null);
   const isPublicSwitchId = useId();
+  const isPremiumSwitchId = useId();
 
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
@@ -221,6 +224,7 @@ export function LibraryAssetForm({
       thumbnailUrl,
       eventId: values.eventId?.trim() ? values.eventId.trim() : null,
       isPublic: values.isPublic ?? false,
+      isPremium: values.isPremium ?? false,
       fileSizeBytes: documentUrl ? (values.fileSizeBytes ?? null) : null,
     };
 
@@ -516,6 +520,33 @@ export function LibraryAssetForm({
                     {form.watch('eventId')
                       ? 'By default, only users registered for the linked event can access this content.'
                       : 'Content without a linked event is accessible to all users.'}
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isPremium"
+              render={({ field }) => (
+                <FormItem className="rounded-lg border p-4 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-amber-600" />
+                      <Label htmlFor={isPremiumSwitchId} className="font-medium">
+                        Premium content
+                      </Label>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        id={isPremiumSwitchId}
+                        checked={field.value ?? false}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </div>
+                  <FormDescription className="mt-2 text-xs">
+                    Requires an active subscription to access this content.
                   </FormDescription>
                 </FormItem>
               )}
