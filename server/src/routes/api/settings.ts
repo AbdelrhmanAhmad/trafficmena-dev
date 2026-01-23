@@ -8,6 +8,7 @@ import { requireAdmin } from './utils.js';
 type SettingsRecord = {
   id: string;
   inviteOnlySignup: boolean;
+  eventMode: boolean;
   updatedAt: Date | null;
   updatedBy: string | null;
 };
@@ -17,6 +18,7 @@ async function fetchSettings(): Promise<SettingsRecord | null> {
     .select({
       id: platformSettings.id,
       inviteOnlySignup: platformSettings.inviteOnlySignup,
+      eventMode: platformSettings.eventMode,
       updatedAt: platformSettings.updatedAt,
       updatedBy: platformSettings.updatedBy,
     })
@@ -53,6 +55,7 @@ export function registerSettingsRoutes(app: Hono) {
       const record = await fetchSettings();
       return c.json({
         inviteOnly: record?.inviteOnlySignup ?? false,
+        eventMode: record?.eventMode ?? false,
         updatedAt: record?.updatedAt ?? null,
         updatedBy: record?.updatedBy ?? null,
       });
@@ -61,6 +64,7 @@ export function registerSettingsRoutes(app: Hono) {
       return c.json(
         {
           inviteOnly: false,
+          eventMode: false,
           updatedAt: null,
           updatedBy: null,
         },
@@ -75,27 +79,35 @@ export function registerSettingsRoutes(app: Hono) {
       return result.response;
     }
 
+    const settingsSchema = z
+      .object({
+        inviteOnly: z.boolean().optional(),
+        eventMode: z.boolean().optional(),
+      })
+      .refine(
+        (data) => data.inviteOnly !== undefined || data.eventMode !== undefined,
+        'At least one setting must be provided.',
+      );
+
     const bodyResult = await c.req
       .json()
-      .then((payload) =>
-        z
-          .object({
-            inviteOnly: z.boolean(),
-          })
-          .safeParse(payload),
-      )
-      .catch(() => ({ success: false }) as z.SafeParseReturnType<unknown, unknown>);
+      .then((payload) => settingsSchema.safeParse(payload))
+      .catch(() => ({ success: false as const, error: null }));
 
     if (!bodyResult.success) {
       return c.json(
-        { error: { code: 'INVALID_REQUEST', message: 'inviteOnly must be provided.' } },
+        { error: { code: 'INVALID_REQUEST', message: 'Provide inviteOnly or eventMode.' } },
         400,
       );
     }
 
+    const validatedData = bodyResult.data;
+
     try {
       const now = new Date();
       const existing = await fetchSettings();
+      const nextInviteOnly = validatedData.inviteOnly ?? existing?.inviteOnlySignup ?? false;
+      const nextEventMode = validatedData.eventMode ?? existing?.eventMode ?? false;
 
       let updated: SettingsRecord | null = null;
 
@@ -103,7 +115,8 @@ export function registerSettingsRoutes(app: Hono) {
         const [row] = await db
           .update(platformSettings)
           .set({
-            inviteOnlySignup: (bodyResult.data as any).inviteOnly,
+            inviteOnlySignup: nextInviteOnly,
+            eventMode: nextEventMode,
             updatedAt: now,
             updatedBy: result.userId,
           })
@@ -111,6 +124,7 @@ export function registerSettingsRoutes(app: Hono) {
           .returning({
             id: platformSettings.id,
             inviteOnlySignup: platformSettings.inviteOnlySignup,
+            eventMode: platformSettings.eventMode,
             updatedAt: platformSettings.updatedAt,
             updatedBy: platformSettings.updatedBy,
           });
@@ -119,13 +133,15 @@ export function registerSettingsRoutes(app: Hono) {
         const [row] = await db
           .insert(platformSettings)
           .values({
-            inviteOnlySignup: (bodyResult.data as any).inviteOnly,
+            inviteOnlySignup: nextInviteOnly,
+            eventMode: nextEventMode,
             updatedAt: now,
             updatedBy: result.userId,
           })
           .returning({
             id: platformSettings.id,
             inviteOnlySignup: platformSettings.inviteOnlySignup,
+            eventMode: platformSettings.eventMode,
             updatedAt: platformSettings.updatedAt,
             updatedBy: platformSettings.updatedBy,
           });
@@ -133,7 +149,8 @@ export function registerSettingsRoutes(app: Hono) {
       }
 
       return c.json({
-        inviteOnly: updated?.inviteOnlySignup ?? (bodyResult.data as any).inviteOnly,
+        inviteOnly: updated?.inviteOnlySignup ?? nextInviteOnly,
+        eventMode: updated?.eventMode ?? nextEventMode,
         updatedAt: updated?.updatedAt ?? now,
         updatedBy: updated?.updatedBy ?? result.userId,
       });

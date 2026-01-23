@@ -870,6 +870,14 @@ export function registerPaymentRoutes(app: Hono) {
 
       const methodName = (selectedMethod.name_en ?? '').toLowerCase();
       const normalizedMethodName = methodName.replace(/[^a-z0-9]/g, '');
+      const methodRedirect = String(selectedMethod.redirect ?? '').toLowerCase() === 'true';
+      const forceRedirect =
+        !methodRedirect &&
+        (normalizedMethodName.includes('fawry') ||
+          normalizedMethodName.includes('meeza') ||
+          normalizedMethodName.includes('aman') ||
+          normalizedMethodName.includes('masary') ||
+          normalizedMethodName.includes('mobilewallet'));
       const requiresPhone = normalizedMethodName.includes('mobilewallet');
       const phoneNumber = user.phoneNumber?.trim();
       if (requiresPhone && !phoneNumber) {
@@ -1185,10 +1193,19 @@ export function registerPaymentRoutes(app: Hono) {
         pendingParams.set('item_id', itemId);
       }
       pendingParams.set('method_id', String(paymentMethodId));
+      pendingParams.set('payment_id', paymentId);
       const pendingUrl = `${env.APP_BASE_URL}/payment/pending?${pendingParams.toString()}`;
 
       let invoiceResult: Awaited<ReturnType<typeof invoiceInitPay>>;
       try {
+        console.info('[payments/checkout] Initiating payment', {
+          paymentId,
+          paymentMethodId,
+          methodName: selectedMethod.name_en ?? null,
+          methodRedirect,
+          forceRedirect,
+          itemType,
+        });
         invoiceResult = await invoiceInitPay({
           paymentMethodId,
           invoiceNumber: paymentId,
@@ -1212,6 +1229,7 @@ export function registerPaymentRoutes(app: Hono) {
             failUrl: `${env.APP_BASE_URL}/payment/failed`,
             pendingUrl,
           },
+          redirectOption: forceRedirect ? true : undefined,
           payload: { paymentId },
         });
       } catch (error) {
@@ -1227,6 +1245,11 @@ export function registerPaymentRoutes(app: Hono) {
         .set({
           fawaterkInvoiceId: invoiceResult.invoiceId,
           fawaterkInvoiceKey: invoiceResult.invoiceKey,
+          fawryCode: invoiceResult.paymentData.fawryCode ?? null,
+          amanCode: invoiceResult.paymentData.amanCode ?? null,
+          masaryCode: invoiceResult.paymentData.masaryCode ?? null,
+          meezaReference: invoiceResult.paymentData.meezaReference ?? null,
+          meezaQrCode: invoiceResult.paymentData.meezaQrCode ?? null,
         })
         .where(eq(payments.id, paymentId));
 
@@ -1448,6 +1471,12 @@ export function registerPaymentRoutes(app: Hono) {
         currency: payment.currency,
         itemType: payment.itemType,
         itemId: payment.itemId,
+        fawaterkInvoiceId: payment.fawaterkInvoiceId,
+        fawryCode: payment.fawryCode,
+        amanCode: payment.amanCode,
+        masaryCode: payment.masaryCode,
+        meezaReference: payment.meezaReference,
+        meezaQrCode: payment.meezaQrCode,
         createdAt: payment.createdAt,
         paidAt: payment.paidAt,
       },

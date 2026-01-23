@@ -106,6 +106,7 @@ type InitiatePaymentArgs = {
   customer: FawaterkCustomer;
   cartItems: FawaterkCartItem[];
   redirectionUrls: FawaterkRedirectionUrls;
+  redirectOption?: boolean;
   payload?: Record<string, unknown>;
 };
 
@@ -156,22 +157,65 @@ const invoiceDataSchema = z
   })
   .passthrough(); // Allow additional fields we don't use
 
+const referenceCodeSchema = z
+  .union([z.string(), z.number(), z.null()])
+  .transform((value) => (value === null ? undefined : String(value)))
+  .refine((value) => value === undefined || value.length <= 64, 'reference code too long');
+
+const paymentDataSchema = z
+  .object({
+    redirectTo: z.string().optional(),
+    redirect_to: z.string().optional(),
+    fawryCode: referenceCodeSchema.optional(),
+    fawry_code: referenceCodeSchema.optional(),
+    meezaReference: referenceCodeSchema.optional(),
+    meeza_reference: referenceCodeSchema.optional(),
+    meezaQrCode: z.string().max(2048).nullable().optional(),
+    meeza_qr_code: z.string().max(2048).nullable().optional(),
+    amanCode: referenceCodeSchema.optional(),
+    aman_code: referenceCodeSchema.optional(),
+    masaryCode: referenceCodeSchema.optional(),
+    masary_code: referenceCodeSchema.optional(),
+  })
+  .passthrough()
+  .transform((data) => ({
+    redirectTo: data.redirectTo ?? data.redirect_to,
+    fawryCode: data.fawryCode ?? data.fawry_code,
+    meezaReference: data.meezaReference ?? data.meeza_reference,
+    meezaQrCode: data.meezaQrCode ?? data.meeza_qr_code ?? undefined,
+    amanCode: data.amanCode ?? data.aman_code,
+    masaryCode: data.masaryCode ?? data.masary_code,
+  }));
+
 const invoiceInitPayResponseSchema = z
   .object({
     invoice_id: z.number(),
     invoice_key: z.string(),
-    payment_data: z
-      .object({
-        redirectTo: z.string().optional(),
-        fawryCode: z.string().optional(),
-        meezaReference: z.number().optional(),
-        meezaQrCode: z.string().optional(),
-        amanCode: z.string().optional(),
-        masaryCode: z.string().optional(),
-      })
-      .passthrough(),
+    payment_data: paymentDataSchema,
   })
   .passthrough();
+
+const summarizePaymentData = (input: unknown) => {
+  if (!input || typeof input !== 'object') {
+    return { type: input === null ? 'null' : typeof input, keys: [] as string[] };
+  }
+  const record = input as Record<string, unknown>;
+  const keys = Object.keys(record);
+  const shapes = Object.fromEntries(
+    keys.map((key) => {
+      const value = record[key];
+      if (value === null) return [key, 'null'];
+      if (Array.isArray(value)) return [key, 'array'];
+      return [key, typeof value];
+    }),
+  );
+  const lengths = Object.fromEntries(
+    keys
+      .filter((key) => typeof record[key] === 'string')
+      .map((key) => [key, (record[key] as string).length]),
+  );
+  return { type: 'object', keys, shapes, lengths };
+};
 
 const getBaseUrl = () =>
   env.FAWATERK_ENV === 'live'
@@ -211,7 +255,7 @@ export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
   paymentData: {
     redirectTo?: string;
     fawryCode?: string;
-    meezaReference?: number;
+    meezaReference?: string;
     meezaQrCode?: string;
     amanCode?: string;
     masaryCode?: string;
@@ -235,6 +279,7 @@ export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
       customer: args.customer,
       cartItems: args.cartItems,
       redirectionUrls: args.redirectionUrls,
+      ...(args.redirectOption ? { redirectOption: true } : {}),
       payLoad: args.payload,
     }),
   });
@@ -245,15 +290,34 @@ export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
   }
 
   const result = await response.json();
+  const paymentDataSummary = summarizePaymentData(result?.data?.payment_data);
   const parsed = invoiceInitPayResponseSchema.safeParse(result.data);
   if (!parsed.success) {
-    console.error('[fawaterk] Invalid invoiceInitPay response:', parsed.error.format());
+    console.error('[fawaterk] Invalid invoiceInitPay response:', parsed.error.format(), {
+      paymentDataSummary,
+    });
     throw new Error('Invalid invoice initialization response from gateway');
+  }
+  const paymentData = parsed.data.payment_data;
+  const hasRedirect = Boolean(paymentData.redirectTo);
+  const hasReference = Boolean(
+    paymentData.fawryCode ||
+      paymentData.amanCode ||
+      paymentData.masaryCode ||
+      paymentData.meezaReference ||
+      paymentData.meezaQrCode,
+  );
+  if (!hasRedirect && !hasReference) {
+    console.warn('[fawaterk] invoiceInitPay returned no redirect or reference codes', {
+      invoiceId: parsed.data.invoice_id,
+      paymentMethodId: args.paymentMethodId,
+      paymentDataSummary,
+    });
   }
   return {
     invoiceId: parsed.data.invoice_id,
     invoiceKey: parsed.data.invoice_key,
-    paymentData: parsed.data.payment_data,
+    paymentData,
   };
 }
 

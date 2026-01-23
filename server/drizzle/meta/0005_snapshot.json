@@ -1,6 +1,6 @@
 {
-  "id": "2a71f3ad-87a5-444e-baf6-961a702f1f24",
-  "prevId": "7c0a2266-8ffd-4525-841a-a59c9a8db649",
+  "id": "1a31e9b3-df29-41a3-a8d7-d311e4b988e7",
+  "prevId": "d310add2-78ac-4fd5-a03e-1de047656ac4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -17,6 +17,13 @@
         },
         "invite_only_signup": {
           "name": "invite_only_signup",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "event_mode": {
+          "name": "event_mode",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -1294,6 +1301,36 @@
         },
         "fawaterk_invoice_key": {
           "name": "fawaterk_invoice_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fawry_code": {
+          "name": "fawry_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aman_code": {
+          "name": "aman_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "masary_code": {
+          "name": "masary_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "meeza_reference": {
+          "name": "meeza_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "meeza_qr_code": {
+          "name": "meeza_qr_code",
           "type": "text",
           "primaryKey": false,
           "notNull": false

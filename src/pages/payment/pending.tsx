@@ -1,10 +1,15 @@
 import { Clock, Loader2 } from 'lucide-react';
 import * as QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import type { PaymentItemType } from '@/app/api/payments';
-import { useCreateCheckout, useVerifyPayment } from '@/app/hooks/usePayments';
+import {
+  useCreateCheckout,
+  usePayment,
+  usePaymentMethods,
+  useVerifyPayment,
+} from '@/app/hooks/usePayments';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -16,28 +21,25 @@ import {
 } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
 
 export default function PaymentPendingPage() {
   const [searchParams] = useSearchParams();
-  const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const verifyPayment = useVerifyPayment();
   const createCheckout = useCreateCheckout();
-  const fawryCode = searchParams.get('fawry_code');
-  const meezaReference = searchParams.get('meeza_reference');
-  const amanCode = searchParams.get('aman_code');
-  const masaryCode = searchParams.get('masary_code');
-  const meezaQrParam = searchParams.get('meeza_qr');
-  const rawMeezaQrCode =
-    meezaQrParam ?? (location.state as { meezaQrCode?: string } | null)?.meezaQrCode ?? undefined;
-  const maxMeezaQrLength = 1024;
+  const paymentIdParam = searchParams.get('payment_id');
+  const paymentId = user ? (paymentIdParam ?? undefined) : undefined;
+  const { data: payment } = usePayment(paymentId);
+  const rawMeezaQrCode = payment?.meezaQrCode ?? undefined;
+  const maxMeezaQrLength = 2048;
   const meezaQrCode =
     rawMeezaQrCode && rawMeezaQrCode.length <= maxMeezaQrLength ? rawMeezaQrCode : undefined;
   const isMeezaQrTooLarge = Boolean(rawMeezaQrCode && !meezaQrCode);
   const invoiceIdParam = searchParams.get('invoice_id');
-  const invoiceId = invoiceIdParam ? Number(invoiceIdParam) : null;
+  const invoiceId = invoiceIdParam ? Number(invoiceIdParam) : (payment?.fawaterkInvoiceId ?? null);
   const itemTypeParam = searchParams.get('item_type');
   const itemType: PaymentItemType | null =
     itemTypeParam === 'event' || itemTypeParam === 'track' || itemTypeParam === 'subscription'
@@ -48,11 +50,21 @@ export default function PaymentPendingPage() {
   const paymentMethodId = methodIdParam ? Number(methodIdParam) : null;
   const isInvoiceIdValid = invoiceId !== null && !Number.isNaN(invoiceId);
   const isMethodIdValid = paymentMethodId !== null && !Number.isNaN(paymentMethodId);
+  const { data: methods } = usePaymentMethods();
+  const selectedMethod =
+    isMethodIdValid && paymentMethodId
+      ? (methods?.find((method) => method.paymentId === paymentMethodId) ?? null)
+      : null;
+  const shouldRedirect = shouldRedirectToGateway(selectedMethod);
   const hasItemContext = itemType && (itemType === 'subscription' || Boolean(itemId));
   const canRequestNewCode = Boolean(user && hasItemContext && isMethodIdValid);
   const canVerifyPayment = Boolean(user && isInvoiceIdValid);
   const [meezaQrDataUrl, setMeezaQrDataUrl] = useState<string | null>(null);
 
+  const fawryCode = payment?.fawryCode ?? undefined;
+  const amanCode = payment?.amanCode ?? undefined;
+  const masaryCode = payment?.masaryCode ?? undefined;
+  const meezaReference = payment?.meezaReference ?? undefined;
   const referenceCodes = [
     {
       key: 'fawry',
@@ -127,33 +139,21 @@ export default function PaymentPendingPage() {
     verifyPayment.mutate({ invoiceId });
   };
 
-  const goToPending = (payload: {
-    invoiceId?: number;
-    fawryCode?: string;
-    meezaReference?: number;
-    meezaQrCode?: string;
-    amanCode?: string;
-    masaryCode?: string;
-  }) => {
-    const safeMeezaQr =
-      payload.meezaQrCode && payload.meezaQrCode.length <= maxMeezaQrLength
-        ? payload.meezaQrCode
-        : undefined;
+  const goToPending = (payload: { invoiceId?: number; paymentId?: string }) => {
     const params = new URLSearchParams();
     if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
-    if (payload.fawryCode) params.set('fawry_code', payload.fawryCode);
-    if (payload.meezaReference) params.set('meeza_reference', String(payload.meezaReference));
-    if (payload.amanCode) params.set('aman_code', payload.amanCode);
-    if (payload.masaryCode) params.set('masary_code', payload.masaryCode);
     if (itemType) params.set('item_type', itemType);
     if (itemId) params.set('item_id', itemId);
     if (isMethodIdValid && paymentMethodId) {
       params.set('method_id', String(paymentMethodId));
     }
+    if (payload.paymentId) {
+      params.set('payment_id', payload.paymentId);
+    }
     const query = params.toString();
     navigate(`/payment/pending${query ? `?${query}` : ''}`, {
       replace: true,
-      state: safeMeezaQr ? { meezaQrCode: safeMeezaQr } : undefined,
+      state: undefined,
     });
   };
 
@@ -194,18 +194,15 @@ export default function PaymentPendingPage() {
       ) {
         goToPending({
           invoiceId: result.invoiceId,
-          fawryCode: result.fawryCode,
-          meezaReference: result.meezaReference,
-          meezaQrCode: result.meezaQrCode,
-          amanCode: result.amanCode,
-          masaryCode: result.masaryCode,
+          paymentId: result.paymentId,
         });
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
         const invoiceId = error.extra?.invoiceId as number | undefined;
+        const pendingPaymentId = error.extra?.paymentId as string | undefined;
         if (invoiceId) {
-          goToPending({ invoiceId });
+          goToPending({ invoiceId, paymentId: pendingPaymentId });
           return;
         }
       }
@@ -267,8 +264,15 @@ export default function PaymentPendingPage() {
               </div>
             ) : (
               <div className="rounded-lg bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-                Your payment is being verified. This may take a few moments. You will receive a
-                confirmation once the payment is complete.
+                {shouldRedirect ? (
+                  <>
+                    Your payment code is generated on the Fawaterk page. If you already generated a
+                    code, complete the payment and then check the status here. If you haven&apos;t
+                    generated a code yet, click &quot;Request new code&quot; to open Fawaterk again.
+                  </>
+                ) : (
+                  'Your payment is being verified. This may take a few moments. You will receive a confirmation once the payment is complete.'
+                )}
               </div>
             )}
 

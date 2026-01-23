@@ -36,7 +36,8 @@ server/.postgres/
 local/postgres/
 
 # Local frontend env (do not commit secrets)
-web/.env
+.env
+.env.local
 
 # Security - never commit env archives
 *.env.zip
@@ -46,3 +47,7 @@ Server*.zip
 # Local scripts (do not commit)
 deploy.sh
 check-db-config.sh
+check-db-config copy.sh
+
+# Local migration cleanup
+server/drizzle/_archive/

@@ -22,7 +22,8 @@ export function useUpdateAdminSettings() {
       const previous = queryClient.getQueryData<AdminSettings>(ADMIN_SETTINGS_QUERY_KEY);
 
       queryClient.setQueryData<AdminSettings>(ADMIN_SETTINGS_QUERY_KEY, (current) => ({
-        inviteOnly: variables.inviteOnly,
+        inviteOnly: variables.inviteOnly ?? current?.inviteOnly ?? false,
+        eventMode: variables.eventMode ?? current?.eventMode ?? false,
         updatedAt: current?.updatedAt ?? null,
         updatedBy: current?.updatedBy ?? null,
       }));

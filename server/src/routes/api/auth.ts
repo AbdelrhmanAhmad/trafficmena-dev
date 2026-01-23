@@ -3,8 +3,9 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { auth } from '../../auth.js';
 import { db } from '../../db/client.js';
-import { authVerifications } from '../../db/schema/index.js';
+import { authVerifications, invitations, platformSettings, users } from '../../db/schema/index.js';
 import { otpRateLimiter, otpVerificationRateLimiter } from '../../services/rateLimiter.js';
+import { isTurnstileEnabled, verifyTurnstileToken } from '../../services/turnstile.js';
 import { getRequestIp, normalizeEmail } from './utils.js';
 
 const OTP_SHORT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -12,16 +13,22 @@ const OTP_SHORT_LIMIT = 3;
 const OTP_DAILY_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 const OTP_DAILY_LIMIT = 10;
 const OTP_IP_WINDOW_MS = 10 * 60 * 1000;
-const OTP_IP_LIMIT = 8;
+const OTP_IP_LIMIT_DEFAULT = 8;
+const OTP_IP_LIMIT_EVENT_MODE = 300; // Event mode supports high-density sessions
+// Threshold after which Turnstile is required (per IP within the window)
+const TURNSTILE_THRESHOLD = 20;
 
 const otpRequestSchema = z.object({
   email: z.string().email(),
   type: z.enum(['sign-in', 'email-verification', 'forget-password']).optional(),
+  intent: z.enum(['signup', 'signin']).optional(),
+  turnstileToken: z.string().optional(),
 });
 
 const otpVerifySchema = z.object({
   email: z.string().email(),
   otp: z.string().min(4).max(8),
+  intent: z.enum(['signup', 'signin']).optional(),
 });
 
 export function registerAuthRoutes(app: Hono) {
@@ -42,6 +49,7 @@ export function registerAuthRoutes(app: Hono) {
     try {
       const email = normalizeEmail(body.data.email);
       const type = body.data.type ?? 'sign-in';
+      const intent = body.data.intent ?? 'signin';
       const clientIp = getRequestIp(c);
       const now = Date.now();
 
@@ -128,9 +136,58 @@ export function registerAuthRoutes(app: Hono) {
         );
       }
 
+      const [settings] = await db
+        .select({
+          inviteOnlySignup: platformSettings.inviteOnlySignup,
+          eventMode: platformSettings.eventMode,
+        })
+        .from(platformSettings)
+        .limit(1);
+
+      const ipLimit = settings?.eventMode ? OTP_IP_LIMIT_EVENT_MODE : OTP_IP_LIMIT_DEFAULT;
+
+      // Check current IP request count for Turnstile requirement
+      const ipRequestCount = otpRateLimiter.getCount(`otp:ip:${clientIp}`);
+      const requiresTurnstile =
+        isTurnstileEnabled() && (settings?.eventMode || ipRequestCount >= TURNSTILE_THRESHOLD);
+
+      if (requiresTurnstile) {
+        const turnstileToken = body.data.turnstileToken;
+        if (!turnstileToken) {
+          return c.json(
+            {
+              error: {
+                code: 'TURNSTILE_REQUIRED',
+                message: 'Please complete the security check to continue.',
+                requiresTurnstile: true,
+              },
+            },
+            400,
+          );
+        }
+
+        const turnstileResult = await verifyTurnstileToken(turnstileToken, clientIp);
+        if (!turnstileResult.success) {
+          console.warn('[auth] Turnstile verification failed', {
+            ip: clientIp,
+            errors: turnstileResult.errorCodes,
+          });
+          return c.json(
+            {
+              error: {
+                code: 'TURNSTILE_FAILED',
+                message: 'Security verification failed. Please try again.',
+                requiresTurnstile: true,
+              },
+            },
+            400,
+          );
+        }
+      }
+
       if (clientIp !== 'unknown') {
         const ipWindow = otpRateLimiter.consume(`otp:ip:${clientIp}`, {
-          limit: OTP_IP_LIMIT,
+          limit: ipLimit,
           windowMs: OTP_IP_WINDOW_MS,
         });
 
@@ -143,6 +200,55 @@ export function registerAuthRoutes(app: Hono) {
               },
             },
             429,
+          );
+        }
+      }
+
+      const [existingUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (intent === 'signup' && existingUser) {
+        return c.json(
+          {
+            error: {
+              code: 'EMAIL_EXISTS',
+              message: 'An account already exists for this email. Please sign in instead.',
+            },
+          },
+          409,
+        );
+      }
+
+      if (!existingUser && intent === 'signin') {
+        return c.json(
+          {
+            error: {
+              code: 'ACCOUNT_NOT_FOUND',
+              message: 'No account found for this email. Please sign up instead.',
+            },
+          },
+          404,
+        );
+      }
+
+      if (!existingUser && settings?.inviteOnlySignup) {
+        const [acceptedInvite] = await db
+          .select({ id: invitations.id })
+          .from(invitations)
+          .where(and(eq(invitations.email, email), eq(invitations.status, 'accepted')))
+          .limit(1);
+        if (!acceptedInvite) {
+          return c.json(
+            {
+              error: {
+                code: 'INVITE_ONLY',
+                message: 'An invitation is required to sign up.',
+              },
+            },
+            403,
           );
         }
       }
@@ -182,6 +288,62 @@ export function registerAuthRoutes(app: Hono) {
 
     try {
       const email = normalizeEmail(body.data.email);
+      const intent = body.data.intent ?? 'signin';
+
+      const [existingUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (intent === 'signup' && existingUser) {
+        return c.json(
+          {
+            error: {
+              code: 'EMAIL_EXISTS',
+              message: 'An account already exists for this email. Please sign in instead.',
+            },
+          },
+          409,
+        );
+      }
+
+      if (!existingUser && intent === 'signin') {
+        return c.json(
+          {
+            error: {
+              code: 'ACCOUNT_NOT_FOUND',
+              message: 'No account found for this email. Please sign up instead.',
+            },
+          },
+          404,
+        );
+      }
+
+      if (!existingUser) {
+        const [settings] = await db
+          .select({ inviteOnlySignup: platformSettings.inviteOnlySignup })
+          .from(platformSettings)
+          .limit(1);
+        if (settings?.inviteOnlySignup) {
+          const [acceptedInvite] = await db
+            .select({ id: invitations.id })
+            .from(invitations)
+            .where(and(eq(invitations.email, email), eq(invitations.status, 'accepted')))
+            .limit(1);
+          if (!acceptedInvite) {
+            return c.json(
+              {
+                error: {
+                  code: 'INVITE_ONLY',
+                  message: 'An invitation is required to sign up.',
+                },
+              },
+              403,
+            );
+          }
+        }
+      }
 
       const verificationWindow = otpVerificationRateLimiter.consume(`otp:verify:${email}`, {
         limit: 5,

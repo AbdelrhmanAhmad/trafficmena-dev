@@ -10,7 +10,11 @@ import { registerHealthRoutes } from './routes/health.js';
 export function createApp() {
   const app = new Hono();
   const allowedOrigins = env.CORS_ALLOWLIST;
-  const connectSources = new Set<string>(["'self'", 'https://api.useplunk.com']);
+  const connectSources = new Set<string>([
+    "'self'",
+    'https://api.useplunk.com',
+    'https://challenges.cloudflare.com',
+  ]);
   for (const origin of allowedOrigins) {
     connectSources.add(origin);
   }
@@ -19,7 +23,12 @@ export function createApp() {
   connectSources.add('https://unpkg.com');
   connectSources.add('https://*.useplunk.com');
 
-  const scriptSrc = ["'self'", 'https://cdn.jsdelivr.net', 'https://unpkg.com'];
+  const scriptSrc = [
+    "'self'",
+    'https://cdn.jsdelivr.net',
+    'https://unpkg.com',
+    'https://challenges.cloudflare.com',
+  ];
 
   if (!isProduction) {
     scriptSrc.push("'unsafe-eval'");
@@ -51,6 +60,7 @@ export function createApp() {
         baseUri: ["'self'"],
         frameSrc: [
           "'self'",
+          'https://challenges.cloudflare.com',
           'https://www.youtube.com',
           'https://www.youtube-nocookie.com',
           'https://player.vimeo.com',

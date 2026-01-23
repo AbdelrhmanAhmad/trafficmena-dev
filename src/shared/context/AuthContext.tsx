@@ -1,9 +1,13 @@
 import type { ReactNode } from 'react';
-import type { AuthUser } from '@/app/auth/AuthContext';
+import type { AuthUser, OtpIntent } from '@/app/auth/AuthContext';
 import {
   AuthProvider as InternalAuthProvider,
   useAuth as useBetterAuth,
 } from '@/app/auth/AuthContext';
+
+type RequestOtpOptions = {
+  turnstileToken?: string;
+};
 
 export interface LegacyAuthContextType {
   user: AuthUser | null;
@@ -11,8 +15,8 @@ export interface LegacyAuthContextType {
   loading: boolean;
   error: string | null;
   signOut: () => Promise<{ error: string | null }>;
-  requestOtp: (email: string) => Promise<void>;
-  verifyOtp: (params: { email: string; otp: string }) => Promise<void>;
+  requestOtp: (email: string, intent?: OtpIntent, options?: RequestOtpOptions) => Promise<void>;
+  verifyOtp: (params: { email: string; otp: string; intent?: OtpIntent }) => Promise<void>;
   refreshSession: () => Promise<void>;
 }
 

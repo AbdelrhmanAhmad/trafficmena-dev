@@ -65,6 +65,9 @@ const AdminUsersPage = () => {
   const [roleFilter, setRoleFilter] = useState<
     'all' | 'owner' | 'admin' | 'manager' | 'expert' | 'user'
   >('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<
+    'all' | 'subscribed' | 'not_subscribed'
+  >('all');
   const [deleteDialog, setDeleteDialog] = useState<{ user: AdminUserRecord } | null>(null);
 
   const roleMutation = useMutation({
@@ -116,14 +119,18 @@ const AdminUsersPage = () => {
     return data.items.filter((user) => {
       const normalizedRole = (user.role ?? 'user').toLowerCase();
       const matchesRole = roleFilter === 'all' || normalizedRole === roleFilter;
+      const matchesSubscription =
+        subscriptionFilter === 'all' ||
+        (subscriptionFilter === 'subscribed' ? user.is_subscriber : !user.is_subscriber);
       const query = search.trim().toLowerCase();
-      if (!query) return matchesRole;
+      if (!query) return matchesRole && matchesSubscription;
       return (
         matchesRole &&
+        matchesSubscription &&
         (`${user.name}`.toLowerCase().includes(query) || user.email.toLowerCase().includes(query))
       );
     });
-  }, [data?.items, roleFilter, search]);
+  }, [data?.items, roleFilter, search, subscriptionFilter]);
 
   const totalPages = data?.pagination.total
     ? Math.max(1, Math.ceil(data.pagination.total / PAGE_SIZE))
@@ -178,6 +185,19 @@ const AdminUsersPage = () => {
                   <SelectItem value="manager">Managers</SelectItem>
                   <SelectItem value="expert">Experts</SelectItem>
                   <SelectItem value="user">Members</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={subscriptionFilter}
+                onValueChange={(value: typeof subscriptionFilter) => setSubscriptionFilter(value)}
+              >
+                <SelectTrigger className="sm:w-48 rounded-xl border-neutral-200 bg-white/70 backdrop-blur">
+                  <SelectValue placeholder="Subscription" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All subscriptions</SelectItem>
+                  <SelectItem value="subscribed">Subscribed</SelectItem>
+                  <SelectItem value="not_subscribed">Not subscribed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -349,8 +369,11 @@ const AdminUserRow = ({
   return (
     <TableRow>
       <TableCell>
-        <div>
+        <div className="flex items-center gap-2">
           <p className="font-semibold text-gray-900">{user.name || 'Member'}</p>
+          {user.is_subscriber ? (
+            <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">Subscriber</Badge>
+          ) : null}
         </div>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>

@@ -381,6 +381,7 @@ export const userActivities = pgTable(
 export const platformSettings = pgTable('platform_settings', {
   id: uuid('id').primaryKey().defaultRandom(),
   inviteOnlySignup: boolean('invite_only_signup').notNull().default(false),
+  eventMode: boolean('event_mode').notNull().default(false),
   annualSubscriptionPriceCents: integer('annual_subscription_price_cents'),
   subscriberDiscountPercent: integer('subscriber_discount_percent').default(20),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -444,14 +445,23 @@ export const authAccounts = pgTable('auth_accounts', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const authVerifications = pgTable('auth_verifications', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  identifier: text('identifier').notNull(),
-  value: text('value').notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-});
+export const authVerifications = pgTable(
+  'auth_verifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    identifier: text('identifier').notNull(),
+    value: text('value').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    identifierCreatedAtIdx: index('auth_verifications_identifier_created_at_idx').on(
+      table.identifier,
+      table.createdAt,
+    ),
+  }),
+);
 
 // --- Payment Tables -----------------------------------------------------------
 
@@ -473,6 +483,11 @@ export const payments = pgTable(
     itemId: uuid('item_id'),
     fawaterkInvoiceId: integer('fawaterk_invoice_id'),
     fawaterkInvoiceKey: text('fawaterk_invoice_key'),
+    fawryCode: text('fawry_code'),
+    amanCode: text('aman_code'),
+    masaryCode: text('masary_code'),
+    meezaReference: text('meeza_reference'),
+    meezaQrCode: text('meeza_qr_code'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     paidAt: timestamp('paid_at', { withTimezone: true }),
   },

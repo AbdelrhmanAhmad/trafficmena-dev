@@ -3,7 +3,7 @@ import { Check, Crown, Loader2, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
-import { useCreateCheckout, usePricePreview } from '@/app/hooks/usePayments';
+import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { useCurrentSubscription, useSubscriptionInfo } from '@/app/hooks/useSubscriptions';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { PaymentMethodSelector } from '@/shared/components/payment';
@@ -18,6 +18,7 @@ import {
 } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { cn } from '@/shared/lib/utils';
+import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
 
 const SUBSCRIPTION_BENEFITS = [
   'Free access to all online events',
@@ -439,6 +440,9 @@ function SubscribePaymentView() {
   const { data: subscriptionInfo } = useSubscriptionInfo();
   const { data: pricePreview } = usePricePreview('subscription');
   const createCheckout = useCreateCheckout();
+  const { data: methods } = usePaymentMethods();
+  const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
+  const shouldRedirect = shouldRedirectToGateway(selectedMethod);
 
   useEffect(() => {
     setIsLoaded(true);
@@ -446,31 +450,21 @@ function SubscribePaymentView() {
 
   const goToPending = (payload: {
     invoiceId?: number;
-    fawryCode?: string;
-    meezaReference?: number;
-    meezaQrCode?: string;
-    amanCode?: string;
-    masaryCode?: string;
     paymentMethodId?: number | null;
+    paymentId?: string;
   }) => {
-    const maxQrLength = 1024;
-    const safeMeezaQr =
-      payload.meezaQrCode && payload.meezaQrCode.length <= maxQrLength
-        ? payload.meezaQrCode
-        : undefined;
     const params = new URLSearchParams();
     if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
-    if (payload.fawryCode) params.set('fawry_code', payload.fawryCode);
-    if (payload.meezaReference) params.set('meeza_reference', String(payload.meezaReference));
-    if (payload.amanCode) params.set('aman_code', payload.amanCode);
-    if (payload.masaryCode) params.set('masary_code', payload.masaryCode);
     params.set('item_type', 'subscription');
     if (payload.paymentMethodId) {
       params.set('method_id', String(payload.paymentMethodId));
     }
+    if (payload.paymentId) {
+      params.set('payment_id', payload.paymentId);
+    }
     const query = params.toString();
     navigate(`/payment/pending${query ? `?${query}` : ''}`, {
-      state: safeMeezaQr ? { meezaQrCode: safeMeezaQr } : undefined,
+      state: undefined,
     });
   };
 
@@ -488,6 +482,7 @@ function SubscribePaymentView() {
       const result = await createCheckout.mutateAsync({
         itemType: 'subscription',
         paymentMethodId: selectedMethodId,
+        forceNewCode: shouldRedirect ? true : undefined,
       });
 
       if (result.free) {
@@ -497,6 +492,15 @@ function SubscribePaymentView() {
 
       if (result.redirectUrl) {
         window.location.href = result.redirectUrl;
+        return;
+      }
+
+      if (shouldRedirect) {
+        toast({
+          title: 'Unable to open payment page',
+          description: 'Please try again to generate a new payment link.',
+          variant: 'destructive',
+        });
         return;
       }
 
@@ -510,31 +514,31 @@ function SubscribePaymentView() {
       ) {
         goToPending({
           invoiceId: result.invoiceId,
-          fawryCode: result.fawryCode,
-          meezaReference: result.meezaReference,
-          meezaQrCode: result.meezaQrCode,
-          amanCode: result.amanCode,
-          masaryCode: result.masaryCode,
           paymentMethodId: selectedMethodId,
+          paymentId: result.paymentId,
         });
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
+        if (shouldRedirect) {
+          toast({
+            title: 'Payment already pending',
+            description: 'Please try again to generate a new payment link.',
+            variant: 'destructive',
+          });
+          return;
+        }
         const invoiceId = error.extra?.invoiceId as number | undefined;
         const fawryCode = error.extra?.fawryCode as string | undefined;
-        const meezaReference = error.extra?.meezaReference as number | undefined;
+        const meezaReference = error.extra?.meezaReference as string | undefined;
         const meezaQrCode = error.extra?.meezaQrCode as string | undefined;
         const amanCode = error.extra?.amanCode as string | undefined;
         const masaryCode = error.extra?.masaryCode as string | undefined;
         if (invoiceId || fawryCode || meezaReference || meezaQrCode || amanCode || masaryCode) {
           goToPending({
             invoiceId,
-            fawryCode,
-            meezaReference,
-            meezaQrCode,
-            amanCode,
-            masaryCode,
             paymentMethodId: selectedMethodId,
+            paymentId: error.extra?.paymentId as string | undefined,
           });
           return;
         }

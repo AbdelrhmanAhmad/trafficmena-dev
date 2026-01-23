@@ -66,6 +66,7 @@ export type AdminUserRecord = {
   created_at: string;
   role: string | null;
   user_type: string | null;
+  is_subscriber: boolean;
 };
 
 type ApiAdminUser = {
@@ -75,6 +76,7 @@ type ApiAdminUser = {
   createdAt: string;
   role: string | null;
   userType: string | null;
+  isSubscriber: boolean;
 };
 
 export type AdminUsersResponse = {
@@ -121,6 +123,7 @@ export async function fetchUsersAdmin(
       created_at: item.createdAt,
       role: item.role,
       user_type: item.userType,
+      is_subscriber: item.isSubscriber,
     })),
     pagination: data.pagination,
   };
@@ -138,6 +141,7 @@ export type UpdateCurrentUserPayload = Partial<{
 
 export async function updateCurrentUser(
   payload: UpdateCurrentUserPayload,
+  options?: { mode?: 'signup' },
 ): Promise<{ success: boolean; message?: string }> {
   const body: Record<string, unknown> = {};
 
@@ -149,10 +153,17 @@ export async function updateCurrentUser(
   if (payload.primary_goal !== undefined) body.primaryGoal = payload.primary_goal;
   if (payload.primary_challenge !== undefined) body.primaryChallenge = payload.primary_challenge;
 
-  return fetchJson<{ success: boolean; message?: string }>(`${API_BASE}/users/me`, {
+  const query = options?.mode ? `?mode=${options.mode}` : '';
+  return fetchJson<{ success: boolean; message?: string }>(`${API_BASE}/users/me${query}`, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
+}
+
+export async function updateCurrentUserSignup(
+  payload: UpdateCurrentUserPayload,
+): Promise<{ success: boolean; message?: string }> {
+  return updateCurrentUser(payload, { mode: 'signup' });
 }
 
 export async function updateUserRole(
@@ -176,6 +187,7 @@ export async function updateUserRole(
       created_at: response.user.createdAt,
       role: response.user.role,
       user_type: response.user.userType,
+      is_subscriber: response.user.isSubscriber,
     },
   };
 }

@@ -2,7 +2,9 @@ import { Mail } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { ApiError } from '@/app/api/client';
 import Header from '@/shared/components/layout/Header';
+import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
 import {
   InputOTP,
@@ -23,9 +25,11 @@ const CheckEmail: React.FC = () => {
   const { verifyOtp, requestOtp, user } = useAuth();
   const { toast } = useToast();
   const { handleError } = useErrorHandler();
+  const turnstile = useTurnstile();
   const [code, setCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [showTurnstile, setShowTurnstile] = useState(false);
 
   useEffect(() => {
     if (!email) {
@@ -56,7 +60,7 @@ const CheckEmail: React.FC = () => {
 
     setIsVerifying(true);
     try {
-      await verifyOtp({ email, otp: code.trim() });
+      await verifyOtp({ email, otp: code.trim(), intent: 'signup' });
       await persistSignupProfile();
       toast({
         title: 'Welcome to TrafficMENA',
@@ -81,14 +85,40 @@ const CheckEmail: React.FC = () => {
     if (!email) {
       return;
     }
+
+    // If Turnstile is shown but not verified, block
+    if (showTurnstile && !turnstile.isVerified) {
+      toast({
+        title: 'Security check required',
+        description: 'Please complete the security check below.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsResending(true);
     try {
-      await requestOtp(email);
+      await requestOtp(email, 'signup', {
+        turnstileToken: turnstile.token ?? undefined,
+      });
       toast({
         title: 'New code sent',
         description: 'Check your inbox. Codes expire in 10 minutes.',
       });
+      setShowTurnstile(false);
+      turnstile.reset();
     } catch (error) {
+      // Handle Turnstile requirement
+      if (error instanceof ApiError && error.extra?.requiresTurnstile) {
+        setShowTurnstile(true);
+        toast({
+          title: 'Security check required',
+          description: 'Please complete the security check below and try again.',
+          variant: 'destructive',
+        });
+        setIsResending(false);
+        return;
+      }
       const appError = handleError(error);
       toast({
         title: 'Unable to resend code',
@@ -154,11 +184,22 @@ const CheckEmail: React.FC = () => {
               </Button>
             </form>
 
+            {showTurnstile && (
+              <div className="mt-4 flex justify-center">
+                <Turnstile
+                  onVerify={turnstile.handleVerify}
+                  onExpire={turnstile.handleExpire}
+                  onError={turnstile.handleError}
+                  theme="light"
+                />
+              </div>
+            )}
+
             <div className="mt-4 space-y-4 text-sm text-gray-600">
               <button
                 type="button"
                 onClick={handleResend}
-                disabled={isResending}
+                disabled={isResending || (showTurnstile && !turnstile.isVerified)}
                 className="w-full text-primary transition hover:underline disabled:cursor-not-allowed disabled:text-gray-400"
               >
                 {isResending ? 'Sending new code…' : 'Resend code'}

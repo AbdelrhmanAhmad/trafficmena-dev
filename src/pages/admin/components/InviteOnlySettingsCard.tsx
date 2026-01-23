@@ -15,17 +15,18 @@ export function InviteOnlySettingsCard({ canEdit }: InviteOnlySettingsCardProps)
   const updateAdminSettings = useUpdateAdminSettings();
 
   const inviteOnlyEnabled = adminSettings.data?.inviteOnly ?? false;
+  const eventModeEnabled = adminSettings.data?.eventMode ?? false;
   const settingsUpdating = updateAdminSettings.isPending;
 
   const inviteOnlyUpdatedAt = adminSettings.data?.updatedAt
     ? formatDistanceToNow(new Date(adminSettings.data.updatedAt), { addSuffix: true })
     : null;
 
-  const handleToggle = (checked: boolean) => {
+  const handleInviteToggle = (checked: boolean) => {
     if (!canEdit) return;
 
     updateAdminSettings.mutate(
-      { inviteOnly: checked },
+      { inviteOnly: checked, eventMode: eventModeEnabled },
       {
         onError: (error) => {
           const message =
@@ -48,6 +49,33 @@ export function InviteOnlySettingsCard({ canEdit }: InviteOnlySettingsCardProps)
     );
   };
 
+  const handleEventModeToggle = (checked: boolean) => {
+    if (!canEdit) return;
+
+    updateAdminSettings.mutate(
+      { inviteOnly: inviteOnlyEnabled, eventMode: checked },
+      {
+        onError: (error) => {
+          const message =
+            error instanceof Error ? error.message : 'Unable to update settings. Please try again.';
+          toast({
+            title: 'Update failed',
+            description: message,
+            variant: 'destructive',
+          });
+        },
+        onSuccess: () => {
+          toast({
+            title: checked ? 'Event mode enabled' : 'Event mode disabled',
+            description: checked
+              ? 'Higher OTP limits are active for busy in-person sessions.'
+              : 'Standard OTP limits are active again.',
+          });
+        },
+      },
+    );
+  };
+
   return (
     <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
       <CardHeader>
@@ -60,27 +88,45 @@ export function InviteOnlySettingsCard({ canEdit }: InviteOnlySettingsCardProps)
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-left">
-          <p className="text-sm font-medium text-foreground">Invite-only mode</p>
-          <p className="text-sm text-muted-foreground">
-            When enabled, only invited members can create an account.
-          </p>
-          {inviteOnlyUpdatedAt && (
-            <p className="mt-2 text-xs text-muted-foreground">Last updated {inviteOnlyUpdatedAt}</p>
-          )}
-          {!canEdit && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Only owners and admins can change this setting.
+      <CardContent className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-left">
+            <p className="text-sm font-medium text-foreground">Invite-only mode</p>
+            <p className="text-sm text-muted-foreground">
+              When enabled, only invited members can create an account.
             </p>
-          )}
+            {inviteOnlyUpdatedAt && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Last updated {inviteOnlyUpdatedAt}
+              </p>
+            )}
+          </div>
+          <Switch
+            checked={inviteOnlyEnabled}
+            disabled={!canEdit || settingsUpdating || adminSettings.isLoading}
+            onCheckedChange={handleInviteToggle}
+            aria-label="Toggle invite-only mode"
+          />
         </div>
-        <Switch
-          checked={inviteOnlyEnabled}
-          disabled={!canEdit || settingsUpdating || adminSettings.isLoading}
-          onCheckedChange={handleToggle}
-          aria-label="Toggle invite-only mode"
-        />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-left">
+            <p className="text-sm font-medium text-foreground">Event mode</p>
+            <p className="text-sm text-muted-foreground">
+              Temporarily raises OTP limits for large in-person gatherings.
+            </p>
+          </div>
+          <Switch
+            checked={eventModeEnabled}
+            disabled={!canEdit || settingsUpdating || adminSettings.isLoading}
+            onCheckedChange={handleEventModeToggle}
+            aria-label="Toggle event mode"
+          />
+        </div>
+        {!canEdit && (
+          <p className="text-xs text-muted-foreground">
+            Only owners and admins can change these settings.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

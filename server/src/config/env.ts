@@ -40,6 +40,8 @@ const envSchema = z.object({
   FAWATERK_ENV: z.enum(['staging', 'live']).optional().default('staging'),
   // Optional API base URL for webhook callbacks (dashboard configuration preferred)
   API_BASE_URL: z.string().url().optional(),
+  // Cloudflare Turnstile CAPTCHA
+  TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

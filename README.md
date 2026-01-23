@@ -44,6 +44,13 @@ cp server/.env.example server/.env
 # Edit server/.env to match your local setup (secrets stay local)
 ```
 
+Optional frontend env (Turnstile):
+
+```
+# Create or edit .env at repo root
+VITE_TURNSTILE_SITE_KEY=your-turnstile-site-key
+```
+
 3) Start local Postgres (project-scoped)
 
 ```

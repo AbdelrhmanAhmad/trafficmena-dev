@@ -27,6 +27,8 @@ const updateUserRoleSchema = z.object({
   role: z.enum(roleValues),
 });
 
+const isEmptyValue = (value: string | null | undefined) => !value || value.trim().length === 0;
+
 export function registerUserRoutes(app: Hono) {
   app.get('/users', async (c) => {
     const session = await getSessionFromRequest(c);
@@ -82,6 +84,8 @@ export function registerUserRoutes(app: Hono) {
     const { page, pageSize } = parsed.data;
     const offset = (page - 1) * pageSize;
 
+    const now = new Date();
+
     const items = await db
       .select({
         id: users.id,
@@ -90,6 +94,13 @@ export function registerUserRoutes(app: Hono) {
         createdAt: users.createdAt,
         role: profiles.role,
         userType: profiles.userType,
+        isSubscriber: sql<boolean>`EXISTS (
+          SELECT 1
+          FROM subscriptions s
+          WHERE s.user_id = ${users.id}
+            AND s.subscription_status = 'active'
+            AND s.ends_at >= ${now}
+        )`,
       })
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.id))
@@ -176,12 +187,22 @@ export function registerUserRoutes(app: Hono) {
     }
 
     const updates = body.data;
+    const mode = c.req.query('mode');
+    const isSignupMode = mode === 'signup';
 
     if (Object.keys(updates).length === 0) {
       return c.json({ success: true, message: 'No changes applied.' });
     }
 
-    if (updates.name) {
+    const [existingUser] = isSignupMode
+      ? await db
+          .select({ name: users.name })
+          .from(users)
+          .where(eq(users.id, session.user.id))
+          .limit(1)
+      : [];
+
+    if (updates.name && (!isSignupMode || isEmptyValue(existingUser?.name))) {
       await db.update(users).set({ name: updates.name }).where(eq(users.id, session.user.id));
     }
 
@@ -199,19 +220,59 @@ export function registerUserRoutes(app: Hono) {
     );
 
     if (Object.keys(cleanProfileUpdates).length > 0) {
-      const existing = await db
-        .select({ id: profiles.id })
-        .from(profiles)
-        .where(eq(profiles.id, session.user.id))
-        .limit(1);
+      if (isSignupMode) {
+        const [existingProfile] = await db
+          .select({
+            id: profiles.id,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
+            phoneNumber: profiles.phoneNumber,
+            experienceLevel: profiles.experienceLevel,
+            primaryGoal: profiles.primaryGoal,
+            primaryChallenge: profiles.primaryChallenge,
+          })
+          .from(profiles)
+          .where(eq(profiles.id, session.user.id))
+          .limit(1);
 
-      if (existing.length === 0) {
-        await db.insert(profiles).values({
-          id: session.user.id,
-          ...cleanProfileUpdates,
-        });
+        if (!existingProfile) {
+          await db.insert(profiles).values({
+            id: session.user.id,
+            ...cleanProfileUpdates,
+          });
+        } else {
+          const guardedUpdates = Object.fromEntries(
+            Object.entries(cleanProfileUpdates).filter(([key]) => {
+              const currentValue = existingProfile[key as keyof typeof existingProfile] as
+                | string
+                | null
+                | undefined;
+              return isEmptyValue(currentValue);
+            }),
+          );
+
+          if (Object.keys(guardedUpdates).length > 0) {
+            await db.update(profiles).set(guardedUpdates).where(eq(profiles.id, session.user.id));
+          }
+        }
       } else {
-        await db.update(profiles).set(cleanProfileUpdates).where(eq(profiles.id, session.user.id));
+        const existing = await db
+          .select({ id: profiles.id })
+          .from(profiles)
+          .where(eq(profiles.id, session.user.id))
+          .limit(1);
+
+        if (existing.length === 0) {
+          await db.insert(profiles).values({
+            id: session.user.id,
+            ...cleanProfileUpdates,
+          });
+        } else {
+          await db
+            .update(profiles)
+            .set(cleanProfileUpdates)
+            .where(eq(profiles.id, session.user.id));
+        }
       }
     }
 
@@ -310,6 +371,8 @@ export function registerUserRoutes(app: Hono) {
       .set({ role: desiredRole, updatedAt: sql`now()` })
       .where(eq(profiles.id, targetId));
 
+    const now = new Date();
+
     const [updated] = await db
       .select({
         id: users.id,
@@ -318,6 +381,13 @@ export function registerUserRoutes(app: Hono) {
         createdAt: users.createdAt,
         role: profiles.role,
         userType: profiles.userType,
+        isSubscriber: sql<boolean>`EXISTS (
+          SELECT 1
+          FROM subscriptions s
+          WHERE s.user_id = ${users.id}
+            AND s.subscription_status = 'active'
+            AND s.ends_at >= ${now}
+        )`,
       })
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.id))

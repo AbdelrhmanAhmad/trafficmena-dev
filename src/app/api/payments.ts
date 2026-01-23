@@ -26,7 +26,7 @@ export type CheckoutResponse = {
   invoiceId?: number;
   redirectUrl?: string;
   fawryCode?: string;
-  meezaReference?: number;
+  meezaReference?: string;
   meezaQrCode?: string;
   amanCode?: string;
   masaryCode?: string;
@@ -52,6 +52,12 @@ export type Payment = {
   currency: string;
   itemType: PaymentItemType;
   itemId: string | null;
+  fawaterkInvoiceId?: number | null;
+  fawryCode?: string | null;
+  amanCode?: string | null;
+  masaryCode?: string | null;
+  meezaReference?: string | null;
+  meezaQrCode?: string | null;
   createdAt: string;
   paidAt: string | null;
 };

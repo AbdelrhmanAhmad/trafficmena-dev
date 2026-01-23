@@ -37,7 +37,7 @@
       <meta
         http-equiv="Content-Security-Policy"
         content="default-src 'self'; 
-                 script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; 
+                 script-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://challenges.cloudflare.com; 
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; 
                  font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; 
                  img-src 'self' data: blob: https:; 
@@ -46,7 +46,8 @@
                base-uri 'self';
                form-action 'self' https://supabase.com;
                frame-ancestors 'self';
-               frame-src 'self' 
+                 frame-src 'self' 
+                         https://challenges.cloudflare.com
                          https://www.youtube.com 
                          https://www.youtube-nocookie.com 
                          https://player.vimeo.com 
@@ -65,6 +66,7 @@
                          https://video.bunnycdn.com
                          https://stream.bunnycdn.com;
                  connect-src 'self' 
+                            https://challenges.cloudflare.com
                             https://api.trafficmena.com
                             http://localhost:3001
                             https://api.github.com

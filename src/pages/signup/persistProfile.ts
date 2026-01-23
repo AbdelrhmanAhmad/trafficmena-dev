@@ -1,4 +1,4 @@
-import { updateCurrentUser } from '@/app/api/users';
+import { updateCurrentUserSignup } from '@/app/api/users';
 import {
   SIGNUP_CURRENT_STEP_KEY,
   SIGNUP_FORM_DATA_KEY,
@@ -56,7 +56,7 @@ export async function persistSignupProfile(override?: SignUpFormData) {
   }
 
   try {
-    await updateCurrentUser(payload);
+    await updateCurrentUserSignup(payload);
   } catch (error) {
     console.warn('[signup] failed to persist profile data', error);
   } finally {

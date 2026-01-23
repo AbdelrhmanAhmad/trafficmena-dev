@@ -9,12 +9,18 @@ export type AuthUser = {
   name: string | null;
 };
 
+export type OtpIntent = 'signup' | 'signin';
+
+type RequestOtpOptions = {
+  turnstileToken?: string;
+};
+
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
   error: string | null;
-  requestOtp: (email: string) => Promise<void>;
-  verifyOtp: (params: { email: string; otp: string }) => Promise<void>;
+  requestOtp: (email: string, intent?: OtpIntent, options?: RequestOtpOptions) => Promise<void>;
+  verifyOtp: (params: { email: string; otp: string; intent?: OtpIntent }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
 };
@@ -51,22 +57,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadSession();
   }, [loadSession]);
 
-  const requestOtp = useCallback(async (email: string) => {
-    setError(null);
-    await fetchJson(`${API_BASE}/auth/otp/request`, {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-  }, []);
+  const requestOtp = useCallback(
+    async (email: string, intent?: OtpIntent, options?: RequestOtpOptions) => {
+      setError(null);
+      const payload: Record<string, string> = { email };
+      if (intent) payload.intent = intent;
+      if (options?.turnstileToken) payload.turnstileToken = options.turnstileToken;
+      await fetchJson(`${API_BASE}/auth/otp/request`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    [],
+  );
 
-  const verifyOtp = useCallback(async ({ email, otp }: { email: string; otp: string }) => {
-    setError(null);
-    const result = await fetchJson<{ user: AuthUser }>(`${API_BASE}/auth/otp/verify`, {
-      method: 'POST',
-      body: JSON.stringify({ email, otp }),
-    });
-    setUser(result.user ?? null);
-  }, []);
+  const verifyOtp = useCallback(
+    async ({ email, otp, intent }: { email: string; otp: string; intent?: OtpIntent }) => {
+      setError(null);
+      const result = await fetchJson<{ user: AuthUser }>(`${API_BASE}/auth/otp/verify`, {
+        method: 'POST',
+        body: JSON.stringify(intent ? { email, otp, intent } : { email, otp }),
+      });
+      setUser(result.user ?? null);
+    },
+    [],
+  );
 
   const signOut = useCallback(async () => {
     setError(null);

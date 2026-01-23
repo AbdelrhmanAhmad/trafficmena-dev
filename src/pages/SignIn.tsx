@@ -1,7 +1,9 @@
 import type React from 'react';
 import { useEffect, useId, useState } from 'react';
 import { Link, type Location, useLocation, useNavigate } from 'react-router-dom';
+import { ApiError } from '@/app/api/client';
 import Layout from '@/shared/components/layout/Layout';
+import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -13,6 +15,7 @@ const SignIn: React.FC = () => {
   const location = useLocation();
   const { user, loading, requestOtp, verifyOtp, refreshSession } = useAuth();
   const { toast } = useToast();
+  const turnstile = useTurnstile();
   const requestEmailId = useId();
   const verifyEmailId = useId();
   const otpId = useId();
@@ -22,6 +25,7 @@ const SignIn: React.FC = () => {
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTurnstile, setShowTurnstile] = useState(false);
   const redirectTo = (location.state as { from?: Location })?.from?.pathname ?? '/dashboard';
 
   useEffect(() => {
@@ -36,17 +40,33 @@ const SignIn: React.FC = () => {
       return;
     }
 
+    // If Turnstile is shown but not verified, block submission
+    if (showTurnstile && !turnstile.isVerified) {
+      setErrorMessage('Please complete the security check.');
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      await requestOtp(email.trim().toLowerCase());
+      await requestOtp(email.trim().toLowerCase(), 'signin', {
+        turnstileToken: turnstile.token ?? undefined,
+      });
       toast({
         title: 'Check your inbox',
         description: 'We sent you a 6-digit code to sign in.',
       });
       setStep('verify');
+      setShowTurnstile(false);
+      turnstile.reset();
     } catch (error) {
+      // Handle Turnstile requirement
+      if (error instanceof ApiError && error.extra?.requiresTurnstile) {
+        setShowTurnstile(true);
+        setErrorMessage('Please complete the security check below.');
+        return;
+      }
       const message = error instanceof Error ? error.message : 'Unable to send login code.';
       setErrorMessage(message);
     } finally {
@@ -70,7 +90,7 @@ const SignIn: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      await verifyOtp({ email: email.trim().toLowerCase(), otp: otp.trim() });
+      await verifyOtp({ email: email.trim().toLowerCase(), otp: otp.trim(), intent: 'signin' });
       await refreshSession();
       toast({ title: 'Welcome back!', description: 'You are now signed in.' });
       navigate(redirectTo, { replace: true });
@@ -126,9 +146,20 @@ const SignIn: React.FC = () => {
                   />
                 </div>
 
+                {showTurnstile && (
+                  <div className="flex justify-center">
+                    <Turnstile
+                      onVerify={turnstile.handleVerify}
+                      onExpire={turnstile.handleExpire}
+                      onError={turnstile.handleError}
+                      theme="light"
+                    />
+                  </div>
+                )}
+
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (showTurnstile && !turnstile.isVerified)}
                   className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] py-3 font-semibold text-[#101010] shadow hover:brightness-95"
                 >
                   {isSubmitting ? 'Sending code…' : 'Send login code'}

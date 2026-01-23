@@ -22,6 +22,34 @@
       "when": 1769026810734,
       "tag": "0002_shallow_malice",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769041028628,
+      "tag": "0003_payment_reference_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769049986000,
+      "tag": "0004_event_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769052650000,
+      "tag": "0005_meeza_reference_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769053650000,
+      "tag": "0006_auth_verifications_identifier_created_at_idx",
+      "breakpoints": true
     }
   ]
 }
