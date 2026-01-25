@@ -1,7 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
-import { Calendar, CheckCircle, Clock, MapPin, Sparkles, Users, Video } from 'lucide-react';
+import {
+  Calendar,
+  CheckCircle,
+  Clock,
+  ClockIcon,
+  MapPin,
+  Sparkles,
+  Users,
+  Video,
+} from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -18,6 +27,7 @@ import {
   storePendingEventContext,
 } from '@/shared/utils/eventRedirectUtils';
 import { stripHtmlTags } from '@/shared/utils/inputSanitization';
+import { CancellationConfirmDialog } from '../components/CancellationConfirmDialog';
 import { useEventBooking } from '../hooks/useEventBooking';
 import { useEvent } from '../hooks/useEvents';
 
@@ -93,8 +103,9 @@ const EventDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { data: event, isLoading, error } = useEvent(id);
   const { isAdmin, loading: adminLoading } = useIsAdmin();
-  const { bookEvent, cancelBooking, isBooking, isCancelling } = useEventBooking();
+  const { bookEvent, bookEventAsync, cancelBooking, isBooking, isCancelling } = useEventBooking();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Get price preview for logged-in users
   const { data: pricePreview } = usePricePreview(user && id ? 'event' : undefined, id);
@@ -129,7 +140,7 @@ const EventDetail: React.FC = () => {
     return Boolean(event.attending);
   }, [adminLoading, event?.attending, event?.meeting_link, isAdmin]);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!id || !event) return;
 
     if (!user) {
@@ -154,13 +165,26 @@ const EventDetail: React.FC = () => {
       return;
     }
 
-    // Free event or subscriber with free access - register directly
-    bookEvent({ event_id: id });
+    // Free event or subscriber with free access - register and redirect to thank-you page
+    try {
+      const response = await bookEventAsync({ event_id: id });
+      if (response.success) {
+        navigate(`/thank-you-event/${id}`);
+      }
+    } catch {
+      // Error toast is handled by the mutation's onError
+    }
   };
 
   const handleCancel = () => {
     if (!id) return;
+    setShowCancelDialog(true);
+  };
+
+  const confirmCancel = () => {
+    if (!id) return;
     cancelBooking({ eventId: id });
+    setShowCancelDialog(false);
   };
 
   const sanitizedDescription = useMemo(
@@ -401,6 +425,15 @@ const EventDetail: React.FC = () => {
                           );
                         }
 
+                        // Refund pending - show disabled button
+                        if (event.registrationStatus === 'refund_requested') {
+                          return (
+                            <Button className="w-full rounded-xl" variant="secondary" disabled>
+                              Refund Request Pending
+                            </Button>
+                          );
+                        }
+
                         return (
                           <Button
                             className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] hover:brightness-95"
@@ -412,10 +445,17 @@ const EventDetail: React.FC = () => {
                         );
                       })()}
 
+                      {event.registrationStatus === 'refund_requested' && (
+                        <div className="flex items-center gap-2 rounded-xl bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700">
+                          <ClockIcon className="h-4 w-4" />
+                          <span>Refund Requested - Pending Review</span>
+                        </div>
+                      )}
+
                       {event.attending && (
                         <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
                           <CheckCircle className="h-4 w-4" />
-                          <span>You’re registered</span>
+                          <span>You're registered</span>
                         </div>
                       )}
 
@@ -492,6 +532,17 @@ const EventDetail: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['event', id] });
             setShowPaymentDialog(false);
           }}
+        />
+      )}
+
+      {/* Cancellation confirmation dialog */}
+      {event && (
+        <CancellationConfirmDialog
+          open={showCancelDialog}
+          onOpenChange={setShowCancelDialog}
+          onConfirm={confirmCancel}
+          isPaidEvent={Boolean(event.price_in_cents && event.price_in_cents > 0)}
+          isLoading={isCancelling}
         />
       )}
     </Layout>

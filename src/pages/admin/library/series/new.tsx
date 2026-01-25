@@ -41,7 +41,7 @@ function NewSeriesPage() {
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
       <AppLayout variant="admin">
-        <div className="space-y-6">
+        <div className="mx-auto max-w-4xl space-y-6">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -64,7 +64,7 @@ function NewSeriesPage() {
             </div>
           </div>
 
-          <Card className="max-w-2xl rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+          <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <CardHeader>
               <CardTitle className="text-lg text-neutral-900">Series Details</CardTitle>
               <CardDescription className="text-neutral-600">

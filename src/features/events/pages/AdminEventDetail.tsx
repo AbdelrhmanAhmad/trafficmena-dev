@@ -8,6 +8,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { CancellationRequestsList } from '../components/CancellationRequestsList';
 import { EventAttendeesList } from '../components/EventAttendeesList';
 import { useEvent } from '../hooks/useEvents';
 
@@ -113,6 +114,8 @@ const AdminEventDetail = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <CancellationRequestsList eventId={event.id} />
 
             <EventAttendeesList eventId={event.id} />
           </div>

@@ -50,6 +50,13 @@
       "when": 1769053650000,
       "tag": "0006_auth_verifications_identifier_created_at_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769367558630,
+      "tag": "0007_strange_northstar",
+      "breakpoints": true
     }
   ]
 }

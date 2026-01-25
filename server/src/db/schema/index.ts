@@ -27,6 +27,11 @@ export const invitationStatusEnum = pgEnum('invitation_status', [
   'failed',
 ]);
 export const invitationSourceEnum = pgEnum('invitation_source', ['single', 'csv']);
+export const registrationStatusEnum = pgEnum('registration_status', [
+  'active',
+  'cancelled',
+  'refund_requested',
+]);
 
 // --- Core Tables ------------------------------------------------------------
 
@@ -96,6 +101,10 @@ export const eventAttendees = pgTable(
     paidAt: timestamp('paid_at', { withTimezone: true }),
     pricePaidCents: integer('price_paid_cents'),
     paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+    status: registrationStatusEnum('status').default('active').notNull(),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    refundRequestedAt: timestamp('refund_requested_at', { withTimezone: true }),
+    adminNote: text('admin_note'),
   },
   (table) => ({
     eventIdx: index('event_attendees_event_idx').on(table.eventId),
@@ -104,6 +113,7 @@ export const eventAttendees = pgTable(
       table.eventId,
       table.userId,
     ),
+    statusIdx: index('event_attendees_status_idx').on(table.status),
   }),
 );
 

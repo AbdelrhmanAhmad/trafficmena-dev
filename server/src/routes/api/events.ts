@@ -192,7 +192,7 @@ export function registerEventRoutes(app: Hono) {
           tags: events.tags,
           eventType: events.eventType,
           priceInCents: events.priceInCents,
-          attendeeCount: sql<number>`COALESCE(COUNT(${eventAttendees.id}), 0)`,
+          attendeeCount: sql<number>`COALESCE(COUNT(${eventAttendees.id}) FILTER (WHERE ${eventAttendees.status} = 'active'), 0)`,
         })
         .from(events)
         .leftJoin(eventAttendees, eq(events.id, eventAttendees.eventId))
@@ -284,16 +284,20 @@ export function registerEventRoutes(app: Hono) {
     const [{ value: attendeeCount }] = await db
       .select({ value: count(eventAttendees.id) })
       .from(eventAttendees)
-      .where(eq(eventAttendees.eventId, eventId));
+      .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'active')));
 
     let attending = false;
+    let registrationStatus: 'active' | 'cancelled' | 'refund_requested' | null = null;
     if (viewerId) {
       const [existing] = await db
-        .select({ id: eventAttendees.id })
+        .select({ id: eventAttendees.id, status: eventAttendees.status })
         .from(eventAttendees)
         .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, viewerId)))
         .limit(1);
-      attending = !!existing;
+      if (existing) {
+        registrationStatus = existing.status;
+        attending = existing.status === 'active';
+      }
     }
 
     const canAccessMeetingLink = attending || isStaff;
@@ -302,6 +306,7 @@ export function registerEventRoutes(app: Hono) {
       ...event,
       attendeeCount: Number(attendeeCount ?? 0),
       attending,
+      registrationStatus,
       meetingLink: canAccessMeetingLink ? event.meetingLink : null,
       trackInfo: trackInfo
         ? {
@@ -366,6 +371,7 @@ export function registerEventRoutes(app: Hono) {
         lastName: profiles.lastName,
         phoneNumber: profiles.phoneNumber,
         registeredAt: eventAttendees.registeredAt,
+        status: eventAttendees.status,
       })
       .from(eventAttendees)
       .leftJoin(users, eq(eventAttendees.userId, users.id))
@@ -495,7 +501,7 @@ export function registerEventRoutes(app: Hono) {
           const [{ count: currentAttendees }] = await db
             .select({ count: count(eventAttendees.id) })
             .from(eventAttendees)
-            .where(eq(eventAttendees.eventId, eventId));
+            .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'active')));
 
           if (updates.maxAttendees !== null && updates.maxAttendees < Number(currentAttendees)) {
             throw new ApiError(
@@ -688,19 +694,39 @@ export function registerEventRoutes(app: Hono) {
           }
 
           const [existing] = await tx
-            .select({ id: eventAttendees.id })
+            .select({ id: eventAttendees.id, status: eventAttendees.status })
             .from(eventAttendees)
             .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)))
             .limit(1);
 
           if (existing) {
-            return { success: true, message: 'Already registered.', alreadyRegistered: true };
+            // If already actively registered or pending refund, don't allow re-registration
+            if (existing.status === 'active') {
+              return { success: true, message: 'Already registered.', alreadyRegistered: true };
+            }
+            if (existing.status === 'refund_requested') {
+              return {
+                success: false,
+                message: 'You have a pending refund request for this event.',
+              };
+            }
+            // If cancelled, re-activate the registration
+            await tx
+              .update(eventAttendees)
+              .set({
+                status: 'active',
+                cancelledAt: null,
+                adminNote: null,
+                registeredAt: new Date(),
+              })
+              .where(eq(eventAttendees.id, existing.id));
+            return { success: true, message: 'You are now registered for the event.' };
           }
 
           const [{ count: currentAttendees }] = await tx
             .select({ count: count(eventAttendees.id) })
             .from(eventAttendees)
-            .where(eq(eventAttendees.eventId, eventId));
+            .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'active')));
 
           const [{ count: reservedCount }] = await tx
             .select({ count: sql<number>`count(*)::int` })
@@ -751,21 +777,196 @@ export function registerEventRoutes(app: Hono) {
       );
     }
 
-    const deleted = await db
-      .delete(eventAttendees)
-      .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, session.user.id)))
-      .returning({ id: eventAttendees.id });
+    const userId = session.user.id;
 
-    if (deleted.length === 0) {
+    // Find existing registration
+    const [registration] = await db
+      .select({
+        id: eventAttendees.id,
+        status: eventAttendees.status,
+        pricePaidCents: eventAttendees.pricePaidCents,
+      })
+      .from(eventAttendees)
+      .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)))
+      .limit(1);
+
+    if (!registration) {
       return c.json({
         success: false,
         message: 'You were not registered for this event.',
       });
     }
 
+    if (registration.status === 'cancelled') {
+      return c.json({
+        success: false,
+        message: 'Your registration was already cancelled.',
+      });
+    }
+
+    if (registration.status === 'refund_requested') {
+      return c.json({
+        success: false,
+        message: 'Your refund request is already pending review.',
+      });
+    }
+
+    // Check if this was a paid registration
+    const isPaidRegistration = registration.pricePaidCents && registration.pricePaidCents > 0;
+
+    if (isPaidRegistration) {
+      // Paid event: set status to refund_requested
+      await db
+        .update(eventAttendees)
+        .set({
+          status: 'refund_requested',
+          refundRequestedAt: new Date(),
+        })
+        .where(eq(eventAttendees.id, registration.id));
+
+      return c.json({
+        success: true,
+        status: 'refund_requested',
+        message:
+          'Your refund request has been submitted. Our team will review and process it shortly.',
+      });
+    }
+
+    // Free event: set status to cancelled
+    await db
+      .update(eventAttendees)
+      .set({
+        status: 'cancelled',
+        cancelledAt: new Date(),
+      })
+      .where(eq(eventAttendees.id, registration.id));
+
     return c.json({
       success: true,
+      status: 'cancelled',
       message: 'Your registration has been cancelled.',
     });
+  });
+
+  // Admin: List cancellation/refund requests for an event
+  app.get('/events/:id/cancellation-requests', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const eventId = c.req.param('id');
+
+    // Verify event exists
+    const [event] = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.id, eventId))
+      .limit(1);
+
+    if (!event) {
+      return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found.' } }, 404);
+    }
+
+    const requests = await db
+      .select({
+        registrationId: eventAttendees.id,
+        userId: users.id,
+        email: users.email,
+        name: users.name,
+        firstName: profiles.firstName,
+        lastName: profiles.lastName,
+        pricePaidCents: eventAttendees.pricePaidCents,
+        refundRequestedAt: eventAttendees.refundRequestedAt,
+      })
+      .from(eventAttendees)
+      .leftJoin(users, eq(eventAttendees.userId, users.id))
+      .leftJoin(profiles, eq(users.id, profiles.id))
+      .where(
+        and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'refund_requested')),
+      )
+      .orderBy(desc(eventAttendees.refundRequestedAt));
+
+    return c.json({ items: requests });
+  });
+
+  // Admin: Approve a cancellation/refund request
+  app.post('/events/:id/cancellation-requests/:regId/approve', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const eventId = c.req.param('id');
+    const registrationId = c.req.param('regId');
+
+    const [registration] = await db
+      .select({ id: eventAttendees.id, status: eventAttendees.status })
+      .from(eventAttendees)
+      .where(and(eq(eventAttendees.id, registrationId), eq(eventAttendees.eventId, eventId)))
+      .limit(1);
+
+    if (!registration) {
+      return c.json(
+        { error: { code: 'REGISTRATION_NOT_FOUND', message: 'Registration not found.' } },
+        404,
+      );
+    }
+
+    if (registration.status !== 'refund_requested') {
+      return c.json(
+        { error: { code: 'INVALID_STATUS', message: 'This registration is not pending refund.' } },
+        400,
+      );
+    }
+
+    await db
+      .update(eventAttendees)
+      .set({
+        status: 'cancelled',
+        cancelledAt: new Date(),
+      })
+      .where(eq(eventAttendees.id, registrationId));
+
+    return c.json({ success: true, message: 'Refund approved and registration cancelled.' });
+  });
+
+  // Admin: Reject a cancellation/refund request
+  app.post('/events/:id/cancellation-requests/:regId/reject', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const eventId = c.req.param('id');
+    const registrationId = c.req.param('regId');
+
+    const body = await c.req.json().catch(() => ({}));
+    const reason = body.reason?.trim() || null;
+
+    const [registration] = await db
+      .select({ id: eventAttendees.id, status: eventAttendees.status })
+      .from(eventAttendees)
+      .where(and(eq(eventAttendees.id, registrationId), eq(eventAttendees.eventId, eventId)))
+      .limit(1);
+
+    if (!registration) {
+      return c.json(
+        { error: { code: 'REGISTRATION_NOT_FOUND', message: 'Registration not found.' } },
+        404,
+      );
+    }
+
+    if (registration.status !== 'refund_requested') {
+      return c.json(
+        { error: { code: 'INVALID_STATUS', message: 'This registration is not pending refund.' } },
+        400,
+      );
+    }
+
+    await db
+      .update(eventAttendees)
+      .set({
+        status: 'active',
+        refundRequestedAt: null,
+        adminNote: reason,
+      })
+      .where(eq(eventAttendees.id, registrationId));
+
+    return c.json({ success: true, message: 'Refund request rejected. Registration restored.' });
   });
 }

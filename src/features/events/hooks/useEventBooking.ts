@@ -35,11 +35,23 @@ export const useEventBooking = () => {
     },
   });
 
-  const cancelBookingMutation = useMutation<BookingResponse, Error, { eventId: string }>({
+  const cancelBookingMutation = useMutation<
+    BookingResponse & { status?: 'cancelled' | 'refund_requested' },
+    Error,
+    { eventId: string }
+  >({
     mutationFn: async ({ eventId }) => cancelEventRegistration(eventId),
     onSuccess: (response, variables) => {
       if (response.success) {
-        toast.success(response.message ?? 'You have been removed from this event.');
+        // Show different message based on status
+        if (response.status === 'refund_requested') {
+          toast.success(
+            response.message ??
+              'Your refund request has been submitted. Our team will review it shortly.',
+          );
+        } else {
+          toast.success(response.message ?? 'Your registration has been cancelled.');
+        }
 
         queryClient.invalidateQueries({ queryKey: ['event', variables.eventId] });
         queryClient.invalidateQueries({ queryKey: EVENT_LIST_KEY });
@@ -57,6 +69,7 @@ export const useEventBooking = () => {
 
   return {
     bookEvent: bookEventMutation.mutate,
+    bookEventAsync: bookEventMutation.mutateAsync,
     cancelBooking: cancelBookingMutation.mutate,
     isBooking: bookEventMutation.isPending,
     isCancelling: cancelBookingMutation.isPending,

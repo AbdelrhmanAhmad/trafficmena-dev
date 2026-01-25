@@ -220,7 +220,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === item.url}
-                      className="hover:bg-neutral-100 rounded-xl transition-colors"
+                      className="h-auto hover:bg-neutral-100 rounded-xl transition-colors"
                     >
                       <Link to={item.url} className="flex items-center gap-3 py-3.5">
                         <Icon className="h-4 w-4 shrink-0 text-neutral-700" />
@@ -238,7 +238,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                   <SidebarMenuButton
                     asChild
                     isActive={location.pathname === '/dashboard/subscribe'}
-                    className="hover:bg-amber-50 rounded-xl transition-colors border border-amber-200 bg-amber-50/50"
+                    className="h-auto hover:bg-amber-50 rounded-xl transition-colors border border-amber-200 bg-amber-50/50"
                   >
                     <Link to="/dashboard/subscribe" className="flex items-center gap-3 py-3.5">
                       <Crown className="h-4 w-4 shrink-0 text-amber-600" />
