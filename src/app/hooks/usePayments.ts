@@ -21,11 +21,12 @@ const PAYMENT_METHODS_KEY = ['payment-methods'];
 const PAYMENT_KEY = ['payment'];
 const PRICE_PREVIEW_KEY = ['price-preview'];
 
-export function usePaymentMethods() {
+export function usePaymentMethods(options?: { enabled?: boolean }) {
   return useQuery<PaymentMethod[]>({
     queryKey: PAYMENT_METHODS_KEY,
     queryFn: fetchPaymentMethods,
     staleTime: 5 * 60 * 1000, // 5 minutes - methods rarely change
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -71,14 +72,18 @@ export function usePayment(paymentId: string | undefined) {
   });
 }
 
-export function usePricePreview(itemType: PaymentItemType | undefined, itemId?: string) {
+export function usePricePreview(
+  itemType: PaymentItemType | undefined,
+  itemId?: string,
+  options?: { enabled?: boolean },
+) {
   return useQuery<PricePreview>({
     queryKey: [...PRICE_PREVIEW_KEY, itemType, itemId],
     queryFn: () => {
       if (!itemType) throw new Error('Item type required');
       return fetchPricePreview(itemType, itemId);
     },
-    enabled: !!itemType,
+    enabled: (options?.enabled ?? true) && !!itemType,
     staleTime: 60 * 1000, // 1 minute - depends on subscription status
   });
 }

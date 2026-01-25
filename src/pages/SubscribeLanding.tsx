@@ -98,7 +98,7 @@ function HeroSection({
           <div className="max-w-xl">
             {/* Premium Badge */}
             <div
-              className={`mb-5 inline-flex items-center gap-2 rounded-full border border-amber-200/50 bg-amber-50/70 px-3 py-1 text-xs font-medium text-amber-700 backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-amber-50 hover:shadow-lg ${isLoaded ? 'animate-bounce' : ''}`}
+              className="mb-5 inline-flex items-center gap-2 rounded-full border border-amber-200/50 bg-amber-50/70 px-3 py-1 text-xs font-medium text-amber-700 backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-amber-50 hover:shadow-lg"
             >
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white">
                 <Crown className="h-3.5 w-3.5" />
@@ -195,7 +195,7 @@ function HeroSection({
 function TestimonialsSection({ isLoaded }: { isLoaded: boolean }) {
   return (
     <section
-      className={`relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8 ${isLoaded ? 'animate-fade-in' : ''}`}
+      className={`relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8 content-visibility-auto ${isLoaded ? 'animate-fade-in' : ''}`}
     >
       {/* Background patterns */}
       <div className="pointer-events-none absolute inset-0 opacity-10">
@@ -225,6 +225,8 @@ function TestimonialsSection({ isLoaded }: { isLoaded: boolean }) {
                 src={testimonial.image}
                 alt={testimonial.name}
                 className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             </div>
             <p className="text-sm italic text-neutral-600">"{testimonial.quote}"</p>
@@ -243,7 +245,7 @@ function TestimonialsSection({ isLoaded }: { isLoaded: boolean }) {
 function PremiumContentSection({ isLoaded }: { isLoaded: boolean }) {
   return (
     <section
-      className={`relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8 ${isLoaded ? 'animate-fade-in' : ''}`}
+      className={`relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8 content-visibility-auto ${isLoaded ? 'animate-fade-in' : ''}`}
     >
       <div className="relative z-10 mx-auto max-w-3xl text-center">
         <span className="text-sm font-normal text-neutral-500">Premium Content</span>
@@ -289,7 +291,13 @@ function PremiumContentSection({ isLoaded }: { isLoaded: boolean }) {
 
             {/* Image side */}
             <div className="aspect-video overflow-hidden rounded-xl bg-neutral-100">
-              <img src={track.image} alt={track.title} className="h-full w-full object-cover" />
+              <img
+                src={track.image}
+                alt={track.title}
+                className="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
             </div>
           </div>
         ))}
@@ -307,7 +315,7 @@ function CTASection({
   onSubscribe: () => void;
 }) {
   return (
-    <section className="relative w-full overflow-hidden rounded-[28px]">
+    <section className="relative w-full overflow-hidden rounded-[28px] content-visibility-auto">
       <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900 to-[#0b3a3f]" />
       <div className="absolute inset-0 bg-gradient-to-br from-green-900/20 via-blue-900/10 to-transparent" />
 
@@ -395,7 +403,7 @@ export default function SubscribeLanding() {
       <div className="relative isolate overflow-hidden">
         {/* Gradient blobs - same as Index.tsx */}
         <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[50vw] top-[30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+        <div className="pointer-events-none absolute -right-[50vw] top-[30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-16 px-4 pb-20 pt-12 sm:px-6 lg:px-0">
           {/* Section 1: Hero */}

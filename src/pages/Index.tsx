@@ -54,9 +54,10 @@ const Index: React.FC = () => {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && visibleEvents < events.length) {
-          setVisibleEvents((prev) => Math.min(prev + 3, events.length));
-        }
+        if (!entries[0]?.isIntersecting) return;
+        setVisibleEvents((prev) =>
+          prev >= events.length ? prev : Math.min(prev + 3, events.length),
+        );
       },
       { threshold: 0.1 },
     );
@@ -68,7 +69,7 @@ const Index: React.FC = () => {
         observerRef.current.disconnect();
       }
     };
-  }, [visibleEvents, events.length]);
+  }, [events.length]);
 
   // Mark component as loaded for animations
   useEffect(() => {
@@ -81,7 +82,7 @@ const Index: React.FC = () => {
     <Layout>
       <div className="relative isolate overflow-hidden">
         <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[50vw] top-[30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+        <div className="pointer-events-none absolute -right-[50vw] top-[30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-16 px-4 pb-20 pt-12 sm:px-6 lg:px-0">
           <section
@@ -95,7 +96,7 @@ const Index: React.FC = () => {
                 <div className="max-w-xl">
                   {/* MVP Badge - Exactly like reference */}
                   <div
-                    className={`mb-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/70 px-3 py-1 text-xs font-medium text-neutral-700 backdrop-blur hover:bg-white/80 transition-all duration-300 hover:scale-105 hover:shadow-lg ${isLoaded ? 'animate-bounce' : ''}`}
+                    className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/70 px-3 py-1 text-xs font-medium text-neutral-700 backdrop-blur hover:bg-white/80 transition-all duration-300 hover:scale-105 hover:shadow-lg"
                   >
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-[#101010]">
                       <Sparkles className="h-3.5 w-3.5" />
@@ -180,9 +181,10 @@ const Index: React.FC = () => {
                       alt="Community meetup"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                       loading="eager"
+                      fetchpriority="high"
                     />
                     <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-white/60"></div>
-                    <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-[#05ef62]/25 via-[#29cf9f]/20 to-[#00fdc2]/20 mix-blend-overlay animate-pulse"></div>
+                    <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-[#05ef62]/25 via-[#29cf9f]/20 to-[#00fdc2]/20 mix-blend-overlay"></div>
                   </div>
                 </div>
               </div>
@@ -247,7 +249,7 @@ const Index: React.FC = () => {
           </section>
 
           {/* Why Join TrafficMENA - Exit Five Style with Timeline */}
-          <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white">
+          <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white content-visibility-auto">
             {/* Section Header */}
             <div className="px-6 sm:px-10 pt-12 pb-8">
               <div className="mx-auto max-w-3xl text-center">
@@ -522,7 +524,7 @@ const Index: React.FC = () => {
           </section>
 
           {/* CTA Band */}
-          <section className="relative w-full overflow-hidden rounded-[28px]">
+          <section className="relative w-full overflow-hidden rounded-[28px] content-visibility-auto">
             <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900 to-[#0b3a3f]"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-green-900/20 via-blue-900/10 to-transparent"></div>
             <div className="relative px-6 sm:px-10 py-12 text-center">

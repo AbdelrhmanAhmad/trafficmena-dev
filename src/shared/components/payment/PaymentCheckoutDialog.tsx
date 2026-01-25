@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import type { PaymentItemType } from '@/app/api/payments';
@@ -15,6 +15,7 @@ import {
 } from '@/shared/components/ui/dialog';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
+import { useAuth } from '@/shared/context/AuthContext';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 
 interface PaymentCheckoutDialogProps {
@@ -34,12 +35,17 @@ export function PaymentCheckoutDialog({
   itemName,
   onSuccess,
 }: PaymentCheckoutDialogProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
-  const { data: pricePreview, isLoading: priceLoading } = usePricePreview(itemType, itemId);
+  const shouldFetchPricing = useMemo(() => open && !!user, [open, user]);
+  const { data: pricePreview, isLoading: priceLoading } = usePricePreview(
+    shouldFetchPricing ? itemType : undefined,
+    itemId,
+  );
   const createCheckout = useCreateCheckout();
-  const { data: methods } = usePaymentMethods();
+  const { data: methods } = usePaymentMethods({ enabled: shouldFetchPricing });
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
   const shouldRedirect = shouldRedirectToGateway(selectedMethod);
 
@@ -189,6 +195,7 @@ export function PaymentCheckoutDialog({
             value={selectedMethodId}
             onChange={setSelectedMethodId}
             disabled={createCheckout.isPending}
+            enabled={shouldFetchPricing}
           />
         </div>
 

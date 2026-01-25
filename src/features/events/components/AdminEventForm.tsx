@@ -6,7 +6,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { CreateEventPayload, EventDetailRecord } from '@/app/api/events';
 import { uploadFile } from '@/app/api/uploads';
-import { SimpleEditorWrapper } from '@/shared/components/SimpleEditorWrapper';
+import { LazyEditor } from '@/shared/components/LazyEditor';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -418,7 +418,7 @@ export function AdminEventForm({
                         control={form.control}
                         name="description"
                         render={({ field: editorField }) => (
-                          <SimpleEditorWrapper
+                          <LazyEditor
                             value={editorField.value}
                             onChange={editorField.onChange}
                           />

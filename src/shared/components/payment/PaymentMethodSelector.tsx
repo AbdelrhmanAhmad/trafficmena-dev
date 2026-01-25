@@ -9,10 +9,25 @@ interface PaymentMethodSelectorProps {
   value: number | null;
   onChange: (methodId: number) => void;
   disabled?: boolean;
+  enabled?: boolean;
 }
 
-export function PaymentMethodSelector({ value, onChange, disabled }: PaymentMethodSelectorProps) {
-  const { data: methods, isLoading, error } = usePaymentMethods();
+export function PaymentMethodSelector({
+  value,
+  onChange,
+  disabled,
+  enabled = true,
+}: PaymentMethodSelectorProps) {
+  const shouldFetch = enabled;
+  const { data: methods, isLoading, error } = usePaymentMethods({ enabled: shouldFetch });
+
+  if (!shouldFetch) {
+    return (
+      <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-center text-sm text-neutral-600">
+        Sign in to view payment methods.
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

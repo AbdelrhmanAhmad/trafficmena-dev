@@ -4,7 +4,7 @@ import { type ChangeEvent, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { uploadFile } from '@/app/api/uploads';
-import { SimpleEditorWrapper } from '@/shared/components/SimpleEditorWrapper';
+import { LazyEditor } from '@/shared/components/LazyEditor';
 import { Button } from '@/shared/components/ui/button';
 import {
   Form,
@@ -111,7 +111,7 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
                 control={form.control}
                 name="description"
                 render={({ field: editorField }) => (
-                  <SimpleEditorWrapper
+                  <LazyEditor
                     value={editorField.value ?? ''}
                     onChange={editorField.onChange}
                     placeholder="Describe what this series covers..."

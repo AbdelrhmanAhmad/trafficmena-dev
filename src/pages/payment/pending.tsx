@@ -50,7 +50,7 @@ export default function PaymentPendingPage() {
   const paymentMethodId = methodIdParam ? Number(methodIdParam) : null;
   const isInvoiceIdValid = invoiceId !== null && !Number.isNaN(invoiceId);
   const isMethodIdValid = paymentMethodId !== null && !Number.isNaN(paymentMethodId);
-  const { data: methods } = usePaymentMethods();
+  const { data: methods } = usePaymentMethods({ enabled: !!user });
   const selectedMethod =
     isMethodIdValid && paymentMethodId
       ? (methods?.find((method) => method.paymentId === paymentMethodId) ?? null)

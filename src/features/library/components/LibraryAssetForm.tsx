@@ -10,7 +10,7 @@ import type {
 } from '@/app/api/library';
 import { uploadFile } from '@/app/api/uploads';
 import { useEvents } from '@/features/events/hooks/useEvents';
-import { SimpleEditorWrapper } from '@/shared/components/SimpleEditorWrapper';
+import { LazyEditor } from '@/shared/components/LazyEditor';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import {
@@ -323,7 +323,7 @@ export function LibraryAssetForm({
                     control={form.control}
                     name="description"
                     render={({ field: editorField }) => (
-                      <SimpleEditorWrapper
+                      <LazyEditor
                         value={editorField.value ?? ''}
                         onChange={editorField.onChange}
                       />

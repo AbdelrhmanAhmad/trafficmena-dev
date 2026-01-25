@@ -1,4 +1,5 @@
 import { Calendar, Clock, Heart, MapPin, Mic, Users } from 'lucide-react';
+import { memo, useMemo } from 'react';
 import type React from 'react';
 import { Link } from 'react-router-dom';
 import type { Event } from '@/features/events/types';
@@ -14,7 +15,7 @@ interface EventCardProps {
   onViewDetails?: (event: Event) => void;
 }
 
-export function EventCard({
+export const EventCard = memo(function EventCard({
   event,
   to,
   className,
@@ -23,26 +24,31 @@ export function EventCard({
   onViewDetails,
 }: EventCardProps) {
   const destination = to ?? `/meetups/${event.id}`;
-  const eventDate = new Date(event.date);
-  const formattedDate = eventDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-  const formattedTime = eventDate.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  const { formattedDate, formattedTime, isUpcoming } = useMemo(() => {
+    const eventDate = new Date(event.date);
+    return {
+      formattedDate: eventDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }),
+      formattedTime: eventDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }),
+      isUpcoming: eventDate.getTime() > Date.now(),
+    };
+  }, [event.date]);
 
   const imageUrl =
     event.image_url ??
     'https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?q=80&w=1200&auto=format&fit=crop';
 
-  const isUpcoming = eventDate.getTime() > Date.now();
   const primaryTag = event.tags?.[0];
-  const descriptionPreview = event.description
-    ? stripHtmlTags(event.description).slice(0, 110)
-    : undefined;
+  const descriptionPreview = useMemo(() => {
+    if (!event.description) return undefined;
+    return stripHtmlTags(event.description).slice(0, 110);
+  }, [event.description]);
 
   const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (onViewDetails) {
@@ -70,6 +76,7 @@ export function EventCard({
               alt={event.title}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
               loading="lazy"
+              decoding="async"
             />
           </div>
           <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-neutral-800 shadow-sm">
@@ -136,4 +143,4 @@ export function EventCard({
       </article>
     </Link>
   );
-}
+});

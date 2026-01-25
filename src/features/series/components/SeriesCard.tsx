@@ -56,7 +56,7 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
 
   return (
     <Card
-      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1"
+      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1"
       onClick={handleCardClick}
     >
       {/* Thumbnail Section */}
@@ -66,6 +66,7 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
             src={series.image_url}
             alt={series.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            decoding="async"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
             }}

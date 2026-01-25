@@ -131,12 +131,11 @@
       color 0.2s ease-in-out;
   }
 
-  /* Smooth transitions for theme switching */
-  *,
-  *::before,
-  *::after {
+  /* Smooth transitions for theme switching (scoped for performance) */
+  .theme-transition {
     transition:
       background-color 0.2s ease-in-out,
+      color 0.2s ease-in-out,
       border-color 0.2s ease-in-out;
   }
 
@@ -188,16 +187,6 @@
     }
   }
 
-  @keyframes gentleBounce {
-    0%,
-    100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-5px);
-    }
-  }
-
   @keyframes pulse {
     0%,
     100% {
@@ -224,12 +213,19 @@
     animation: slideInRight 0.8s ease-out;
   }
 
-  .animate-bounce {
-    animation: gentleBounce 2s ease-in-out infinite;
-  }
-
   .animate-pulse {
     animation: pulse 4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   /* TrafficMENA brand gradients for theme switching */
@@ -239,6 +235,12 @@
 
   .gradient-secondary {
     background: linear-gradient(135deg, hsl(var(--secondary)), #00fdc2);
+  }
+
+  /* Defer offscreen rendering for long marketing sections */
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 900px;
   }
 
   /* Professional shadows for both themes */

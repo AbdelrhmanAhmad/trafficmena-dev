@@ -26,7 +26,7 @@ export default function InviteOnlyPage() {
     <Layout>
       <div className="relative isolate min-h-screen overflow-hidden bg-neutral-50">
         <div className="pointer-events-none absolute -left-[40vw] top-[-30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/50 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[44vw] bottom-[-32vh] -z-10 h-[55vh] w-[78vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[130px]" />
+        <div className="pointer-events-none absolute -right-[44vw] bottom-[-32vh] -z-10 h-[55vh] w-[78vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="mx-auto flex min-h-[70vh] max-w-2xl flex-col justify-center px-6 py-24 text-center">
           <span className="inline-flex items-center justify-center rounded-full border border-neutral-200 bg-white px-4 py-1 text-xs font-medium uppercase tracking-wide text-neutral-600">

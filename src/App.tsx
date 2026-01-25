@@ -1,16 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import AdminEventDetail from '@/features/events/pages/AdminEventDetail';
-import AdminMeetups from '@/features/events/pages/AdminMeetups';
-import EditMeetup from '@/features/events/pages/admin/edit';
-import AdminMeetupsNew from '@/features/events/pages/admin/new';
-import DashboardMeetups from '@/features/events/pages/DashboardMeetups';
 import MeetupDetail from '@/features/events/pages/EventDetail';
 import Meetups from '@/features/events/pages/Meetups';
-import AdminTrackDetail from '@/features/tracks/pages/AdminTrackDetail';
 import PublicTrackDetail from '@/features/tracks/pages/TrackDetail';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
+import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { SignUpGuard } from '@/shared/components/layout/SignUpGuard';
@@ -19,48 +14,8 @@ import { Toaster as Sonner } from '@/shared/components/ui/sonner';
 import { Toaster } from '@/shared/components/ui/toaster';
 import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import { AuthProvider } from '@/shared/context/AuthContext';
-import AboutPage from './pages/About';
-import AdminDashboard from './pages/admin/index';
-import AdminInvitations from './pages/admin/invitations';
-import LibraryManagement from './pages/admin/library';
-import AdminLibraryItemDetail from './pages/admin/library/[id]';
-import EditLibraryItem from './pages/admin/library/edit-item';
-import NewLibraryItem from './pages/admin/library/new-item';
-import SeriesDetailPage from './pages/admin/library/series/[id]';
-import NewSeriesPage from './pages/admin/library/series/new';
-import TrackDetailPage from './pages/admin/library/tracks/[id]';
-import NewTrackPage from './pages/admin/library/tracks/new';
-import AdminSettingsPage from './pages/admin/settings';
-import UserManagement from './pages/admin/users';
-import CommunityComingSoon from './pages/Community';
-import Dashboard from './pages/Dashboard';
-import DashboardLibrary from './pages/DashboardLibrary';
-import DashboardSeriesDetail from './pages/DashboardSeriesDetail';
-import DashboardTrackDetail from './pages/DashboardTrackDetail';
-import DashboardSubscribePage from './pages/dashboard/Subscribe';
 import Index from './pages/Index';
-import InviteOnlyPage from './pages/InviteOnly';
-import InvitationAcceptancePage from './pages/invitation/[token]';
-import LibraryComingSoon from './pages/Library';
-import LibraryItemDetail from './pages/LibraryItemDetail';
-import NotFound from './pages/NotFound';
-import PrivacyPolicy from './pages/Privacy';
-import PaymentFailedPage from './pages/payment/failed';
-import PaymentPendingPage from './pages/payment/pending';
-import PaymentSuccessPage from './pages/payment/success';
 import SignIn from './pages/SignIn';
-import SubscribeLanding from './pages/SubscribeLanding';
-import CheckEmail from './pages/signup/CheckEmail';
-import Step0 from './pages/signup/Step0';
-import Step1 from './pages/signup/Step1';
-import Step2 from './pages/signup/Step2';
-import Step3 from './pages/signup/Step3';
-import Step4 from './pages/signup/Step4';
-import Step5 from './pages/signup/Step5';
-import TermsOfService from './pages/Terms';
-import ThankYou from './pages/ThankYou';
-import ThankYouEvent from './pages/ThankYouEvent';
-import WelcomeDashboard from './pages/WelcomeDashboard';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,12 +27,68 @@ const queryClient = new QueryClient({
   },
 });
 
+const AboutPage = lazy(() => import('./pages/About'));
+const CommunityComingSoon = lazy(() => import('./pages/Community'));
+const InviteOnlyPage = lazy(() => import('./pages/InviteOnly'));
+const LibraryComingSoon = lazy(() => import('./pages/Library'));
+const SubscribeLanding = lazy(() => import('./pages/SubscribeLanding'));
+const ThankYou = lazy(() => import('./pages/ThankYou'));
+const ThankYouEvent = lazy(() => import('./pages/ThankYouEvent'));
+const PrivacyPolicy = lazy(() => import('./pages/Privacy'));
+const TermsOfService = lazy(() => import('./pages/Terms'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const InvitationAcceptancePage = lazy(() => import('./pages/invitation/[token]'));
+
+const PaymentSuccessPage = lazy(() => import('./pages/payment/success'));
+const PaymentFailedPage = lazy(() => import('./pages/payment/failed'));
+const PaymentPendingPage = lazy(() => import('./pages/payment/pending'));
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const WelcomeDashboard = lazy(() => import('./pages/WelcomeDashboard'));
+const DashboardMeetups = lazy(() => import('@/features/events/pages/DashboardMeetups'));
+const DashboardLibrary = lazy(() => import('./pages/DashboardLibrary'));
+const DashboardTrackDetail = lazy(() => import('./pages/DashboardTrackDetail'));
+const DashboardSeriesDetail = lazy(() => import('./pages/DashboardSeriesDetail'));
+const DashboardSubscribePage = lazy(() => import('./pages/dashboard/Subscribe'));
+const LibraryItemDetail = lazy(() => import('./pages/LibraryItemDetail'));
+
+const AdminDashboard = lazy(() => import('./pages/admin/index'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/settings'));
+const UserManagement = lazy(() => import('./pages/admin/users'));
+const AdminInvitations = lazy(() => import('./pages/admin/invitations'));
+const LibraryManagement = lazy(() => import('./pages/admin/library'));
+const AdminLibraryItemDetail = lazy(() => import('./pages/admin/library/[id]'));
+const NewLibraryItem = lazy(() => import('./pages/admin/library/new-item'));
+const EditLibraryItem = lazy(() => import('./pages/admin/library/edit-item'));
+const NewTrackPage = lazy(() => import('./pages/admin/library/tracks/new'));
+const TrackDetailPage = lazy(() => import('./pages/admin/library/tracks/[id]'));
+const NewSeriesPage = lazy(() => import('./pages/admin/library/series/new'));
+const SeriesDetailPage = lazy(() => import('./pages/admin/library/series/[id]'));
+
+const AdminMeetups = lazy(() => import('@/features/events/pages/AdminMeetups'));
+const AdminMeetupsNew = lazy(() => import('@/features/events/pages/admin/new'));
+const EditMeetup = lazy(() => import('@/features/events/pages/admin/edit'));
+const AdminEventDetail = lazy(() => import('@/features/events/pages/AdminEventDetail'));
+const AdminTrackDetail = lazy(() => import('@/features/tracks/pages/AdminTrackDetail'));
+
+const Step0 = lazy(() => import('./pages/signup/Step0'));
+const Step1 = lazy(() => import('./pages/signup/Step1'));
+const Step2 = lazy(() => import('./pages/signup/Step2'));
+const Step3 = lazy(() => import('./pages/signup/Step3'));
+const Step4 = lazy(() => import('./pages/signup/Step4'));
+const Step5 = lazy(() => import('./pages/signup/Step5'));
+const CheckEmail = lazy(() => import('./pages/signup/CheckEmail'));
+
+const routeFallback = (
+  <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <LoadingSpinner size="lg" text="Loading..." />
+  </div>
+);
+
 const App = () => {
   // App initialization
   useEffect(() => {
     // App startup logic here if needed
-    console.log('🚀 App.tsx mounted successfully!');
-    console.log('📍 Current location:', window.location.href);
   }, []);
 
   return (
@@ -97,7 +108,8 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <AuthProvider>
-              <Routes>
+              <Suspense fallback={routeFallback}>
+                <Routes>
                 <Route
                   path="/"
                   element={
@@ -533,7 +545,8 @@ const App = () => {
                     </ErrorBoundary>
                   }
                 />
-              </Routes>
+                </Routes>
+              </Suspense>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

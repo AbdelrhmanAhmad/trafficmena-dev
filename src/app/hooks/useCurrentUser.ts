@@ -8,12 +8,13 @@ import {
 
 export const currentUserQueryKey = ['current-user'];
 
-export function useCurrentUser() {
+export function useCurrentUser(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: currentUserQueryKey,
     queryFn: (): Promise<CurrentUserResponse> => fetchCurrentUser(),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    enabled: options?.enabled ?? true,
   });
 }
 

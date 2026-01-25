@@ -53,6 +53,7 @@ export function PublicTrackCard({ track, to, className, onClick }: PublicTrackCa
               alt={track.title}
               className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
               loading="lazy"
+              decoding="async"
             />
           </div>
           <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-neutral-800 shadow-sm">
