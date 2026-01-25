@@ -1,5 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Calendar, Library, MessageSquare, Mic, Sparkles, Users2 } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  Headphones,
+  Library,
+  Mic,
+  Sparkles,
+  Users2,
+  Video,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type EventRecord, fetchEvents } from '@/app/api/events';
@@ -235,68 +246,274 @@ const Index: React.FC = () => {
             )}
           </section>
 
-          {/* Why Choose TrafficMENA */}
+          {/* Why Join TrafficMENA - Exit Five Style with Timeline */}
           <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white">
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/[0.06] via-transparent to-transparent"></div>
-              <div className="absolute inset-0 opacity-10"></div>
-            </div>
-
-            <div className="relative px-6 sm:px-10 py-12">
+            {/* Section Header */}
+            <div className="px-6 sm:px-10 pt-12 pb-8">
               <div className="mx-auto max-w-3xl text-center">
                 <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
-                  Why Choose TrafficMENA?
+                  Why Join TrafficMENA?
                 </h2>
                 <p className="mt-3 text-sm text-neutral-600">
                   Focused on real outcomes for marketers across the MENA region.
                 </p>
               </div>
+            </div>
 
-              <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="relative rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                  <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-neutral-900/80 text-white flex items-center justify-center ring-1 ring-white/10 shadow">
-                      <Mic className="h-5 w-5" />
+            {/* Benefits Container with Timeline */}
+            <div className="px-6 sm:px-10 pb-12">
+              {/* Timeline wrapper - relative container for the vertical line */}
+              <div className="relative">
+                {/* Vertical Timeline Line */}
+                <div className="absolute left-[23px] sm:left-[27px] top-0 bottom-0 w-[3px] bg-[#05ef62]/30" />
+
+                {/* Benefits List */}
+                <div className="space-y-12 sm:space-y-16">
+                  {/* Benefit 01: Expert-Led Meetups */}
+                  <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+                    <div className="lg:col-span-5 flex gap-4">
+                      {/* Number badge on timeline */}
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] border-[#05ef62] bg-white text-[#05ef62] text-lg sm:text-xl font-semibold shadow-sm">
+                          01
+                        </div>
+                      </div>
+                      {/* Content */}
+                      <div className="pt-2 sm:pt-3">
+                        <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+                          Expert-Led Meetups
+                        </h3>
+                        <ul className="mt-4 space-y-3">
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Learn from MENA's top marketing leaders at monthly events
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Get practical strategies you can implement immediately
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Network with peers who understand your market challenges
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-medium tracking-tight text-neutral-900">
-                        Expert-Led Meetups
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                        Learn from leaders through interactive meetups made for the MENA market.
-                      </p>
+                    <div className="lg:col-span-7 ml-16 lg:ml-0">
+                      <div className="aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/20 via-[#00fdc2]/10 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm">
+                        <Mic className="h-16 w-16 text-[#05ef62]/40" />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="relative rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                  <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-neutral-900/80 text-white flex items-center justify-center ring-1 ring-white/10 shadow">
-                      <Library className="h-5 w-5" />
+                  {/* Benefit 02: Exclusive Content Library */}
+                  <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+                    <div className="lg:col-span-5 flex gap-4">
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] border-[#05ef62] bg-white text-[#05ef62] text-lg sm:text-xl font-semibold shadow-sm">
+                          02
+                        </div>
+                      </div>
+                      <div className="pt-2 sm:pt-3">
+                        <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+                          Exclusive Content Library
+                        </h3>
+                        <ul className="mt-4 space-y-3">
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Access recordings, templates, and playbooks from past workshops
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Get MENA-specific marketing guides and case studies
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Download ready-to-use campaign frameworks
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-medium tracking-tight text-neutral-900">
-                        Exclusive Content Library
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                        Access recordings, templates, and playbooks from past workshops.
-                      </p>
+                    <div className="lg:col-span-7 ml-16 lg:ml-0">
+                      <div className="aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/20 via-[#05ef62]/10 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm">
+                        <Library className="h-16 w-16 text-[#00fdc2]/50" />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="relative rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                  <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-neutral-900/80 text-white flex items-center justify-center ring-1 ring-white/10 shadow">
-                      <MessageSquare className="h-5 w-5" />
+                  {/* Benefit 03: Community Support */}
+                  <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+                    <div className="lg:col-span-5 flex gap-4">
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] border-[#05ef62] bg-white text-[#05ef62] text-lg sm:text-xl font-semibold shadow-sm">
+                          03
+                        </div>
+                      </div>
+                      <div className="pt-2 sm:pt-3">
+                        <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+                          Community Support
+                        </h3>
+                        <ul className="mt-4 space-y-3">
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Connect with 1,200+ marketers across 7 MENA cities
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Get answers from peers and mentors in your industry
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Build lasting professional relationships
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-base font-medium tracking-tight text-neutral-900">
-                        Community Support
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                        Get practical help from peers and mentors across the region.
-                      </p>
+                    <div className="lg:col-span-7 ml-16 lg:ml-0">
+                      <div className="aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/15 via-neutral-100 to-[#00fdc2]/10 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm">
+                        <Users2 className="h-16 w-16 text-[#05ef62]/40" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Benefit 04: Free Online Events */}
+                  <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+                    <div className="lg:col-span-5 flex gap-4">
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] border-[#05ef62] bg-white text-[#05ef62] text-lg sm:text-xl font-semibold shadow-sm">
+                          04
+                        </div>
+                      </div>
+                      <div className="pt-2 sm:pt-3">
+                        <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+                          Free Online Events
+                        </h3>
+                        <ul className="mt-4 space-y-3">
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Attend all virtual workshops at no extra cost
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Join live Q&A sessions with industry experts
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Access recordings if you miss a session
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="lg:col-span-7 ml-16 lg:ml-0">
+                      <div className="aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/20 via-[#05ef62]/15 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm">
+                        <Video className="h-16 w-16 text-[#00fdc2]/50" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Benefit 05: Discounted Learning Tracks */}
+                  <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+                    <div className="lg:col-span-5 flex gap-4">
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] border-[#05ef62] bg-white text-[#05ef62] text-lg sm:text-xl font-semibold shadow-sm">
+                          05
+                        </div>
+                      </div>
+                      <div className="pt-2 sm:pt-3">
+                        <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+                          Discounted Learning Tracks
+                        </h3>
+                        <ul className="mt-4 space-y-3">
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Save 20%+ on Performance Marketing Track
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Save 20%+ on Content Marketing Track
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Early access to new courses before public release
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="lg:col-span-7 ml-16 lg:ml-0">
+                      <div className="aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/20 via-[#00fdc2]/15 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm">
+                        <BookOpen className="h-16 w-16 text-[#05ef62]/40" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Benefit 06: Priority Support */}
+                  <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+                    <div className="lg:col-span-5 flex gap-4">
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] border-[#05ef62] bg-white text-[#05ef62] text-lg sm:text-xl font-semibold shadow-sm">
+                          06
+                        </div>
+                      </div>
+                      <div className="pt-2 sm:pt-3">
+                        <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+                          Priority Support
+                        </h3>
+                        <ul className="mt-4 space-y-3">
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Get faster responses from the TrafficMENA team
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Access exclusive member-only resources
+                            </span>
+                          </li>
+                          <li className="flex items-start gap-2.5">
+                            <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-neutral-600 leading-relaxed">
+                              Receive personalized learning recommendations
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                    <div className="lg:col-span-7 ml-16 lg:ml-0">
+                      <div className="aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/15 via-neutral-100 to-[#05ef62]/10 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm">
+                        <Headphones className="h-16 w-16 text-[#00fdc2]/50" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -327,18 +544,6 @@ const Index: React.FC = () => {
                   </Link>
                 </Button>
               </div>
-            </div>
-          </section>
-
-          {/* Logos / Social proof */}
-          <section className="mx-auto flex w-full max-w-4xl flex-col items-center justify-center gap-y-6 pt-10 pb-10 sm:py-12">
-            <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6 text-neutral-500">
-              <span className="text-xs font-medium">Supported by marketing leaders</span>
-              <div className="h-5 w-px bg-neutral-200"></div>
-              <span className="text-sm font-medium">MENA Growth Guild</span>
-              <span className="text-sm font-medium">GCC Marketers</span>
-              <span className="text-sm font-medium">AdTech Labs</span>
-              <span className="text-sm font-medium">Data & CRM Collective</span>
             </div>
           </section>
         </div>

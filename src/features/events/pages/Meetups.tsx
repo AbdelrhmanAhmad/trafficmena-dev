@@ -79,17 +79,17 @@ const EventsPage: React.FC = () => {
           {/* Learning Tracks Section */}
           {tracksData && tracksData.items.length > 0 && (
             <section className="relative w-full rounded-[28px] border border-neutral-200 bg-white/90 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
-              <div className="flex flex-col gap-3 text-center sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex flex-col gap-3 sm:text-left">
                 <div>
                   <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-neutral-500">
                     <BookOpen className="h-3.5 w-3.5 text-purple-500" />
                     Learning Tracks
                   </span>
                   <h2 className="mt-1 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                    Multi-Session Programs
+                    Master Skills Together
                   </h2>
                   <p className="mt-2 text-neutral-600">
-                    Book an entire learning track and get access to all sessions in the program.
+                    Deep-dive programs with multiple sessions. Book once, learn it all.
                   </p>
                 </div>
               </div>
@@ -116,17 +116,15 @@ const EventsPage: React.FC = () => {
             </div>
 
             <div className="relative z-10">
-              <div className="flex flex-col gap-3 text-center sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-                    Events
-                  </span>
-                  <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                    Upcoming Sessions & Experiences
-                  </h2>
-                </div>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
+                  Meetups
+                </span>
+                <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+                  Upcoming Meetups & Workshops
+                </h2>
                 {data && (
-                  <p className="text-sm text-neutral-500">
+                  <p className="mt-1 text-sm text-neutral-500">
                     Showing {data.items.length} of {data.total} events
                     {filters.upcoming_only && ' · Upcoming only'}
                   </p>

@@ -155,26 +155,10 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Legal */}
           <div>
-            <h3 className="mb-4 text-lg font-semibold text-primary-green">Support</h3>
+            <h3 className="mb-4 text-lg font-semibold text-primary-green">Legal</h3>
             <ul className="space-y-2">
-              <li>
-                <Link
-                  to="/contact"
-                  className="text-gray-300 transition-colors duration-200 hover:text-primary-green"
-                >
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/help"
-                  className="text-gray-300 transition-colors duration-200 hover:text-primary-green"
-                >
-                  Help Center
-                </Link>
-              </li>
               <li>
                 <Link
                   to="/privacy"

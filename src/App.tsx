@@ -44,6 +44,7 @@ import InvitationAcceptancePage from './pages/invitation/[token]';
 import LibraryComingSoon from './pages/Library';
 import LibraryItemDetail from './pages/LibraryItemDetail';
 import NotFound from './pages/NotFound';
+import PrivacyPolicy from './pages/Privacy';
 import PaymentFailedPage from './pages/payment/failed';
 import PaymentPendingPage from './pages/payment/pending';
 import PaymentSuccessPage from './pages/payment/success';
@@ -56,6 +57,7 @@ import Step2 from './pages/signup/Step2';
 import Step3 from './pages/signup/Step3';
 import Step4 from './pages/signup/Step4';
 import Step5 from './pages/signup/Step5';
+import TermsOfService from './pages/Terms';
 import ThankYou from './pages/ThankYou';
 import ThankYouEvent from './pages/ThankYouEvent';
 import WelcomeDashboard from './pages/WelcomeDashboard';
@@ -503,6 +505,22 @@ const App = () => {
                           </Routes>
                         </SignUpProvider>
                       </SignUpGuard>
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/privacy"
+                  element={
+                    <ErrorBoundary>
+                      <PrivacyPolicy />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/terms"
+                  element={
+                    <ErrorBoundary>
+                      <TermsOfService />
                     </ErrorBoundary>
                   }
                 />
