@@ -321,7 +321,7 @@ const Index: React.FC = () => {
                   className="group inline-flex items-center gap-2 transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] transition-all duration-300 hover:brightness-95 hover:scale-105 hover:shadow-lg"
                   asChild
                 >
-                  <Link to="/events">
+                  <Link to="/meetups">
                     Explore Events
                     <ArrowRight className="h-4 w-4" />
                   </Link>

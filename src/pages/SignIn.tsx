@@ -168,7 +168,7 @@ const SignIn: React.FC = () => {
                 <p className="text-center text-sm text-neutral-600">
                   Don&apos;t have an account?{' '}
                   <Link
-                    to="/signup/step-0"
+                    to="/signup"
                     className="font-medium text-[#05ef62] hover:text-[#29cf9f]"
                   >
                     Join TrafficMENA
