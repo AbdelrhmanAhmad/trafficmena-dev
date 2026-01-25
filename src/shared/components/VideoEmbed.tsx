@@ -119,6 +119,29 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
     </div>
   );
 
+  const isDirectVideoFile = (url: string): boolean => {
+    try {
+      const parsedUrl = new URL(url);
+      const path = parsedUrl.pathname.toLowerCase();
+      return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.ogg');
+    } catch (error) {
+      console.error('Error parsing video URL:', error);
+      return false;
+    }
+  };
+
+  const renderDirectVideo = (url: string) => (
+    <div className={`relative aspect-video w-full ${className}`}>
+      <video
+        src={url}
+        className="absolute inset-0 h-full w-full rounded-lg bg-black"
+        controls
+        playsInline
+        preload="metadata"
+      />
+    </div>
+  );
+
   // Function to render Bunny CDN embed
   const renderBunnyCDNEmbed = (url: string) => {
     const embedUrl = getBunnyCDNEmbedUrl(url);
@@ -265,6 +288,10 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
     // Use sanitized URL if provided
     const safeUrl = validation.sanitizedUrl || url;
     const embedType = validation.embedType;
+
+    if (isDirectVideoFile(safeUrl)) {
+      return renderDirectVideo(safeUrl);
+    }
 
     // SECURITY: Get secure iframe attributes based on embed type
     if (embedType) {
