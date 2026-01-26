@@ -1,6 +1,6 @@
 import { FileText, Search } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
 import LibraryItemCard from '@/features/library/components/LibraryItemCard';
 import { SeriesGrid } from '@/features/series';
@@ -18,33 +18,43 @@ const DashboardLibrary: React.FC = () => {
   const { data: assetsData, isLoading, isError } = useLibraryList(1, 50, { excludeInTracks: true });
   const { data: seriesData, isLoading: seriesLoading } = useSeries(1, 50);
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
   // Filter assets based on search query
-  const filteredAssets =
-    assetsData?.items?.filter(
+  const filteredAssets = useMemo(() => {
+    if (!assetsData?.items) return [];
+    if (!normalizedQuery) return assetsData.items;
+
+    return assetsData.items.filter(
       (item) =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase()),
-    ) || [];
+        item.title.toLowerCase().includes(normalizedQuery) ||
+        item.description?.toLowerCase().includes(normalizedQuery),
+    );
+  }, [assetsData?.items, normalizedQuery]);
 
   // Transform library items to match LibraryItemCard expected format
-  const transformedItems = filteredAssets.map((item) => ({
-    id: item.id,
-    title: item.title,
-    description: item.description || '',
-    file_type: item.file_type,
-    video_url: item.video_url,
-    document_url: item.document_url,
-    embed_url: item.embed_url,
-    embed_type: item.embed_type,
-    file_url: item.file_url, // Legacy field for backward compatibility
-    created_at: item.created_at,
-    view_count: item.view_count,
-    download_count: item.download_count,
-    event_id: item.event_id,
-    is_public: item.is_public,
-    is_premium: item.is_premium,
-    has_access: item.has_access,
-  }));
+  const transformedItems = useMemo(
+    () =>
+      filteredAssets.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        file_type: item.file_type,
+        video_url: item.video_url,
+        document_url: item.document_url,
+        embed_url: item.embed_url,
+        embed_type: item.embed_type,
+        file_url: item.file_url, // Legacy field for backward compatibility
+        created_at: item.created_at,
+        view_count: item.view_count,
+        download_count: item.download_count,
+        event_id: item.event_id,
+        is_public: item.is_public,
+        is_premium: item.is_premium,
+        has_access: item.has_access,
+      })),
+    [filteredAssets],
+  );
 
   return (
     <ProtectedRoute>

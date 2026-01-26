@@ -43,6 +43,8 @@ export type VerifyPaymentResponse = {
   fawaterkPaid?: boolean;
   success?: boolean;
   itemName?: string;
+  itemType?: PaymentItemType;
+  itemId?: string | null;
 };
 
 export type Payment = {

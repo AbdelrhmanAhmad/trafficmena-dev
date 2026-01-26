@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import DOMPurify from 'dompurify';
 import { FileText, Globe, HelpCircle, Link2, Lock, Upload, Video } from 'lucide-react';
 import { type ChangeEvent, useId, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -10,7 +11,7 @@ import type {
 } from '@/app/api/library';
 import { uploadFile } from '@/app/api/uploads';
 import { useEvents } from '@/features/events/hooks/useEvents';
-import { SimpleEditorWrapper } from '@/shared/components/SimpleEditorWrapper';
+import { LazyEditor } from '@/shared/components/LazyEditor';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import {
@@ -213,9 +214,13 @@ export function LibraryAssetForm({
     const embedUrl = normaliseUrl(values.embedUrl);
     const thumbnailUrl = normaliseUrl(values.thumbnailUrl);
 
+    const sanitizedDescription = values.description?.trim()
+      ? DOMPurify.sanitize(values.description.trim())
+      : null;
+
     const payload: CreateLibraryAssetPayload = {
       title: values.title.trim(),
-      description: values.description?.trim() || null,
+      description: sanitizedDescription,
       fileType: values.fileType,
       videoUrl,
       documentUrl,
@@ -323,10 +328,7 @@ export function LibraryAssetForm({
                     control={form.control}
                     name="description"
                     render={({ field: editorField }) => (
-                      <SimpleEditorWrapper
-                        value={editorField.value ?? ''}
-                        onChange={editorField.onChange}
-                      />
+                      <LazyEditor value={editorField.value ?? ''} onChange={editorField.onChange} />
                     )}
                   />
                   <FormMessage />

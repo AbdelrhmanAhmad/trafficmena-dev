@@ -1,6 +1,6 @@
 import { BookOpen, Calendar } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
 import { usePublicTracks } from '@/features/tracks/hooks/useTracks';
@@ -23,13 +23,19 @@ const EventsPage: React.FC = () => {
   const { data, isLoading, error } = useEvents(currentPage, itemsPerPage, filters);
   const { data: tracksData } = usePublicTracks(1, 6);
 
-  const handleEventClick = (event: Event) => {
-    navigate(`/meetups/${event.id}`);
-  };
+  const handleEventClick = useCallback(
+    (event: Event) => {
+      navigate(`/meetups/${event.id}`);
+    },
+    [navigate],
+  );
 
-  const handleTrackClick = (trackId: string) => {
-    navigate(`/tracks/${trackId}`);
-  };
+  const handleTrackClick = useCallback(
+    (trackId: string) => {
+      navigate(`/tracks/${trackId}`);
+    },
+    [navigate],
+  );
 
   const toggleUpcomingFilter = () => {
     setFilters((prev) => ({
@@ -45,7 +51,7 @@ const EventsPage: React.FC = () => {
     <Layout>
       <div className="relative isolate overflow-hidden">
         <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[50vw] bottom-[-30vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+        <div className="pointer-events-none absolute -right-[50vw] bottom-[-30vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-12 px-4 pb-20 pt-12 sm:px-6 lg:px-0">
           {/* Page Header */}
@@ -79,17 +85,17 @@ const EventsPage: React.FC = () => {
           {/* Learning Tracks Section */}
           {tracksData && tracksData.items.length > 0 && (
             <section className="relative w-full rounded-[28px] border border-neutral-200 bg-white/90 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
-              <div className="flex flex-col gap-3 text-center sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex flex-col gap-3 sm:text-left">
                 <div>
                   <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-neutral-500">
                     <BookOpen className="h-3.5 w-3.5 text-purple-500" />
                     Learning Tracks
                   </span>
                   <h2 className="mt-1 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                    Multi-Session Programs
+                    Master Skills Together
                   </h2>
                   <p className="mt-2 text-neutral-600">
-                    Book an entire learning track and get access to all sessions in the program.
+                    Deep-dive programs with multiple sessions. Book once, learn it all.
                   </p>
                 </div>
               </div>
@@ -116,17 +122,15 @@ const EventsPage: React.FC = () => {
             </div>
 
             <div className="relative z-10">
-              <div className="flex flex-col gap-3 text-center sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-                    Events
-                  </span>
-                  <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                    Upcoming Sessions & Experiences
-                  </h2>
-                </div>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
+                  Meetups
+                </span>
+                <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+                  Upcoming Meetups & Workshops
+                </h2>
                 {data && (
-                  <p className="text-sm text-neutral-500">
+                  <p className="mt-1 text-sm text-neutral-500">
                     Showing {data.items.length} of {data.total} events
                     {filters.upcoming_only && ' · Upcoming only'}
                   </p>

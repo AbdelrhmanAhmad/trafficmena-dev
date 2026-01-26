@@ -12,7 +12,6 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
     try {
       // Validate URL format first
       if (!url || typeof url !== 'string') {
-        console.warn('Invalid URL provided to getYouTubeVideoId:', url);
         return null;
       }
 
@@ -32,14 +31,13 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
               return videoId;
             }
           }
-        } catch (matchError) {
-          console.warn('Error matching pattern:', matchError);
+        } catch {
+          return null;
         }
       }
 
       return null;
-    } catch (error) {
-      console.error('Error extracting YouTube video ID:', error);
+    } catch {
       return null;
     }
   };
@@ -51,8 +49,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
       return (
         url.includes('bunnycdn.com') || url.includes('b-cdn.net') || url.includes('.b-cdn.net')
       );
-    } catch (error) {
-      console.error('Error checking Bunny CDN URL:', error);
+    } catch {
       return false;
     }
   };
@@ -68,8 +65,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
         url.includes('jwplayer.com') ||
         url.includes('vidyard.com')
       );
-    } catch (error) {
-      console.error('Error checking media delivery platform URL:', error);
+    } catch {
       return false;
     }
   };
@@ -100,8 +96,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
       }
 
       return url; // Return original URL if we can't parse it
-    } catch (error) {
-      console.error('Error processing Bunny CDN URL:', error);
+    } catch {
       return url; // Fallback to original URL
     }
   };
@@ -116,6 +111,36 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
         allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen={true}
       />
+    </div>
+  );
+
+  const isDirectVideoFile = (url: string): boolean => {
+    try {
+      const parsedUrl = new URL(url);
+      const path = parsedUrl.pathname.toLowerCase();
+      return path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.ogg');
+    } catch {
+      return false;
+    }
+  };
+
+  const renderDirectVideo = (url: string) => (
+    <div className={`relative aspect-video w-full ${className}`}>
+      <video
+        src={url}
+        className="absolute inset-0 h-full w-full rounded-lg bg-black"
+        controls
+        playsInline
+        preload="metadata"
+      >
+        <track
+          kind="captions"
+          src="data:text/vtt;charset=utf-8,WEBVTT"
+          srcLang="en"
+          label="English"
+          default
+        />
+      </video>
     </div>
   );
 
@@ -248,7 +273,6 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
     const validation = validateEmbedUrl(url);
 
     if (!validation.isValid || validation.errors.length > 0) {
-      console.error('VideoEmbed security validation failed:', validation.errors);
       return (
         <div
           className={`flex aspect-video w-full items-center justify-center rounded-lg bg-red-50 border-2 border-red-200 ${className}`}
@@ -265,6 +289,10 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
     // Use sanitized URL if provided
     const safeUrl = validation.sanitizedUrl || url;
     const embedType = validation.embedType;
+
+    if (isDirectVideoFile(safeUrl)) {
+      return renderDirectVideo(safeUrl);
+    }
 
     // SECURITY: Get secure iframe attributes based on embed type
     if (embedType) {
@@ -299,10 +327,8 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
     }
 
     // For any other video URL, try to embed it directly (with security warnings)
-    console.warn('VideoEmbed: Using generic embed for unvalidated URL type:', safeUrl);
     return renderGenericEmbed(safeUrl);
-  } catch (error) {
-    console.error('Error rendering video embed:', error);
+  } catch {
     return (
       <div
         className={`flex aspect-video w-full items-center justify-center rounded-lg bg-red-50 ${className}`}

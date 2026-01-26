@@ -300,12 +300,18 @@ function sanitizeEmbedUrl(
       break;
 
     case 'bunny':
-      // Add responsive parameters for proper video scaling
-      if (!sanitizedUrl.searchParams.has('responsive')) {
-        sanitizedUrl.searchParams.set('responsive', 'true');
-      }
+      // Force responsive player to prevent fixed-size embeds inside responsive containers
+      sanitizedUrl.searchParams.set('responsive', 'true');
       if (!sanitizedUrl.searchParams.has('preload')) {
         sanitizedUrl.searchParams.set('preload', 'true');
+      }
+      // Normalize Bunny Stream "play" URLs to embed URLs for full-size player rendering
+      if (
+        (sanitizedUrl.hostname === 'iframe.mediadelivery.net' ||
+          sanitizedUrl.hostname === 'iframe.videodelivery.net') &&
+        sanitizedUrl.pathname.startsWith('/play/')
+      ) {
+        sanitizedUrl.pathname = sanitizedUrl.pathname.replace('/play/', '/embed/');
       }
       break;
   }

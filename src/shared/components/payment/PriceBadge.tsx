@@ -40,6 +40,7 @@ export function PriceBadge({
   const { data: fetchedPricePreview, isLoading } = usePricePreview(
     shouldFetch ? itemType : undefined,
     itemId,
+    { enabled: shouldFetch },
   );
 
   // Use external data if provided, otherwise use fetched data

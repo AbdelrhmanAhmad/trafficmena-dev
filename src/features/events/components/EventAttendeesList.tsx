@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import {
@@ -69,6 +70,7 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Registered</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -81,6 +83,21 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
                     <TableCell>{attendee.phone_number || '-'}</TableCell>
                     <TableCell>
                       {format(new Date(attendee.registered_at), 'MMM d, yyyy h:mm a')}
+                    </TableCell>
+                    <TableCell>
+                      {attendee.status === 'active' && (
+                        <Badge variant="default" className="bg-green-600">
+                          Active
+                        </Badge>
+                      )}
+                      {attendee.status === 'cancelled' && (
+                        <Badge variant="destructive">Cancelled</Badge>
+                      )}
+                      {attendee.status === 'refund_requested' && (
+                        <Badge variant="outline" className="border-amber-500 text-amber-600">
+                          Refund Pending
+                        </Badge>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -58,15 +58,15 @@ const WelcomeDashboard: React.FC = () => {
       <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
         <section className="relative w-full overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-gradient-to-br from-[#d5ffe9]/30 via-[#f4fff9]/20 to-[#00fdc2]/10 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <div className="pointer-events-none absolute -left-1/4 -top-1/4 -z-10 h-[40%] w-[60%] rounded-full bg-gradient-to-br from-[#d5ffe9]/50 via-[#f4fff9]/30 to-transparent blur-3xl" />
-          <div className="pointer-events-none absolute -right-1/4 -bottom-1/4 -z-10 h-[40%] w-[50%] rounded-full bg-gradient-to-tr from-[#00fdc2]/20 via-[#05ef62]/15 to-transparent blur-[100px]" />
+          <div className="pointer-events-none absolute -right-1/4 -bottom-1/4 -z-10 h-[40%] w-[50%] rounded-full bg-gradient-to-tr from-[#00fdc2]/20 via-[#05ef62]/15 to-transparent blur-[80px]" />
 
           <div className="relative z-10 space-y-4 text-center">
             <div className="mb-4 flex items-center justify-center gap-2">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white animate-pulse">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
                 <Sparkles className="h-6 w-6" />
               </div>
               <h1 className="text-4xl font-bold text-neutral-900">Welcome to TrafficMENA</h1>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-[#29cf9f] to-[#00fdc2] text-white animate-pulse">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-[#29cf9f] to-[#00fdc2] text-white">
                 <Sparkles className="h-6 w-6" />
               </div>
             </div>
@@ -108,7 +108,7 @@ const WelcomeDashboard: React.FC = () => {
                   events.map((event) => (
                     <div
                       key={event.id}
-                      className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#05ef62]/40"
+                      className="rounded-2xl border border-neutral-200 bg-white/90 p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#05ef62]/40"
                     >
                       <div className="flex items-start justify-between mb-3">
                         <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">

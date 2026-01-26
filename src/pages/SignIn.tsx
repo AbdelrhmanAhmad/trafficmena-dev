@@ -106,7 +106,7 @@ const SignIn: React.FC = () => {
     <Layout>
       <div className="relative isolate min-h-screen overflow-hidden px-4 py-16 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute -left-[45vw] top-[-30vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/60 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[48vw] bottom-[-35vh] -z-10 h-[60vh] w-[82vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+        <div className="pointer-events-none absolute -right-[48vw] bottom-[-35vh] -z-10 h-[60vh] w-[82vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[420px] flex-col gap-6">
           <div className="rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_18px_50px_-20px_rgba(16,16,16,0.35)] backdrop-blur">
@@ -167,10 +167,7 @@ const SignIn: React.FC = () => {
 
                 <p className="text-center text-sm text-neutral-600">
                   Don&apos;t have an account?{' '}
-                  <Link
-                    to="/signup/step-0"
-                    className="font-medium text-[#05ef62] hover:text-[#29cf9f]"
-                  >
+                  <Link to="/signup" className="font-medium text-[#05ef62] hover:text-[#29cf9f]">
                     Join TrafficMENA
                   </Link>
                 </p>

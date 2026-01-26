@@ -291,7 +291,7 @@ async function calculatePrice(
       }
     }
 
-    if (existingReg) {
+    if (existingReg && existingReg.status !== 'cancelled') {
       throw new ApiError('ALREADY_REGISTERED', 'Already registered for this event', 400);
     }
 
@@ -300,7 +300,12 @@ async function calculatePrice(
       const [countResult] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(eventAttendees)
-        .where(eq(eventAttendees.eventId, itemId));
+        .where(
+          and(
+            eq(eventAttendees.eventId, itemId),
+            inArray(eventAttendees.status, ['active', 'refund_requested']),
+          ),
+        );
 
       if (Number(countResult.count) >= event.maxAttendees) {
         throw new ApiError('EVENT_FULL', 'Event capacity reached.', 409);
@@ -469,7 +474,12 @@ async function processSuccessfulPayment(paymentId: string) {
           const [countResult] = await tx
             .select({ count: sql<number>`count(*)::int` })
             .from(eventAttendees)
-            .where(eq(eventAttendees.eventId, payment.itemId));
+            .where(
+              and(
+                eq(eventAttendees.eventId, payment.itemId),
+                inArray(eventAttendees.status, ['active', 'refund_requested']),
+              ),
+            );
 
           const [reservationCount] = await tx
             .select({ count: sql<number>`count(*)::int` })
@@ -498,6 +508,10 @@ async function processSuccessfulPayment(paymentId: string) {
           .onConflictDoUpdate({
             target: [eventAttendees.eventId, eventAttendees.userId],
             set: {
+              status: 'active',
+              cancelledAt: null,
+              refundRequestedAt: null,
+              adminNote: null,
               paidAt,
               pricePaidCents: payment.amountCents,
               paymentId: payment.id,
@@ -910,12 +924,12 @@ export function registerPaymentRoutes(app: Hono) {
           }
 
           const [existingRegistration] = await tx
-            .select({ id: eventAttendees.id })
+            .select({ id: eventAttendees.id, status: eventAttendees.status })
             .from(eventAttendees)
             .where(and(eq(eventAttendees.eventId, itemId), eq(eventAttendees.userId, userId)))
             .limit(1);
 
-          if (existingRegistration) {
+          if (existingRegistration && existingRegistration.status !== 'cancelled') {
             throw new ApiError('ALREADY_REGISTERED', 'Already registered for this event.', 400);
           }
 
@@ -958,7 +972,12 @@ export function registerPaymentRoutes(app: Hono) {
             const [attendeeCount] = await tx
               .select({ count: sql<number>`count(*)::int` })
               .from(eventAttendees)
-              .where(eq(eventAttendees.eventId, itemId));
+              .where(
+                and(
+                  eq(eventAttendees.eventId, itemId),
+                  inArray(eventAttendees.status, ['active', 'refund_requested']),
+                ),
+              );
 
             const [reservationCount] = await tx
               .select({ count: sql<number>`count(*)::int` })
@@ -1062,7 +1081,11 @@ export function registerPaymentRoutes(app: Hono) {
             .select({ eventId: eventAttendees.eventId })
             .from(eventAttendees)
             .where(
-              and(eq(eventAttendees.userId, userId), inArray(eventAttendees.eventId, eventIds)),
+              and(
+                eq(eventAttendees.userId, userId),
+                inArray(eventAttendees.eventId, eventIds),
+                inArray(eventAttendees.status, ['active', 'refund_requested']),
+              ),
             );
           const existingEventIds = new Set(existingEventRows.map((row) => row.eventId));
 
@@ -1072,7 +1095,12 @@ export function registerPaymentRoutes(app: Hono) {
               count: sql<number>`count(*)::int`,
             })
             .from(eventAttendees)
-            .where(inArray(eventAttendees.eventId, eventIds))
+            .where(
+              and(
+                inArray(eventAttendees.eventId, eventIds),
+                inArray(eventAttendees.status, ['active', 'refund_requested']),
+              ),
+            )
             .groupBy(eventAttendees.eventId);
           const reservationCounts = await tx
             .select({
@@ -1338,11 +1366,24 @@ export function registerPaymentRoutes(app: Hono) {
     }
 
     if (payment.status === 'paid') {
-      return c.json({ data: { status: 'paid', alreadyProcessed: true } });
+      return c.json({
+        data: {
+          status: 'paid',
+          alreadyProcessed: true,
+          itemType: payment.itemType,
+          itemId: payment.itemId,
+        },
+      });
     }
 
     if (payment.status !== 'pending') {
-      return c.json({ data: { status: payment.status } });
+      return c.json({
+        data: {
+          status: payment.status,
+          itemType: payment.itemType,
+          itemId: payment.itemId,
+        },
+      });
     }
 
     try {
@@ -1350,12 +1391,26 @@ export function registerPaymentRoutes(app: Hono) {
       const invoiceData = await getInvoiceData(invoiceId);
 
       if (invoiceData.paid !== 1) {
-        return c.json({ data: { status: 'pending', fawaterkPaid: false } });
+        return c.json({
+          data: {
+            status: 'pending',
+            fawaterkPaid: false,
+            itemType: payment.itemType,
+            itemId: payment.itemId,
+          },
+        });
       }
 
       // Payment confirmed - process it
       const processResult = await processSuccessfulPayment(payment.id);
-      return c.json({ data: { status: 'paid', ...processResult } });
+      return c.json({
+        data: {
+          status: 'paid',
+          itemType: payment.itemType,
+          itemId: payment.itemId,
+          ...processResult,
+        },
+      });
     } catch (error) {
       if (error instanceof ApiError) {
         return c.json(

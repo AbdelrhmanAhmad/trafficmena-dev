@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
+import { useAuth } from '@/shared/context/AuthContext';
 
 export type UserRole = 'owner' | 'admin' | 'manager' | 'expert' | 'user';
 
@@ -22,7 +23,8 @@ const normalizeRole = (value: string | null | undefined): UserRole => {
 };
 
 export const useRolePermissions = () => {
-  const { data, isLoading } = useCurrentUser();
+  const { user } = useAuth();
+  const { data, isLoading } = useCurrentUser({ enabled: !!user });
 
   const role = useMemo(() => normalizeRole(data?.profile?.role), [data?.profile?.role]);
   const rank = ROLE_PRIORITY[role];

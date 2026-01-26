@@ -1,5 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Calendar, Library, MessageSquare, Mic, Sparkles, Users2 } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  Headphones,
+  Library,
+  Mic,
+  Sparkles,
+  Users2,
+  Video,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type EventRecord, fetchEvents } from '@/app/api/events';
@@ -7,6 +17,87 @@ import { EventCard } from '@/features/events/components/EventCard';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
+
+const benefitItems = [
+  {
+    id: '01',
+    title: 'Expert-Led Meetups',
+    points: [
+      "Learn from MENA's top marketing leaders at monthly events",
+      'Get practical strategies you can implement immediately',
+      'Network with peers who understand your market challenges',
+    ],
+    icon: Mic,
+    mediaClassName:
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/20 via-[#00fdc2]/10 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-[#05ef62]/40',
+  },
+  {
+    id: '02',
+    title: 'Exclusive Content Library',
+    points: [
+      'Access recordings, templates, and playbooks from past workshops',
+      'Get MENA-specific marketing guides and case studies',
+      'Download ready-to-use campaign frameworks',
+    ],
+    icon: Library,
+    mediaClassName:
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/20 via-[#05ef62]/10 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-[#00fdc2]/50',
+  },
+  {
+    id: '03',
+    title: 'Community Support',
+    points: [
+      'Connect with 1,200+ marketers across 7 MENA cities',
+      'Get answers from peers and mentors in your industry',
+      'Build lasting professional relationships',
+    ],
+    icon: Users2,
+    mediaClassName:
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/15 via-neutral-100 to-[#00fdc2]/10 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-[#05ef62]/40',
+  },
+  {
+    id: '04',
+    title: 'Free Online Events',
+    points: [
+      'Attend all virtual workshops at no extra cost',
+      'Join live Q&A sessions with industry experts',
+      'Access recordings if you miss a session',
+    ],
+    icon: Video,
+    mediaClassName:
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/20 via-[#05ef62]/15 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-[#00fdc2]/50',
+  },
+  {
+    id: '05',
+    title: 'Discounted Learning Tracks',
+    points: [
+      'Save 20%+ on Performance Marketing Track',
+      'Save 20%+ on Content Marketing Track',
+      'Early access to new courses before public release',
+    ],
+    icon: BookOpen,
+    mediaClassName:
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/20 via-[#00fdc2]/15 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-[#05ef62]/40',
+  },
+  {
+    id: '06',
+    title: 'Priority Support',
+    points: [
+      'Get faster responses from the TrafficMENA team',
+      'Access exclusive member-only resources',
+      'Receive personalized learning recommendations',
+    ],
+    icon: Headphones,
+    mediaClassName:
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/15 via-neutral-100 to-[#05ef62]/10 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-[#00fdc2]/50',
+  },
+];
 
 const Index: React.FC = () => {
   const { handleError } = useErrorHandler();
@@ -43,9 +134,10 @@ const Index: React.FC = () => {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && visibleEvents < events.length) {
-          setVisibleEvents((prev) => Math.min(prev + 3, events.length));
-        }
+        if (!entries[0]?.isIntersecting) return;
+        setVisibleEvents((prev) =>
+          prev >= events.length ? prev : Math.min(prev + 3, events.length),
+        );
       },
       { threshold: 0.1 },
     );
@@ -57,7 +149,7 @@ const Index: React.FC = () => {
         observerRef.current.disconnect();
       }
     };
-  }, [visibleEvents, events.length]);
+  }, [events.length]);
 
   // Mark component as loaded for animations
   useEffect(() => {
@@ -70,7 +162,7 @@ const Index: React.FC = () => {
     <Layout>
       <div className="relative isolate overflow-hidden">
         <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[50vw] top-[30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+        <div className="pointer-events-none absolute -right-[50vw] top-[30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-16 px-4 pb-20 pt-12 sm:px-6 lg:px-0">
           <section
@@ -83,9 +175,7 @@ const Index: React.FC = () => {
               >
                 <div className="max-w-xl">
                   {/* MVP Badge - Exactly like reference */}
-                  <div
-                    className={`mb-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/70 px-3 py-1 text-xs font-medium text-neutral-700 backdrop-blur hover:bg-white/80 transition-all duration-300 hover:scale-105 hover:shadow-lg ${isLoaded ? 'animate-bounce' : ''}`}
-                  >
+                  <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/70 px-3 py-1 text-xs font-medium text-neutral-700 backdrop-blur hover:bg-white/80 transition-all duration-300 hover:scale-105 hover:shadow-lg">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-[#101010]">
                       <Sparkles className="h-3.5 w-3.5" />
                     </span>
@@ -109,25 +199,15 @@ const Index: React.FC = () => {
                   </p>
 
                   <div
-                    className={`mt-8 flex flex-wrap gap-3 items-center ${isLoaded ? 'animate-fade-in-up' : ''}`}
+                    className={`mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start ${isLoaded ? 'animate-fade-in-up' : ''}`}
                   >
                     <Button
                       className="group flex gap-2 transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
                       asChild
                     >
-                      <Link to="/meetups">
+                      <Link to="/signup">
                         <Users2 className="h-4 w-4" />
                         <span>Join the Community</span>
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="group inline-flex gap-2 transform rounded-xl border-neutral-300 bg-white px-4 py-3 text-sm font-medium text-neutral-900 transition-all duration-300 hover:scale-105 hover:shadow-md hover:-translate-y-0.5 active:scale-95"
-                      asChild
-                    >
-                      <Link to="/events">
-                        <Calendar className="h-4 w-4" />
-                        <span>See Upcoming Events</span>
                       </Link>
                     </Button>
                   </div>
@@ -169,9 +249,10 @@ const Index: React.FC = () => {
                       alt="Community meetup"
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                       loading="eager"
+                      fetchpriority="high"
                     />
                     <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-white/60"></div>
-                    <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-[#05ef62]/25 via-[#29cf9f]/20 to-[#00fdc2]/20 mix-blend-overlay animate-pulse"></div>
+                    <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-[#05ef62]/25 via-[#29cf9f]/20 to-[#00fdc2]/20 mix-blend-overlay"></div>
                   </div>
                 </div>
               </div>
@@ -235,77 +316,73 @@ const Index: React.FC = () => {
             )}
           </section>
 
-          {/* Why Choose TrafficMENA */}
-          <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white">
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/[0.06] via-transparent to-transparent"></div>
-              <div className="absolute inset-0 opacity-10"></div>
-            </div>
-
-            <div className="relative px-6 sm:px-10 py-12">
+          {/* Why Join TrafficMENA - Exit Five Style with Timeline */}
+          <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white content-visibility-auto">
+            {/* Section Header */}
+            <div className="px-6 sm:px-10 pt-12 pb-8">
               <div className="mx-auto max-w-3xl text-center">
                 <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
-                  Why Choose TrafficMENA?
+                  Why Join TrafficMENA?
                 </h2>
                 <p className="mt-3 text-sm text-neutral-600">
                   Focused on real outcomes for marketers across the MENA region.
                 </p>
               </div>
+            </div>
 
-              <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="relative rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                  <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-neutral-900/80 text-white flex items-center justify-center ring-1 ring-white/10 shadow">
-                      <Mic className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-medium tracking-tight text-neutral-900">
-                        Expert-Led Meetups
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                        Learn from leaders through interactive meetups made for the MENA market.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            {/* Benefits Container with Timeline */}
+            <div className="px-6 sm:px-10 pb-12">
+              {/* Timeline wrapper - relative container for the vertical line */}
+              <div className="relative">
+                {/* Vertical Timeline Line */}
+                <div className="absolute left-[23px] sm:left-[27px] top-0 bottom-0 w-[3px] bg-[#05ef62]/30" />
 
-                <div className="relative rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                  <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-neutral-900/80 text-white flex items-center justify-center ring-1 ring-white/10 shadow">
-                      <Library className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-medium tracking-tight text-neutral-900">
-                        Exclusive Content Library
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                        Access recordings, templates, and playbooks from past workshops.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="relative rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                  <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-neutral-900/80 text-white flex items-center justify-center ring-1 ring-white/10 shadow">
-                      <MessageSquare className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-medium tracking-tight text-neutral-900">
-                        Community Support
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                        Get practical help from peers and mentors across the region.
-                      </p>
-                    </div>
-                  </div>
+                {/* Benefits List */}
+                <div className="space-y-12 sm:space-y-16">
+                  {benefitItems.map((benefit) => {
+                    const Icon = benefit.icon;
+                    return (
+                      <div
+                        key={benefit.id}
+                        className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start"
+                      >
+                        <div className="lg:col-span-5 flex gap-4">
+                          <div className="relative z-10 flex-shrink-0">
+                            <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] border-[#05ef62] bg-white text-[#05ef62] text-lg sm:text-xl font-semibold shadow-sm">
+                              {benefit.id}
+                            </div>
+                          </div>
+                          <div className="pt-2 sm:pt-3">
+                            <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+                              {benefit.title}
+                            </h3>
+                            <ul className="mt-4 space-y-3">
+                              {benefit.points.map((point) => (
+                                <li key={point} className="flex items-start gap-2.5">
+                                  <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
+                                  <span className="text-sm text-neutral-600 leading-relaxed">
+                                    {point}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                        <div className="lg:col-span-7 ml-16 lg:ml-0">
+                          <div className={benefit.mediaClassName}>
+                            <Icon className={benefit.iconClassName} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           </section>
 
           {/* CTA Band */}
-          <section className="relative w-full overflow-hidden rounded-[28px]">
+          <section className="relative w-full overflow-hidden rounded-[28px] content-visibility-auto">
             <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900 to-[#0b3a3f]"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-green-900/20 via-blue-900/10 to-transparent"></div>
             <div className="relative px-6 sm:px-10 py-12 text-center">
@@ -321,24 +398,12 @@ const Index: React.FC = () => {
                   className="group inline-flex items-center gap-2 transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] transition-all duration-300 hover:brightness-95 hover:scale-105 hover:shadow-lg"
                   asChild
                 >
-                  <Link to="/events">
+                  <Link to="/meetups">
                     Explore Events
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
               </div>
-            </div>
-          </section>
-
-          {/* Logos / Social proof */}
-          <section className="mx-auto flex w-full max-w-4xl flex-col items-center justify-center gap-y-6 pt-10 pb-10 sm:py-12">
-            <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6 text-neutral-500">
-              <span className="text-xs font-medium">Supported by marketing leaders</span>
-              <div className="h-5 w-px bg-neutral-200"></div>
-              <span className="text-sm font-medium">MENA Growth Guild</span>
-              <span className="text-sm font-medium">GCC Marketers</span>
-              <span className="text-sm font-medium">AdTech Labs</span>
-              <span className="text-sm font-medium">Data & CRM Collective</span>
             </div>
           </section>
         </div>

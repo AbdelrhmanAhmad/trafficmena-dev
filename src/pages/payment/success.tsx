@@ -1,6 +1,6 @@
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useVerifyPayment } from '@/app/hooks/usePayments';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
@@ -19,6 +19,7 @@ export default function PaymentSuccessPage() {
   const { user } = useAuth();
   const verifyPayment = useVerifyPayment();
   const [verificationAttempted, setVerificationAttempted] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (invoiceId && user && !verificationAttempted) {
@@ -26,6 +27,16 @@ export default function PaymentSuccessPage() {
       verifyPayment.mutate({ invoiceId: Number(invoiceId) });
     }
   }, [invoiceId, user, verificationAttempted, verifyPayment]);
+
+  useEffect(() => {
+    if (
+      verifyPayment.data?.status === 'paid' &&
+      verifyPayment.data.itemType === 'event' &&
+      verifyPayment.data.itemId
+    ) {
+      navigate(`/thank-you-event/${verifyPayment.data.itemId}?paid=1`, { replace: true });
+    }
+  }, [verifyPayment.data, navigate]);
 
   const isVerifying = verifyPayment.isPending;
   const hasInvoice = Boolean(invoiceId);

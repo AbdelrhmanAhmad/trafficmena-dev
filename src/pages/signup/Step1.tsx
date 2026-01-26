@@ -27,7 +27,7 @@ const Step1: React.FC = () => {
   const validateName = (name: string, field: string): string | undefined => {
     if (!name.trim()) return `${field} is required`;
     if (name.trim().length < 2) return `${field} must be at least 2 characters`;
-    if (!/^[a-zA-Z\s'-]+$/.test(name))
+    if (!/^[\p{L}\s'-]+$/u.test(name))
       return `${field} can only contain letters, spaces, hyphens, and apostrophes`;
     return undefined;
   };

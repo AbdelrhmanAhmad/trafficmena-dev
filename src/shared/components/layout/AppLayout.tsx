@@ -220,7 +220,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === item.url}
-                      className="hover:bg-neutral-100 rounded-xl transition-colors"
+                      className="h-auto hover:bg-neutral-100 rounded-xl transition-colors"
                     >
                       <Link to={item.url} className="flex items-center gap-3 py-3.5">
                         <Icon className="h-4 w-4 shrink-0 text-neutral-700" />
@@ -238,7 +238,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                   <SidebarMenuButton
                     asChild
                     isActive={location.pathname === '/dashboard/subscribe'}
-                    className="hover:bg-amber-50 rounded-xl transition-colors border border-amber-200 bg-amber-50/50"
+                    className="h-auto hover:bg-amber-50 rounded-xl transition-colors border border-amber-200 bg-amber-50/50"
                   >
                     <Link to="/dashboard/subscribe" className="flex items-center gap-3 py-3.5">
                       <Crown className="h-4 w-4 shrink-0 text-amber-600" />
@@ -314,8 +314,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ variant, children }) => {
     <SidebarProvider>
       <div className="relative flex min-h-screen w-full">
         <AppSidebar variant={variant} />
-        <SidebarInset className="flex-1">
-          <header className="relative flex h-16 shrink-0 items-center justify-between gap-2 border-b border-neutral-200/60 bg-white/90 backdrop-blur px-4">
+        <SidebarInset className="flex-1 theme-transition">
+          <header className="relative flex h-16 shrink-0 items-center justify-between gap-2 border-b border-neutral-200/60 bg-white/90 backdrop-blur px-4 theme-transition">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="-ml-1" />
               <h1 className="text-xl font-semibold text-neutral-900">{getPageTitle()}</h1>
@@ -324,7 +324,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ variant, children }) => {
           </header>
           <main className="relative flex-1 overflow-x-hidden overflow-y-auto">
             <div className="pointer-events-none absolute -left-1/4 top-0 -z-10 h-[50vh] w-[60vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/50 via-[#f4fff9]/30 to-transparent blur-3xl" />
-            <div className="pointer-events-none absolute right-0 top-1/3 -z-10 h-[50vh] w-[50vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/20 via-[#05ef62]/15 to-transparent blur-[140px]" />
+            <div className="pointer-events-none absolute right-0 top-1/3 -z-10 h-[50vh] w-[50vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/20 via-[#05ef62]/15 to-transparent blur-[90px]" />
             <div className="relative p-6">{children}</div>
           </main>
         </SidebarInset>

@@ -1,6 +1,6 @@
 {
-  "id": "3e03f5d3-a16b-4246-8235-c7a9cfcaa459",
-  "prevId": "1a31e9b3-df29-41a3-a8d7-d311e4b988e7",
+  "id": "3e4f30a3-b662-4e83-84aa-2ef69228a33f",
+  "prevId": "bf52fae3-a849-4367-8a05-bc70e2bfecb8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -532,6 +532,32 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "registration_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "cancelled_at": {
+          "name": "cancelled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "refund_requested_at": {
+          "name": "refund_requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "admin_note": {
+          "name": "admin_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -582,6 +608,42 @@
             }
           ],
           "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_attendees_status_idx": {
+          "name": "event_attendees_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_attendees_event_status_idx": {
+          "name": "event_attendees_event_status_idx",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -2910,6 +2972,11 @@
       "name": "payment_status",
       "schema": "public",
       "values": ["pending", "paid", "failed", "expired"]
+    },
+    "public.registration_status": {
+      "name": "registration_status",
+      "schema": "public",
+      "values": ["active", "cancelled", "refund_requested"]
     },
     "public.subscription_status": {
       "name": "subscription_status",

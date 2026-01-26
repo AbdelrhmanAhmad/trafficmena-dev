@@ -8,7 +8,7 @@ const AboutPage: React.FC = () => {
     <Layout>
       <div className="relative isolate overflow-hidden">
         <div className="pointer-events-none absolute -left-[45vw] top-[-30vh] -z-10 h-[50vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[50vw] bottom-[-25vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+        <div className="pointer-events-none absolute -right-[50vw] bottom-[-25vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[1000px] flex-col gap-14 px-4 py-16 sm:px-6 lg:px-0">
           <section className="w-full rounded-[28px] border border-neutral-200 bg-white/90 px-6 py-12 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur sm:px-12">

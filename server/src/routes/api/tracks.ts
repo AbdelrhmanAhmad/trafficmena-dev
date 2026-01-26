@@ -379,7 +379,7 @@ export function registerTrackRoutes(app: Hono) {
           attendeeCount: count(),
         })
         .from(eventAttendees)
-        .where(inArray(eventAttendees.eventId, eventIds))
+        .where(and(inArray(eventAttendees.eventId, eventIds), eq(eventAttendees.status, 'active')))
         .groupBy(eventAttendees.eventId);
 
       for (const ac of attendeeCounts) {

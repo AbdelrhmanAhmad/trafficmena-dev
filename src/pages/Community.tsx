@@ -8,7 +8,7 @@ const CommunityComingSoon: React.FC = () => {
     <Layout>
       <div className="relative isolate overflow-hidden">
         <div className="pointer-events-none absolute -left-[42vw] top-[-28vh] -z-10 h-[48vh] w-[82vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[48vw] bottom-[-32vh] -z-10 h-[52vh] w-[78vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[140px]" />
+        <div className="pointer-events-none absolute -right-[48vw] bottom-[-32vh] -z-10 h-[52vh] w-[78vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[820px] flex-col px-4 py-16 sm:px-6 lg:px-0">
           <section className="w-full rounded-[28px] border border-neutral-200 bg-white/90 px-6 py-12 text-center shadow-[0_10px_30px_-16px_rgba(16,16,16,0.35)] backdrop-blur sm:px-12">

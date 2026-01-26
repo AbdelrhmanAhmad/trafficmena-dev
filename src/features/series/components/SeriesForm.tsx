@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Upload } from 'lucide-react';
 import { type ChangeEvent, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { uploadFile } from '@/app/api/uploads';
+import { LazyEditor } from '@/shared/components/LazyEditor';
 import { Button } from '@/shared/components/ui/button';
 import {
   Form,
@@ -16,7 +17,6 @@ import {
 } from '@/shared/components/ui/form';
 import { Input } from '@/shared/components/ui/input';
 import { Switch } from '@/shared/components/ui/switch';
-import { Textarea } from '@/shared/components/ui/textarea';
 import type { Series } from '../types';
 
 const seriesFormSchema = z.object({
@@ -104,12 +104,21 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
         <FormField
           control={form.control}
           name="description"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Describe what this series covers..." rows={4} {...field} />
-              </FormControl>
+              <Controller
+                control={form.control}
+                name="description"
+                render={({ field: editorField }) => (
+                  <LazyEditor
+                    value={editorField.value ?? ''}
+                    onChange={editorField.onChange}
+                    placeholder="Describe what this series covers..."
+                    maxLength={4000}
+                  />
+                )}
+              />
               <FormMessage />
             </FormItem>
           )}

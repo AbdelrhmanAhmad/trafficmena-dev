@@ -18,6 +18,7 @@ type ApiEvent = {
 
 type ApiEventDetail = ApiEvent & {
   attending?: boolean;
+  registrationStatus?: 'active' | 'cancelled' | 'refund_requested' | null;
   trackInfo?: {
     id: string;
     title: string;
@@ -47,6 +48,7 @@ export type EventRecord = {
 export interface EventDetailRecord extends EventRecord {
   attendeeCount: number;
   attending: boolean;
+  registrationStatus: 'active' | 'cancelled' | 'refund_requested' | null;
   meetingLink: string | null;
   trackInfo?: {
     id: string;
@@ -79,6 +81,7 @@ export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecor
     ...mapApiEventToRecord(api),
     attendeeCount: api.attendeeCount,
     attending: api.attending,
+    registrationStatus: api.registrationStatus ?? null,
     meetingLink: api.meetingLink,
     trackInfo: api.trackInfo
       ? {
@@ -211,6 +214,7 @@ type ApiEventAttendee = {
   lastName: string | null;
   phoneNumber: string | null;
   registeredAt: string;
+  status: 'active' | 'cancelled' | 'refund_requested';
 };
 
 export type EventAttendeeRecord = {
@@ -221,6 +225,7 @@ export type EventAttendeeRecord = {
   last_name: string | null;
   phone_number: string | null;
   registered_at: string;
+  status: 'active' | 'cancelled' | 'refund_requested';
 };
 
 export async function fetchEventAttendees(
@@ -247,7 +252,87 @@ export async function fetchEventAttendees(
       last_name: item.lastName,
       phone_number: item.phoneNumber,
       registered_at: item.registeredAt,
+      status: item.status,
     })),
     pagination: data.pagination,
   };
+}
+
+// --- Cancellation Requests (Admin) ---
+
+type ApiCancellationRequest = {
+  registrationId: string;
+  userId: string;
+  email: string;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  pricePaidCents: number | null;
+  refundRequestedAt: string | null;
+};
+
+export type CancellationRequest = {
+  registration_id: string;
+  user_id: string;
+  email: string;
+  name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  price_paid_cents: number | null;
+  refund_requested_at: string | null;
+};
+
+export async function fetchCancellationRequests(
+  eventId: string,
+  params: { page?: number; pageSize?: number } = {},
+): Promise<PaginatedResult<CancellationRequest>> {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.pageSize) query.set('pageSize', String(params.pageSize));
+
+  const data = await fetchJson<{
+    items: ApiCancellationRequest[];
+    pagination: PaginatedResult<ApiCancellationRequest>['pagination'];
+  }>(
+    `${API_BASE}/events/${eventId}/cancellation-requests${query.toString() ? `?${query.toString()}` : ''}`,
+    { method: 'GET' },
+  );
+
+  return {
+    items: (data.items ?? []).map((item) => ({
+      registration_id: item.registrationId,
+      user_id: item.userId,
+      email: item.email,
+      name: item.name,
+      first_name: item.firstName,
+      last_name: item.lastName,
+      price_paid_cents: item.pricePaidCents,
+      refund_requested_at: item.refundRequestedAt,
+    })),
+    pagination: data.pagination,
+  };
+}
+
+export async function approveCancellation(
+  eventId: string,
+  registrationId: string,
+): Promise<{ success: boolean; message?: string }> {
+  return fetchJson<{ success: boolean; message?: string }>(
+    `${API_BASE}/events/${eventId}/cancellation-requests/${registrationId}/approve`,
+    { method: 'POST' },
+  );
+}
+
+export async function rejectCancellation(
+  eventId: string,
+  registrationId: string,
+  reason?: string,
+): Promise<{ success: boolean; message?: string }> {
+  return fetchJson<{ success: boolean; message?: string }>(
+    `${API_BASE}/events/${eventId}/cancellation-requests/${registrationId}/reject`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    },
+  );
 }
