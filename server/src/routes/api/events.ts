@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, gte, ilike, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, gte, ilike, inArray, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -26,6 +26,12 @@ const listQuerySchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((value) => value === 'true'),
+});
+
+const uuidParamSchema = z.string().uuid();
+const paginationQuerySchema = listQuerySchema.pick({ page: true, pageSize: true });
+const rejectionReasonSchema = z.object({
+  reason: z.string().trim().max(1000).optional(),
 });
 
 const registerBodySchema = z.object({});
@@ -111,357 +117,350 @@ const updateEventSchema = baseEventSchema
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
 export function registerEventRoutes(app: Hono) {
-  app.get('/events', async (c) => {
-    try {
-      const session = await getSessionFromRequest(c);
-      const parsed = listQuerySchema.safeParse({
-        page: c.req.query('page'),
-        pageSize: c.req.query('pageSize'),
-        search: c.req.query('search'),
-        type: c.req.query('type'),
-        upcoming: c.req.query('upcoming'),
-      });
-
-      if (!parsed.success) {
-        throw new ApiError('INVALID_QUERY', parsed.error.message, 400);
-      }
-
-      const { page, pageSize, search, type, upcoming } = parsed.data;
-      const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
-      const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
-
-      const filters: any[] = [];
-
-      if (type) {
-        filters.push(eq(events.eventType, type));
-      }
-
-      if (upcoming) {
-        filters.push(gte(events.date, new Date()));
-      }
-
-      if (search) {
-        filters.push(ilike(events.title, `%${escapeLikePattern(search)}%`));
-      }
-
-      // Hide events in unpublished tracks (unless staff)
-      if (!isStaff) {
-        const hiddenTrackEvents = db
-          .select({ id: trackEvents.eventId })
-          .from(trackEvents)
-          .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
-          .where(eq(tracks.isPublished, false));
-
-        // This is a bit complex in SQL, typically we'd do NOT IN or LEFT JOIN check.
-        // For simplicity with Drizzle/MVP, we can filter out IDs if the list is small,
-        // but robustly: events where ID NOT IN (hiddenTrackEvents)
-        // Drizzle `notInArray` might work if subquery is supported, else CTE or Join.
-        // Let's use a WHERE NOT EXISTS or join strategy on the main query for performance.
-        // Actually, easiest is:
-        // filters.push(sql`NOT EXISTS (
-        //   SELECT 1 FROM track_events te
-        //   JOIN tracks t ON t.id = te.track_id
-        //   WHERE te.event_id = events.id AND t.is_published = false
-        // )`);
-        filters.push(sql`NOT EXISTS (
-          SELECT 1 FROM track_events te 
-          JOIN tracks t ON t.id = te.track_id 
-          WHERE te.event_id = ${events.id} AND t.is_published = false
-        )`);
-      }
-
-      const whereClause = filters.length > 0 ? and(...filters) : undefined;
-
-      const [totalResult] = await db
-        .select({ value: count(events.id) })
-        .from(events)
-        .where(whereClause);
-
-      const offset = (page - 1) * pageSize;
-
-      const items = await db
-        .select({
-          id: events.id,
-          title: events.title,
-          eventDescription: events.eventDescription,
-          date: events.date,
-          location: events.location,
-          maxAttendees: events.maxAttendees,
-          meetingLink: events.meetingLink,
-          imageUrl: events.imageUrl,
-          tags: events.tags,
-          eventType: events.eventType,
-          priceInCents: events.priceInCents,
-          attendeeCount: sql<number>`COALESCE(COUNT(${eventAttendees.id}) FILTER (WHERE ${eventAttendees.status} = 'active'), 0)`,
-        })
-        .from(events)
-        .leftJoin(eventAttendees, eq(events.id, eventAttendees.eventId))
-        .where(whereClause)
-        .groupBy(events.id)
-        .orderBy(events.date)
-        .limit(pageSize)
-        .offset(offset);
-
-      const sanitizedItems = items.map(({ meetingLink, ...rest }) => ({
-        ...rest,
-        meetingLink: null,
-      }));
-
-      return c.json({
-        items: sanitizedItems,
-        pagination: {
-          page,
-          pageSize,
-          total: Number(totalResult?.value ?? 0),
-        },
-      });
-    } catch (error) {
-      // Using simpler error log here or delegate to handleRoute if I wrapped it,
-      // but for now keeping compatible with current style or updating.
-      // The plan implies using handleRoute, but maybe I'll mix for now to minimize diffs.
-      console.error('[api:events.list] failed to load events', error);
-      return c.json(
-        { error: { code: 'EVENTS_FETCH_FAILED', message: 'Unable to load events.' } },
-        500,
-      );
-    }
-  });
-
-  app.get('/events/:id', async (c) => {
-    const eventId = c.req.param('id');
-    const session = await getSessionFromRequest(c);
-    const viewerId = session?.user?.id;
-
-    // Get event details
-    const [event] = await db
-      .select({
-        id: events.id,
-        title: events.title,
-        eventDescription: events.eventDescription,
-        date: events.date,
-        location: events.location,
-        maxAttendees: events.maxAttendees,
-        meetingLink: events.meetingLink,
-        imageUrl: events.imageUrl,
-        tags: events.tags,
-        eventType: events.eventType,
-        priceInCents: events.priceInCents,
-      })
-      .from(events)
-      .where(eq(events.id, eventId))
-      .limit(1);
-
-    if (!event) {
-      return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
-    }
-
-    // Check if event is part of a track (unpublished tracks hide events from non-staff)
-    // Also fetch track booking info
-    const [trackInfo] = await db
-      .select({
-        id: tracks.id,
-        title: tracks.title,
-        isPublished: tracks.isPublished,
-        trackBookingStart: tracks.trackBookingStart,
-        trackBookingEnd: tracks.trackBookingEnd,
-        singleBookingStart: tracks.singleBookingStart,
-        singleBookingEnd: tracks.singleBookingEnd,
-      })
-      .from(trackEvents)
-      .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
-      .where(eq(trackEvents.eventId, eventId))
-      .limit(1);
-
-    const role = viewerId ? await getOptionalUserRole(viewerId) : null;
-    const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
-
-    // Hide if track is strictly unpublished and user is not staff
-    // Note: If event is NOT in a track, it is standalone and visible.
-    if (trackInfo && !trackInfo.isPublished && !isStaff) {
-      return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
-    }
-
-    const [{ value: attendeeCount }] = await db
-      .select({ value: count(eventAttendees.id) })
-      .from(eventAttendees)
-      .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'active')));
-
-    let attending = false;
-    let registrationStatus: 'active' | 'cancelled' | 'refund_requested' | null = null;
-    if (viewerId) {
-      const [existing] = await db
-        .select({ id: eventAttendees.id, status: eventAttendees.status })
-        .from(eventAttendees)
-        .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, viewerId)))
-        .limit(1);
-      if (existing) {
-        registrationStatus = existing.status;
-        attending = existing.status === 'active';
-      }
-    }
-
-    const canAccessMeetingLink = attending || isStaff;
-
-    return c.json({
-      ...event,
-      attendeeCount: Number(attendeeCount ?? 0),
-      attending,
-      registrationStatus,
-      meetingLink: canAccessMeetingLink ? event.meetingLink : null,
-      trackInfo: trackInfo
-        ? {
-            id: trackInfo.id,
-            title: trackInfo.title,
-            trackBookingStart: trackInfo.trackBookingStart,
-            trackBookingEnd: trackInfo.trackBookingEnd,
-            singleBookingStart: trackInfo.singleBookingStart,
-            singleBookingEnd: trackInfo.singleBookingEnd,
-          }
-        : null,
-    });
-  });
-
-  app.get('/events/:id/attendees', async (c) => {
-    const staff = await requireManager(c);
-    if ('response' in staff) return staff.response;
-
-    const eventId = c.req.param('id');
-    const parsed = listQuerySchema.safeParse({
-      page: c.req.query('page'),
-      pageSize: c.req.query('pageSize'),
-    });
-
-    if (!parsed.success) {
-      return c.json(
-        {
-          error: {
-            code: 'INVALID_QUERY',
-            message: parsed.error.message,
-          },
-        },
-        400,
-      );
-    }
-
-    const { page, pageSize } = parsed.data;
-    const offset = (page - 1) * pageSize;
-
-    // Verify event exists first
-    const [eventExists] = await db
-      .select({ id: events.id })
-      .from(events)
-      .where(eq(events.id, eventId))
-      .limit(1);
-
-    if (!eventExists) {
-      return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found.' } }, 404);
-    }
-
-    const totalResult = await db
-      .select({ value: count(eventAttendees.id) })
-      .from(eventAttendees)
-      .where(eq(eventAttendees.eventId, eventId));
-
-    const items = await db
-      .select({
-        userId: users.id,
-        email: users.email,
-        name: users.name,
-        firstName: profiles.firstName,
-        lastName: profiles.lastName,
-        phoneNumber: profiles.phoneNumber,
-        registeredAt: eventAttendees.registeredAt,
-        status: eventAttendees.status,
-      })
-      .from(eventAttendees)
-      .leftJoin(users, eq(eventAttendees.userId, users.id))
-      .leftJoin(profiles, eq(users.id, profiles.id))
-      .where(eq(eventAttendees.eventId, eventId))
-      .orderBy(desc(eventAttendees.registeredAt))
-      .limit(pageSize)
-      .offset(offset);
-
-    return c.json({
-      items,
-      pagination: {
-        page,
-        pageSize,
-        total: Number(totalResult?.[0]?.value ?? 0),
-      },
-    });
-  });
-
-  app.post('/events', async (c) => {
-    const staff = await requireManager(c);
-    if ('response' in staff) return staff.response;
-
-    const body = await c.req.json().catch(() => ({}));
-    const parsed = createEventSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return c.json(
-        {
-          error: {
-            code: 'INVALID_REQUEST',
-            message: parsed.error.message,
-          },
-        },
-        400,
-      );
-    }
-
-    const payload = parsed.data;
-
-    // Use transaction to ensure event + auto-created asset are atomic
-    const created = await db.transaction(async (tx) => {
-      const [event] = await tx
-        .insert(events)
-        .values({
-          title: payload.title,
-          eventDescription: normalizeDescription(payload.description),
-          date: new Date(payload.date),
-          location: payload.location ?? null,
-          meetingLink: payload.meetingLink ?? null,
-          maxAttendees: payload.maxAttendees === undefined ? null : payload.maxAttendees,
-          imageUrl: payload.imageUrl ?? null,
-          tags: payload.tags ?? [],
-          eventType: payload.eventType,
-          priceInCents: payload.priceInCents ?? null,
-          guestExperts: [],
-        })
-        .returning({
-          id: events.id,
-          title: events.title,
-          eventDescription: events.eventDescription,
-          date: events.date,
-          location: events.location,
-          maxAttendees: events.maxAttendees,
-          meetingLink: events.meetingLink,
-          imageUrl: events.imageUrl,
-          tags: events.tags,
-          eventType: events.eventType,
-          priceInCents: events.priceInCents,
+  app.get(
+    '/events',
+    handleRoute(
+      async (c) => {
+        const session = await getSessionFromRequest(c);
+        const parsed = listQuerySchema.safeParse({
+          page: c.req.query('page'),
+          pageSize: c.req.query('pageSize'),
+          search: c.req.query('search'),
+          type: c.req.query('type'),
+          upcoming: c.req.query('upcoming'),
         });
 
-      // Auto-create draft library asset for event recordings
-      await tx.insert(libraryAssets).values({
-        title: `${payload.title} - Recording`,
-        description: `Recording from ${payload.title}`,
-        fileType: 'Video',
-        eventId: event.id,
-        isPublic: false,
-      });
+        if (!parsed.success) {
+          throw new ApiError('INVALID_QUERY', parsed.error.message, 400);
+        }
 
-      return event;
-    });
+        const { page, pageSize, search, type, upcoming } = parsed.data;
+        const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
+        const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
 
-    return c.json(
-      {
-        event: created,
+        const filters: any[] = [];
+
+        if (type) {
+          filters.push(eq(events.eventType, type));
+        }
+
+        if (upcoming) {
+          filters.push(gte(events.date, new Date()));
+        }
+
+        if (search) {
+          filters.push(ilike(events.title, `%${escapeLikePattern(search)}%`));
+        }
+
+        // Hide events in unpublished tracks (unless staff)
+        if (!isStaff) {
+          filters.push(sql`NOT EXISTS (
+            SELECT 1 FROM track_events te 
+            JOIN tracks t ON t.id = te.track_id 
+            WHERE te.event_id = ${events.id} AND t.is_published = false
+          )`);
+        }
+
+        const whereClause = filters.length > 0 ? and(...filters) : undefined;
+
+        const [totalResult] = await db
+          .select({ value: count(events.id) })
+          .from(events)
+          .where(whereClause);
+
+        const offset = (page - 1) * pageSize;
+
+        const items = await db
+          .select({
+            id: events.id,
+            title: events.title,
+            eventDescription: events.eventDescription,
+            date: events.date,
+            location: events.location,
+            maxAttendees: events.maxAttendees,
+            meetingLink: events.meetingLink,
+            imageUrl: events.imageUrl,
+            tags: events.tags,
+            eventType: events.eventType,
+            priceInCents: events.priceInCents,
+            attendeeCount: sql<number>`COALESCE(COUNT(${eventAttendees.id}) FILTER (WHERE ${eventAttendees.status} = 'active'), 0)`,
+          })
+          .from(events)
+          .leftJoin(eventAttendees, eq(events.id, eventAttendees.eventId))
+          .where(whereClause)
+          .groupBy(events.id)
+          .orderBy(events.date)
+          .limit(pageSize)
+          .offset(offset);
+
+        const sanitizedItems = items.map(({ meetingLink, ...rest }) => ({
+          ...rest,
+          meetingLink: null,
+        }));
+
+        return c.json({
+          items: sanitizedItems,
+          pagination: {
+            page,
+            pageSize,
+            total: Number(totalResult?.value ?? 0),
+          },
+        });
       },
-      201,
-    );
-  });
+      'EVENTS_FETCH_FAILED',
+      'Unable to load events.',
+      'list events',
+    ),
+  );
+
+  app.get(
+    '/events/:id',
+    handleRoute(
+      async (c) => {
+        const eventIdParam = c.req.param('id');
+        const eventIdParsed = uuidParamSchema.safeParse(eventIdParam);
+        if (!eventIdParsed.success) {
+          throw new ApiError('INVALID_PARAM', 'Event ID must be a valid UUID.', 400);
+        }
+        const eventId = eventIdParsed.data;
+        const session = await getSessionFromRequest(c);
+        const viewerId = session?.user?.id;
+
+        const [event] = await db
+          .select({
+            id: events.id,
+            title: events.title,
+            eventDescription: events.eventDescription,
+            date: events.date,
+            location: events.location,
+            maxAttendees: events.maxAttendees,
+            meetingLink: events.meetingLink,
+            imageUrl: events.imageUrl,
+            tags: events.tags,
+            eventType: events.eventType,
+            priceInCents: events.priceInCents,
+          })
+          .from(events)
+          .where(eq(events.id, eventId))
+          .limit(1);
+
+        if (!event) {
+          return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
+        }
+
+        const [trackInfoResult, attendeeCountResult, registrationResult, role] = await Promise.all([
+          db
+            .select({
+              id: tracks.id,
+              title: tracks.title,
+              isPublished: tracks.isPublished,
+              trackBookingStart: tracks.trackBookingStart,
+              trackBookingEnd: tracks.trackBookingEnd,
+              singleBookingStart: tracks.singleBookingStart,
+              singleBookingEnd: tracks.singleBookingEnd,
+            })
+            .from(trackEvents)
+            .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
+            .where(eq(trackEvents.eventId, eventId))
+            .limit(1),
+          db
+            .select({ value: count(eventAttendees.id) })
+            .from(eventAttendees)
+            .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'active'))),
+          viewerId
+            ? db
+                .select({ id: eventAttendees.id, status: eventAttendees.status })
+                .from(eventAttendees)
+                .where(
+                  and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, viewerId)),
+                )
+                .limit(1)
+            : Promise.resolve([]),
+          viewerId ? getOptionalUserRole(viewerId) : Promise.resolve(null),
+        ]);
+
+        const trackInfo = trackInfoResult[0];
+        const roleValue = role;
+        const isStaff = roleValue && ['owner', 'admin', 'manager'].includes(roleValue);
+
+        if (trackInfo && !trackInfo.isPublished && !isStaff) {
+          return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
+        }
+
+        const attendeeCount = Number(attendeeCountResult?.[0]?.value ?? 0);
+
+        let attending = false;
+        let registrationStatus: 'active' | 'cancelled' | 'refund_requested' | null = null;
+        const existing = registrationResult[0];
+        if (existing) {
+          registrationStatus = existing.status;
+          attending = existing.status === 'active';
+        }
+
+        const canAccessMeetingLink = attending || isStaff;
+
+        return c.json({
+          ...event,
+          attendeeCount,
+          attending,
+          registrationStatus,
+          meetingLink: canAccessMeetingLink ? event.meetingLink : null,
+          trackInfo: trackInfo
+            ? {
+                id: trackInfo.id,
+                title: trackInfo.title,
+                trackBookingStart: trackInfo.trackBookingStart,
+                trackBookingEnd: trackInfo.trackBookingEnd,
+                singleBookingStart: trackInfo.singleBookingStart,
+                singleBookingEnd: trackInfo.singleBookingEnd,
+              }
+            : null,
+        });
+      },
+      'EVENT_DETAIL_FAILED',
+      'Unable to load event.',
+      'get event detail',
+    ),
+  );
+
+  app.get(
+    '/events/:id/attendees',
+    handleRoute(
+      async (c) => {
+        const staff = await requireManager(c);
+        if ('response' in staff) return staff.response;
+
+        const eventId = c.req.param('id');
+        const parsed = listQuerySchema.safeParse({
+          page: c.req.query('page'),
+          pageSize: c.req.query('pageSize'),
+        });
+
+        if (!parsed.success) {
+          throw new ApiError('INVALID_QUERY', parsed.error.message, 400);
+        }
+
+        const { page, pageSize } = parsed.data;
+        const offset = (page - 1) * pageSize;
+
+        const [eventExists] = await db
+          .select({ id: events.id })
+          .from(events)
+          .where(eq(events.id, eventId))
+          .limit(1);
+
+        if (!eventExists) {
+          return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found.' } }, 404);
+        }
+
+        const totalResult = await db
+          .select({ value: count(eventAttendees.id) })
+          .from(eventAttendees)
+          .where(eq(eventAttendees.eventId, eventId));
+
+        const items = await db
+          .select({
+            userId: users.id,
+            email: users.email,
+            name: users.name,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
+            phoneNumber: profiles.phoneNumber,
+            registeredAt: eventAttendees.registeredAt,
+            status: eventAttendees.status,
+          })
+          .from(eventAttendees)
+          .leftJoin(users, eq(eventAttendees.userId, users.id))
+          .leftJoin(profiles, eq(users.id, profiles.id))
+          .where(eq(eventAttendees.eventId, eventId))
+          .orderBy(desc(eventAttendees.registeredAt))
+          .limit(pageSize)
+          .offset(offset);
+
+        return c.json({
+          items,
+          pagination: {
+            page,
+            pageSize,
+            total: Number(totalResult?.[0]?.value ?? 0),
+          },
+        });
+      },
+      'EVENT_ATTENDEES_FAILED',
+      'Unable to load attendees.',
+      'list event attendees',
+    ),
+  );
+
+  app.post(
+    '/events',
+    handleRoute(
+      async (c) => {
+        const staff = await requireManager(c);
+        if ('response' in staff) return staff.response;
+
+        const body = await c.req.json().catch(() => ({}));
+        const parsed = createEventSchema.safeParse(body);
+
+        if (!parsed.success) {
+          throw new ApiError('INVALID_REQUEST', parsed.error.message, 400);
+        }
+
+        const payload = parsed.data;
+
+        const created = await db.transaction(async (tx) => {
+          const [event] = await tx
+            .insert(events)
+            .values({
+              title: payload.title,
+              eventDescription: normalizeDescription(payload.description),
+              date: new Date(payload.date),
+              location: payload.location ?? null,
+              meetingLink: payload.meetingLink ?? null,
+              maxAttendees: payload.maxAttendees === undefined ? null : payload.maxAttendees,
+              imageUrl: payload.imageUrl ?? null,
+              tags: payload.tags ?? [],
+              eventType: payload.eventType,
+              priceInCents: payload.priceInCents ?? null,
+              guestExperts: [],
+            })
+            .returning({
+              id: events.id,
+              title: events.title,
+              eventDescription: events.eventDescription,
+              date: events.date,
+              location: events.location,
+              maxAttendees: events.maxAttendees,
+              meetingLink: events.meetingLink,
+              imageUrl: events.imageUrl,
+              tags: events.tags,
+              eventType: events.eventType,
+              priceInCents: events.priceInCents,
+            });
+
+          await tx.insert(libraryAssets).values({
+            title: `${payload.title} - Recording`,
+            description: `Recording from ${payload.title}`,
+            fileType: 'Video',
+            eventId: event.id,
+            isPublic: false,
+          });
+
+          return event;
+        });
+
+        return c.json(
+          {
+            event: created,
+          },
+          201,
+        );
+      },
+      'EVENT_CREATE_FAILED',
+      'Unable to create event.',
+      'create event',
+    ),
+  );
 
   // Update event with capacity checks
   app.put(
@@ -562,31 +561,31 @@ export function registerEventRoutes(app: Hono) {
     ),
   );
 
-  app.delete('/events/:id', async (c) => {
-    const admin = await requireAdmin(c);
-    if ('response' in admin) return admin.response;
+  app.delete(
+    '/events/:id',
+    handleRoute(
+      async (c) => {
+        const admin = await requireAdmin(c);
+        if ('response' in admin) return admin.response;
 
-    const eventId = c.req.param('id');
+        const eventId = c.req.param('id');
 
-    const deleted = await db
-      .delete(events)
-      .where(eq(events.id, eventId))
-      .returning({ id: events.id });
+        const deleted = await db
+          .delete(events)
+          .where(eq(events.id, eventId))
+          .returning({ id: events.id });
 
-    if (deleted.length === 0) {
-      return c.json(
-        {
-          error: {
-            code: 'EVENT_NOT_FOUND',
-            message: 'Event not found.',
-          },
-        },
-        404,
-      );
-    }
+        if (deleted.length === 0) {
+          throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
+        }
 
-    return c.json({ success: true });
-  });
+        return c.json({ success: true });
+      },
+      'EVENT_DELETE_FAILED',
+      'Unable to delete event.',
+      'delete event',
+    ),
+  );
 
   // Register for event
   app.post(
@@ -693,10 +692,12 @@ export function registerEventRoutes(app: Hono) {
             );
           }
 
+          // Lock existing registration row to prevent race conditions during re-registration
           const [existing] = await tx
             .select({ id: eventAttendees.id, status: eventAttendees.status })
             .from(eventAttendees)
             .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)))
+            .for('update')
             .limit(1);
 
           if (existing) {
@@ -710,12 +711,41 @@ export function registerEventRoutes(app: Hono) {
                 message: 'You have a pending refund request for this event.',
               };
             }
-            // If cancelled, re-activate the registration
+            // If cancelled, check capacity before re-activating
+            // This prevents race condition where two concurrent re-registrations could exceed capacity
+            if (event.maxAttendees !== null) {
+              const [{ count: currentAttendees }] = await tx
+                .select({ count: count(eventAttendees.id) })
+                .from(eventAttendees)
+                .where(
+                  and(
+                    eq(eventAttendees.eventId, eventId),
+                    inArray(eventAttendees.status, ['active', 'refund_requested']),
+                  ),
+                );
+
+              const [{ count: reservedCount }] = await tx
+                .select({ count: sql<number>`count(*)::int` })
+                .from(eventReservations)
+                .where(
+                  and(
+                    eq(eventReservations.eventId, eventId),
+                    gt(eventReservations.expiresAt, new Date()),
+                  ),
+                );
+
+              if (Number(currentAttendees) + Number(reservedCount) >= event.maxAttendees) {
+                throw new ApiError('EVENT_FULL', 'Event capacity reached.', 409);
+              }
+            }
+
+            // Re-activate the cancelled registration
             await tx
               .update(eventAttendees)
               .set({
                 status: 'active',
                 cancelledAt: null,
+                refundRequestedAt: null,
                 adminNote: null,
                 registeredAt: new Date(),
               })
@@ -726,7 +756,12 @@ export function registerEventRoutes(app: Hono) {
           const [{ count: currentAttendees }] = await tx
             .select({ count: count(eventAttendees.id) })
             .from(eventAttendees)
-            .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'active')));
+            .where(
+              and(
+                eq(eventAttendees.eventId, eventId),
+                inArray(eventAttendees.status, ['active', 'refund_requested']),
+              ),
+            );
 
           const [{ count: reservedCount }] = await tx
             .select({ count: sql<number>`count(*)::int` })
@@ -761,212 +796,288 @@ export function registerEventRoutes(app: Hono) {
     ),
   );
 
-  app.delete('/events/:id/register', async (c) => {
-    const eventId = c.req.param('id');
-    const session = await getSessionFromRequest(c);
+  app.delete(
+    '/events/:id/register',
+    handleRoute(
+      async (c) => {
+        const eventId = c.req.param('id');
+        const session = await getSessionFromRequest(c);
 
-    if (!session || !session.user) {
-      return c.json(
-        {
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'Authentication required to cancel registration.',
-          },
-        },
-        401,
-      );
-    }
+        if (!session || !session.user) {
+          throw new ApiError(
+            'UNAUTHORIZED',
+            'Authentication required to cancel registration.',
+            401,
+          );
+        }
 
-    const userId = session.user.id;
+        const userId = session.user.id;
 
-    // Find existing registration
-    const [registration] = await db
-      .select({
-        id: eventAttendees.id,
-        status: eventAttendees.status,
-        pricePaidCents: eventAttendees.pricePaidCents,
-      })
-      .from(eventAttendees)
-      .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)))
-      .limit(1);
+        const result = await db.transaction(async (tx) => {
+          const [registration] = await tx
+            .select({
+              id: eventAttendees.id,
+              status: eventAttendees.status,
+              pricePaidCents: eventAttendees.pricePaidCents,
+            })
+            .from(eventAttendees)
+            .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, userId)))
+            .for('update')
+            .limit(1);
 
-    if (!registration) {
-      return c.json({
-        success: false,
-        message: 'You were not registered for this event.',
-      });
-    }
+          if (!registration) {
+            return {
+              success: false,
+              message: 'You were not registered for this event.',
+            };
+          }
 
-    if (registration.status === 'cancelled') {
-      return c.json({
-        success: false,
-        message: 'Your registration was already cancelled.',
-      });
-    }
+          if (registration.status === 'cancelled') {
+            return {
+              success: false,
+              message: 'Your registration was already cancelled.',
+            };
+          }
 
-    if (registration.status === 'refund_requested') {
-      return c.json({
-        success: false,
-        message: 'Your refund request is already pending review.',
-      });
-    }
+          if (registration.status === 'refund_requested') {
+            return {
+              success: false,
+              message: 'Your refund request is already pending review.',
+            };
+          }
 
-    // Check if this was a paid registration
-    const isPaidRegistration = registration.pricePaidCents && registration.pricePaidCents > 0;
+          const isPaidRegistration = registration.pricePaidCents && registration.pricePaidCents > 0;
 
-    if (isPaidRegistration) {
-      // Paid event: set status to refund_requested
-      await db
-        .update(eventAttendees)
-        .set({
-          status: 'refund_requested',
-          refundRequestedAt: new Date(),
-        })
-        .where(eq(eventAttendees.id, registration.id));
+          if (isPaidRegistration) {
+            await tx
+              .update(eventAttendees)
+              .set({
+                status: 'refund_requested',
+                refundRequestedAt: new Date(),
+              })
+              .where(eq(eventAttendees.id, registration.id));
 
-      return c.json({
-        success: true,
-        status: 'refund_requested',
-        message:
-          'Your refund request has been submitted. Our team will review and process it shortly.',
-      });
-    }
+            return {
+              success: true,
+              status: 'refund_requested' as const,
+              message:
+                'Your refund request has been submitted. Our team will review and process it shortly.',
+            };
+          }
 
-    // Free event: set status to cancelled
-    await db
-      .update(eventAttendees)
-      .set({
-        status: 'cancelled',
-        cancelledAt: new Date(),
-      })
-      .where(eq(eventAttendees.id, registration.id));
+          await tx
+            .update(eventAttendees)
+            .set({
+              status: 'cancelled',
+              cancelledAt: new Date(),
+            })
+            .where(eq(eventAttendees.id, registration.id));
 
-    return c.json({
-      success: true,
-      status: 'cancelled',
-      message: 'Your registration has been cancelled.',
-    });
-  });
+          return {
+            success: true,
+            status: 'cancelled' as const,
+            message: 'Your registration has been cancelled.',
+          };
+        });
+
+        return c.json(result);
+      },
+      'EVENT_CANCELLATION_FAILED',
+      'Unable to cancel registration.',
+      'cancel registration',
+    ),
+  );
 
   // Admin: List cancellation/refund requests for an event
-  app.get('/events/:id/cancellation-requests', async (c) => {
-    const staff = await requireManager(c);
-    if ('response' in staff) return staff.response;
+  app.get(
+    '/events/:id/cancellation-requests',
+    handleRoute(
+      async (c) => {
+        const admin = await requireAdmin(c);
+        if ('response' in admin) return admin.response;
 
-    const eventId = c.req.param('id');
+        const eventIdParam = c.req.param('id');
+        const eventIdParsed = uuidParamSchema.safeParse(eventIdParam);
+        if (!eventIdParsed.success) {
+          throw new ApiError('INVALID_PARAM', 'Event ID must be a valid UUID.', 400);
+        }
+        const eventId = eventIdParsed.data;
+        const parsed = paginationQuerySchema.safeParse({
+          page: c.req.query('page'),
+          pageSize: c.req.query('pageSize'),
+        });
+        if (!parsed.success) {
+          throw new ApiError('INVALID_QUERY', parsed.error.message, 400);
+        }
+        const { page, pageSize } = parsed.data;
+        const offset = (page - 1) * pageSize;
 
-    // Verify event exists
-    const [event] = await db
-      .select({ id: events.id })
-      .from(events)
-      .where(eq(events.id, eventId))
-      .limit(1);
+        const [event] = await db
+          .select({ id: events.id })
+          .from(events)
+          .where(eq(events.id, eventId))
+          .limit(1);
 
-    if (!event) {
-      return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found.' } }, 404);
-    }
+        if (!event) {
+          throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
+        }
 
-    const requests = await db
-      .select({
-        registrationId: eventAttendees.id,
-        userId: users.id,
-        email: users.email,
-        name: users.name,
-        firstName: profiles.firstName,
-        lastName: profiles.lastName,
-        pricePaidCents: eventAttendees.pricePaidCents,
-        refundRequestedAt: eventAttendees.refundRequestedAt,
-      })
-      .from(eventAttendees)
-      .leftJoin(users, eq(eventAttendees.userId, users.id))
-      .leftJoin(profiles, eq(users.id, profiles.id))
-      .where(
-        and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'refund_requested')),
-      )
-      .orderBy(desc(eventAttendees.refundRequestedAt));
+        const totalResult = await db
+          .select({ value: count(eventAttendees.id) })
+          .from(eventAttendees)
+          .where(
+            and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'refund_requested')),
+          );
 
-    return c.json({ items: requests });
-  });
+        const requests = await db
+          .select({
+            registrationId: eventAttendees.id,
+            userId: users.id,
+            email: users.email,
+            name: users.name,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
+            pricePaidCents: eventAttendees.pricePaidCents,
+            refundRequestedAt: eventAttendees.refundRequestedAt,
+          })
+          .from(eventAttendees)
+          .leftJoin(users, eq(eventAttendees.userId, users.id))
+          .leftJoin(profiles, eq(users.id, profiles.id))
+          .where(
+            and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'refund_requested')),
+          )
+          .orderBy(desc(eventAttendees.refundRequestedAt))
+          .limit(pageSize)
+          .offset(offset);
+
+        return c.json({
+          items: requests,
+          pagination: {
+            page,
+            pageSize,
+            total: Number(totalResult?.[0]?.value ?? 0),
+          },
+        });
+      },
+      'CANCELLATION_LIST_FAILED',
+      'Unable to load cancellation requests.',
+      'list cancellation requests',
+    ),
+  );
 
   // Admin: Approve a cancellation/refund request
-  app.post('/events/:id/cancellation-requests/:regId/approve', async (c) => {
-    const staff = await requireManager(c);
-    if ('response' in staff) return staff.response;
+  app.post(
+    '/events/:id/cancellation-requests/:regId/approve',
+    handleRoute(
+      async (c) => {
+        const admin = await requireAdmin(c);
+        if ('response' in admin) return admin.response;
 
-    const eventId = c.req.param('id');
-    const registrationId = c.req.param('regId');
+        const eventIdParam = c.req.param('id');
+        const registrationIdParam = c.req.param('regId');
+        const eventIdParsed = uuidParamSchema.safeParse(eventIdParam);
+        const registrationIdParsed = uuidParamSchema.safeParse(registrationIdParam);
+        if (!eventIdParsed.success || !registrationIdParsed.success) {
+          throw new ApiError('INVALID_PARAM', 'Invalid event or registration ID.', 400);
+        }
+        const eventId = eventIdParsed.data;
+        const registrationId = registrationIdParsed.data;
 
-    const [registration] = await db
-      .select({ id: eventAttendees.id, status: eventAttendees.status })
-      .from(eventAttendees)
-      .where(and(eq(eventAttendees.id, registrationId), eq(eventAttendees.eventId, eventId)))
-      .limit(1);
+        const result = await db.transaction(async (tx) => {
+          const [registration] = await tx
+            .select({ id: eventAttendees.id, status: eventAttendees.status })
+            .from(eventAttendees)
+            .where(and(eq(eventAttendees.id, registrationId), eq(eventAttendees.eventId, eventId)))
+            .for('update')
+            .limit(1);
 
-    if (!registration) {
-      return c.json(
-        { error: { code: 'REGISTRATION_NOT_FOUND', message: 'Registration not found.' } },
-        404,
-      );
-    }
+          if (!registration) {
+            throw new ApiError('REGISTRATION_NOT_FOUND', 'Registration not found.', 404);
+          }
 
-    if (registration.status !== 'refund_requested') {
-      return c.json(
-        { error: { code: 'INVALID_STATUS', message: 'This registration is not pending refund.' } },
-        400,
-      );
-    }
+          if (registration.status !== 'refund_requested') {
+            throw new ApiError('INVALID_STATUS', 'This registration is not pending refund.', 400);
+          }
 
-    await db
-      .update(eventAttendees)
-      .set({
-        status: 'cancelled',
-        cancelledAt: new Date(),
-      })
-      .where(eq(eventAttendees.id, registrationId));
+          await tx
+            .update(eventAttendees)
+            .set({
+              status: 'cancelled',
+              cancelledAt: new Date(),
+            })
+            .where(eq(eventAttendees.id, registrationId));
 
-    return c.json({ success: true, message: 'Refund approved and registration cancelled.' });
-  });
+          return { success: true, message: 'Refund approved and registration cancelled.' };
+        });
+
+        return c.json(result);
+      },
+      'CANCELLATION_APPROVE_FAILED',
+      'Unable to approve cancellation request.',
+      'approve cancellation request',
+    ),
+  );
 
   // Admin: Reject a cancellation/refund request
-  app.post('/events/:id/cancellation-requests/:regId/reject', async (c) => {
-    const staff = await requireManager(c);
-    if ('response' in staff) return staff.response;
+  app.post(
+    '/events/:id/cancellation-requests/:regId/reject',
+    handleRoute(
+      async (c) => {
+        const admin = await requireAdmin(c);
+        if ('response' in admin) return admin.response;
 
-    const eventId = c.req.param('id');
-    const registrationId = c.req.param('regId');
+        const eventIdParam = c.req.param('id');
+        const registrationIdParam = c.req.param('regId');
+        const eventIdParsed = uuidParamSchema.safeParse(eventIdParam);
+        const registrationIdParsed = uuidParamSchema.safeParse(registrationIdParam);
+        if (!eventIdParsed.success || !registrationIdParsed.success) {
+          throw new ApiError('INVALID_PARAM', 'Invalid event or registration ID.', 400);
+        }
+        const eventId = eventIdParsed.data;
+        const registrationId = registrationIdParsed.data;
 
-    const body = await c.req.json().catch(() => ({}));
-    const reason = body.reason?.trim() || null;
+        const bodyParse = rejectionReasonSchema.safeParse(await c.req.json().catch(() => ({})));
+        if (!bodyParse.success) {
+          throw new ApiError('INVALID_REQUEST', bodyParse.error.message, 400);
+        }
+        const reason = bodyParse.data.reason?.trim() || null;
 
-    const [registration] = await db
-      .select({ id: eventAttendees.id, status: eventAttendees.status })
-      .from(eventAttendees)
-      .where(and(eq(eventAttendees.id, registrationId), eq(eventAttendees.eventId, eventId)))
-      .limit(1);
+        const result = await db.transaction(async (tx) => {
+          const [registration] = await tx
+            .select({ id: eventAttendees.id, status: eventAttendees.status })
+            .from(eventAttendees)
+            .where(and(eq(eventAttendees.id, registrationId), eq(eventAttendees.eventId, eventId)))
+            .for('update')
+            .limit(1);
 
-    if (!registration) {
-      return c.json(
-        { error: { code: 'REGISTRATION_NOT_FOUND', message: 'Registration not found.' } },
-        404,
-      );
-    }
+          if (!registration) {
+            throw new ApiError('REGISTRATION_NOT_FOUND', 'Registration not found.', 404);
+          }
 
-    if (registration.status !== 'refund_requested') {
-      return c.json(
-        { error: { code: 'INVALID_STATUS', message: 'This registration is not pending refund.' } },
-        400,
-      );
-    }
+          if (registration.status !== 'refund_requested') {
+            throw new ApiError('INVALID_STATUS', 'This registration is not pending refund.', 400);
+          }
 
-    await db
-      .update(eventAttendees)
-      .set({
-        status: 'active',
-        refundRequestedAt: null,
-        adminNote: reason,
-      })
-      .where(eq(eventAttendees.id, registrationId));
+          await tx
+            .update(eventAttendees)
+            .set({
+              status: 'active',
+              refundRequestedAt: null,
+              adminNote: reason,
+            })
+            .where(eq(eventAttendees.id, registrationId));
 
-    return c.json({ success: true, message: 'Refund request rejected. Registration restored.' });
-  });
+          return {
+            success: true,
+            message: 'Refund request rejected. Registration restored.',
+          };
+        });
+
+        return c.json(result);
+      },
+      'CANCELLATION_REJECT_FAILED',
+      'Unable to reject cancellation request.',
+      'reject cancellation request',
+    ),
+  );
 }

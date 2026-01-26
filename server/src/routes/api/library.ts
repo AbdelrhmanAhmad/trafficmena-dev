@@ -51,6 +51,8 @@ const assetObjectSchema = z.object({
     }),
 });
 
+const uuidParamSchema = z.string().uuid();
+
 const createAssetSchema = assetObjectSchema.superRefine((payload, ctx) => {
   if (payload.fileType === 'Video') {
     if (!payload.videoUrl) {
@@ -150,7 +152,9 @@ export function registerLibraryRoutes(app: Hono) {
       const userEventIds = db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
-        .where(eq(eventAttendees.userId, session.user.id));
+        .where(
+          and(eq(eventAttendees.userId, session.user.id), eq(eventAttendees.status, 'active')),
+        );
 
       filters.push(
         sql`(
@@ -164,7 +168,9 @@ export function registerLibraryRoutes(app: Hono) {
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
-        .where(eq(eventAttendees.userId, session.user.id));
+        .where(
+          and(eq(eventAttendees.userId, session.user.id), eq(eventAttendees.status, 'active')),
+        );
       registeredEventIds = new Set(registrations.map((r) => r.eventId));
     }
 
@@ -276,7 +282,15 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
 
-    const id = c.req.param('id');
+    const idParam = c.req.param('id');
+    const idParsed = uuidParamSchema.safeParse(idParam);
+    if (!idParsed.success) {
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } },
+        400,
+      );
+    }
+    const id = idParsed.data;
 
     const asset = await db
       .select({
@@ -344,6 +358,7 @@ export function registerLibraryRoutes(app: Hono) {
             and(
               eq(eventAttendees.eventId, asset[0].eventId),
               eq(eventAttendees.userId, session.user.id),
+              eq(eventAttendees.status, 'active'),
             ),
           )
           .limit(1);
