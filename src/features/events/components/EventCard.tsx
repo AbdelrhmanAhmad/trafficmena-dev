@@ -1,6 +1,6 @@
 import { Calendar, Clock, Heart, MapPin, Mic, Users } from 'lucide-react';
-import { memo, useMemo } from 'react';
 import type React from 'react';
+import { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { Event } from '@/features/events/types';
 import { cn } from '@/shared/lib/utils';

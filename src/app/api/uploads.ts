@@ -1,4 +1,4 @@
-import { API_BASE } from './client';
+import { API_BASE, getCsrfHeaders } from './client';
 
 export type UploadScope = 'events' | 'library' | 'editor' | 'general';
 
@@ -31,6 +31,7 @@ export async function uploadFile({
     method: 'POST',
     body: formData,
     credentials: 'include',
+    headers: getCsrfHeaders(),
     signal,
   });
 

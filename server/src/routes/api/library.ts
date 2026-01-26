@@ -451,7 +451,13 @@ export function registerLibraryRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    const id = c.req.param('id');
+    const idParam = c.req.param('id');
+    const idParsed = uuidParamSchema.safeParse(idParam);
+    if (!idParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } }, 400);
+    }
+    const id = idParsed.data;
+
     const body = await c.req.json().catch(() => ({}));
     const parsed = updateAssetSchema.safeParse(body);
 
@@ -545,7 +551,13 @@ export function registerLibraryRoutes(app: Hono) {
     const admin = await requireAdmin(c);
     if ('response' in admin) return admin.response;
 
-    const id = c.req.param('id');
+    const idParam = c.req.param('id');
+    const idParsed = uuidParamSchema.safeParse(idParam);
+    if (!idParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } }, 400);
+    }
+    const id = idParsed.data;
+
     const deleted = await db
       .delete(libraryAssets)
       .where(eq(libraryAssets.id, id))

@@ -45,6 +45,8 @@ const reorderAssetsSchema = z.object({
   assetIds: z.array(z.string().uuid()),
 });
 
+const uuidParamSchema = z.string().uuid();
+
 const hasActiveSubscription = async (userId: string): Promise<boolean> => {
   const [subscription] = await db
     .select({ id: subscriptions.id })
@@ -156,7 +158,13 @@ export function registerSeriesRoutes(app: Hono) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
     }
 
-    const id = c.req.param('id');
+    const idParam = c.req.param('id');
+    const idParsed = uuidParamSchema.safeParse(idParam);
+    if (!idParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+    }
+    const id = idParsed.data;
+
     const role = await getOptionalUserRole(session.user.id);
     const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
 
@@ -221,7 +229,9 @@ export function registerSeriesRoutes(app: Hono) {
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
-        .where(eq(eventAttendees.userId, session.user.id));
+        .where(
+          and(eq(eventAttendees.userId, session.user.id), eq(eventAttendees.status, 'active')),
+        );
       userEventIds = new Set(registrations.map((r) => r.eventId));
     }
 
@@ -297,7 +307,13 @@ export function registerSeriesRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    const id = c.req.param('id');
+    const idParam = c.req.param('id');
+    const idParsed = uuidParamSchema.safeParse(idParam);
+    if (!idParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+    }
+    const id = idParsed.data;
+
     const body = await c.req.json().catch(() => ({}));
     const parsed = updateSeriesSchema.safeParse(body);
 
@@ -333,7 +349,13 @@ export function registerSeriesRoutes(app: Hono) {
     const admin = await requireAdmin(c);
     if ('response' in admin) return admin.response;
 
-    const id = c.req.param('id');
+    const idParam = c.req.param('id');
+    const idParsed = uuidParamSchema.safeParse(idParam);
+    if (!idParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+    }
+    const id = idParsed.data;
+
     const deleted = await db.delete(series).where(eq(series.id, id)).returning({ id: series.id });
 
     if (deleted.length === 0) {
@@ -348,7 +370,13 @@ export function registerSeriesRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    const seriesId = c.req.param('id');
+    const seriesIdParam = c.req.param('id');
+    const seriesIdParsed = uuidParamSchema.safeParse(seriesIdParam);
+    if (!seriesIdParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+    }
+    const seriesId = seriesIdParsed.data;
+
     const body = await c.req.json().catch(() => ({}));
     const parsed = addAssetsSchema.safeParse(body);
 
@@ -413,8 +441,19 @@ export function registerSeriesRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    const seriesId = c.req.param('id');
-    const assetId = c.req.param('assetId');
+    const seriesIdParam = c.req.param('id');
+    const seriesIdParsed = uuidParamSchema.safeParse(seriesIdParam);
+    if (!seriesIdParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+    }
+    const seriesId = seriesIdParsed.data;
+
+    const assetIdParam = c.req.param('assetId');
+    const assetIdParsed = uuidParamSchema.safeParse(assetIdParam);
+    if (!assetIdParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } }, 400);
+    }
+    const assetId = assetIdParsed.data;
 
     const deleted = await db
       .delete(seriesAssets)
@@ -433,7 +472,13 @@ export function registerSeriesRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    const seriesId = c.req.param('id');
+    const seriesIdParam = c.req.param('id');
+    const seriesIdParsed = uuidParamSchema.safeParse(seriesIdParam);
+    if (!seriesIdParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+    }
+    const seriesId = seriesIdParsed.data;
+
     const body = await c.req.json().catch(() => ({}));
     const parsed = reorderAssetsSchema.safeParse(body);
 

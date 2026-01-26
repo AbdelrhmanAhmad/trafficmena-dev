@@ -1,4 +1,4 @@
-import { API_BASE, fetchJson } from './client';
+import { API_BASE, fetchJson, getCsrfHeaders } from './client';
 import type { PaginatedResult } from './types';
 
 export type InvitationStatus = 'pending' | 'sent' | 'accepted' | 'expired' | 'failed';
@@ -147,6 +147,7 @@ export async function createInvitationsFromCsv(file: File): Promise<BulkInvitati
     method: 'POST',
     body: formData,
     credentials: 'include',
+    headers: getCsrfHeaders(),
   });
 
   const isJson = response.headers.get('content-type')?.includes('application/json');

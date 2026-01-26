@@ -114,6 +114,7 @@ export const eventAttendees = pgTable(
       table.userId,
     ),
     statusIdx: index('event_attendees_status_idx').on(table.status),
+    eventStatusIdx: index('event_attendees_event_status_idx').on(table.eventId, table.status),
   }),
 );
 

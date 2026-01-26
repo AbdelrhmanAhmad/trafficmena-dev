@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Suspense, lazy, useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import MeetupDetail from '@/features/events/pages/EventDetail';
 import Meetups from '@/features/events/pages/Meetups';
@@ -110,441 +110,441 @@ const App = () => {
             <AuthProvider>
               <Suspense fallback={routeFallback}>
                 <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <ErrorBoundary>
-                      <Index />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/about"
-                  element={
-                    <ErrorBoundary>
-                      <AboutPage />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/library"
-                  element={
-                    <ErrorBoundary>
-                      <LibraryComingSoon />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/community"
-                  element={
-                    <ErrorBoundary>
-                      <CommunityComingSoon />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/invite-only"
-                  element={
-                    <ErrorBoundary>
-                      <InviteOnlyPage />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/signin"
-                  element={
-                    <ErrorBoundary>
-                      <SignIn />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
+                  <Route
+                    path="/"
+                    element={
                       <ErrorBoundary>
-                        <WelcomeDashboard />
+                        <Index />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard/profile"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/about"
+                    element={
                       <ErrorBoundary>
-                        <Dashboard />
+                        <AboutPage />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile/edit"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/library"
+                    element={
                       <ErrorBoundary>
-                        <Dashboard />
+                        <LibraryComingSoon />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard/meetups"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/community"
+                    element={
                       <ErrorBoundary>
-                        <DashboardMeetups />
+                        <CommunityComingSoon />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard/library"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/invite-only"
+                    element={
                       <ErrorBoundary>
-                        <DashboardLibrary />
+                        <InviteOnlyPage />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard/library/:id"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/signin"
+                    element={
                       <ErrorBoundary>
-                        <LibraryItemDetail />
+                        <SignIn />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard/library/tracks/:id"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <WelcomeDashboard />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/profile"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <Dashboard />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile/edit"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <Dashboard />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/meetups"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <DashboardMeetups />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/library"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <DashboardLibrary />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/library/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <LibraryItemDetail />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/library/tracks/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <DashboardTrackDetail />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/library/series/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <DashboardSeriesDetail />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/subscribe"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <DashboardSubscribePage />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/meetups"
+                    element={
                       <ErrorBoundary>
-                        <DashboardTrackDetail />
+                        <Meetups />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard/library/series/:id"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/meetups/:id"
+                    element={
                       <ErrorBoundary>
-                        <DashboardSeriesDetail />
+                        <MeetupDetail />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/dashboard/subscribe"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/tracks/:id"
+                    element={
                       <ErrorBoundary>
-                        <DashboardSubscribePage />
+                        <PublicTrackDetail />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/meetups"
-                  element={
-                    <ErrorBoundary>
-                      <Meetups />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/meetups/:id"
-                  element={
-                    <ErrorBoundary>
-                      <MeetupDetail />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/tracks/:id"
-                  element={
-                    <ErrorBoundary>
-                      <PublicTrackDetail />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/payment/success"
-                  element={
-                    <ErrorBoundary>
-                      <PaymentSuccessPage />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/payment/failed"
-                  element={
-                    <ErrorBoundary>
-                      <PaymentFailedPage />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/payment/pending"
-                  element={
-                    <ErrorBoundary>
-                      <PaymentPendingPage />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/subscribe"
-                  element={
-                    <ErrorBoundary>
-                      <SubscribeLanding />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/thank-you"
-                  element={
-                    <ErrorBoundary>
-                      <ThankYou />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/thank-you-event/:id"
-                  element={
-                    <ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/payment/success"
+                    element={
                       <ErrorBoundary>
-                        <ThankYouEvent />
+                        <PaymentSuccessPage />
                       </ErrorBoundary>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/payment/failed"
+                    element={
                       <ErrorBoundary>
-                        <AdminDashboard />
+                        <PaymentFailedPage />
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/settings"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/payment/pending"
+                    element={
                       <ErrorBoundary>
-                        <AdminSettingsPage />
+                        <PaymentPendingPage />
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/users"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/subscribe"
+                    element={
                       <ErrorBoundary>
-                        <UserManagement />
+                        <SubscribeLanding />
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/library"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/thank-you"
+                    element={
                       <ErrorBoundary>
-                        <LibraryManagement />
+                        <ThankYou />
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/library/new-item"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/thank-you-event/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <ThankYouEvent />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <AdminDashboard />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/settings"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <AdminSettingsPage />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/users"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <UserManagement />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/library"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <LibraryManagement />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/library/new-item"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <NewLibraryItem />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/library/edit/:id"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <EditLibraryItem />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/library/:id"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <AdminLibraryItemDetail />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/library/tracks/new"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <NewTrackPage />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/library/tracks/:id"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <TrackDetailPage />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/library/series/new"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <NewSeriesPage />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/library/series/:id"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <SeriesDetailPage />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/meetups"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <AdminMeetups />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/meetups/new"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <AdminMeetupsNew />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/meetups/edit/:id"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <EditMeetup />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/events/:id"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <AdminEventDetail />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/tracks/:id"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <AdminTrackDetail />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/invitations"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <AdminInvitations />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/invitation/:token"
+                    element={
                       <ErrorBoundary>
-                        <NewLibraryItem />
+                        <InvitationAcceptancePage />
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/library/edit/:id"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/signup/*"
+                    element={
                       <ErrorBoundary>
-                        <EditLibraryItem />
+                        <SignUpGuard>
+                          <SignUpProvider>
+                            <Routes>
+                              <Route index element={<Step0 />} />
+                              <Route path="step-1" element={<Step1 />} />
+                              <Route path="step-2" element={<Step2 />} />
+                              <Route path="step-3" element={<Step3 />} />
+                              <Route path="step-4" element={<Step4 />} />
+                              <Route path="step-5" element={<Step5 />} />
+                              <Route path="check-email" element={<CheckEmail />} />
+                            </Routes>
+                          </SignUpProvider>
+                        </SignUpGuard>
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/library/:id"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/privacy"
+                    element={
                       <ErrorBoundary>
-                        <AdminLibraryItemDetail />
+                        <PrivacyPolicy />
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/library/tracks/new"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/terms"
+                    element={
                       <ErrorBoundary>
-                        <NewTrackPage />
+                        <TermsOfService />
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/library/tracks/:id"
-                  element={
-                    <AdminProtectedRoute>
+                    }
+                  />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route
+                    path="*"
+                    element={
                       <ErrorBoundary>
-                        <TrackDetailPage />
+                        <NotFound />
                       </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/library/series/new"
-                  element={
-                    <AdminProtectedRoute>
-                      <ErrorBoundary>
-                        <NewSeriesPage />
-                      </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/library/series/:id"
-                  element={
-                    <AdminProtectedRoute>
-                      <ErrorBoundary>
-                        <SeriesDetailPage />
-                      </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/meetups"
-                  element={
-                    <AdminProtectedRoute>
-                      <ErrorBoundary>
-                        <AdminMeetups />
-                      </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/meetups/new"
-                  element={
-                    <AdminProtectedRoute>
-                      <ErrorBoundary>
-                        <AdminMeetupsNew />
-                      </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/meetups/edit/:id"
-                  element={
-                    <AdminProtectedRoute>
-                      <ErrorBoundary>
-                        <EditMeetup />
-                      </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/events/:id"
-                  element={
-                    <AdminProtectedRoute>
-                      <ErrorBoundary>
-                        <AdminEventDetail />
-                      </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/tracks/:id"
-                  element={
-                    <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
-                      <ErrorBoundary>
-                        <AdminTrackDetail />
-                      </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/invitations"
-                  element={
-                    <AdminProtectedRoute>
-                      <ErrorBoundary>
-                        <AdminInvitations />
-                      </ErrorBoundary>
-                    </AdminProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/invitation/:token"
-                  element={
-                    <ErrorBoundary>
-                      <InvitationAcceptancePage />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/signup/*"
-                  element={
-                    <ErrorBoundary>
-                      <SignUpGuard>
-                        <SignUpProvider>
-                          <Routes>
-                            <Route index element={<Step0 />} />
-                            <Route path="step-1" element={<Step1 />} />
-                            <Route path="step-2" element={<Step2 />} />
-                            <Route path="step-3" element={<Step3 />} />
-                            <Route path="step-4" element={<Step4 />} />
-                            <Route path="step-5" element={<Step5 />} />
-                            <Route path="check-email" element={<CheckEmail />} />
-                          </Routes>
-                        </SignUpProvider>
-                      </SignUpGuard>
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/privacy"
-                  element={
-                    <ErrorBoundary>
-                      <PrivacyPolicy />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/terms"
-                  element={
-                    <ErrorBoundary>
-                      <TermsOfService />
-                    </ErrorBoundary>
-                  }
-                />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route
-                  path="*"
-                  element={
-                    <ErrorBoundary>
-                      <NotFound />
-                    </ErrorBoundary>
-                  }
-                />
+                    }
+                  />
                 </Routes>
               </Suspense>
             </AuthProvider>

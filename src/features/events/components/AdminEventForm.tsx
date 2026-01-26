@@ -418,10 +418,7 @@ export function AdminEventForm({
                         control={form.control}
                         name="description"
                         render={({ field: editorField }) => (
-                          <LazyEditor
-                            value={editorField.value}
-                            onChange={editorField.onChange}
-                          />
+                          <LazyEditor value={editorField.value} onChange={editorField.onChange} />
                         )}
                       />
                     </FormControl>

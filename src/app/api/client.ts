@@ -11,13 +11,35 @@ export class ApiError extends Error {
   }
 }
 
+const CSRF_COOKIE_NAME = 'tm_csrf';
+const CSRF_HEADER_NAME = 'x-csrf-token';
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+function getCookieValue(name: string) {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export function getCsrfHeaders() {
+  const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
+  return csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {};
+}
+
 export async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? 'GET').toUpperCase();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers ?? {}),
+  };
+
+  if (!SAFE_METHODS.has(method)) {
+    Object.assign(headers, getCsrfHeaders());
+  }
+
   const response = await fetch(input, {
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers,
     ...init,
   });
 

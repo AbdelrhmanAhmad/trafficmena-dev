@@ -13,9 +13,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui/dialog';
+import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
-import { useAuth } from '@/shared/context/AuthContext';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 
 interface PaymentCheckoutDialogProps {

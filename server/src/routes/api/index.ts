@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { csrfMiddleware } from '../../utils/csrf.js';
 import { registerAuthRoutes } from './auth.js';
 import { registerEventRoutes } from './events.js';
 import { registerInvitationRoutes } from './invitations.js';
@@ -14,6 +15,8 @@ import { registerUserRoutes } from './users.js';
 
 export function registerApiRoutes(app: Hono) {
   const api = new Hono();
+
+  api.use('*', csrfMiddleware);
 
   registerAuthRoutes(api);
   registerUserRoutes(api);

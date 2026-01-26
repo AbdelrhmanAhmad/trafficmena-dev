@@ -1,9 +1,11 @@
 import { format } from 'date-fns';
 import {
   ArrowRight,
+  BadgeCheck,
   Calendar,
   CheckCircle,
   Clock,
+  Crown,
   Download,
   ExternalLink,
   MapPin,
@@ -12,7 +14,8 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useEventBooking } from '@/features/events/hooks/useEventBooking';
 import { useEvent } from '@/features/events/hooks/useEvents';
 import DataLoader from '@/shared/components/DataLoader';
@@ -27,9 +30,12 @@ const ThankYouEvent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isPaidFlow = searchParams.get('paid') === '1';
 
   const { data: event, isLoading, error } = useEvent(id);
   const { bookEvent } = useEventBooking();
+  const { data: subscription } = useCurrentSubscription({ enabled: Boolean(user) });
 
   // Auto-register user for the event when arriving from post-signup flow
   useEffect(() => {
@@ -52,6 +58,14 @@ const ThankYouEvent: React.FC = () => {
       return format(new Date(dateString), 'h:mm a');
     } catch {
       return 'Time TBD';
+    }
+  };
+
+  const formatSubscriptionEnd = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM d, yyyy');
+    } catch {
+      return dateString;
     }
   };
 
@@ -127,6 +141,7 @@ const ThankYouEvent: React.FC = () => {
     event?.image_url && event.image_url.trim().length > 0
       ? event.image_url.trim()
       : '/placeholder.svg';
+  const hasActiveSubscription = subscription?.status === 'active';
 
   return (
     <Layout>
@@ -154,8 +169,17 @@ const ThankYouEvent: React.FC = () => {
                   {user?.user_metadata?.first_name ? `, ${user.user_metadata.first_name}` : ''}!
                 </p>
                 <p className="text-lg text-gray-600">
-                  You've successfully registered for the event below.
+                  {isPaidFlow
+                    ? 'Payment confirmed. Your spot is secured for the event below.'
+                    : "You've successfully registered for the event below."}
                 </p>
+
+                {isPaidFlow && (
+                  <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
+                    <BadgeCheck className="h-4 w-4" />
+                    Payment successful · Registration confirmed
+                  </div>
+                )}
               </div>
 
               {/* Event Details Card */}
@@ -270,6 +294,66 @@ const ThankYouEvent: React.FC = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Payment + Membership Summary */}
+              <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+                {isPaidFlow && (
+                  <Card className="border-emerald-200 bg-emerald-50/60">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg text-emerald-900">
+                        <BadgeCheck className="h-5 w-5" />
+                        Payment Confirmed
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm text-emerald-900/80">
+                      <p>Your payment was processed successfully.</p>
+                      <p>Your seat is reserved and your registration is active.</p>
+                      <p>We will email you a receipt and event updates.</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card className={isPaidFlow ? '' : 'md:col-span-2'}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg text-neutral-900">
+                      <Crown className="h-5 w-5 text-[#05ef62]" />
+                      Membership Status
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm text-neutral-700">
+                    {hasActiveSubscription ? (
+                      <>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-[#05ef62]/10 px-3 py-1 text-sm font-semibold text-[#059640]">
+                          Active Subscription
+                        </div>
+                        <p>
+                          Your subscription is active
+                          {subscription?.endsAt
+                            ? ` until ${formatSubscriptionEnd(subscription.endsAt)}.`
+                            : '.'}
+                        </p>
+                        <p>You have full library access, member discounts, and priority support.</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 text-sm font-semibold text-neutral-700">
+                          No Active Subscription
+                        </div>
+                        <p>
+                          Upgrade to unlock full library access, discounted events, and member-only
+                          resources.
+                        </p>
+                        <Button
+                          onClick={() => navigate('/subscribe')}
+                          className="w-full bg-neutral-900 text-white hover:bg-neutral-800"
+                        >
+                          Explore Subscription
+                        </Button>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Calendar Action Buttons */}
               <div className="mb-8 space-y-4">

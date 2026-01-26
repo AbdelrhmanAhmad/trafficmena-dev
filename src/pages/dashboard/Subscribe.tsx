@@ -155,9 +155,7 @@ function HeroSection({
         >
           <div className="max-w-xl">
             {/* Premium Badge */}
-            <div
-              className="mb-5 inline-flex items-center gap-2 rounded-full border border-amber-200/50 bg-amber-50/70 px-3 py-1 text-xs font-medium text-amber-700 backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-amber-50 hover:shadow-lg"
-            >
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-amber-200/50 bg-amber-50/70 px-3 py-1 text-xs font-medium text-amber-700 backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-amber-50 hover:shadow-lg">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white">
                 <Crown className="h-3.5 w-3.5" />
               </span>

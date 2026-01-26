@@ -57,6 +57,13 @@
       "when": 1769367558630,
       "tag": "0007_strange_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769385516484,
+      "tag": "0008_nice_toad",
+      "breakpoints": true
     }
   ]
 }

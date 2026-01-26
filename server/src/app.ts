@@ -108,7 +108,7 @@ export function createApp() {
         return allowedOrigins.includes(requestOrigin) ? requestOrigin : null;
       },
       allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization'],
+      allowHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
       credentials: true,
       exposeHeaders: ['X-Request-Id'],
       maxAge: 60,

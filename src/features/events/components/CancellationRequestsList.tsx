@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
+import DOMPurify from 'dompurify';
 import { AlertTriangle, Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -37,11 +38,14 @@ export function CancellationRequestsList({ eventId }: CancellationRequestsListPr
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
-  const { data: requests, isLoading } = useQuery({
-    queryKey: ['cancellation-requests', eventId],
-    queryFn: () => fetchCancellationRequests(eventId),
+  const { data, isLoading } = useQuery({
+    queryKey: ['cancellation-requests', eventId, page, pageSize],
+    queryFn: () => fetchCancellationRequests(eventId, { page, pageSize }),
     staleTime: 30000,
+    placeholderData: keepPreviousData,
   });
 
   const approveMutation = useMutation({
@@ -83,14 +87,24 @@ export function CancellationRequestsList({ eventId }: CancellationRequestsListPr
 
   const handleRejectConfirm = () => {
     if (!selectedRequestId) return;
-    rejectMutation.mutate({ registrationId: selectedRequestId, reason: rejectReason || undefined });
+    const sanitizedReason = rejectReason
+      ? DOMPurify.sanitize(rejectReason, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+      : undefined;
+    rejectMutation.mutate({
+      registrationId: selectedRequestId,
+      reason: sanitizedReason || undefined,
+    });
   };
 
   if (isLoading) {
     return null;
   }
 
-  if (!requests || requests.length === 0) {
+  const requests = data?.items ?? [];
+  const total = data?.pagination?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  if (requests.length === 0) {
     return null;
   }
 
@@ -112,7 +126,7 @@ export function CancellationRequestsList({ eventId }: CancellationRequestsListPr
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-amber-800">
             <AlertTriangle className="h-5 w-5" />
-            Pending Refund Requests ({requests.length})
+            Pending Refund Requests ({total || requests.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -164,6 +178,31 @@ export function CancellationRequestsList({ eventId }: CancellationRequestsListPr
               ))}
             </TableBody>
           </Table>
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page === 1}
+                >
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

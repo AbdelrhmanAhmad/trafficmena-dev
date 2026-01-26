@@ -282,22 +282,35 @@ export type CancellationRequest = {
   refund_requested_at: string | null;
 };
 
-export async function fetchCancellationRequests(eventId: string): Promise<CancellationRequest[]> {
-  const data = await fetchJson<{ items: ApiCancellationRequest[] }>(
-    `${API_BASE}/events/${eventId}/cancellation-requests`,
+export async function fetchCancellationRequests(
+  eventId: string,
+  params: { page?: number; pageSize?: number } = {},
+): Promise<PaginatedResult<CancellationRequest>> {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.pageSize) query.set('pageSize', String(params.pageSize));
+
+  const data = await fetchJson<{
+    items: ApiCancellationRequest[];
+    pagination: PaginatedResult<ApiCancellationRequest>['pagination'];
+  }>(
+    `${API_BASE}/events/${eventId}/cancellation-requests${query.toString() ? `?${query.toString()}` : ''}`,
     { method: 'GET' },
   );
 
-  return (data.items ?? []).map((item) => ({
-    registration_id: item.registrationId,
-    user_id: item.userId,
-    email: item.email,
-    name: item.name,
-    first_name: item.firstName,
-    last_name: item.lastName,
-    price_paid_cents: item.pricePaidCents,
-    refund_requested_at: item.refundRequestedAt,
-  }));
+  return {
+    items: (data.items ?? []).map((item) => ({
+      registration_id: item.registrationId,
+      user_id: item.userId,
+      email: item.email,
+      name: item.name,
+      first_name: item.firstName,
+      last_name: item.lastName,
+      price_paid_cents: item.pricePaidCents,
+      refund_requested_at: item.refundRequestedAt,
+    })),
+    pagination: data.pagination,
+  };
 }
 
 export async function approveCancellation(
