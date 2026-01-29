@@ -1,7 +1,17 @@
-import { Check, Crown, Star } from 'lucide-react';
+import { Check, Crown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSubscriptionInfo } from '@/app/hooks/useSubscriptions';
+import {
+  ComparisonTable,
+  DifferentiationSection,
+  FAQSection,
+  FoundingMemberPricing,
+  ROISection,
+  TrackDetailsSection,
+  ValueMathSection,
+} from '@/features/subscribe/components';
+import { FINAL_CTA_COPY, HERO_BENEFITS } from '@/features/subscribe/content';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -11,15 +21,6 @@ import {
   generateSubscriptionSignupUrl,
   storePendingSubscriptionContext,
 } from '@/shared/utils/subscriptionRedirectUtils';
-
-const SUBSCRIPTION_BENEFITS = [
-  'Free access to all online events',
-  'Discounted pricing on offline & hybrid events',
-  'Discounted pricing on learning tracks',
-  'Early access to new content and workshops',
-  'Exclusive member-only resources',
-  'Priority support from the TrafficMENA team',
-];
 
 // Testimonial data (placeholder - replace with real data)
 const TESTIMONIALS = [
@@ -50,39 +51,13 @@ const TESTIMONIALS = [
   },
 ];
 
-// Premium tracks data
-const PREMIUM_TRACKS = [
-  {
-    title: 'Performance Marketing Track',
-    description: 'Master paid advertising across Meta, Google, and TikTok platforms',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=450&fit=crop',
-    benefits: [
-      'Facebook & Instagram Ads mastery',
-      'Google Ads certification prep',
-      'Campaign optimization techniques',
-      'ROI tracking and analytics',
-    ],
-  },
-  {
-    title: 'Content Marketing Track',
-    description: 'Create compelling content that converts visitors into customers',
-    image: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=450&fit=crop',
-    benefits: [
-      'Content strategy development',
-      'SEO-optimized writing',
-      'Video content creation',
-      'Social media management',
-    ],
-  },
-];
-
 // Section 1: Hero Section
 function HeroSection({
   subscriptionInfo,
   onSubscribe,
   isLoaded,
 }: {
-  subscriptionInfo: { priceEgp?: number; discountPercent?: number } | undefined;
+  subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
   onSubscribe: () => void;
   isLoaded: boolean;
 }) {
@@ -103,26 +78,26 @@ function HeroSection({
               </span>
               Premium Membership
               <span className="mx-1.5 h-1 w-1 rounded-full bg-amber-400" />
-              Unlock exclusive benefits
+              Become the Marketer Everyone Wants to Hire
             </div>
 
             {/* Headline */}
             <h1
               className={`text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              Become a TrafficMENA Premium Member
+              Your Fast Track to Becoming the Expert Others Turn To
             </h1>
 
             <p
               className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              Unlock exclusive access to digital marketing education designed for the MENA region.
-              Get free events, discounted content, and priority support.
+              Premium gives you advanced knowledge and exclusive resources — expert-led tracks,
+              done-for-you playbooks, and a community of 1,250+ MENA marketers who push you forward.
             </p>
 
             {/* Benefits List */}
             <ul className={`mt-6 space-y-3 ${isLoaded ? 'animate-fade-in-up' : ''}`}>
-              {SUBSCRIPTION_BENEFITS.slice(0, 4).map((benefit) => (
+              {HERO_BENEFITS.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-3">
                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f]">
                     <Check className="h-3 w-3 text-white" />
@@ -154,19 +129,19 @@ function HeroSection({
               <ul className="mb-6 space-y-3 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-amber-500" />
-                  Free access to all online events
+                  Content + Performance Tracks
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-amber-500" />
-                  {subscriptionInfo?.discountPercent ?? 20}% off all paid content
+                  Exclusive playbooks & templates
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-amber-500" />
-                  Premium learning tracks
+                  24 expert sessions per year
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-amber-500" />
-                  Priority support
+                  All future tracks included
                 </li>
               </ul>
 
@@ -175,7 +150,7 @@ function HeroSection({
                 className="group w-full transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl active:scale-95"
               >
                 <Crown className="mr-2 h-4 w-4" />
-                Subscribe Now
+                Become a Member
               </Button>
 
               <p className="mt-4 text-center text-xs text-neutral-500">
@@ -189,7 +164,7 @@ function HeroSection({
   );
 }
 
-// Section 2: Testimonials Section
+// Testimonials Section
 function TestimonialsSection({ isLoaded }: { isLoaded: boolean }) {
   return (
     <section
@@ -239,77 +214,12 @@ function TestimonialsSection({ isLoaded }: { isLoaded: boolean }) {
   );
 }
 
-// Section 3: Premium Content Section
-function PremiumContentSection({ isLoaded }: { isLoaded: boolean }) {
-  return (
-    <section
-      className={`relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8 content-visibility-auto ${isLoaded ? 'animate-fade-in' : ''}`}
-    >
-      <div className="relative z-10 mx-auto max-w-3xl text-center">
-        <span className="text-sm font-normal text-neutral-500">Premium Content</span>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-          What's Included in Premium
-        </h2>
-        <p className="mt-3 text-sm text-neutral-600">
-          Access exclusive learning tracks and courses designed for MENA marketers
-        </p>
-      </div>
-
-      <div className="relative z-10 mt-10 space-y-8">
-        {PREMIUM_TRACKS.map((track, index) => (
-          <div
-            key={track.title}
-            className={cn(
-              'grid items-center gap-6 rounded-2xl border border-neutral-200 bg-white/80 p-6 backdrop-blur transition-all duration-300 hover:shadow-xl lg:grid-cols-2 lg:gap-10',
-              index % 2 === 1 && 'lg:[&>*:first-child]:order-2',
-            )}
-          >
-            {/* Text side */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900/80 text-white shadow ring-1 ring-white/10">
-                  <Star className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold tracking-tight text-neutral-900">
-                    {track.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-neutral-600">{track.description}</p>
-                </div>
-              </div>
-              <ul className="space-y-2 pl-14">
-                {track.benefits.map((benefit) => (
-                  <li key={benefit} className="flex items-center gap-2 text-sm text-neutral-700">
-                    <Check className="h-4 w-4 shrink-0 text-[#05ef62]" />
-                    {benefit}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Image side */}
-            <div className="aspect-video overflow-hidden rounded-xl bg-neutral-100">
-              <img
-                src={track.image}
-                alt={track.title}
-                className="h-full w-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// Section 4: CTA Reminder Section
-function CTASection({
+// Final CTA Section
+function FinalCTASection({
   subscriptionInfo,
   onSubscribe,
 }: {
-  subscriptionInfo: { priceEgp?: number; discountPercent?: number } | undefined;
+  subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
   onSubscribe: () => void;
 }) {
   return (
@@ -323,43 +233,33 @@ function CTASection({
         </div>
 
         <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-          Ready to Level Up Your Marketing Career?
+          {FINAL_CTA_COPY.headline}
         </h3>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-white/70">
-          Join hundreds of marketers in the MENA region who are already learning from industry
-          experts and growing their skills.
+        <p className="mx-auto mt-4 max-w-2xl text-base text-white/80 leading-relaxed">
+          {FINAL_CTA_COPY.lead}
         </p>
-
-        <div className="mt-6 inline-flex flex-wrap justify-center gap-3 text-xs">
-          <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-white/90 backdrop-blur">
-            <Check className="h-3 w-3" />
-            Free online events
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-white/90 backdrop-blur">
-            <Check className="h-3 w-3" />
-            {subscriptionInfo?.discountPercent ?? 20}% off content
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-white/90 backdrop-blur">
-            <Check className="h-3 w-3" />
-            Priority support
-          </div>
-        </div>
+        <p className="mx-auto mt-4 max-w-2xl text-sm text-white/60">{FINAL_CTA_COPY.description}</p>
+        <p className="mt-4 text-lg font-semibold text-[#05ef62]">{FINAL_CTA_COPY.emphasis}</p>
 
         <div className="mt-8">
           <Button
             onClick={onSubscribe}
-            className="group inline-flex transform items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95"
+            className="group inline-flex transform items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95"
           >
-            <Crown className="h-4 w-4" />
-            Subscribe Now - {subscriptionInfo?.priceEgp ?? '---'} EGP/year
+            <Crown className="h-5 w-5" />
+            Become a Founding Member — {subscriptionInfo?.priceEgp ?? '---'} EGP/year
           </Button>
         </div>
 
-        <p className="mt-4 text-xs text-white/50">
-          Already a member?{' '}
-          <Link to="/signin" className="text-white/70 underline hover:text-white">
-            Sign in
-          </Link>
+        <p className="mt-6 text-sm text-white/50">
+          {FINAL_CTA_COPY.secondaryText}{' '}
+          <Link
+            to={FINAL_CTA_COPY.secondaryLinkHref}
+            className="text-white/70 underline hover:text-white"
+          >
+            {FINAL_CTA_COPY.secondaryLink}
+          </Link>{' '}
+          {FINAL_CTA_COPY.secondaryLinkSuffix}
         </p>
       </div>
     </section>
@@ -411,14 +311,35 @@ export default function SubscribeLanding() {
             isLoaded={isLoaded}
           />
 
-          {/* Section 2: Testimonials */}
+          {/* Section 2: What Premium Includes (Track Details) */}
+          <TrackDetailsSection />
+
+          {/* Section 3: FREE vs PREMIUM Comparison */}
+          <ComparisonTable />
+
+          {/* Section 4: Value Math */}
+          <ValueMathSection currentPrice={subscriptionInfo?.priceEgp} />
+
+          {/* Section 5: ROI Argument */}
+          <ROISection />
+
+          {/* Section 6: Why TrafficMENA Premium (Differentiation) */}
+          <DifferentiationSection />
+
+          {/* Section 7: Testimonials */}
           <TestimonialsSection isLoaded={isLoaded} />
 
-          {/* Section 3: Premium Content */}
-          <PremiumContentSection isLoaded={isLoaded} />
+          {/* Section 8: Founding Member Pricing */}
+          <FoundingMemberPricing
+            priceEgp={subscriptionInfo?.priceEgp}
+            onSubscribe={handleSubscribeClick}
+          />
 
-          {/* Section 4: CTA Reminder */}
-          <CTASection subscriptionInfo={subscriptionInfo} onSubscribe={handleSubscribeClick} />
+          {/* Section 9: FAQ */}
+          <FAQSection />
+
+          {/* Section 10: Final CTA */}
+          <FinalCTASection subscriptionInfo={subscriptionInfo} onSubscribe={handleSubscribeClick} />
         </div>
       </div>
     </Layout>
