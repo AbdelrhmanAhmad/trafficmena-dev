@@ -1,10 +1,20 @@
 import { format } from 'date-fns';
-import { Check, Crown, Loader2, Star } from 'lucide-react';
+import { Check, Crown, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { useCurrentSubscription, useSubscriptionInfo } from '@/app/hooks/useSubscriptions';
+import {
+  ComparisonTable,
+  DifferentiationSection,
+  FAQSection,
+  ROISection,
+  TestimonialsSection,
+  TrackDetailsSection,
+  ValueMathSection,
+} from '@/features/subscribe/components';
+import { FINAL_CTA_COPY, HERO_BENEFITS } from '@/features/subscribe/content';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { PaymentMethodSelector } from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
@@ -17,72 +27,7 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
-import { cn } from '@/shared/lib/utils';
 import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
-
-const SUBSCRIPTION_BENEFITS = [
-  'Free access to all online events',
-  'Discounted pricing on offline & hybrid events',
-  'Discounted pricing on learning tracks',
-  'Early access to new content and workshops',
-  'Exclusive member-only resources',
-  'Priority support from the TrafficMENA team',
-];
-
-// Testimonial data
-const TESTIMONIALS = [
-  {
-    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-    quote:
-      'The best investment in my marketing career. The workshops are practical and actionable.',
-    name: 'Ahmed M.',
-    role: 'Digital Marketing Manager',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop',
-    quote: 'Finally, marketing education designed for the MENA region. Highly recommended!',
-    name: 'Sara K.',
-    role: 'E-commerce Specialist',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
-    quote: 'The community alone is worth the subscription. Amazing networking opportunities.',
-    name: 'Omar H.',
-    role: 'Startup Founder',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
-    quote: 'Learned more in one month than in my entire marketing degree. Game changer!',
-    name: 'Layla A.',
-    role: 'Content Creator',
-  },
-];
-
-// Premium tracks data
-const PREMIUM_TRACKS = [
-  {
-    title: 'Performance Marketing Track',
-    description: 'Master paid advertising across Meta, Google, and TikTok platforms',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=450&fit=crop',
-    benefits: [
-      'Facebook & Instagram Ads mastery',
-      'Google Ads certification prep',
-      'Campaign optimization techniques',
-      'ROI tracking and analytics',
-    ],
-  },
-  {
-    title: 'Content Marketing Track',
-    description: 'Create compelling content that converts visitors into customers',
-    image: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=450&fit=crop',
-    benefits: [
-      'Content strategy development',
-      'SEO-optimized writing',
-      'Video content creation',
-      'Social media management',
-    ],
-  },
-];
 
 // Already subscribed view
 function AlreadySubscribedView({ subscription }: { subscription: { endsAt: string } }) {
@@ -96,7 +41,7 @@ function AlreadySubscribedView({ subscription }: { subscription: { endsAt: strin
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10">
             <Crown className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl">You're a Subscriber!</CardTitle>
+          <CardTitle className="text-2xl">You're a Premium Member!</CardTitle>
           <CardDescription>
             Your subscription is active until{' '}
             <span className="font-medium text-foreground">{format(expiresAt, 'MMMM d, yyyy')}</span>
@@ -107,7 +52,7 @@ function AlreadySubscribedView({ subscription }: { subscription: { endsAt: strin
           <div className="rounded-xl bg-muted/50 p-4">
             <h3 className="font-medium">Your Benefits</h3>
             <ul className="mt-3 space-y-2">
-              {SUBSCRIPTION_BENEFITS.map((benefit) => (
+              {HERO_BENEFITS.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-2 text-sm">
                   <Check className="h-4 w-4 text-primary" />
                   {benefit}
@@ -126,7 +71,7 @@ function AlreadySubscribedView({ subscription }: { subscription: { endsAt: strin
   );
 }
 
-// Section 1: Hero Section with Payment
+// Hero Section with Payment
 function HeroSection({
   subscriptionInfo,
   pricePreview,
@@ -136,7 +81,7 @@ function HeroSection({
   isPending,
   isLoaded,
 }: {
-  subscriptionInfo: { priceEgp?: number; discountPercent?: number } | undefined;
+  subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
   pricePreview: { amountFormatted?: string } | undefined;
   selectedMethodId: number | null;
   setSelectedMethodId: (id: number | null) => void;
@@ -161,7 +106,7 @@ function HeroSection({
               </span>
               Premium Membership
               <span className="mx-1.5 h-1 w-1 rounded-full bg-amber-400" />
-              Unlock exclusive benefits
+              Become the Expert Others Turn To
             </div>
 
             {/* Headline */}
@@ -174,13 +119,13 @@ function HeroSection({
             <p
               className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              You're one step away from unlocking exclusive access to digital marketing education
-              designed for the MENA region.
+              You're one step away from advanced knowledge and exclusive resources — expert-led
+              tracks, done-for-you playbooks, and a community of 1,250+ MENA marketers.
             </p>
 
             {/* Benefits List */}
             <ul className={`mt-6 space-y-3 ${isLoaded ? 'animate-fade-in-up' : ''}`}>
-              {SUBSCRIPTION_BENEFITS.slice(0, 4).map((benefit) => (
+              {HERO_BENEFITS.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-3">
                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f]">
                     <Check className="h-3 w-3 text-white" />
@@ -247,121 +192,14 @@ function HeroSection({
   );
 }
 
-// Section 2: Testimonials Section
-function TestimonialsSection({ isLoaded }: { isLoaded: boolean }) {
-  return (
-    <section
-      className={`relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8 ${isLoaded ? 'animate-fade-in' : ''}`}
-    >
-      {/* Background patterns */}
-      <div className="pointer-events-none absolute inset-0 opacity-10">
-        <div className="absolute left-0 right-0 top-1/4 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
-        <div className="absolute left-0 right-0 top-3/4 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-3xl text-center">
-        <span className="text-sm font-normal text-neutral-500">Testimonials</span>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-          What Our Members Say
-        </h2>
-      </div>
-
-      {/* Desktop: 4 cards, Mobile: 3 cards (4th hidden) */}
-      <div className="relative z-10 mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {TESTIMONIALS.map((testimonial, index) => (
-          <div
-            key={testimonial.name}
-            className={cn(
-              'rounded-2xl border border-neutral-200 bg-white/80 p-5 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-xl',
-              index === 3 && 'hidden lg:block',
-            )}
-          >
-            <div className="mb-4 aspect-square overflow-hidden rounded-xl bg-neutral-100">
-              <img
-                src={testimonial.image}
-                alt={testimonial.name}
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <p className="text-sm italic text-neutral-600">"{testimonial.quote}"</p>
-            <div className="mt-3">
-              <p className="font-medium text-neutral-900">{testimonial.name}</p>
-              <p className="text-xs text-neutral-500">{testimonial.role}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// Section 3: Premium Content Section
-function PremiumContentSection({ isLoaded }: { isLoaded: boolean }) {
-  return (
-    <section
-      className={`relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8 ${isLoaded ? 'animate-fade-in' : ''}`}
-    >
-      <div className="relative z-10 mx-auto max-w-3xl text-center">
-        <span className="text-sm font-normal text-neutral-500">Premium Content</span>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-          What's Included in Premium
-        </h2>
-        <p className="mt-3 text-sm text-neutral-600">
-          Access exclusive learning tracks and courses designed for MENA marketers
-        </p>
-      </div>
-
-      <div className="relative z-10 mt-10 space-y-8">
-        {PREMIUM_TRACKS.map((track, index) => (
-          <div
-            key={track.title}
-            className={cn(
-              'grid items-center gap-6 rounded-2xl border border-neutral-200 bg-white/80 p-6 backdrop-blur transition-all duration-300 hover:shadow-xl lg:grid-cols-2 lg:gap-10',
-              index % 2 === 1 && 'lg:[&>*:first-child]:order-2',
-            )}
-          >
-            {/* Text side */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900/80 text-white shadow ring-1 ring-white/10">
-                  <Star className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold tracking-tight text-neutral-900">
-                    {track.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-neutral-600">{track.description}</p>
-                </div>
-              </div>
-              <ul className="space-y-2 pl-14">
-                {track.benefits.map((benefit) => (
-                  <li key={benefit} className="flex items-center gap-2 text-sm text-neutral-700">
-                    <Check className="h-4 w-4 shrink-0 text-[#05ef62]" />
-                    {benefit}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Image side */}
-            <div className="aspect-video overflow-hidden rounded-xl bg-neutral-100">
-              <img src={track.image} alt={track.title} className="h-full w-full object-cover" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-// Section 4: CTA Reminder Section
-function CTASection({
+// Final CTA Section with Payment
+function FinalCTASection({
   subscriptionInfo,
   selectedMethodId,
   onSubscribe,
   isPending,
 }: {
-  subscriptionInfo: { priceEgp?: number; discountPercent?: number } | undefined;
+  subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
   selectedMethodId: number | null;
   onSubscribe: () => void;
   isPending: boolean;
@@ -377,52 +215,50 @@ function CTASection({
         </div>
 
         <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-          Ready to Level Up Your Marketing Career?
+          {FINAL_CTA_COPY.headline}
         </h3>
-        <p className="mx-auto mt-2 max-w-2xl text-sm text-white/70">
-          Join hundreds of marketers in the MENA region who are already learning from industry
-          experts and growing their skills.
+        <p className="mx-auto mt-4 max-w-2xl text-base text-white/80 leading-relaxed">
+          {FINAL_CTA_COPY.lead}
         </p>
-
-        <div className="mt-6 inline-flex flex-wrap justify-center gap-3 text-xs">
-          <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-white/90 backdrop-blur">
-            <Check className="h-3 w-3" />
-            Free online events
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-white/90 backdrop-blur">
-            <Check className="h-3 w-3" />
-            {subscriptionInfo?.discountPercent ?? 20}% off content
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-white/90 backdrop-blur">
-            <Check className="h-3 w-3" />
-            Priority support
-          </div>
-        </div>
+        <p className="mx-auto mt-4 max-w-2xl text-sm text-white/60">{FINAL_CTA_COPY.description}</p>
+        <p className="mt-4 text-lg font-semibold text-[#05ef62]">{FINAL_CTA_COPY.emphasis}</p>
 
         <div className="mt-8">
           <Button
             onClick={onSubscribe}
             disabled={!selectedMethodId || isPending}
-            className="group inline-flex transform items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0"
+            className="group inline-flex transform items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0"
           >
             {isPending ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
                 Processing...
               </>
             ) : (
               <>
-                <Crown className="h-4 w-4" />
-                Subscribe Now - {subscriptionInfo?.priceEgp ?? '---'} EGP/year
+                <Crown className="h-5 w-5" />
+                Subscribe Now — {subscriptionInfo?.priceEgp ?? '---'} EGP/year
               </>
             )}
           </Button>
           {!selectedMethodId && (
-            <p className="mt-2 text-xs text-white/50">
+            <p className="mt-3 text-sm text-white/50">
               Please select a payment method above to continue
             </p>
           )}
         </div>
+
+        <p className="mt-6 text-sm text-white/50">
+          Questions?{' '}
+          <a
+            href="https://wa.me/201505437979"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white/70 underline hover:text-white"
+          >
+            Contact us on WhatsApp
+          </a>
+        </p>
       </div>
     </section>
   );
@@ -556,7 +392,7 @@ function SubscribePaymentView() {
 
   return (
     <div className="relative isolate overflow-hidden">
-      {/* Gradient blobs - same as public page */}
+      {/* Gradient blobs */}
       <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
       <div className="pointer-events-none absolute -right-[50vw] top-[30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
@@ -572,14 +408,29 @@ function SubscribePaymentView() {
           isLoaded={isLoaded}
         />
 
-        {/* Section 2: Testimonials */}
+        {/* Section 2: Social Proof */}
         <TestimonialsSection isLoaded={isLoaded} />
 
-        {/* Section 3: Premium Content */}
-        <PremiumContentSection isLoaded={isLoaded} />
+        {/* Section 3: What Premium Includes (Track Details) */}
+        <TrackDetailsSection />
 
-        {/* Section 4: CTA Reminder */}
-        <CTASection
+        {/* Section 3: FREE vs PREMIUM Comparison */}
+        <ComparisonTable />
+
+        {/* Section 4: Value Math */}
+        <ValueMathSection currentPrice={subscriptionInfo?.priceEgp} />
+
+        {/* Section 5: ROI Argument */}
+        <ROISection />
+
+        {/* Section 7: Why TrafficMENA Premium (Differentiation) */}
+        <DifferentiationSection />
+
+        {/* Section 8: FAQ */}
+        <FAQSection />
+
+        {/* Section 9: Final CTA with Payment */}
+        <FinalCTASection
           subscriptionInfo={subscriptionInfo}
           selectedMethodId={selectedMethodId}
           onSubscribe={handleSubscribe}

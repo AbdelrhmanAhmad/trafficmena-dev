@@ -2,13 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
   BookOpen,
+  Calculator,
   CheckCircle2,
-  Headphones,
+  Crown,
+  FileText,
   Library,
-  Mic,
+  MessageCircle,
+  Rocket,
   Sparkles,
   Users2,
-  Video,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -19,84 +21,102 @@ import { Button } from '@/shared/components/ui/button';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
 
 const benefitItems = [
+  // FREE ITEMS (01-03)
   {
     id: '01',
-    title: 'Expert-Led Meetups',
+    title: 'Complete Learning Tracks — Yours Free',
     points: [
-      "Learn from MENA's top marketing leaders at monthly events",
-      'Get practical strategies you can implement immediately',
-      'Network with peers who understand your market challenges',
+      'E-commerce Business Track: 7 sessions covering idea to analytics',
+      'AI for Marketers Track: 5 sessions on practical AI tools',
+      'Each session taught by a different specialist — multiple experts, not one instructor',
     ],
-    icon: Mic,
+    icon: BookOpen,
+    isPremium: false,
     mediaClassName:
       'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/20 via-[#00fdc2]/10 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
     iconClassName: 'h-16 w-16 text-[#05ef62]/40',
   },
   {
     id: '02',
-    title: 'Exclusive Content Library',
+    title: 'Professional Marketing Calculators',
     points: [
-      'Access recordings, templates, and playbooks from past workshops',
-      'Get MENA-specific marketing guides and case studies',
-      'Download ready-to-use campaign frameworks',
+      'ROAS Calculator — Know your true return on ad spend',
+      'MER Calculator — Understand your blended performance',
+      'CAC & nCAC Calculators — Track acquisition costs accurately',
+      '19 more tools used by professional marketers daily',
     ],
-    icon: Library,
+    icon: Calculator,
+    isPremium: false,
     mediaClassName:
       'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/20 via-[#05ef62]/10 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
     iconClassName: 'h-16 w-16 text-[#00fdc2]/50',
   },
   {
     id: '03',
-    title: 'Community Support',
+    title: 'Direct Access to Experts Every Month',
     points: [
-      'Connect with 1,200+ marketers across 7 MENA cities',
-      'Get answers from peers and mentors in your industry',
-      'Build lasting professional relationships',
+      'Monthly live Q&A sessions with industry practitioners',
+      'Ask about your specific challenges, get real answers',
+      'No gatekeeping — free members get the same expert access',
     ],
-    icon: Users2,
+    icon: MessageCircle,
+    isPremium: false,
     mediaClassName:
       'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/15 via-neutral-100 to-[#00fdc2]/10 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
     iconClassName: 'h-16 w-16 text-[#05ef62]/40',
   },
+  // PREMIUM ITEMS (04-06)
   {
     id: '04',
-    title: 'Free Online Events',
+    title: 'Advanced Tracks for Serious Marketers',
     points: [
-      'Attend all virtual workshops at no extra cost',
-      'Join live Q&A sessions with industry experts',
-      'Access recordings if you miss a session',
+      'Content Marketing Track: 6 sessions + Content Marketing Day materials',
+      'Performance Marketing Track: 7 sessions + Performance Marketing Day materials',
+      'All future tracks included free — no additional cost as we grow',
     ],
-    icon: Video,
+    icon: Rocket,
+    isPremium: true,
     mediaClassName:
-      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/20 via-[#05ef62]/15 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
-    iconClassName: 'h-16 w-16 text-[#00fdc2]/50',
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-amber-100/50 via-amber-50/30 to-neutral-100 border border-amber-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-amber-500/50',
   },
   {
     id: '05',
-    title: 'Discounted Learning Tracks',
+    title: 'Playbooks, Templates & Exclusive Guides',
     points: [
-      'Save 20%+ on Performance Marketing Track',
-      'Save 20%+ on Content Marketing Track',
-      'Early access to new courses before public release',
+      "Ready-to-use templates from practitioners who've proven them",
+      'Step-by-step playbooks for specific marketing challenges',
+      'Discounts on highly specialized premium resources',
     ],
-    icon: BookOpen,
+    icon: FileText,
+    isPremium: true,
     mediaClassName:
-      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/20 via-[#00fdc2]/15 to-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
-    iconClassName: 'h-16 w-16 text-[#05ef62]/40',
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-amber-50/50 via-amber-100/30 to-neutral-100 border border-amber-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-amber-500/40',
   },
   {
     id: '06',
-    title: 'Priority Support',
+    title: 'VIP Treatment & Specialized Networks',
     points: [
-      'Get faster responses from the TrafficMENA team',
-      'Access exclusive member-only resources',
-      'Receive personalized learning recommendations',
+      '2x Monthly Q&A sessions (double the free tier)',
+      '20%+ discount on all offline events and intensive days',
+      'Specialty subgroups for your specific focus area',
     ],
-    icon: Headphones,
+    icon: Crown,
+    isPremium: true,
     mediaClassName:
-      'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#00fdc2]/15 via-neutral-100 to-[#05ef62]/10 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
-    iconClassName: 'h-16 w-16 text-[#00fdc2]/50',
+      'aspect-video w-full rounded-2xl bg-gradient-to-br from-amber-100/60 via-amber-50/40 to-neutral-100 border border-amber-200 flex items-center justify-center overflow-hidden shadow-sm',
+    iconClassName: 'h-16 w-16 text-amber-600/50',
   },
+];
+
+const FREE_FEATURES = [
+  { icon: BookOpen, title: 'E-commerce Business Track', desc: '7 expert sessions' },
+  { icon: Sparkles, title: 'AI for Marketers Track', desc: '5 practical sessions' },
+  { icon: MessageCircle, title: 'Monthly Q&A Session', desc: 'Direct expert access' },
+  { icon: Calculator, title: '23 Marketing Calculators', desc: 'ROAS, MER, CAC & more' },
+  { icon: Library, title: 'Premium Content Access', desc: 'After 6+ months' },
+  { icon: Users2, title: 'Community Access', desc: '1,200+ marketers' },
 ];
 
 const Index: React.FC = () => {
@@ -188,26 +208,39 @@ const Index: React.FC = () => {
                   <h1
                     className={`text-5xl font-semibold tracking-tight text-neutral-900 sm:text-6xl lg:text-7xl ${isLoaded ? 'animate-fade-in-up' : ''}`}
                   >
-                    Where MENA's Marketers Grow
+                    Learn Digital Marketing From The Experts Who've Done It
                   </h1>
 
                   <p
                     className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
                   >
-                    TrafficMENA connects marketers with experts through meetups, workshops, and an
-                    exclusive content library focused on the Middle East and North Africa.
+                    TrafficMENA connects you with practitioners — not professors — through
+                    expert-led meetups, structured learning tracks, and a community that actually
+                    helps you grow.
                   </p>
 
                   <div
                     className={`mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start ${isLoaded ? 'animate-fade-in-up' : ''}`}
                   >
+                    {/* Primary CTA - Join Free */}
                     <Button
                       className="group flex gap-2 transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
                       asChild
                     >
                       <Link to="/signup">
                         <Users2 className="h-4 w-4" />
-                        <span>Join the Community</span>
+                        <span>Join Free</span>
+                      </Link>
+                    </Button>
+
+                    {/* Secondary CTA - Go Premium */}
+                    <Button
+                      className="group flex gap-2 transform rounded-xl border-2 border-amber-300 bg-amber-50 px-6 py-3.5 text-sm font-medium text-amber-700 transition-all duration-300 hover:bg-amber-100 hover:shadow-lg hover:scale-105 hover:-translate-y-1 active:scale-95"
+                      asChild
+                    >
+                      <Link to="/subscribe">
+                        <Crown className="h-4 w-4" />
+                        <span>Go Premium — 40% Off</span>
                       </Link>
                     </Button>
                   </div>
@@ -316,16 +349,59 @@ const Index: React.FC = () => {
             )}
           </section>
 
-          {/* Why Join TrafficMENA - Exit Five Style with Timeline */}
+          {/* What You Get FREE Section */}
+          <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-6 sm:p-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="text-sm font-normal text-neutral-500">No Payment Required</span>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+                Start Learning Today — For Free
+              </h2>
+              <p className="mt-3 text-sm text-neutral-600">
+                Our free membership isn't a teaser. It's a complete learning experience.
+              </p>
+            </div>
+
+            <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {FREE_FEATURES.map((item) => (
+                <div
+                  key={item.title}
+                  className="flex items-start gap-4 rounded-2xl border border-neutral-200 bg-neutral-50/50 p-4"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#05ef62]/10">
+                    <item.icon className="h-5 w-5 text-[#05ef62]" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-neutral-900">{item.title}</h3>
+                    <p className="text-sm text-neutral-500">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 text-center">
+              <Button
+                className="group inline-flex items-center gap-2 transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105"
+                asChild
+              >
+                <Link to="/signup">
+                  Join Free — Get Instant Access
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </section>
+
+          {/* What You Get at Every Level - Timeline Section */}
           <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white content-visibility-auto">
             {/* Section Header */}
             <div className="px-6 sm:px-10 pt-12 pb-8">
               <div className="mx-auto max-w-3xl text-center">
-                <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
-                  Why Join TrafficMENA?
+                <span className="text-sm font-normal text-neutral-500">Your Growth Journey</span>
+                <h2 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
+                  What You Get at Every Level
                 </h2>
                 <p className="mt-3 text-sm text-neutral-600">
-                  Focused on real outcomes for marketers across the MENA region.
+                  Whether you start free or go premium, here's what's waiting for you.
                 </p>
               </div>
             </div>
@@ -334,43 +410,139 @@ const Index: React.FC = () => {
             <div className="px-6 sm:px-10 pb-12">
               {/* Timeline wrapper - relative container for the vertical line */}
               <div className="relative">
-                {/* Vertical Timeline Line */}
-                <div className="absolute left-[23px] sm:left-[27px] top-0 bottom-0 w-[3px] bg-[#05ef62]/30" />
+                {/* Timeline line - gradient from green to amber */}
+                <div className="absolute left-[23px] sm:left-[27px] top-0 bottom-0 w-[3px] overflow-hidden">
+                  <div className="h-[52%] bg-[#05ef62]/30" />
+                  <div className="h-[48%] bg-gradient-to-b from-[#05ef62]/30 via-amber-300/40 to-amber-400/30" />
+                </div>
 
                 {/* Benefits List */}
                 <div className="space-y-12 sm:space-y-16">
-                  {benefitItems.map((benefit) => {
+                  {benefitItems.map((benefit, index) => {
                     const Icon = benefit.icon;
+                    const isPremium = benefit.isPremium;
+
                     return (
-                      <div
-                        key={benefit.id}
-                        className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start"
-                      >
-                        <div className="lg:col-span-5 flex gap-4">
-                          <div className="relative z-10 flex-shrink-0">
-                            <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] border-[#05ef62] bg-white text-[#05ef62] text-lg sm:text-xl font-semibold shadow-sm">
-                              {benefit.id}
+                      <div key={benefit.id}>
+                        {/* Timeline Transition Point - Insert after index 2 (item 03) */}
+                        {index === 3 && (
+                          <div className="relative py-6 sm:py-8 mb-12 sm:mb-16">
+                            {/* Transition card */}
+                            <div className="ml-16 lg:ml-0 relative overflow-hidden rounded-3xl border border-neutral-200/60 bg-gradient-to-r from-[#05ef62]/8 via-white/95 to-amber-50/70 p-5 sm:p-7 shadow-xl shadow-neutral-900/[0.04]">
+                              {/* Decorative gradient line at top */}
+                              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#05ef62] via-emerald-400 to-amber-400" />
+
+                              {/* Subtle corner glow */}
+                              <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+                              <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-[#05ef62]/10 rounded-full blur-3xl pointer-events-none" />
+
+                              <div className="relative flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                                {/* Left - Foundation complete badge */}
+                                <div className="flex items-center gap-3 shrink-0">
+                                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#05ef62]/30 to-[#05ef62]/15 ring-1 ring-[#05ef62]/25 shadow-sm">
+                                    <CheckCircle2 className="h-5 w-5 text-[#05ef62]" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-[0.15em]">
+                                      Complete
+                                    </span>
+                                    <span className="text-sm font-bold text-[#05ef62]">
+                                      Foundation
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Divider - visible on desktop */}
+                                <div className="hidden sm:block w-px h-10 bg-gradient-to-b from-transparent via-neutral-200 to-transparent" />
+
+                                {/* Center - Message */}
+                                <div className="flex-1 text-center sm:text-left">
+                                  <p className="text-sm sm:text-[15px] leading-relaxed text-neutral-600">
+                                    <span className="font-semibold text-neutral-800">
+                                      You have the essentials.
+                                    </span>
+                                    <span className="hidden sm:inline text-neutral-300 mx-2">
+                                      |
+                                    </span>
+                                    <br className="sm:hidden" />
+                                    <span className="sm:hidden text-xs text-neutral-400 block mt-1">
+                                      Ready for more?
+                                    </span>
+                                    <span className="hidden sm:inline">
+                                      Ready for{' '}
+                                      <span className="font-semibold text-amber-600">
+                                        specialization
+                                      </span>
+                                      ?
+                                    </span>
+                                  </p>
+                                </div>
+
+                                {/* Right - Premium CTA */}
+                                <Link
+                                  to="/subscribe"
+                                  className="group relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 hover:from-amber-500 hover:to-amber-500 hover:shadow-xl hover:shadow-amber-500/25 hover:-translate-y-0.5 transition-all duration-200 shrink-0"
+                                >
+                                  <Crown className="h-4 w-4" />
+                                  <span>Go Premium</span>
+                                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                                </Link>
+                              </div>
                             </div>
                           </div>
-                          <div className="pt-2 sm:pt-3">
-                            <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
-                              {benefit.title}
-                            </h3>
-                            <ul className="mt-4 space-y-3">
-                              {benefit.points.map((point) => (
-                                <li key={point} className="flex items-start gap-2.5">
-                                  <CheckCircle2 className="h-5 w-5 text-[#05ef62] flex-shrink-0 mt-0.5" />
-                                  <span className="text-sm text-neutral-600 leading-relaxed">
-                                    {point}
+                        )}
+
+                        <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+                          <div className="lg:col-span-5 flex gap-4">
+                            {/* Numbered badge with conditional styling */}
+                            <div className="relative z-10 flex-shrink-0">
+                              <div
+                                className={`flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] bg-white text-lg sm:text-xl font-semibold shadow-sm ${
+                                  isPremium
+                                    ? 'border-amber-400 text-amber-500'
+                                    : 'border-[#05ef62] text-[#05ef62]'
+                                }`}
+                              >
+                                {benefit.id}
+                              </div>
+                            </div>
+
+                            <div className="pt-2 sm:pt-3">
+                              {/* Title with optional PREMIUM badge */}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-lg sm:text-xl font-semibold text-neutral-900">
+                                  {benefit.title}
+                                </h3>
+                                {isPremium && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                    <Crown className="h-3 w-3" />
+                                    PREMIUM
                                   </span>
-                                </li>
-                              ))}
-                            </ul>
+                                )}
+                              </div>
+
+                              {/* Points with conditional check color */}
+                              <ul className="mt-4 space-y-3">
+                                {benefit.points.map((point) => (
+                                  <li key={point} className="flex items-start gap-2.5">
+                                    <CheckCircle2
+                                      className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+                                        isPremium ? 'text-amber-500' : 'text-[#05ef62]'
+                                      }`}
+                                    />
+                                    <span className="text-sm text-neutral-600 leading-relaxed">
+                                      {point}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           </div>
-                        </div>
-                        <div className="lg:col-span-7 ml-16 lg:ml-0">
-                          <div className={benefit.mediaClassName}>
-                            <Icon className={benefit.iconClassName} />
+
+                          <div className="lg:col-span-7 ml-16 lg:ml-0">
+                            <div className={benefit.mediaClassName}>
+                              <Icon className={benefit.iconClassName} />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -387,23 +559,32 @@ const Index: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-green-900/20 via-blue-900/10 to-transparent"></div>
             <div className="relative px-6 sm:px-10 py-12 text-center">
               <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
-                Ready to Join the Community?
+                Start Your Marketing Journey Today
               </h3>
               <p className="mt-2 text-sm text-white/70 max-w-2xl mx-auto">
-                Connect with like‑minded professionals, expand your network, and stay ahead in the
-                digital marketing landscape.
+                Whether you choose free or premium, you're joining 1,200+ marketers who are leveling
+                up together.
               </p>
-              <div className="mt-6">
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Button
                   className="group inline-flex items-center gap-2 transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] transition-all duration-300 hover:brightness-95 hover:scale-105 hover:shadow-lg"
                   asChild
                 >
-                  <Link to="/meetups">
-                    Explore Events
-                    <ArrowRight className="h-4 w-4" />
+                  <Link to="/signup">Join Free</Link>
+                </Button>
+                <Button
+                  className="group inline-flex items-center gap-2 transform rounded-xl border-2 border-amber-400/50 bg-amber-50/10 px-5 py-3 text-sm font-medium text-white transition-all duration-300 hover:bg-amber-50/20 hover:scale-105 hover:shadow-lg"
+                  asChild
+                >
+                  <Link to="/subscribe">
+                    <Crown className="h-4 w-4" />
+                    Go Premium — Launch Pricing
                   </Link>
                 </Button>
               </div>
+              <p className="mt-4 text-xs text-white/50">
+                Free membership is genuinely valuable. Premium is for those ready to specialize.
+              </p>
             </div>
           </section>
         </div>
