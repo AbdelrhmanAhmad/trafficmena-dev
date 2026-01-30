@@ -1,6 +1,6 @@
 import { Check, Crown, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
-import { FOUNDING_MEMBER_COPY } from '../content';
+import { FOUNDING_MEMBER_COPY, PRICING } from '../content';
 
 type FoundingMemberPricingProps = {
   priceEgp?: number | null;
@@ -13,7 +13,7 @@ export function FoundingMemberPricing({
   onSubscribe,
   isPending = false,
 }: FoundingMemberPricingProps) {
-  const regularPrice = 5000;
+  const regularPrice = PRICING.regular;
   const displayPrice = priceEgp ?? 3000;
   const savings = Math.round(((regularPrice - displayPrice) / regularPrice) * 100);
 

@@ -10,6 +10,7 @@ import {
   DifferentiationSection,
   FAQSection,
   ROISection,
+  TestimonialsSection,
   TrackDetailsSection,
   ValueMathSection,
 } from '@/features/subscribe/components';
@@ -26,46 +27,7 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
-import { cn } from '@/shared/lib/utils';
 import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
-
-const SUBSCRIPTION_BENEFITS = [
-  'Content Marketing Track (6 sessions)',
-  'Performance Marketing Track (7 sessions)',
-  '2x monthly expert sessions',
-  'All future online tracks included',
-  '20%+ off all offline events',
-  'Exclusive playbooks & templates',
-];
-
-// Testimonial data
-const TESTIMONIALS = [
-  {
-    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-    quote:
-      'The best investment in my marketing career. The workshops are practical and actionable.',
-    name: 'Ahmed M.',
-    role: 'Digital Marketing Manager',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop',
-    quote: 'Finally, marketing education designed for the MENA region. Highly recommended!',
-    name: 'Sara K.',
-    role: 'E-commerce Specialist',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
-    quote: 'The community alone is worth the subscription. Amazing networking opportunities.',
-    name: 'Omar H.',
-    role: 'Startup Founder',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
-    quote: 'Learned more in one month than in my entire marketing degree. Game changer!',
-    name: 'Layla A.',
-    role: 'Content Creator',
-  },
-];
 
 // Already subscribed view
 function AlreadySubscribedView({ subscription }: { subscription: { endsAt: string } }) {
@@ -90,7 +52,7 @@ function AlreadySubscribedView({ subscription }: { subscription: { endsAt: strin
           <div className="rounded-xl bg-muted/50 p-4">
             <h3 className="font-medium">Your Benefits</h3>
             <ul className="mt-3 space-y-2">
-              {SUBSCRIPTION_BENEFITS.map((benefit) => (
+              {HERO_BENEFITS.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-2 text-sm">
                   <Check className="h-4 w-4 text-primary" />
                   {benefit}
@@ -225,56 +187,6 @@ function HeroSection({
             </div>
           </div>
         </div>
-      </div>
-    </section>
-  );
-}
-
-// Testimonials Section
-function TestimonialsSection({ isLoaded }: { isLoaded: boolean }) {
-  return (
-    <section
-      className={`relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8 ${isLoaded ? 'animate-fade-in' : ''}`}
-    >
-      {/* Background patterns */}
-      <div className="pointer-events-none absolute inset-0 opacity-10">
-        <div className="absolute left-0 right-0 top-1/4 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
-        <div className="absolute left-0 right-0 top-3/4 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent" />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-3xl text-center">
-        <span className="text-sm font-normal text-neutral-500">Testimonials</span>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-          What Our Members Say
-        </h2>
-      </div>
-
-      {/* Desktop: 4 cards, Mobile: 3 cards (4th hidden) */}
-      <div className="relative z-10 mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {TESTIMONIALS.map((testimonial, index) => (
-          <div
-            key={testimonial.name}
-            className={cn(
-              'rounded-2xl border border-neutral-200 bg-white/80 p-5 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:shadow-xl',
-              index === 3 && 'hidden lg:block',
-            )}
-          >
-            <div className="mb-4 aspect-square overflow-hidden rounded-xl bg-neutral-100">
-              <img
-                src={testimonial.image}
-                alt={testimonial.name}
-                className="h-full w-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-            <p className="text-sm italic text-neutral-600">"{testimonial.quote}"</p>
-            <div className="mt-3">
-              <p className="font-medium text-neutral-900">{testimonial.name}</p>
-              <p className="text-xs text-neutral-500">{testimonial.role}</p>
-            </div>
-          </div>
-        ))}
       </div>
     </section>
   );

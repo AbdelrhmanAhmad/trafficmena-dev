@@ -10,13 +10,14 @@ import {
   Users2,
 } from 'lucide-react';
 
-// Hero section benefits (left side bullet points)
+// Hero section benefits (used in both hero and already-subscribed views)
 export const HERO_BENEFITS = [
   'Content Marketing Track (6 sessions)',
   'Performance Marketing Track (7 sessions)',
   '2x monthly expert sessions',
   'All future online tracks included',
   '20%+ off all offline events',
+  'Exclusive playbooks & templates',
 ];
 
 // Content Marketing Track sessions
@@ -173,7 +174,13 @@ export const VALUE_MATH_ITEMS = [
   { label: 'Future Tracks (estimated 1-2 new tracks/year)', value: 2000 },
 ];
 
-export const TOTAL_VALUE = 9900;
+export const TOTAL_VALUE = VALUE_MATH_ITEMS.reduce((sum, item) => sum + item.value, 0);
+
+// Centralized pricing constants
+export const PRICING = {
+  regular: 5000,
+  foundingMember: 3000,
+};
 
 // ROI scenarios
 export const ROI_SCENARIOS = [
@@ -279,6 +286,35 @@ export const FOUNDING_MEMBER_COPY = {
     "Cancel anytime (but you won't want to)",
   ],
 };
+
+// Testimonials
+export const TESTIMONIALS = [
+  {
+    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
+    quote:
+      'The best investment in my marketing career. The workshops are practical and actionable.',
+    name: 'Ahmed M.',
+    role: 'Digital Marketing Manager',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop',
+    quote: 'Finally, marketing education designed for the MENA region. Highly recommended!',
+    name: 'Sara K.',
+    role: 'E-commerce Specialist',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
+    quote: 'The community alone is worth the subscription. Amazing networking opportunities.',
+    name: 'Omar H.',
+    role: 'Startup Founder',
+  },
+  {
+    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
+    quote: 'Learned more in one month than in my entire marketing degree. Game changer!',
+    name: 'Layla A.',
+    role: 'Content Creator',
+  },
+];
 
 // Final CTA copy
 export const FINAL_CTA_COPY = {

@@ -72,11 +72,6 @@ export function ComparisonTable() {
           ))}
         </div>
       </div>
-
-      {/* Mobile note */}
-      <p className="mt-4 text-center text-xs text-neutral-400 sm:hidden">
-        Scroll horizontally to see all columns
-      </p>
     </section>
   );
 }

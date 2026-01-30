@@ -1,12 +1,12 @@
 import { Calculator, Sparkles } from 'lucide-react';
-import { TOTAL_VALUE, VALUE_MATH_ITEMS } from '../content';
+import { PRICING, TOTAL_VALUE, VALUE_MATH_ITEMS } from '../content';
 
 type ValueMathProps = {
   currentPrice?: number | null;
 };
 
 export function ValueMathSection({ currentPrice }: ValueMathProps) {
-  const regularPrice = 5000;
+  const regularPrice = PRICING.regular;
   const displayPrice = currentPrice ?? 3000;
   const valueRatio = displayPrice > 0 ? (TOTAL_VALUE / displayPrice).toFixed(1) : '3.3';
   const monthlyPrice = displayPrice > 0 ? Math.round(displayPrice / 12) : 250;
