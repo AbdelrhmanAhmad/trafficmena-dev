@@ -1,125 +1,174 @@
 # TrafficMENA Hub
 
-MVP digital marketing education platform for the MENA region. The core loop is: Signup → Browse Events → Register → Access Library. Built for fast iteration with a modern TypeScript stack.
+> Digital marketing education platform for the MENA region
+
+Connect with practitioners—not professors—through expert-led events, structured learning tracks, and a community that helps you grow.
+
+## Highlights
+
+- **Event Management** — Create, browse, and register for marketing events
+- **Knowledge Library** — Access educational content and resources
+- **Learning Tracks** — E-commerce, AI for marketers, content & performance marketing
+- **Marketing Calculators** — ROAS, MER, CAC, and 20+ professional tools
+- **Premium Membership** — Advanced tracks, templates, and VIP access
+- **Invite System** — Single and bulk CSV invitations with admin controls
 
 ## Tech Stack
 
-- Frontend: React 18, TypeScript, Vite, Tailwind CSS, Shadcn UI (Radix primitives), TanStack Query
-- Backend API: Hono (Node 20 LTS)
-- Auth: Better Auth (email OTP), Plunk (email delivery)
-- Database: PostgreSQL 17.x with Drizzle ORM
-- Tooling: Ultracite (Biome) for lint/format, path aliases (`@/`)
-- Deployment (prod): Single VPS (Ubuntu + systemd + Caddy)
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Shadcn UI, TanStack Query |
+| Backend | Hono, Node.js 20 |
+| Database | PostgreSQL 17, Drizzle ORM |
+| Auth | Better Auth (OTP-based) |
+| Storage | BunnyCDN |
+| Email | Plunk |
+| Tooling | Ultracite (Biome), path aliases (`@/`) |
 
-## Repository Structure
+## Install
 
-```
-.
-├── server/                 # Hono API (Better Auth + Drizzle + Postgres)
-│   ├── src/
-│   ├── package.json
-│   └── .env.example        # Copy to .env for local dev
-├── src/                    # React SPA
-├── public/                 # Static assets
-├── local/postgres/         # Project-scoped Postgres helper scripts
-├── package.json            # SPA scripts + local DB scripts
-└── README.md
-```
+Prerequisites: Node.js 20+, npm
 
-## Getting Started (Local)
-
-Prerequisites: Node.js 20+, npm; Postgres is managed locally via helper scripts (no Docker required).
-
-1) Install dependencies
-
-```
+```sh
 npm install
 npm --prefix server install
 ```
 
-2) Configure environment
+## Setup
 
-```
+1. Copy environment file:
+
+```sh
 cp server/.env.example server/.env
-# Edit server/.env to match your local setup (secrets stay local)
 ```
 
-Optional frontend env (Turnstile):
+2. Configure required variables in `server/.env`:
 
-```
-# Create or edit .env at repo root
-VITE_TURNSTILE_SITE_KEY=your-turnstile-site-key
-```
-
-3) Start local Postgres (project-scoped)
-
-```
-npm run db:start          # start local PG on 5433
-npm run db:status         # optional health check
+```sh
+DATABASE_URL=postgresql://user:pass@localhost:5433/trafficmena_dev
+BETTER_AUTH_SECRET=your-secret-min-32-chars
+PLUNK_API_KEY=your-plunk-key
+BUNNY_STORAGE_ZONE=your-zone
+BUNNY_STORAGE_ACCESS_KEY=your-key
+BUNNY_STORAGE_CDN_URL=https://your-cdn.b-cdn.net
 ```
 
-4) Apply database migrations
+3. Start local PostgreSQL and run migrations:
 
-```
+```sh
+npm run db:start
 npm --prefix server run db:migrate
 ```
 
-5) Run the dev servers (in two terminals)
+## Usage
 
+Run both servers in separate terminals:
+
+```sh
+# Terminal A — Backend (http://localhost:3001)
+npm --prefix server run dev
+
+# Terminal B — Frontend (http://localhost:8080)
+npm run dev
 ```
-# Terminal A (API)
-npm --prefix server run dev   # Hono on http://localhost:3001
 
-# Terminal B (SPA)
-npm run dev                   # Vite on http://localhost:8080
-```
+Stop the local database:
 
-To stop the local database:
-
-```
+```sh
 npm run db:stop
 ```
 
-## Available Scripts
+## Project Structure
 
-Root (SPA):
-- `npm run dev` – start Vite dev server
-- `npm run build` – production build
-- `npm run preview` – preview production build
-- `npm run lint` / `npm run format` – code quality via Ultracite
-- `npm run db:start|stop|status|psql|reset|health` – local Postgres helpers
+```
+├── src/                    # React SPA
+│   ├── app/               # API client, auth context, hooks
+│   ├── features/          # Feature modules (events, library, subscribe)
+│   ├── pages/             # Route pages
+│   └── shared/            # Shared UI components
+├── server/                # Hono API
+│   ├── src/
+│   │   ├── routes/api/    # API endpoints
+│   │   ├── db/            # Drizzle schema
+│   │   └── services/      # Business logic
+│   └── drizzle/           # Migration files
+├── local/postgres/        # Local DB scripts
+└── docs/                  # Operational documentation
+```
 
-Server (API):
-- `npm --prefix server run dev` – start Hono with dotenv
-- `npm --prefix server run build` – compile TypeScript
-- `npm --prefix server run start` – run compiled server
-- `npm --prefix server run db:gen` – generate Drizzle SQL
-- `npm --prefix server run db:migrate` – apply migrations
-- `npm --prefix server run db:studio` – open Drizzle Studio
+## Scripts
 
-## API Overview (MVP)
+### Frontend (Root)
 
-- `POST /api/auth/otp/request` – request OTP
-- `POST /api/auth/otp/verify` – verify OTP, create session
-- `GET /api/events` / `GET /api/events/:id`
-- `POST /api/events/:id/register` / `POST /api/events/:id/cancel`
-- `GET /api/library` / `GET /api/library/:id`
-- `GET /api/users/me`
-- `POST /api/invitations` (single) / `POST /api/invitations/csv` / `GET /api/invitations`
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run Ultracite linter |
+| `npm run format` | Format code |
 
-All endpoints are protected appropriately; payloads validated with Zod on the server.
+### Backend (Server)
 
-## Development Notes
+| Command | Description |
+|---------|-------------|
+| `npm --prefix server run dev` | Start Hono dev server |
+| `npm --prefix server run build` | Compile TypeScript |
+| `npm --prefix server run db:gen` | Generate Drizzle SQL |
+| `npm --prefix server run db:migrate` | Apply migrations |
+| `npm --prefix server run db:studio` | Open Drizzle Studio |
 
-- Do not commit secrets. Use `server/.env` locally; share safe defaults via `server/.env.example`.
-- The SPA talks only to the Hono API; legacy Supabase clients were removed.
-- Prefer simple patterns over over-engineering—this is an MVP.
+### Database (Local)
 
-## Deployment (Brief)
+| Command | Description |
+|---------|-------------|
+| `npm run db:start` | Start PostgreSQL on port 5433 |
+| `npm run db:stop` | Stop PostgreSQL |
+| `npm run db:status` | Health check |
+| `npm run db:reset` | Reset database |
+| `npm run db:psql` | Open psql shell |
 
-- Single VPS (Ubuntu 22.04+), systemd service for the Hono server, Caddy for TLS and reverse proxy.
-- Use managed Postgres or promote the local schema; enable SSL in production.
+## API Overview
 
----
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/auth/otp/request` | Request OTP |
+| `POST /api/auth/otp/verify` | Verify OTP, create session |
+| `GET /api/events` | List events |
+| `POST /api/events/:id/register` | Register for event |
+| `GET /api/library` | List library assets |
+| `POST /api/uploads` | Upload file (≤20MB) |
+| `POST /api/invitations` | Single invite |
+| `POST /api/invitations/csv` | Bulk CSV invite |
 
-For day-to-day operator steps, see `docs/admin-content-workflow.md`. For architecture and migration notes, see `warp-reviewed-plan.md`.
+All endpoints are protected; payloads validated with Zod.
+
+## RBAC Roles
+
+```
+owner > admin > manager > expert > user
+```
+
+| Role | Permissions |
+|------|-------------|
+| user | Browse events and library |
+| expert | Co-host/author content |
+| manager | CRUD events and library |
+| admin | Full control (except owner removal) |
+| owner | Full system control |
+
+## Deployment
+
+Single VPS setup:
+- Ubuntu 22.04+ with systemd
+- Caddy for TLS and reverse proxy
+- Managed PostgreSQL (or promote local schema with SSL)
+
+## Documentation
+
+- [Admin Content Workflow](docs/admin-content-workflow.md)
+- [RBAC Decision](docs/rbac-decision.md)
+
+## License
+
+Private — All rights reserved
