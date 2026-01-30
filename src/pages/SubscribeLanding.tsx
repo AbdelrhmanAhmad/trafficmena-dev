@@ -232,7 +232,10 @@ export default function SubscribeLanding() {
             isLoaded={isLoaded}
           />
 
-          {/* Section 2: What Premium Includes (Track Details) */}
+          {/* Section 2: Social Proof */}
+          <TestimonialsSection isLoaded={isLoaded} />
+
+          {/* Section 3: What Premium Includes (Track Details) */}
           <TrackDetailsSection />
 
           {/* Section 3: FREE vs PREMIUM Comparison */}
@@ -244,11 +247,8 @@ export default function SubscribeLanding() {
           {/* Section 5: ROI Argument */}
           <ROISection />
 
-          {/* Section 6: Why TrafficMENA Premium (Differentiation) */}
+          {/* Section 7: Why TrafficMENA Premium (Differentiation) */}
           <DifferentiationSection />
-
-          {/* Section 7: Testimonials */}
-          <TestimonialsSection isLoaded={isLoaded} />
 
           {/* Section 8: Founding Member Pricing */}
           <FoundingMemberPricing

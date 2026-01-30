@@ -404,7 +404,10 @@ function SubscribePaymentView() {
           isLoaded={isLoaded}
         />
 
-        {/* Section 2: What Premium Includes (Track Details) */}
+        {/* Section 2: Social Proof */}
+        <TestimonialsSection isLoaded={isLoaded} />
+
+        {/* Section 3: What Premium Includes (Track Details) */}
         <TrackDetailsSection />
 
         {/* Section 3: FREE vs PREMIUM Comparison */}
@@ -416,11 +419,8 @@ function SubscribePaymentView() {
         {/* Section 5: ROI Argument */}
         <ROISection />
 
-        {/* Section 6: Why TrafficMENA Premium (Differentiation) */}
+        {/* Section 7: Why TrafficMENA Premium (Differentiation) */}
         <DifferentiationSection />
-
-        {/* Section 7: Testimonials */}
-        <TestimonialsSection isLoaded={isLoaded} />
 
         {/* Section 8: FAQ */}
         <FAQSection />
