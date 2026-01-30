@@ -161,7 +161,10 @@ export function registerSeriesRoutes(app: Hono) {
     const idParam = c.req.param('id');
     const idParsed = uuidParamSchema.safeParse(idParam);
     if (!idParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
+        400,
+      );
     }
     const id = idParsed.data;
 
@@ -310,7 +313,10 @@ export function registerSeriesRoutes(app: Hono) {
     const idParam = c.req.param('id');
     const idParsed = uuidParamSchema.safeParse(idParam);
     if (!idParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
+        400,
+      );
     }
     const id = idParsed.data;
 
@@ -352,7 +358,10 @@ export function registerSeriesRoutes(app: Hono) {
     const idParam = c.req.param('id');
     const idParsed = uuidParamSchema.safeParse(idParam);
     if (!idParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
+        400,
+      );
     }
     const id = idParsed.data;
 
@@ -373,7 +382,10 @@ export function registerSeriesRoutes(app: Hono) {
     const seriesIdParam = c.req.param('id');
     const seriesIdParsed = uuidParamSchema.safeParse(seriesIdParam);
     if (!seriesIdParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
+        400,
+      );
     }
     const seriesId = seriesIdParsed.data;
 
@@ -444,14 +456,20 @@ export function registerSeriesRoutes(app: Hono) {
     const seriesIdParam = c.req.param('id');
     const seriesIdParsed = uuidParamSchema.safeParse(seriesIdParam);
     if (!seriesIdParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
+        400,
+      );
     }
     const seriesId = seriesIdParsed.data;
 
     const assetIdParam = c.req.param('assetId');
     const assetIdParsed = uuidParamSchema.safeParse(assetIdParam);
     if (!assetIdParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } },
+        400,
+      );
     }
     const assetId = assetIdParsed.data;
 
@@ -475,7 +493,10 @@ export function registerSeriesRoutes(app: Hono) {
     const seriesIdParam = c.req.param('id');
     const seriesIdParsed = uuidParamSchema.safeParse(seriesIdParam);
     if (!seriesIdParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
+        400,
+      );
     }
     const seriesId = seriesIdParsed.data;
 

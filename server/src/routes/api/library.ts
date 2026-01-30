@@ -454,7 +454,10 @@ export function registerLibraryRoutes(app: Hono) {
     const idParam = c.req.param('id');
     const idParsed = uuidParamSchema.safeParse(idParam);
     if (!idParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } },
+        400,
+      );
     }
     const id = idParsed.data;
 
@@ -554,7 +557,10 @@ export function registerLibraryRoutes(app: Hono) {
     const idParam = c.req.param('id');
     const idParsed = uuidParamSchema.safeParse(idParam);
     if (!idParsed.success) {
-      return c.json({ error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } }, 400);
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Asset ID must be a valid UUID.' } },
+        400,
+      );
     }
     const id = idParsed.data;
 
