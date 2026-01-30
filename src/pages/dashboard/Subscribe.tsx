@@ -250,10 +250,14 @@ function FinalCTASection({
 
         <p className="mt-6 text-sm text-white/50">
           Questions?{' '}
-          <Link to="/contact" className="text-white/70 underline hover:text-white">
-            Contact us
-          </Link>{' '}
-          — we're here to help.
+          <a
+            href="https://wa.me/201505437979"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-white/70 underline hover:text-white"
+          >
+            Contact us on WhatsApp
+          </a>
         </p>
       </div>
     </section>
