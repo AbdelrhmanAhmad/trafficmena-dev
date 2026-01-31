@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  Calculator,
   Calendar,
   Crown,
   Edit,
@@ -63,6 +64,12 @@ const memberMenuItems = [
     url: '/dashboard/library',
     icon: Library,
     description: 'Resources & content',
+  },
+  {
+    title: 'Calculators',
+    url: '/dashboard/calculators',
+    icon: Calculator,
+    description: 'Marketing metrics & tools',
   },
 ];
 
@@ -215,11 +222,15 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
             <SidebarMenu>
               {menuItems.map((item) => {
                 const Icon = item.icon;
+                // Match exact path or sub-paths for sections like library and calculators
+                const isActive =
+                  location.pathname === item.url ||
+                  (item.url !== '/dashboard' && location.pathname.startsWith(`${item.url}/`));
                 return (
                   <SidebarMenuItem key={item.title} className="mb-2">
                     <SidebarMenuButton
                       asChild
-                      isActive={location.pathname === item.url}
+                      isActive={isActive}
                       className="h-auto hover:bg-neutral-100 rounded-xl transition-colors"
                     >
                       <Link to={item.url} className="flex items-center gap-3 py-3.5">
@@ -294,7 +305,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({ variant, children }) => {
           return 'Events & Tracks';
         case '/dashboard/library':
           return 'Library';
+        case '/dashboard/calculators':
+          return 'Marketing Calculators';
         default:
+          if (location.pathname.startsWith('/dashboard/calculators/')) {
+            return 'Calculator';
+          }
           return 'Dashboard';
       }
     }

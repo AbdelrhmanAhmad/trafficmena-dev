@@ -305,6 +305,8 @@ function sanitizeEmbedUrl(
       if (!sanitizedUrl.searchParams.has('preload')) {
         sanitizedUrl.searchParams.set('preload', 'true');
       }
+      // Explicitly disable autoplay - Bunny defaults to autoplay=true when not set
+      sanitizedUrl.searchParams.set('autoplay', 'false');
       // Normalize Bunny Stream "play" URLs to embed URLs for full-size player rendering
       if (
         (sanitizedUrl.hostname === 'iframe.mediadelivery.net' ||

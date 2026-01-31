@@ -159,7 +159,7 @@ const DashboardTrackDetail: React.FC = () => {
                       </span>
                       {track.track_booking_spots_remaining !== null && (
                         <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                          {track.track_booking_spots_remaining} spots remaining
+                          {track.track_booking_spots_remaining <= 0 ? 'Sold Out' : 'Limited Spots'}
                         </span>
                       )}
                     </div>

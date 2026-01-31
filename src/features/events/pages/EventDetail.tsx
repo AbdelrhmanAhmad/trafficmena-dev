@@ -127,11 +127,14 @@ const EventDetail: React.FC = () => {
   }, [bookEvent, event, id, navigate, searchParams]);
 
   const attendeeCountLabel = useMemo(() => {
-    if (!event) return '0 attendees';
-    if (event.max_attendees) {
-      return `${event.attendee_count} / ${event.max_attendees} attending`;
+    if (!event) return 'Limited Spots';
+    const spotsRemaining = event.max_attendees
+      ? event.max_attendees - (event.attendee_count ?? 0)
+      : null;
+    if (spotsRemaining !== null && spotsRemaining <= 0) {
+      return 'Sold Out';
     }
-    return `${event.attendee_count} attendees`;
+    return 'Limited Spots';
   }, [event]);
 
   const showMeetingLink = useMemo(() => {
@@ -338,14 +341,9 @@ const EventDetail: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
                           <Users className="h-5 w-5 text-[#05ef62]" />
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                              Attendance
-                            </p>
-                            <p className="text-sm font-semibold text-neutral-900">
-                              {attendeeCountLabel}
-                            </p>
-                          </div>
+                          <p className="text-sm font-semibold text-neutral-900">
+                            {attendeeCountLabel}
+                          </p>
                         </div>
 
                         {/* Price display */}

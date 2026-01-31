@@ -257,14 +257,11 @@ const ThankYouEvent: React.FC = () => {
 
                     <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
                       <Users className="h-5 w-5 text-[#05ef62]" />
-                      <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                          Attendees
-                        </div>
-                        <div className="font-semibold text-neutral-900">
-                          {event.attendee_count}
-                          {event.max_attendees ? ` / ${event.max_attendees}` : ''} registered
-                        </div>
+                      <div className="font-semibold text-neutral-900">
+                        {event.max_attendees &&
+                        event.attendee_count >= event.max_attendees
+                          ? 'Sold Out'
+                          : 'Limited Spots'}
                       </div>
                     </div>
                   </div>

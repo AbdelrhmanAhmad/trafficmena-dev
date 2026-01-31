@@ -10,11 +10,11 @@ import {
   DifferentiationSection,
   FAQSection,
   ROISection,
-  TestimonialsSection,
+  VideoReviewsSection,
   TrackDetailsSection,
   ValueMathSection,
 } from '@/features/subscribe/components';
-import { FINAL_CTA_COPY, HERO_BENEFITS } from '@/features/subscribe/content';
+import { FINAL_CTA_COPY, HERO_BENEFITS, PRICING } from '@/features/subscribe/content';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { PaymentMethodSelector } from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
@@ -119,7 +119,7 @@ function HeroSection({
             <p
               className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              You're one step away from advanced knowledge and exclusive resources — expert-led
+              You're one step away from advanced knowledge and exclusive resources: expert-led
               tracks, done-for-you playbooks, and a community of 1,250+ MENA marketers.
             </p>
 
@@ -147,7 +147,10 @@ function HeroSection({
                 <Badge className="mb-4 bg-amber-100 text-amber-800 hover:bg-amber-100">
                   Annual Subscription
                 </Badge>
-                <div className="text-5xl font-bold text-neutral-900">
+                <div className="text-4xl font-medium text-neutral-400 line-through">
+                  {PRICING.regular.toLocaleString()} EGP
+                </div>
+                <div className="text-3xl font-bold text-neutral-900">
                   {pricePreview?.amountFormatted ?? `${subscriptionInfo?.priceEgp ?? '---'} EGP`}
                 </div>
                 <p className="mt-1 text-neutral-500">per year</p>
@@ -227,17 +230,17 @@ function FinalCTASection({
           <Button
             onClick={onSubscribe}
             disabled={!selectedMethodId || isPending}
-            className="group inline-flex transform items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0"
+            className="group inline-flex max-w-full transform items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0 whitespace-normal text-center"
           >
             {isPending ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Processing...
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+                <span>Processing...</span>
               </>
             ) : (
               <>
-                <Crown className="h-5 w-5" />
-                Subscribe Now — {subscriptionInfo?.priceEgp ?? '---'} EGP/year
+                <Crown className="h-5 w-5 shrink-0" />
+                <span>Subscribe Now: {subscriptionInfo?.priceEgp ?? '---'} EGP/year</span>
               </>
             )}
           </Button>
@@ -409,7 +412,7 @@ function SubscribePaymentView() {
         />
 
         {/* Section 2: Social Proof */}
-        <TestimonialsSection isLoaded={isLoaded} />
+        <VideoReviewsSection isLoaded={isLoaded} />
 
         {/* Section 3: What Premium Includes (Track Details) */}
         <TrackDetailsSection />

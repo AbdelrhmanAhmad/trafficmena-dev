@@ -52,6 +52,9 @@ const DashboardSeriesDetail = lazy(() => import('./pages/DashboardSeriesDetail')
 const DashboardSubscribePage = lazy(() => import('./pages/dashboard/Subscribe'));
 const LibraryItemDetail = lazy(() => import('./pages/LibraryItemDetail'));
 
+const CalculatorsIndex = lazy(() => import('@/features/calculators/pages/CalculatorsIndex'));
+const CalculatorDetail = lazy(() => import('@/features/calculators/pages/CalculatorDetail'));
+
 const AdminDashboard = lazy(() => import('./pages/admin/index'));
 const AdminSettingsPage = lazy(() => import('./pages/admin/settings'));
 const UserManagement = lazy(() => import('./pages/admin/users'));
@@ -234,6 +237,26 @@ const App = () => {
                       <ProtectedRoute>
                         <ErrorBoundary>
                           <DashboardSeriesDetail />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/calculators"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <CalculatorsIndex />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/calculators/:slug"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <CalculatorDetail />
                         </ErrorBoundary>
                       </ProtectedRoute>
                     }

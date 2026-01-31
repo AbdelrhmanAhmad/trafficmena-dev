@@ -127,8 +127,7 @@ export const EventCard = memo(function EventCard({
           <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-neutral-100 pt-4 text-sm text-neutral-600">
             <span className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              {attendeeCount} RSVPs
-              {typeof maxAttendees === 'number' && maxAttendees > 0 && ` / ${maxAttendees}`}
+              {maxAttendees && attendeeCount >= maxAttendees ? 'Sold Out' : 'Limited Spots'}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />

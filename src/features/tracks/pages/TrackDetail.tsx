@@ -88,8 +88,9 @@ function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
         <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3">
           <span className="flex items-center gap-1 text-sm text-neutral-600">
             <Users className="h-4 w-4" />
-            {event.attendee_count} RSVPs
-            {event.max_attendees && ` / ${event.max_attendees}`}
+            {event.max_attendees && event.attendee_count >= event.max_attendees
+              ? 'Sold Out'
+              : 'Limited Spots'}
           </span>
         </div>
       </div>
@@ -316,16 +317,11 @@ const TrackDetail: React.FC = () => {
                         )}
                         <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
                           <Users className="h-5 w-5 text-purple-500" />
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                              Availability
-                            </p>
-                            <p className="text-sm font-semibold text-neutral-900">
-                              {track.spots_remaining !== null
-                                ? `${track.spots_remaining} spots remaining`
-                                : 'Open enrollment'}
-                            </p>
-                          </div>
+                          <p className="text-sm font-semibold text-neutral-900">
+                            {track.spots_remaining !== null && track.spots_remaining <= 0
+                              ? 'Sold Out'
+                              : 'Limited Spots'}
+                          </p>
                         </div>
 
                         {/* Price display */}

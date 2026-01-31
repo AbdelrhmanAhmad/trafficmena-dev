@@ -8,11 +8,11 @@ import {
   FAQSection,
   FoundingMemberPricing,
   ROISection,
-  TestimonialsSection,
   TrackDetailsSection,
   ValueMathSection,
+  VideoReviewsSection,
 } from '@/features/subscribe/components';
-import { FINAL_CTA_COPY, HERO_BENEFITS } from '@/features/subscribe/content';
+import { FINAL_CTA_COPY, HERO_BENEFITS, PRICING } from '@/features/subscribe/content';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -62,7 +62,7 @@ function HeroSection({
             <p
               className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              Premium gives you advanced knowledge and exclusive resources — expert-led tracks,
+              Premium gives you advanced knowledge and exclusive resources: expert-led tracks,
               done-for-you playbooks, and a community of 1,250+ MENA marketers who push you forward.
             </p>
 
@@ -90,9 +90,12 @@ function HeroSection({
                 <Badge className="mb-4 bg-amber-100 text-amber-800 hover:bg-amber-100">
                   Annual Subscription
                 </Badge>
-                <div className="text-5xl font-bold text-neutral-900">
+                <div className="text-4xl font-medium text-neutral-400 line-through">
+                  {PRICING.regular.toLocaleString()} EGP
+                </div>
+                <div className="text-3xl font-bold text-neutral-900">
                   {subscriptionInfo?.priceEgp ?? '---'}{' '}
-                  <span className="text-2xl font-medium text-neutral-500">EGP</span>
+                  <span className="text-lg font-medium text-neutral-500">EGP</span>
                 </div>
                 <p className="mt-1 text-neutral-500">per year</p>
               </div>
@@ -165,10 +168,10 @@ function FinalCTASection({
         <div className="mt-8">
           <Button
             onClick={onSubscribe}
-            className="group inline-flex transform items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95"
+            className="group inline-flex max-w-full transform items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95 whitespace-normal text-center"
           >
-            <Crown className="h-5 w-5" />
-            Become a Founding Member — {subscriptionInfo?.priceEgp ?? '---'} EGP/year
+            <Crown className="h-5 w-5 shrink-0" />
+            <span>Become a Founding Member: {subscriptionInfo?.priceEgp ?? '---'} EGP/year</span>
           </Button>
         </div>
 
@@ -233,7 +236,7 @@ export default function SubscribeLanding() {
           />
 
           {/* Section 2: Social Proof */}
-          <TestimonialsSection isLoaded={isLoaded} />
+          <VideoReviewsSection isLoaded={isLoaded} />
 
           {/* Section 3: What Premium Includes (Track Details) */}
           <TrackDetailsSection />

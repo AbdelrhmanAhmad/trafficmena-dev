@@ -64,10 +64,10 @@ export function PublicTrackCard({ track, to, className, onClick }: PublicTrackCa
               {track.event_count} {track.event_count === 1 ? 'Session' : 'Sessions'}
             </span>
           </div>
-          {isBookingOpen && track.spots_remaining !== null && (
+          {isBookingOpen && track.spots_remaining !== null && track.spots_remaining <= 0 && (
             <div className="absolute top-3 right-3">
-              <span className="rounded-full bg-green-500 px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
-                {track.spots_remaining} spots left
+              <span className="rounded-full bg-red-500 px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
+                Sold Out
               </span>
             </div>
           )}
@@ -101,9 +101,9 @@ export function PublicTrackCard({ track, to, className, onClick }: PublicTrackCa
           <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-neutral-100 pt-4 text-sm text-neutral-600">
             <span className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              {track.spots_remaining !== null
-                ? `${track.spots_remaining} spots available`
-                : 'Open enrollment'}
+              {track.spots_remaining !== null && track.spots_remaining <= 0
+                ? 'Sold Out'
+                : 'Limited Spots'}
             </span>
             {isBookingOpen && (
               <span className="ml-auto rounded-full bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-3 py-1 text-xs font-medium text-[#101010]">

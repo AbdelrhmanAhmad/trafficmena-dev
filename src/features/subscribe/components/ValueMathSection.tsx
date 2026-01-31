@@ -65,7 +65,7 @@ export function ValueMathSection({ currentPrice }: ValueMathProps) {
             <div className="space-y-4">
               <div className="flex items-center justify-between py-2">
                 <span className="text-sm text-neutral-600">Regular Price</span>
-                <span className="text-sm text-neutral-500 line-through">
+                <span className="text-xl text-neutral-400 line-through">
                   {regularPrice.toLocaleString()} EGP/year
                 </span>
               </div>
@@ -73,7 +73,7 @@ export function ValueMathSection({ currentPrice }: ValueMathProps) {
                 <span className="text-base font-semibold text-amber-700">
                   Founding Member Price
                 </span>
-                <span className="text-2xl font-bold text-amber-600">
+                <span className="text-lg font-bold text-amber-600">
                   {displayPrice.toLocaleString()} EGP/year
                 </span>
               </div>
@@ -94,7 +94,7 @@ export function ValueMathSection({ currentPrice }: ValueMathProps) {
               {monthlyPrice.toLocaleString()} EGP
               <span className="text-lg font-normal text-white/60">/month</span>
             </p>
-            <p className="mt-2 text-sm text-white/50">That's approximately $5 USD/month</p>
+            <p className="mt-2 text-sm text-white/50">That's approximately $8 USD/month</p>
           </div>
         </div>
       </div>

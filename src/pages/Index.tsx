@@ -24,11 +24,11 @@ const benefitItems = [
   // FREE ITEMS (01-03)
   {
     id: '01',
-    title: 'Complete Learning Tracks — Yours Free',
+    title: 'Complete Learning Tracks: Yours Free',
     points: [
       'E-commerce Business Track: 7 sessions covering idea to analytics',
       'AI for Marketers Track: 5 sessions on practical AI tools',
-      'Each session taught by a different specialist — multiple experts, not one instructor',
+      'Each session taught by a different specialist. Multiple experts, not one instructor',
     ],
     icon: BookOpen,
     isPremium: false,
@@ -40,9 +40,9 @@ const benefitItems = [
     id: '02',
     title: 'Professional Marketing Calculators',
     points: [
-      'ROAS Calculator — Know your true return on ad spend',
-      'MER Calculator — Understand your blended performance',
-      'CAC & nCAC Calculators — Track acquisition costs accurately',
+      'ROAS Calculator: Know your true return on ad spend',
+      'MER Calculator: Understand your blended performance',
+      'CAC & nCAC Calculators: Track acquisition costs accurately',
       '19 more tools used by professional marketers daily',
     ],
     icon: Calculator,
@@ -57,7 +57,7 @@ const benefitItems = [
     points: [
       'Monthly live Q&A sessions with industry practitioners',
       'Ask about your specific challenges, get real answers',
-      'No gatekeeping — free members get the same expert access',
+      'No gatekeeping. Free members get the same expert access',
     ],
     icon: MessageCircle,
     isPremium: false,
@@ -72,7 +72,7 @@ const benefitItems = [
     points: [
       'Content Marketing Track: 6 sessions + Content Marketing Day materials',
       'Performance Marketing Track: 7 sessions + Performance Marketing Day materials',
-      'All future tracks included free — no additional cost as we grow',
+      'All future tracks included free. No additional cost as we grow',
     ],
     icon: Rocket,
     isPremium: true,
@@ -214,7 +214,7 @@ const Index: React.FC = () => {
                   <p
                     className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
                   >
-                    TrafficMENA connects you with practitioners — not professors — through
+                    TrafficMENA connects you with practitioners, not professors, through
                     expert-led meetups, structured learning tracks, and a community that actually
                     helps you grow.
                   </p>
@@ -240,7 +240,7 @@ const Index: React.FC = () => {
                     >
                       <Link to="/subscribe">
                         <Crown className="h-4 w-4" />
-                        <span>Go Premium — 40% Off</span>
+                        <span>Go Premium / 50% Off</span>
                       </Link>
                     </Button>
                   </div>
@@ -263,9 +263,9 @@ const Index: React.FC = () => {
                     </div>
                   </div>
                   <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 backdrop-blur hover:bg-white/90 hover:scale-105 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-                    <div className="text-sm font-medium text-neutral-600">Cities</div>
+                    <div className="text-sm font-medium text-neutral-600">Experts</div>
                     <div className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900 group-hover:text-[#29cf9f] transition-colors duration-300">
-                      7
+                      36+
                     </div>
                   </div>
                 </div>
@@ -305,7 +305,7 @@ const Index: React.FC = () => {
             <div className="relative z-10 mx-auto max-w-3xl text-center">
               <span className="text-sm font-normal text-neutral-500">Homepage</span>
               <h2 className="text-[44px] sm:text-6xl lg:text-7xl leading-[0.95] text-neutral-900 mt-2 tracking-tight">
-                Upcoming Events & Core Value Propositions
+                Upcoming Events
               </h2>
             </div>
 
@@ -354,7 +354,7 @@ const Index: React.FC = () => {
             <div className="mx-auto max-w-3xl text-center">
               <span className="text-sm font-normal text-neutral-500">No Payment Required</span>
               <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                Start Learning Today — For Free
+                Start Learning Today: For Free
               </h2>
               <p className="mt-3 text-sm text-neutral-600">
                 Our free membership isn't a teaser. It's a complete learning experience.
@@ -384,7 +384,7 @@ const Index: React.FC = () => {
                 asChild
               >
                 <Link to="/signup">
-                  Join Free — Get Instant Access
+                  Join Free: Get Instant Access
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -497,11 +497,10 @@ const Index: React.FC = () => {
                             {/* Numbered badge with conditional styling */}
                             <div className="relative z-10 flex-shrink-0">
                               <div
-                                className={`flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] bg-white text-lg sm:text-xl font-semibold shadow-sm ${
-                                  isPremium
-                                    ? 'border-amber-400 text-amber-500'
-                                    : 'border-[#05ef62] text-[#05ef62]'
-                                }`}
+                                className={`flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] bg-white text-lg sm:text-xl font-semibold shadow-sm ${isPremium
+                                  ? 'border-amber-400 text-amber-500'
+                                  : 'border-[#05ef62] text-[#05ef62]'
+                                  }`}
                               >
                                 {benefit.id}
                               </div>
@@ -526,9 +525,8 @@ const Index: React.FC = () => {
                                 {benefit.points.map((point) => (
                                   <li key={point} className="flex items-start gap-2.5">
                                     <CheckCircle2
-                                      className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-                                        isPremium ? 'text-amber-500' : 'text-[#05ef62]'
-                                      }`}
+                                      className={`h-5 w-5 flex-shrink-0 mt-0.5 ${isPremium ? 'text-amber-500' : 'text-[#05ef62]'
+                                        }`}
                                     />
                                     <span className="text-sm text-neutral-600 leading-relaxed">
                                       {point}
@@ -578,7 +576,7 @@ const Index: React.FC = () => {
                 >
                   <Link to="/subscribe">
                     <Crown className="h-4 w-4" />
-                    Go Premium — Launch Pricing
+                    Go Premium: Launch Pricing
                   </Link>
                 </Button>
               </div>

@@ -41,14 +41,14 @@ export function FoundingMemberPricing({
 
           {/* Pricing */}
           <div className="mt-8 flex flex-col items-center">
-            <div className="text-lg text-neutral-500 line-through">
+            <div className="text-4xl font-medium text-neutral-400 line-through sm:text-5xl">
               {regularPrice.toLocaleString()} EGP/year
             </div>
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-5xl font-bold text-amber-600 sm:text-6xl">
+              <span className="text-3xl font-bold text-amber-600 sm:text-4xl">
                 {priceEgp !== null && priceEgp !== undefined ? priceEgp.toLocaleString() : '---'}
               </span>
-              <span className="text-xl text-neutral-600">EGP/year</span>
+              <span className="text-lg text-neutral-600">EGP/year</span>
             </div>
             <div className="mt-2 text-sm text-neutral-500">
               {displayPrice > 0 ? Math.round(displayPrice / 12).toLocaleString() : '---'} EGP/month

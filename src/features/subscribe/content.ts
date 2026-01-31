@@ -28,7 +28,7 @@ export const CONTENT_MARKETING_SESSIONS = [
   },
   {
     number: 2,
-    topic: 'Content Marketing Funnel Design — Mapping content to customer journey',
+    topic: 'Content Marketing Funnel Design: Mapping content to customer journey',
   },
   { number: 3, topic: 'Podcast Content Marketing' },
   {
@@ -38,7 +38,7 @@ export const CONTENT_MARKETING_SESSIONS = [
   { number: 5, topic: 'Content Marketing for Personal Branding' },
   {
     number: 6,
-    topic: 'Content Strategy Presentation — How to build your Portfolio',
+    topic: 'Content Strategy Presentation: How to build your Portfolio',
   },
 ];
 
@@ -52,16 +52,16 @@ export const CONTENT_MARKETING_BONUS = [
 export const PERFORMANCE_MARKETING_SESSIONS = [
   { number: 1, topic: 'Performance Marketing Strategy' },
   { number: 2, topic: 'Performance Marketing Mindset' },
-  { number: 3, topic: 'Performance Marketing — Meta Ads' },
-  { number: 4, topic: 'Performance Marketing — TikTok & Snapchat Ads' },
-  { number: 5, topic: 'Performance Marketing — Google Search Ads' },
+  { number: 3, topic: 'Performance Marketing: Meta Ads' },
+  { number: 4, topic: 'Performance Marketing: TikTok & Snapchat Ads' },
+  { number: 5, topic: 'Performance Marketing: Google Search Ads' },
   { number: 6, topic: 'Full B2B Performance Marketing' },
   { number: 7, topic: 'Meta Ads Scaling Strategies' },
 ];
 
 export const PERFORMANCE_MARKETING_BONUS = [
   'Google Ads Deep Dive: PMax, Demand Gen, Standard Shopping (Recording + Presentation)',
-  'Convert Your Skills to Agency — One Niche Agency Model (Recording + Presentation)',
+  'Convert Your Skills to Agency: One Niche Agency Model (Recording + Presentation)',
 ];
 
 // Premium benefits for timeline section
@@ -165,21 +165,20 @@ export const COMPARISON_FEATURES = [
 
 // Value math breakdown
 export const VALUE_MATH_ITEMS = [
-  { label: 'Content Marketing Track + Day Materials', value: 2000 },
-  { label: 'Performance Marketing Track + Day Materials', value: 2500 },
-  { label: '24 Monthly Q&A Sessions (value at 50 EGP each)', value: 1200 },
-  { label: 'Offline Event Savings (2 events × avg 350 EGP)', value: 700 },
-  { label: 'Exclusive Resources (playbooks, templates, guides)', value: 1000 },
-  { label: 'Specialty Subgroup Access', value: 500 },
-  { label: 'Future Tracks (estimated 1-2 new tracks/year)', value: 2000 },
+  { label: 'Content Marketing Track + Offline Day Materials', value: 1000 },
+  { label: 'Performance Marketing Track + Offline Day Materials', value: 2100 },
+  { label: '24 Monthly Q&A Sessions (value at 1000 EGP avg each)', value: 24000 },
+  { label: 'Offline Discount Savings (8 events × avg 350 EGP Discount)', value: 2800 },
+  { label: 'Exclusive Resources (playbooks, templates, guides) avg', value: 5000 },
+  { label: 'All Future Online Tracks & Offline Recordings (estimated 5-8 new tracks/year)', value: 17600 },
 ];
 
 export const TOTAL_VALUE = VALUE_MATH_ITEMS.reduce((sum, item) => sum + item.value, 0);
 
 // Centralized pricing constants
 export const PRICING = {
-  regular: 5000,
-  foundingMember: 3000,
+  regular: 10000,
+  foundingMember: 5000,
 };
 
 // ROI scenarios
@@ -219,7 +218,7 @@ export const DIFFERENTIATORS = [
     icon: Briefcase,
     title: 'Practitioners, Not Professors',
     description:
-      "Every expert who presents at TrafficMENA is actively working in marketing. They're not academics teaching theory — they're professionals sharing what's working NOW.",
+      "Every expert who presents at TrafficMENA is actively working in marketing. They're not academics teaching theory. They're professionals sharing what's working NOW.",
   },
   {
     icon: Globe,
@@ -240,7 +239,7 @@ export const FAQ_ITEMS = [
   {
     question: "What's the difference between free and premium?",
     answer:
-      "Free gives you our E-commerce and AI tracks, 23 calculators, and monthly Q&A — that's a complete learning foundation. Premium adds advanced tracks (Content Marketing, Performance Marketing), exclusive resources, 2x monthly sessions, offline discounts, and specialty subgroups. Think of it as: Free = Foundation, Premium = Specialization.",
+      "Free gives you our E-commerce and AI tracks, 23 calculators, and monthly Q&A. That's a complete learning foundation. Premium adds advanced tracks (Content Marketing, Performance Marketing), exclusive resources, 2x monthly sessions, offline discounts, and specialty subgroups. Think of it as: Free = Foundation, Premium = Specialization.",
   },
   {
     question: "What if I'm already a free member?",
@@ -250,7 +249,7 @@ export const FAQ_ITEMS = [
   {
     question: 'When does founding member pricing end?',
     answer:
-      "We haven't set an exact date, but it won't last indefinitely. We'll give notice before pricing changes — but the best way to lock in this rate is to join now.",
+      "We haven't set an exact date, but it won't last indefinitely. We'll give notice before pricing changes, but the best way to lock in this rate is to join now.",
   },
   {
     question: 'Can I cancel my subscription?',
@@ -270,16 +269,16 @@ export const FAQ_ITEMS = [
   {
     question: 'How is this different from other courses?',
     answer:
-      'Three ways: (1) Multiple experts per track, not one instructor. (2) Practitioners, not professors — everyone teaching is actively working in marketing. (3) Content and community designed for marketers working in this region, not generic Western tactics.',
+      'Three ways: (1) Multiple experts per track, not one instructor. (2) Practitioners, not professors. Everyone teaching is actively working in marketing. (3) Content and community designed for marketers working in this region, not generic Western tactics.',
   },
 ];
 
 // Founding member copy
 export const FOUNDING_MEMBER_COPY = {
   badge: 'Founding Member',
-  headline: 'Lock In 40% Off',
+  headline: 'Lock In 50% Off',
   description:
-    "We're launching TrafficMENA Premium and offering founding members 40% off. This isn't a gimmick — it's our thank-you to early believers. Founding member pricing is available now but won't last forever. Your premium access, however, will.",
+    "We're launching TrafficMENA Premium and offering founding members 50% off. This isn't a gimmick. It's our thank-you to early believers. Founding member pricing is available now but won't last forever. Your premium access, however, will.",
   features: [
     'Instant access to all premium content',
     'Founding member pricing locked for this year',
@@ -287,42 +286,28 @@ export const FOUNDING_MEMBER_COPY = {
   ],
 };
 
-// Testimonials
-export const TESTIMONIALS = [
-  {
-    image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop',
-    quote:
-      'The best investment in my marketing career. The workshops are practical and actionable.',
-    name: 'Ahmed M.',
-    role: 'Digital Marketing Manager',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop',
-    quote: 'Finally, marketing education designed for the MENA region. Highly recommended!',
-    name: 'Sara K.',
-    role: 'E-commerce Specialist',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop',
-    quote: 'The community alone is worth the subscription. Amazing networking opportunities.',
-    name: 'Omar H.',
-    role: 'Startup Founder',
-  },
-  {
-    image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=400&fit=crop',
-    quote: 'Learned more in one month than in my entire marketing degree. Game changer!',
-    name: 'Layla A.',
-    role: 'Content Creator',
-  },
+// Video reviews from Bunny Stream
+export const VIDEO_REVIEWS = [
+  'https://iframe.mediadelivery.net/play/465597/e3fcc1e6-b848-4850-b418-18a4d556ae5e',
+  'https://iframe.mediadelivery.net/play/465597/b9a6f7f9-3cf4-4375-80d8-189df32e857f',
+  'https://iframe.mediadelivery.net/play/465597/c6f7a2f8-a193-4c80-93bf-adc581dc694d',
+  'https://iframe.mediadelivery.net/play/465597/7f908cb7-4049-4d5c-ba0b-e8c296939937',
+  'https://iframe.mediadelivery.net/play/465597/a47eeacf-2395-479e-9442-b713e3fd0784',
+  'https://iframe.mediadelivery.net/play/465597/c4dfb79e-f21f-4985-875c-c1a553919b3a',
+  'https://iframe.mediadelivery.net/play/465597/ee797560-72bb-4293-8eb1-e17425615bed',
+  'https://iframe.mediadelivery.net/play/465597/c57caa71-4089-4689-862b-0786136c0fae',
+  'https://iframe.mediadelivery.net/play/465597/1d1f3b59-4859-40d4-9e10-160091424a86',
+  'https://iframe.mediadelivery.net/play/465597/d871c94b-0a93-4004-8bd5-64b36cfbbc7e',
+  'https://iframe.mediadelivery.net/play/465597/dcdcdeed-4578-47dd-a63b-87262a2eb786',
 ];
 
 // Final CTA copy
 export const FINAL_CTA_COPY = {
   headline: 'Your Next Step',
-  lead: "A year from now, you'll either be the generalist still hoping for a break — or the specialist who made it happen.",
+  lead: "A year from now, you'll either be the generalist still hoping for a break, or the specialist who made it happen.",
   description:
     'Premium membership is your shortcut to specialization. Advanced tracks. Exclusive resources. A community that pushes you forward.',
-  emphasis: "And right now, it's 40% off.",
+  emphasis: "And right now, it's 50% off.",
   secondaryText: 'Not ready?',
   secondaryLink: 'Join Free',
   secondaryLinkHref: '/signup',

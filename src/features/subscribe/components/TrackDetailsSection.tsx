@@ -109,7 +109,7 @@ export function TrackDetailsSection() {
           sessions={CONTENT_MARKETING_SESSIONS}
           bonus={CONTENT_MARKETING_BONUS}
           icon={BookOpen}
-          outcome="Build a content system that attracts, engages, and converts — with a portfolio to prove you can do it."
+          outcome="Build a content system that attracts, engages, and converts, with a portfolio to prove you can do it."
         />
 
         <TrackCard
@@ -118,7 +118,7 @@ export function TrackDetailsSection() {
           sessions={PERFORMANCE_MARKETING_SESSIONS}
           bonus={PERFORMANCE_MARKETING_BONUS}
           icon={Megaphone}
-          outcome="Master paid advertising across Meta, Google, TikTok, and Snapchat — plus learn how to scale campaigns and even build an agency."
+          outcome="Master paid advertising across Meta, Google, TikTok, and Snapchat, plus learn how to scale campaigns and even build an agency."
         />
       </div>
     </section>
