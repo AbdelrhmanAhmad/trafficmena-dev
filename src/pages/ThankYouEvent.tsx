@@ -146,7 +146,6 @@ const ThankYouEvent: React.FC = () => {
     event?.image_url && event.image_url.trim().length > 0
       ? event.image_url.trim()
       : '/placeholder.svg';
-  const hasActiveSubscription = subscription?.status === 'active';
 
   return (
     <Layout>
