@@ -17,11 +17,16 @@ import {
 const invitationQueryKey = (params: FetchInvitationsParams) =>
   ['admin', 'invitations', params] as const;
 
-export function useInvitations(params: FetchInvitationsParams) {
+type UseInvitationsOptions = {
+  enabled?: boolean;
+};
+
+export function useInvitations(params: FetchInvitationsParams, options?: UseInvitationsOptions) {
   return useQuery({
     queryKey: invitationQueryKey(params),
     queryFn: () => fetchInvitations(params),
     staleTime: 60 * 1000,
+    enabled: options?.enabled ?? true,
   });
 }
 

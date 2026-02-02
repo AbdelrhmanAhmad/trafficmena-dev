@@ -229,10 +229,10 @@ async function requireAdmin(c: Context): Promise<AdminGuardSuccess | AdminGuardF
 
   const role = (record?.role ?? 'user').toLowerCase();
 
-  if (role !== 'admin' && role !== 'owner') {
+  if (role !== 'admin' && role !== 'owner' && role !== 'manager') {
     return {
       response: c.json(
-        { error: { code: 'FORBIDDEN', message: 'Admin privileges required.' } },
+        { error: { code: 'FORBIDDEN', message: 'Manager or admin privileges required.' } },
         403,
       ),
     };

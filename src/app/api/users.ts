@@ -64,6 +64,7 @@ export type AdminUserRecord = {
   email: string;
   name: string;
   created_at: string;
+  phone_number: string | null;
   role: string | null;
   user_type: string | null;
   is_subscriber: boolean;
@@ -74,6 +75,7 @@ type ApiAdminUser = {
   email: string;
   name: string;
   createdAt: string;
+  phoneNumber: string | null;
   role: string | null;
   userType: string | null;
   isSubscriber: boolean;
@@ -121,6 +123,7 @@ export async function fetchUsersAdmin(
       email: item.email,
       name: item.name,
       created_at: item.createdAt,
+      phone_number: item.phoneNumber ?? null,
       role: item.role,
       user_type: item.userType,
       is_subscriber: item.isSubscriber,

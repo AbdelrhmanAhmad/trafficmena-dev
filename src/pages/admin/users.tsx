@@ -59,6 +59,7 @@ const AdminUsersPage = () => {
   const { data: currentUser } = useCurrentUser();
   const { isOwner, role: currentRole } = useRolePermissions();
   const queryClient = useQueryClient();
+  const isManagerRole = currentRole === 'manager';
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -145,7 +146,7 @@ const AdminUsersPage = () => {
   };
 
   return (
-    <AdminProtectedRoute allowedRoles={['owner', 'admin']}>
+    <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
       <AppLayout variant="admin">
         <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -222,6 +223,7 @@ const AdminUsersPage = () => {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -235,6 +237,7 @@ const AdminUsersPage = () => {
                       currentUserId={currentUser?.user?.id ?? null}
                       actorRole={currentRole}
                       isOwner={isOwner}
+                      isManagerRole={isManagerRole}
                       bootstrapPromote={bootstrapPromote}
                       onChangeRole={(userId, role) => roleMutation.mutate({ userId, role })}
                       pendingUserId={
@@ -320,6 +323,7 @@ const AdminUsersPage = () => {
 const AdminUserRow = ({
   user,
   isOwner,
+  isManagerRole,
   bootstrapPromote,
   actorRole,
   currentUserId,
@@ -330,6 +334,7 @@ const AdminUserRow = ({
 }: {
   user: AdminUserRecord;
   isOwner: boolean;
+  isManagerRole: boolean;
   bootstrapPromote: boolean;
   actorRole: UserRoleValue | null;
   currentUserId: string | null;
@@ -341,11 +346,19 @@ const AdminUserRow = ({
   const roleKey = (user.role ?? 'user').toLowerCase();
   const isSelf = currentUserId === user.id;
   const bootstrapEditable = bootstrapPromote && isSelf && roleKey !== 'owner';
-  const canEdit = (isOwner && !isSelf) || bootstrapEditable;
+  const canEdit = (() => {
+    if (isManagerRole) return false;
+    if (bootstrapEditable) return true;
+    if (isSelf) return false;
+    if (isOwner) return true;
+    if (actorRole === 'admin' && roleKey !== 'owner') return true;
+    return false;
+  })();
   const isUpdating = pendingUserId === user.id;
   const isDeleting = pendingDeleteUserId === user.id;
 
   const canDelete = (() => {
+    if (isManagerRole) return false;
     if (isSelf) return false;
     if (actorRole === 'owner') return true;
     if (actorRole === 'admin') return roleKey !== 'owner';
@@ -377,6 +390,7 @@ const AdminUserRow = ({
         </div>
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+      <TableCell className="text-sm text-muted-foreground">{user.phone_number ?? '—'}</TableCell>
       <TableCell>
         {canEdit ? (
           <Select
@@ -405,14 +419,16 @@ const AdminUserRow = ({
         {new Date(user.created_at).toLocaleDateString()}
       </TableCell>
       <TableCell className="text-right">
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => onRequestDelete({ user })}
-          disabled={!canDelete || isDeleting}
-        >
-          {isDeleting ? 'Removing…' : 'Delete'}
-        </Button>
+        {canDelete ? (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => onRequestDelete({ user })}
+            disabled={isDeleting}
+          >
+            {isDeleting ? 'Removing…' : 'Delete'}
+          </Button>
+        ) : null}
       </TableCell>
     </TableRow>
   );

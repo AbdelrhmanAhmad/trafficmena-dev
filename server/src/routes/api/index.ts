@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { csrfMiddleware } from '../../utils/csrf.js';
+import { registerAdminMetricsRoutes } from './adminMetrics.js';
 import { registerAuthRoutes } from './auth.js';
 import { registerEventRoutes } from './events.js';
 import { registerInvitationRoutes } from './invitations.js';
@@ -19,6 +20,7 @@ export function registerApiRoutes(app: Hono) {
   api.use('*', csrfMiddleware);
 
   registerAuthRoutes(api);
+  registerAdminMetricsRoutes(api);
   registerUserRoutes(api);
   registerEventRoutes(api);
   registerLibraryRoutes(api);

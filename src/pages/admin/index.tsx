@@ -1,13 +1,26 @@
-import { Activity, BadgeCheck, Clock, TrendingUp, UserCheck, Users } from 'lucide-react';
+import {
+  Activity,
+  BadgeCheck,
+  BookOpen,
+  Calendar,
+  Clock,
+  CreditCard,
+  Mail,
+  TrendingUp,
+  UserCheck,
+  Users,
+} from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useAdminMetricsOverview } from '@/app/hooks/useAdminMetrics';
 import { useInvitations } from '@/app/hooks/useInvitations';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
 import { useIsManager } from '@/shared/hooks/custom/useIsManager';
 
@@ -35,15 +48,25 @@ const MetricCard: React.FC<MetricCardProps> = ({ label, value, icon: Icon, trend
   </Card>
 );
 
+const formatCount = (value: number) => value.toLocaleString();
+const formatRevenue = (cents: number) => `${Math.round(cents / 100).toLocaleString()} EGP`;
+
 const AdminDashboard: React.FC = () => {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const { isManager, loading: managerLoading } = useIsManager();
+  const isManagerOnly = isManager && !isAdmin;
+  const loading = adminLoading || managerLoading;
+  const metricsEnabled = !loading && isAdmin;
+  const {
+    data: adminMetrics,
+    isLoading: metricsLoading,
+    isError: metricsError,
+  } = useAdminMetricsOverview({ enabled: metricsEnabled });
   const {
     data: invitationData,
     isLoading: invitationsLoading,
     isError: invitationsError,
-  } = useInvitations({ page: 1, pageSize: 50 });
-  const loading = adminLoading || managerLoading;
+  } = useInvitations({ page: 1, pageSize: 50 }, { enabled: metricsEnabled });
 
   const invitationStats = useMemo(() => {
     const items = invitationData?.items ?? [];
@@ -68,25 +91,79 @@ const AdminDashboard: React.FC = () => {
     const awaiting = invitationStats.accepted - invitationStats.activated;
     return awaiting > 0 ? awaiting : 0;
   }, [invitationStats.accepted, invitationStats.activated]);
-  // Invitation-focused metrics surfaced on the dashboard while broader analytics are deferred
-  const coreMetrics = [
+
+  const metricsStatus = useMemo(() => {
+    if (!metricsEnabled) return 'Admin access required';
+    if (metricsLoading) return 'Loading metrics...';
+    if (metricsError) return 'Unable to load metrics';
+    const asOfDate = adminMetrics?.asOf
+      ? new Date(adminMetrics.asOf).toLocaleDateString()
+      : new Date().toLocaleDateString();
+    return `As of ${asOfDate}`;
+  }, [metricsEnabled, metricsLoading, metricsError, adminMetrics?.asOf]);
+
+  const userMetrics = adminMetrics?.users;
+  const metricsPlaceholder = !metricsEnabled || metricsLoading || metricsError || !userMetrics;
+
+  const managerQuickLinks = [
     {
-      label: 'Accepted Invitations',
-      value: invitationsLoading ? '—' : invitationStats.accepted,
-      icon: BadgeCheck,
-      trend: invitationsLoading
-        ? 'Loading invitation activity...'
-        : awaitingActivation > 0
-          ? `${awaitingActivation} awaiting activation`
-          : 'All accepted members activated',
+      label: 'Content Library',
+      description: 'Manage resources, tracks, and series.',
+      href: '/admin/library',
+      icon: BookOpen,
     },
     {
-      label: 'Activated Members',
-      value: invitationsLoading ? '—' : invitationStats.activated,
+      label: 'Events & Tracks',
+      description: 'Publish and manage upcoming events.',
+      href: '/admin/meetups',
+      icon: Calendar,
+    },
+    {
+      label: 'User Management',
+      description: 'View and filter community members.',
+      href: '/admin/users',
+      icon: Users,
+    },
+    {
+      label: 'User Invitations',
+      description: 'Invite new members to the platform.',
+      href: '/admin/invitations',
+      icon: Mail,
+    },
+  ];
+
+  const coreMetrics = [
+    {
+      label: 'Total Users',
+      value: metricsPlaceholder ? '—' : formatCount(userMetrics.total),
+      icon: Users,
+      trend: metricsStatus,
+    },
+    {
+      label: 'Premium Users',
+      value: metricsPlaceholder ? '—' : formatCount(userMetrics.premium),
+      icon: BadgeCheck,
+      trend: metricsStatus,
+    },
+    {
+      label: 'Free Users',
+      value: metricsPlaceholder ? '—' : formatCount(userMetrics.free),
       icon: UserCheck,
-      trend: invitationsLoading
-        ? 'Refreshing session links'
-        : `${invitationStats.total} total invitations`,
+      trend: metricsStatus,
+    },
+    {
+      label: 'Active Subscriptions',
+      value: metricsPlaceholder ? '—' : formatCount(userMetrics.activeSubscriptions),
+      icon: Activity,
+      trend: metricsStatus,
+    },
+    {
+      label: 'Subscription Revenue',
+      value: metricsPlaceholder
+        ? '—'
+        : formatRevenue(adminMetrics?.subscriptions.revenueCents ?? 0),
+      icon: CreditCard,
+      trend: metricsStatus,
     },
   ];
 
@@ -119,7 +196,7 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Dashboard Content for Admin/Manager */}
-          {isAdmin || isManager ? (
+          {isAdmin ? (
             <>
               {/* Key Metrics Section */}
               <div className="space-y-4">
@@ -140,11 +217,91 @@ const AdminDashboard: React.FC = () => {
                     />
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Broader platform metrics stay hidden until the `/api/admin/metrics` endpoint
-                  ships.
-                </p>
+                {!metricsEnabled ? (
+                  <p className="text-xs text-muted-foreground">
+                    Admin access required to view user and sales metrics.
+                  </p>
+                ) : metricsError ? (
+                  <p className="text-xs text-destructive">Unable to load user metrics right now.</p>
+                ) : null}
               </div>
+
+              <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                      <CreditCard className="h-5 w-5 text-[#05ef62]" />
+                    </div>
+                    <CardTitle className="text-neutral-900">Paid Sales</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {!metricsEnabled ? (
+                    <p className="text-sm text-muted-foreground">
+                      Admin access required to view paid sales metrics.
+                    </p>
+                  ) : metricsError ? (
+                    <p className="text-sm text-destructive">Unable to load paid sales right now.</p>
+                  ) : (
+                    <Tabs defaultValue="events">
+                      <TabsList>
+                        <TabsTrigger value="events">Events</TabsTrigger>
+                        <TabsTrigger value="tracks">Tracks</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="events">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Paid purchases</p>
+                            <div className="mt-1 text-2xl font-semibold">
+                              {metricsPlaceholder
+                                ? '—'
+                                : formatCount(adminMetrics?.paidSales.events.count ?? 0)}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Revenue</p>
+                            <div className="mt-1 text-2xl font-semibold">
+                              {metricsPlaceholder
+                                ? '—'
+                                : formatRevenue(adminMetrics?.paidSales.events.revenueCents ?? 0)}
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="tracks">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                          <div>
+                            <p className="text-sm text-muted-foreground">Paid purchases</p>
+                            <div className="mt-1 text-2xl font-semibold">
+                              {metricsPlaceholder
+                                ? '—'
+                                : formatCount(adminMetrics?.paidSales.tracks.count ?? 0)}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Revenue</p>
+                            <div className="mt-1 text-2xl font-semibold">
+                              {metricsPlaceholder
+                                ? '—'
+                                : formatRevenue(adminMetrics?.paidSales.tracks.revenueCents ?? 0)}
+                            </div>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  )}
+                  {metricsEnabled && !metricsError ? (
+                    <p className="text-xs text-muted-foreground">
+                      Total paid sales:{' '}
+                      {metricsPlaceholder
+                        ? '—'
+                        : `${formatCount(adminMetrics?.paidSales.total.count ?? 0)} · ${formatRevenue(
+                            adminMetrics?.paidSales.total.revenueCents ?? 0,
+                          )}`}
+                    </p>
+                  ) : null}
+                </CardContent>
+              </Card>
 
               <Card className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
                 <CardHeader>
@@ -156,7 +313,11 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {invitationsError ? (
+                  {!metricsEnabled ? (
+                    <p className="text-sm text-muted-foreground">
+                      Invitation metrics are available to admins only.
+                    </p>
+                  ) : invitationsError ? (
                     <p className="text-sm text-destructive">
                       Unable to load invitation activity right now.
                     </p>
@@ -351,6 +512,41 @@ const AdminDashboard: React.FC = () => {
                 </Card>
               </div>
             </>
+          ) : isManagerOnly ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                  <Users className="h-5 w-5 text-[#05ef62]" />
+                </div>
+                <h2 className="text-2xl font-semibold text-neutral-900">Quick Links</h2>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {managerQuickLinks.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Card
+                      key={item.label}
+                      className="rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur"
+                    >
+                      <CardContent className="p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
+                            <Icon className="h-5 w-5 text-[#05ef62]" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-lg font-semibold text-neutral-900">{item.label}</p>
+                            <p className="text-sm text-neutral-600">{item.description}</p>
+                            <Button variant="outline" asChild className="mt-4">
+                              <Link to={item.href}>Open</Link>
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
             /* Regular User Message */
             <div className="py-12 text-center">

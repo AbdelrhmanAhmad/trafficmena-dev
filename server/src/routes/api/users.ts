@@ -52,12 +52,12 @@ export function registerUserRoutes(app: Hono) {
       .limit(1);
 
     const normalizedRole = (adminProfile[0]?.role ?? 'user').toLowerCase();
-    if (normalizedRole !== 'admin' && normalizedRole !== 'owner') {
+    if (normalizedRole !== 'admin' && normalizedRole !== 'owner' && normalizedRole !== 'manager') {
       return c.json(
         {
           error: {
             code: 'FORBIDDEN',
-            message: 'Admin privileges required.',
+            message: 'Manager or admin privileges required.',
           },
         },
         403,
@@ -94,6 +94,7 @@ export function registerUserRoutes(app: Hono) {
         createdAt: users.createdAt,
         role: profiles.role,
         userType: profiles.userType,
+        phoneNumber: profiles.phoneNumber,
         isSubscriber: sql<boolean>`EXISTS (
           SELECT 1
           FROM subscriptions s

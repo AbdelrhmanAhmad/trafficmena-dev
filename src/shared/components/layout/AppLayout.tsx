@@ -93,14 +93,14 @@ const adminMenuItems = [
     title: 'User Management',
     url: '/admin/users',
     icon: Users,
-    roles: ['owner', 'admin'] as UserRole[],
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
     description: 'Manage users & roles',
   },
   {
     title: 'User Invitations',
     url: '/admin/invitations',
     icon: Mail,
-    roles: ['owner', 'admin'] as UserRole[],
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
     description: 'Send & manage invitations',
   },
   {

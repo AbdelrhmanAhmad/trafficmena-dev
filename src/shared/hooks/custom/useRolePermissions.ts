@@ -40,7 +40,7 @@ export const useRolePermissions = () => {
       isMember: role === 'user',
       canManageContent: rank >= ROLE_PRIORITY.manager,
       canDeleteContent: rank >= ROLE_PRIORITY.admin,
-      canManageInvites: rank >= ROLE_PRIORITY.admin,
+      canManageInvites: rank >= ROLE_PRIORITY.manager,
       canManageUsers: rank >= ROLE_PRIORITY.admin,
       canAccessAdmin: rank >= ROLE_PRIORITY.manager,
       hasRole: (required: UserRole | UserRole[]) => {

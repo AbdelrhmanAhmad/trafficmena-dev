@@ -1,8 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, FileText, Library, MapPin, Sparkles, Users } from 'lucide-react';
+import DOMPurify from 'dompurify';
+import { BookOpen, Calendar, FileText, FolderOpen, MapPin, Sparkles, Users } from 'lucide-react';
 import type React from 'react';
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchEvents } from '@/app/api/events';
 import { fetchLibraryAssets } from '@/app/api/library';
+import { fetchSeries } from '@/app/api/series';
+import { fetchTracks } from '@/app/api/tracks';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { SubscriptionStatusBadge } from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
@@ -30,9 +35,9 @@ const WelcomeDashboard: React.FC = () => {
     isLoading: assetsLoading,
     error: assetsError,
   } = useQuery({
-    queryKey: ['welcome-library-assets'],
+    queryKey: ['welcome-library-assets-single'],
     queryFn: async () => {
-      const response = await fetchLibraryAssets({ page: 1, pageSize: 4 });
+      const response = await fetchLibraryAssets({ page: 1, pageSize: 3, excludeInTracks: true });
       return response.items;
     },
     staleTime: 5 * 60 * 1000,
@@ -41,6 +46,44 @@ const WelcomeDashboard: React.FC = () => {
 
   const events = eventsData ?? [];
   const assets = assetsData ?? [];
+
+  const {
+    data: tracksData,
+    isLoading: tracksLoading,
+    error: tracksError,
+  } = useQuery({
+    queryKey: ['welcome-tracks'],
+    queryFn: async () => {
+      const response = await fetchTracks({ page: 1, pageSize: 3 });
+      return response.items;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const {
+    data: seriesData,
+    isLoading: seriesLoading,
+    error: seriesError,
+  } = useQuery({
+    queryKey: ['welcome-series'],
+    queryFn: async () => {
+      const response = await fetchSeries({ page: 1, pageSize: 3 });
+      return response.items;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const tracks = tracksData ?? [];
+  const series = seriesData ?? [];
+  const singleContent = useMemo(
+    () =>
+      [...assets].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
+    [assets],
+  );
 
   const formatDate = (value: string | null | undefined) => {
     if (!value) return 'Date TBA';
@@ -51,6 +94,19 @@ const WelcomeDashboard: React.FC = () => {
       day: 'numeric',
       year: 'numeric',
     });
+  };
+
+  const sanitizeConfig = {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u'],
+    ALLOWED_ATTR: [],
+  };
+
+  const getPlainText = (value: string | null | undefined) => {
+    if (!value) return '';
+    const sanitized = DOMPurify.sanitize(value, sanitizeConfig);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = sanitized;
+    return tempDiv.textContent || tempDiv.innerText || '';
   };
 
   return (
@@ -80,7 +136,7 @@ const WelcomeDashboard: React.FC = () => {
           </div>
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card className="flex flex-col rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <CardHeader className="p-5 sm:p-6">
               <div className="flex items-center gap-3">
@@ -106,39 +162,38 @@ const WelcomeDashboard: React.FC = () => {
                   </p>
                 ) : events.length > 0 ? (
                   events.map((event) => (
-                    <div
-                      key={event.id}
-                      className="rounded-2xl border border-neutral-200 bg-white/90 p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#05ef62]/40"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">
-                          {event.title}
-                        </h3>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20 flex-shrink-0 ml-2">
-                          <Calendar className="h-4 w-4 text-[#05ef62]" />
+                    <Link key={event.id} to={`/meetups/${event.id}`} className="block">
+                      <div className="rounded-2xl border border-neutral-200 bg-white/90 p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#05ef62]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#05ef62]/40">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">
+                            {event.title}
+                          </h3>
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20 flex-shrink-0 ml-2">
+                            <Calendar className="h-4 w-4 text-[#05ef62]" />
+                          </div>
+                        </div>
+                        <p className="mt-1 flex items-center gap-2 text-xs text-neutral-600">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(event.date)}
+                        </p>
+                        {event.location ? (
+                          <p className="mt-1 flex items-center gap-2 text-xs text-neutral-600">
+                            <MapPin className="h-3 w-3" />
+                            {event.location}
+                          </p>
+                        ) : (
+                          <p className="mt-1 flex items-center gap-2 text-xs text-neutral-600">
+                            <Users className="h-3 w-3" />
+                            Online Event
+                          </p>
+                        )}
+                        <div className="mt-3 flex items-center gap-2">
+                          <Badge className="rounded-full border border-[#05ef62]/60 bg-[#05ef62]/10 text-[#05ef62] px-2 py-1 text-[10px] font-medium">
+                            {event.event_type}
+                          </Badge>
                         </div>
                       </div>
-                      <p className="mt-1 flex items-center gap-2 text-xs text-neutral-600">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(event.date)}
-                      </p>
-                      {event.location ? (
-                        <p className="mt-1 flex items-center gap-2 text-xs text-neutral-600">
-                          <MapPin className="h-3 w-3" />
-                          {event.location}
-                        </p>
-                      ) : (
-                        <p className="mt-1 flex items-center gap-2 text-xs text-neutral-600">
-                          <Users className="h-3 w-3" />
-                          Online Event
-                        </p>
-                      )}
-                      <div className="mt-3 flex items-center gap-2">
-                        <Badge className="rounded-full border border-[#05ef62]/60 bg-[#05ef62]/10 text-[#05ef62] px-2 py-1 text-[10px] font-medium">
-                          {event.event_type}
-                        </Badge>
-                      </div>
-                    </div>
+                    </Link>
                   ))
                 ) : (
                   <p className="text-sm text-neutral-600">
@@ -151,7 +206,7 @@ const WelcomeDashboard: React.FC = () => {
                 variant="default"
                 asChild
               >
-                <a href="/meetups">Browse Events</a>
+                <Link to="/meetups">Browse Events</Link>
               </Button>
             </CardContent>
           </Card>
@@ -160,10 +215,136 @@ const WelcomeDashboard: React.FC = () => {
             <CardHeader className="p-5 sm:p-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#29cf9f] to-[#00fdc2] text-white shadow-lg">
-                  <Library className="h-5 w-5 sm:h-6 sm:w-6" />
+                  <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <CardTitle className="text-lg sm:text-xl text-neutral-900">
-                  Latest Learning Resources
+                  Learning Tracks
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col justify-between space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">
+              <div className="space-y-3">
+                {tracksLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-52" />
+                    <Skeleton className="h-3 w-40" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                ) : tracksError ? (
+                  <p className="text-sm text-destructive">Unable to load tracks right now.</p>
+                ) : tracks.length > 0 ? (
+                  tracks.map((track) => (
+                    <Link key={track.id} to={`/tracks/${track.id}`} className="block">
+                      <div className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#29cf9f]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#29cf9f]/40">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">
+                            {track.title}
+                          </h3>
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#f4fff9]/40 to-[#d5ffe9]/20 flex-shrink-0 ml-2">
+                            <FolderOpen className="h-4 w-4 text-[#29cf9f]" />
+                          </div>
+                        </div>
+                        {track.description ? (
+                          <p className="mt-1 line-clamp-2 text-xs text-neutral-600">
+                            {getPlainText(track.description)}
+                          </p>
+                        ) : null}
+                        <div className="mt-3 flex items-center gap-2">
+                          <Badge className="rounded-full border border-[#29cf9f]/60 bg-[#29cf9f]/10 text-[#29cf9f] px-2 py-1 text-[10px] font-medium">
+                            {track.event_count} {track.event_count === 1 ? 'Event' : 'Events'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="text-sm text-neutral-600">
+                    Tracks will appear here as soon as they&apos;re published.
+                  </p>
+                )}
+              </div>
+              <Button
+                className="self-start rounded-xl bg-gradient-to-r from-[#29cf9f] to-[#00fdc2] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
+                variant="default"
+                asChild
+              >
+                <Link to="/meetups">Browse Tracks</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <CardHeader className="p-5 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] text-white shadow-lg">
+                  <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">Series</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-1 flex-col justify-between space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">
+              <div className="space-y-3">
+                {seriesLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-52" />
+                    <Skeleton className="h-3 w-40" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                ) : seriesError ? (
+                  <p className="text-sm text-destructive">Unable to load series right now.</p>
+                ) : series.length > 0 ? (
+                  series.map((item) => (
+                    <Link
+                      key={item.id}
+                      to={`/dashboard/library/series/${item.id}`}
+                      className="block"
+                    >
+                      <div className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#6366f1]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366f1]/40">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">
+                            {item.title}
+                          </h3>
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#ede9fe]/60 to-[#e0e7ff]/30 flex-shrink-0 ml-2">
+                            <BookOpen className="h-4 w-4 text-[#6366f1]" />
+                          </div>
+                        </div>
+                        {item.description ? (
+                          <p className="mt-1 line-clamp-2 text-xs text-neutral-600">
+                            {getPlainText(item.description)}
+                          </p>
+                        ) : null}
+                        <div className="mt-3 flex items-center gap-2">
+                          <Badge className="rounded-full border border-[#6366f1]/60 bg-[#6366f1]/10 text-[#6366f1] px-2 py-1 text-[10px] font-medium">
+                            {item.asset_count} {item.asset_count === 1 ? 'Item' : 'Items'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="text-sm text-neutral-600">
+                    Series will appear here as soon as they&apos;re published.
+                  </p>
+                )}
+              </div>
+              <Button
+                className="self-start rounded-xl bg-gradient-to-r from-[#8b5cf6] to-[#6366f1] px-4 py-2 text-sm font-medium text-white shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
+                variant="default"
+                asChild
+              >
+                <Link to="/dashboard/library">View Series</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="flex flex-col rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
+            <CardHeader className="p-5 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#10b981] to-[#34d399] text-white shadow-lg">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">
+                  Single Content
                 </CardTitle>
               </div>
             </CardHeader>
@@ -177,46 +358,45 @@ const WelcomeDashboard: React.FC = () => {
                   </div>
                 ) : assetsError ? (
                   <p className="text-sm text-destructive">
-                    Unable to load library items right now.
+                    Unable to load single content right now.
                   </p>
-                ) : assets.length > 0 ? (
-                  assets.map((asset) => (
-                    <div
-                      key={asset.id}
-                      className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#29cf9f]/40"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">
-                          {asset.title}
-                        </h3>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#f4fff9]/40 to-[#d5ffe9]/20 flex-shrink-0 ml-2">
-                          <FileText className="h-4 w-4 text-[#29cf9f]" />
+                ) : singleContent.length > 0 ? (
+                  singleContent.map((asset) => (
+                    <Link key={asset.id} to={`/dashboard/library/${asset.id}`} className="block">
+                      <div className="rounded-2xl border border-neutral-200 bg-white/80 backdrop-blur p-4 text-left transition-all duration-300 hover:scale-105 hover:-translate-y-1 hover:shadow-lg hover:border-[#10b981]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10b981]/40">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className="text-sm font-semibold text-neutral-900 line-clamp-2">
+                            {asset.title}
+                          </h3>
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20 flex-shrink-0 ml-2">
+                            <FileText className="h-4 w-4 text-[#10b981]" />
+                          </div>
+                        </div>
+                        {asset.description ? (
+                          <p className="mt-1 line-clamp-2 text-xs text-neutral-600">
+                            {getPlainText(asset.description)}
+                          </p>
+                        ) : null}
+                        <div className="mt-3 flex items-center gap-2">
+                          <Badge className="rounded-full border border-[#10b981]/60 bg-[#10b981]/10 text-[#10b981] px-2 py-1 text-[10px] font-medium">
+                            {asset.file_type}
+                          </Badge>
                         </div>
                       </div>
-                      {asset.description ? (
-                        <p className="mt-1 line-clamp-2 text-xs text-neutral-600">
-                          {asset.description}
-                        </p>
-                      ) : null}
-                      <div className="mt-3 flex items-center gap-2">
-                        <Badge className="rounded-full border border-[#29cf9f]/60 bg-[#29cf9f]/10 text-[#29cf9f] px-2 py-1 text-[10px] font-medium">
-                          {asset.file_type}
-                        </Badge>
-                      </div>
-                    </div>
+                    </Link>
                   ))
                 ) : (
                   <p className="text-sm text-neutral-600">
-                    Library uploads will appear here as soon as they&apos;re published.
+                    Single content will appear here once available.
                   </p>
                 )}
               </div>
               <Button
-                className="self-start rounded-xl bg-gradient-to-r from-[#29cf9f] to-[#00fdc2] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
+                className="self-start rounded-xl bg-gradient-to-r from-[#10b981] to-[#34d399] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
                 variant="default"
                 asChild
               >
-                <a href="/dashboard/library">View Library</a>
+                <Link to="/dashboard/library">View Library</Link>
               </Button>
             </CardContent>
           </Card>

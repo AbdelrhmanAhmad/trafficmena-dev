@@ -359,7 +359,7 @@ const App = () => {
                   <Route
                     path="/admin"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminDashboard />
                         </ErrorBoundary>
@@ -379,7 +379,7 @@ const App = () => {
                   <Route
                     path="/admin/users"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <UserManagement />
                         </ErrorBoundary>
@@ -389,7 +389,7 @@ const App = () => {
                   <Route
                     path="/admin/library"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <LibraryManagement />
                         </ErrorBoundary>
@@ -399,7 +399,7 @@ const App = () => {
                   <Route
                     path="/admin/library/new-item"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <NewLibraryItem />
                         </ErrorBoundary>
@@ -409,7 +409,7 @@ const App = () => {
                   <Route
                     path="/admin/library/edit/:id"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <EditLibraryItem />
                         </ErrorBoundary>
@@ -419,7 +419,7 @@ const App = () => {
                   <Route
                     path="/admin/library/:id"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminLibraryItemDetail />
                         </ErrorBoundary>
@@ -429,7 +429,7 @@ const App = () => {
                   <Route
                     path="/admin/library/tracks/new"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <NewTrackPage />
                         </ErrorBoundary>
@@ -439,7 +439,7 @@ const App = () => {
                   <Route
                     path="/admin/library/tracks/:id"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <TrackDetailPage />
                         </ErrorBoundary>
@@ -449,7 +449,7 @@ const App = () => {
                   <Route
                     path="/admin/library/series/new"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <NewSeriesPage />
                         </ErrorBoundary>
@@ -459,7 +459,7 @@ const App = () => {
                   <Route
                     path="/admin/library/series/:id"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <SeriesDetailPage />
                         </ErrorBoundary>
@@ -469,7 +469,7 @@ const App = () => {
                   <Route
                     path="/admin/meetups"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminMeetups />
                         </ErrorBoundary>
@@ -479,7 +479,7 @@ const App = () => {
                   <Route
                     path="/admin/meetups/new"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminMeetupsNew />
                         </ErrorBoundary>
@@ -489,7 +489,7 @@ const App = () => {
                   <Route
                     path="/admin/meetups/edit/:id"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <EditMeetup />
                         </ErrorBoundary>
@@ -499,7 +499,7 @@ const App = () => {
                   <Route
                     path="/admin/events/:id"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminEventDetail />
                         </ErrorBoundary>
@@ -519,7 +519,7 @@ const App = () => {
                   <Route
                     path="/admin/invitations"
                     element={
-                      <AdminProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminInvitations />
                         </ErrorBoundary>

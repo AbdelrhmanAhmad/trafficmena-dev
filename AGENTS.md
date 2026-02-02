@@ -134,7 +134,7 @@ owner  > admin > manager > expert > user
 
 - **user**: Read-only access to events and library
 - **expert**: Can co-host/author content
-- **manager**: CRUD events + library (no delete, no user management)
+- **manager**: CRUD events + library (no delete), manage invitations, view-only user directory
 - **admin**: Full control except removing owners
 - **owner**: Full system control
 
@@ -162,9 +162,9 @@ POST /api/library              # Create asset (stub)
 DELETE /api/library/:id        # Delete asset (stub)
 
 GET  /api/users/me             # Current user profile
-GET  /api/invitations          # List invitations (admin)
-POST /api/invitations          # Single invite (admin)
-POST /api/invitations/csv      # Bulk CSV invite (admin)
+GET  /api/invitations          # List invitations (manager+)
+POST /api/invitations          # Single invite (manager+)
+POST /api/invitations/csv      # Bulk CSV invite (manager+)
 
 POST /api/uploads              # File upload to BunnyCDN (<=20MB)
 GET  /api/settings             # Platform settings

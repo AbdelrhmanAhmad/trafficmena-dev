@@ -13,11 +13,12 @@ import {
 } from '@/shared/components/ui/dropdown-menu';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
+import { getAdminDashboardPath } from '@/shared/utils/adminAccess';
 
 const UserProfileDropdown: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { canAccessAdmin, isOwner, isAdmin, isManager } = useRolePermissions();
+  const { canAccessAdmin, isOwner, isAdmin, isManager, role } = useRolePermissions();
   const { data: currentUser } = useCurrentUser();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
   const profile = currentUser?.profile;
@@ -133,7 +134,7 @@ const UserProfileDropdown: React.FC = () => {
 
         {canAccessAdmin && (
           <DropdownMenuItem asChild>
-            <Link to="/admin" className="flex cursor-pointer items-center">
+            <Link to={getAdminDashboardPath(role)} className="flex cursor-pointer items-center">
               <Shield className="mr-2 h-4 w-4" />
               <span>
                 {isOwner ? 'Owner Dashboard' : isAdmin ? 'Admin Dashboard' : 'Manager Dashboard'}

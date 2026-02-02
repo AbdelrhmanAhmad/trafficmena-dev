@@ -14,7 +14,7 @@ During RBAC implementation we briefly considered renaming the free tier role fro
 **Current Role Structure:**
 - `owner` – Full system control
 - `admin` – Full control except removing owners
-- `manager` – Create/update events & library, no delete, no user management
+- `manager` – Create/update events & library (no delete), manage invitations, view-only user directory
 - `expert` – Co-host/author content only
 - `user` – View-only access to events and library (MVP free tier)
 
