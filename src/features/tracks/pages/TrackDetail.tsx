@@ -12,8 +12,8 @@ import {
   Users,
 } from 'lucide-react';
 import type React from 'react';
-import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { PublicTrackEventRecord } from '@/app/api/tracks';
 import { usePricePreview } from '@/app/hooks/usePayments';
 import DataLoader from '@/shared/components/DataLoader';
@@ -26,6 +26,7 @@ import {
   isValidLocationUrl,
   useLocationVisibility,
 } from '@/shared/hooks/custom/useLocationVisibility';
+import { storePendingTrackContext } from '@/shared/utils/trackRedirectUtils';
 import { useBookTrack, usePublicTrack } from '../hooks/useTracks';
 
 type SanitizedHtmlProps = {
@@ -114,6 +115,7 @@ const TrackDetail: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const { isManager: isStaff, loading: adminLoading } = useIsManager();
   const { data, isLoading, error } = usePublicTrack(id || '');
   const bookMutation = useBookTrack();
@@ -175,10 +177,34 @@ const TrackDetail: React.FC = () => {
     return { canBook: true, message: null };
   }, [track]);
 
+  useEffect(() => {
+    if (!id || !track || !user || !needsPayment) return;
+    const checkoutParam = searchParams.get('checkout');
+    if (checkoutParam !== '1') return;
+    setShowPaymentDialog(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('checkout');
+    const nextQuery = next.toString();
+    navigate(`/tracks/${id}${nextQuery ? `?${nextQuery}` : ''}`, { replace: true });
+  }, [id, navigate, needsPayment, searchParams, track, user]);
+
   const handleBook = () => {
     if (!id) return;
 
     if (!user) {
+      if (track) {
+        const stored = storePendingTrackContext({
+          trackId: id,
+          trackTitle: track.title,
+          redirectUrl: `/tracks/${id}`,
+          requiresPayment: needsPayment,
+        });
+
+        if (!stored) {
+          console.warn('Failed to capture track context prior to signup redirect.');
+        }
+      }
+
       navigate('/signup?source=track');
       return;
     }

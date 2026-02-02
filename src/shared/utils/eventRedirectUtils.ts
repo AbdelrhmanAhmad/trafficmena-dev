@@ -10,6 +10,7 @@ export interface PendingEventContext {
   eventTitle: string;
   eventDate: string;
   redirectUrl: string;
+  requiresPayment: boolean;
   timestamp: number;
 }
 

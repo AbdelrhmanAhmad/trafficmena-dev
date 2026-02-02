@@ -133,6 +133,17 @@ const EventDetail: React.FC = () => {
     }
   }, [bookEvent, event, id, navigate, searchParams]);
 
+  useEffect(() => {
+    if (!id || !event || !user || !needsPayment) return;
+    const checkoutParam = searchParams.get('checkout');
+    if (checkoutParam !== '1') return;
+    setShowPaymentDialog(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('checkout');
+    const nextQuery = next.toString();
+    navigate(`/meetups/${id}${nextQuery ? `?${nextQuery}` : ''}`, { replace: true });
+  }, [event, id, navigate, needsPayment, searchParams, user]);
+
   const attendeeCountLabel = useMemo(() => {
     if (!event) return 'Limited Spots';
     const spotsRemaining = event.max_attendees
@@ -172,6 +183,7 @@ const EventDetail: React.FC = () => {
         eventTitle: event.title,
         eventDate: event.date,
         redirectUrl: `/meetups/${id}`,
+        requiresPayment: needsPayment,
       });
 
       if (!stored) {

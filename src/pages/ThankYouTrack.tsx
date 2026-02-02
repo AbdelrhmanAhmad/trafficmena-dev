@@ -23,6 +23,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { isValidLocationUrl } from '@/shared/hooks/custom/useLocationVisibility';
+import { clearPendingTrackContext } from '@/shared/utils/trackRedirectUtils';
 
 const ThankYouTrack: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,6 +45,7 @@ const ThankYouTrack: React.FC = () => {
     if (user && id && track && isFreeTrack && !track.user_has_booked) {
       bookTrack(id);
     }
+    clearPendingTrackContext();
   }, [user, id, track, bookTrack]);
 
   const formatEventDate = (dateString: string) => {

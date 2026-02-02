@@ -38,13 +38,18 @@ const ThankYouEvent: React.FC = () => {
   const { bookEvent } = useEventBooking();
   const { data: subscription } = useCurrentSubscription({ enabled: Boolean(user) });
 
+  const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
+  const hasActiveSubscription = subscription?.status === 'active';
+  const requiresPayment =
+    (event?.price_in_cents ?? 0) > 0 && !(hasActiveSubscription && isOnlineEvent);
+
   // Auto-register user for the event when arriving from post-signup flow
   useEffect(() => {
-    if (user && id && event && !event.attending) {
+    if (user && id && event && !event.attending && !requiresPayment) {
       bookEvent({ event_id: id });
     }
     clearPendingEventContext();
-  }, [user, id, event, bookEvent]);
+  }, [user, id, event, bookEvent, requiresPayment]);
 
   const formatEventDate = (dateString: string) => {
     try {
@@ -136,7 +141,6 @@ const ThankYouEvent: React.FC = () => {
     window.URL.revokeObjectURL(link.href);
   };
 
-  const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
   const locationLabel = event?.location || (isOnlineEvent ? 'Online Event' : 'Location TBD');
   const eventImageUrl =
     event?.image_url && event.image_url.trim().length > 0
