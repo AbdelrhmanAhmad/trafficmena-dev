@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -29,11 +29,17 @@ const MoMGrowthCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const previousValueId = useId();
+  const currentValueId = useId();
+  const startValueId = useId();
+  const endValueId = useId();
+  const numberOfMonthsId = useId();
+
   // MoM Growth = (Current - Previous) / Previous × 100
   const calculateMoMGrowth = (): number | null => {
     const prev = parseFloat(previousValue);
     const curr = parseFloat(currentValue);
-    if (isNaN(prev) || isNaN(curr) || prev <= 0) return null;
+    if (Number.isNaN(prev) || Number.isNaN(curr) || prev <= 0) return null;
     return ((curr - prev) / prev) * 100;
   };
 
@@ -42,7 +48,14 @@ const MoMGrowthCalculator = () => {
     const start = parseFloat(startValue);
     const end = parseFloat(endValue);
     const months = parseFloat(numberOfMonths);
-    if (isNaN(start) || isNaN(end) || isNaN(months) || start <= 0 || months <= 0) return null;
+    if (
+      Number.isNaN(start) ||
+      Number.isNaN(end) ||
+      Number.isNaN(months) ||
+      start <= 0 ||
+      months <= 0
+    )
+      return null;
     return ((end / start) ** (1 / months) - 1) * 100;
   };
 
@@ -274,10 +287,10 @@ const MoMGrowthCalculator = () => {
                 <div className="space-y-4">
                   {/* Previous Month Value */}
                   <div className="space-y-2">
-                    <Label htmlFor="previousValue">Previous Month Value</Label>
+                    <Label htmlFor={previousValueId}>Previous Month Value</Label>
                     <div className="relative">
                       <Input
-                        id="previousValue"
+                        id={previousValueId}
                         type="number"
                         placeholder="e.g., 100000"
                         value={previousValue}
@@ -306,10 +319,10 @@ const MoMGrowthCalculator = () => {
 
                   {/* Current Month Value */}
                   <div className="space-y-2">
-                    <Label htmlFor="currentValue">Current Month Value</Label>
+                    <Label htmlFor={currentValueId}>Current Month Value</Label>
                     <div className="relative">
                       <Input
-                        id="currentValue"
+                        id={currentValueId}
                         type="number"
                         placeholder="e.g., 120000"
                         value={currentValue}
@@ -390,10 +403,10 @@ const MoMGrowthCalculator = () => {
                 <div className="space-y-4">
                   {/* Start Value */}
                   <div className="space-y-2">
-                    <Label htmlFor="startValue">Start Value (Month 1)</Label>
+                    <Label htmlFor={startValueId}>Start Value (Month 1)</Label>
                     <div className="relative">
                       <Input
-                        id="startValue"
+                        id={startValueId}
                         type="number"
                         placeholder="e.g., 10000"
                         value={startValue}
@@ -422,10 +435,10 @@ const MoMGrowthCalculator = () => {
 
                   {/* End Value */}
                   <div className="space-y-2">
-                    <Label htmlFor="endValue">End Value (Final Month)</Label>
+                    <Label htmlFor={endValueId}>End Value (Final Month)</Label>
                     <div className="relative">
                       <Input
-                        id="endValue"
+                        id={endValueId}
                         type="number"
                         placeholder="e.g., 20000"
                         value={endValue}
@@ -454,9 +467,9 @@ const MoMGrowthCalculator = () => {
 
                   {/* Number of Months */}
                   <div className="space-y-2">
-                    <Label htmlFor="numberOfMonths">Number of Months Between</Label>
+                    <Label htmlFor={numberOfMonthsId}>Number of Months Between</Label>
                     <Input
-                      id="numberOfMonths"
+                      id={numberOfMonthsId}
                       type="number"
                       placeholder="e.g., 11"
                       value={numberOfMonths}

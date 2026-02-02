@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Upload } from 'lucide-react';
 import { type ChangeEvent, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { uploadFile } from '@/app/api/uploads';
+import { LazyEditor } from '@/shared/components/LazyEditor';
 import { Button } from '@/shared/components/ui/button';
 import {
   Form,
@@ -16,7 +17,6 @@ import {
 } from '@/shared/components/ui/form';
 import { Input } from '@/shared/components/ui/input';
 import { Switch } from '@/shared/components/ui/switch';
-import { Textarea } from '@/shared/components/ui/textarea';
 import type { Track } from '../types';
 
 const trackFormSchema = z
@@ -41,6 +41,21 @@ const trackFormSchema = z
           !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
         'Price must be between 0 and 100,000 EGP.',
       ),
+    // Location fields
+    location: z.string().trim().max(255).optional(),
+    locationUrl: z
+      .string()
+      .url('Enter a valid URL')
+      .max(500)
+      .refine((value) => {
+        try {
+          return new URL(value).protocol === 'https:';
+        } catch {
+          return false;
+        }
+      }, 'Location URL must start with https://')
+      .optional()
+      .or(z.literal('')),
   })
   .refine(
     (data) => {
@@ -123,6 +138,8 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
       singleBookingStart: formatDateForInput(track?.single_booking_start),
       singleBookingEnd: formatDateForInput(track?.single_booking_end),
       priceEgp: track?.price_in_cents ? String(track.price_in_cents / 100) : '',
+      location: track?.location || '',
+      locationUrl: track?.location_url || '',
     },
   });
 
@@ -171,17 +188,21 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
         <FormField
           control={form.control}
           name="description"
-          render={({ field }) => (
+          render={() => (
             <FormItem>
               <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Describe what members will learn in this track..."
-                  rows={4}
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>Brief overview of the track content.</FormDescription>
+              <Controller
+                control={form.control}
+                name="description"
+                render={({ field: editorField }) => (
+                  <LazyEditor
+                    value={editorField.value ?? ''}
+                    onChange={editorField.onChange}
+                    placeholder="Describe what members will learn in this track..."
+                    maxLength={4000}
+                  />
+                )}
+              />
               <FormMessage />
             </FormItem>
           )}
@@ -228,6 +249,42 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
               </FormControl>
               <FormDescription>
                 Leave empty or set to 0 for free tracks. Subscribers get discounts on paid tracks.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="location"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Location</FormLabel>
+              <FormControl>
+                <Input placeholder="Dubai, UAE or Online" {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormDescription>Where the track sessions will take place.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="locationUrl"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Location URL (Map Link)</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="https://maps.google.com/..."
+                  {...field}
+                  value={field.value ?? ''}
+                />
+              </FormControl>
+              <FormDescription>
+                Paste a link from any map service. Only visible to booked users.
               </FormDescription>
               <FormMessage />
             </FormItem>

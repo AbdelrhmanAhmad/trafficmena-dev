@@ -85,19 +85,17 @@ const EventsPage: React.FC = () => {
           {/* Learning Tracks Section */}
           {tracksData && tracksData.items.length > 0 && (
             <section className="relative w-full rounded-[28px] border border-neutral-200 bg-white/90 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
-              <div className="flex flex-col gap-3 sm:text-left">
-                <div>
-                  <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-neutral-500">
-                    <BookOpen className="h-3.5 w-3.5 text-purple-500" />
-                    Learning Tracks
-                  </span>
-                  <h2 className="mt-1 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                    Master Skills Together
-                  </h2>
-                  <p className="mt-2 text-neutral-600">
-                    Deep-dive programs with multiple sessions. Book once, learn it all.
-                  </p>
-                </div>
+              <div className="flex flex-col items-center gap-2 text-center">
+                <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-neutral-500">
+                  <BookOpen className="h-3.5 w-3.5 text-purple-500" />
+                  Learning Tracks
+                </span>
+                <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+                  Master Skills Together
+                </h2>
+                <p className="text-neutral-600">
+                  Deep-dive programs with multiple sessions. Book once, learn it all.
+                </p>
               </div>
 
               <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">

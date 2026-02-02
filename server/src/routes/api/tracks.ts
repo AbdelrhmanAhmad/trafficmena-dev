@@ -16,6 +16,8 @@ import {
 } from '../../db/schema/index.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { isPaidTrack } from './trackPaidStatus.js';
+import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -32,6 +34,21 @@ const priceInCentsSchema = z
   .optional()
   .transform((value) => (value === undefined ? undefined : value));
 
+const locationSchema = z.string().trim().max(255).optional().or(z.literal(''));
+const locationUrlSchema = z
+  .string()
+  .url()
+  .max(500)
+  .refine((value) => {
+    try {
+      return new URL(value).protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }, 'Location URL must start with https://')
+  .optional()
+  .or(z.literal(''));
+
 const createTrackSchema = z.object({
   title: z.string().trim().min(3, 'Title is required.').max(180),
   description: z.union([z.string().trim().max(4000), z.null()]).optional(),
@@ -44,6 +61,8 @@ const createTrackSchema = z.object({
   allowIndividualBooking: z.boolean().default(false),
   maxTrackBookings: z.number().int().positive().nullable().optional(),
   priceInCents: priceInCentsSchema,
+  location: locationSchema,
+  locationUrl: locationUrlSchema,
 });
 
 const updateTrackSchema = z
@@ -60,6 +79,24 @@ const updateTrackSchema = z
     allowIndividualBooking: z.boolean().optional(),
     maxTrackBookings: z.number().int().positive().nullable().optional(),
     priceInCents: priceInCentsSchema,
+    location: z.union([z.string().trim().max(255), z.null()]).optional(),
+    locationUrl: z
+      .union([
+        z
+          .string()
+          .url()
+          .max(500)
+          .refine((value) => {
+            try {
+              return new URL(value).protocol === 'https:';
+            } catch {
+              return false;
+            }
+          }, 'Location URL must start with https://'),
+        z.literal(''),
+        z.null(),
+      ])
+      .optional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
@@ -205,240 +242,272 @@ function validateUuid(
 
 export function registerTrackRoutes(app: Hono) {
   // Public tracks list (no auth required) - returns only published tracks
-  app.get('/tracks/public', async (c) => {
-    const parsed = listQuerySchema.safeParse({
-      page: c.req.query('page'),
-      pageSize: c.req.query('pageSize'),
-    });
-
-    if (!parsed.success) {
-      return c.json({ error: { code: 'INVALID_QUERY', message: parsed.error.message } }, 400);
-    }
-
-    const { page, pageSize } = parsed.data;
-    const offset = (page - 1) * pageSize;
-
-    // Get total count of published tracks
-    const [totalResult] = await db
-      .select({ value: count(tracks.id) })
-      .from(tracks)
-      .where(eq(tracks.isPublished, true));
-
-    // Get published tracks with event counts and first event date
-    const trackList = await db
-      .select({
-        id: tracks.id,
-        title: tracks.title,
-        description: tracks.description,
-        imageUrl: tracks.imageUrl,
-        trackBookingStart: tracks.trackBookingStart,
-        trackBookingEnd: tracks.trackBookingEnd,
-        maxTrackBookings: tracks.maxTrackBookings,
-        priceInCents: tracks.priceInCents,
-      })
-      .from(tracks)
-      .where(eq(tracks.isPublished, true))
-      .orderBy(tracks.sortOrder, desc(tracks.createdAt))
-      .limit(pageSize)
-      .offset(offset);
-
-    const trackIds = trackList.map((t) => t.id);
-
-    // Get event counts and first event date for each track
-    const eventStats = new Map<string, { count: number; firstDate: Date | null }>();
-
-    if (trackIds.length > 0) {
-      const stats = await db
-        .select({
-          trackId: trackEvents.trackId,
-          eventCount: count(trackEvents.eventId),
-          firstEventDate: sql<Date>`MIN(${events.date})`,
-        })
-        .from(trackEvents)
-        .innerJoin(events, eq(events.id, trackEvents.eventId))
-        .where(inArray(trackEvents.trackId, trackIds))
-        .groupBy(trackEvents.trackId);
-
-      for (const s of stats) {
-        eventStats.set(s.trackId, {
-          count: Number(s.eventCount),
-          firstDate: s.firstEventDate,
+  app.get(
+    '/tracks/public',
+    handleRoute(
+      async (c) => {
+        const parsed = listQuerySchema.safeParse({
+          page: c.req.query('page'),
+          pageSize: c.req.query('pageSize'),
         });
-      }
-    }
 
-    // Get booking counts
-    const bookingCounts = new Map<string, number>();
-    if (trackIds.length > 0) {
-      const bookings = await db
-        .select({
-          trackId: trackBookings.trackId,
-          bookingCount: count(trackBookings.id),
-        })
-        .from(trackBookings)
-        .where(inArray(trackBookings.trackId, trackIds))
-        .groupBy(trackBookings.trackId);
+        if (!parsed.success) {
+          return c.json({ error: { code: 'INVALID_QUERY', message: parsed.error.message } }, 400);
+        }
 
-      for (const b of bookings) {
-        bookingCounts.set(b.trackId, Number(b.bookingCount));
-      }
-    }
+        const { page, pageSize } = parsed.data;
+        const offset = (page - 1) * pageSize;
 
-    const items = trackList.map((t) => {
-      const stats = eventStats.get(t.id) ?? { count: 0, firstDate: null };
-      const currentBookings = bookingCounts.get(t.id) ?? 0;
-      return {
-        id: t.id,
-        title: t.title,
-        description: t.description,
-        imageUrl: t.imageUrl,
-        eventCount: stats.count,
-        firstEventDate: stats.firstDate,
-        trackBookingStart: t.trackBookingStart,
-        trackBookingEnd: t.trackBookingEnd,
-        spotsRemaining: t.maxTrackBookings !== null ? t.maxTrackBookings - currentBookings : null,
-        priceInCents: t.priceInCents,
-      };
-    });
+        // Get total count of published tracks
+        const [totalResult] = await db
+          .select({ value: count(tracks.id) })
+          .from(tracks)
+          .where(eq(tracks.isPublished, true));
 
-    // Sort by first event date (upcoming first)
-    items.sort((a, b) => {
-      if (!a.firstEventDate && !b.firstEventDate) return 0;
-      if (!a.firstEventDate) return 1;
-      if (!b.firstEventDate) return -1;
-      return new Date(a.firstEventDate).getTime() - new Date(b.firstEventDate).getTime();
-    });
+        // Get published tracks with event counts and first event date
+        const trackList = await db
+          .select({
+            id: tracks.id,
+            title: tracks.title,
+            description: tracks.description,
+            imageUrl: tracks.imageUrl,
+            trackBookingStart: tracks.trackBookingStart,
+            trackBookingEnd: tracks.trackBookingEnd,
+            maxTrackBookings: tracks.maxTrackBookings,
+            priceInCents: tracks.priceInCents,
+            location: tracks.location,
+            locationUrl: tracks.locationUrl,
+          })
+          .from(tracks)
+          .where(eq(tracks.isPublished, true))
+          .orderBy(tracks.sortOrder, desc(tracks.createdAt))
+          .limit(pageSize)
+          .offset(offset);
 
-    return c.json({
-      items,
-      pagination: { page, pageSize, total: Number(totalResult?.value ?? 0) },
-    });
-  });
+        const trackIds = trackList.map((t) => t.id);
+
+        // Get event counts and first event date for each track
+        const eventStats = new Map<string, { count: number; firstDate: Date | null }>();
+
+        if (trackIds.length > 0) {
+          const stats = await db
+            .select({
+              trackId: trackEvents.trackId,
+              eventCount: count(trackEvents.eventId),
+              firstEventDate: sql<Date>`MIN(${events.date})`,
+            })
+            .from(trackEvents)
+            .innerJoin(events, eq(events.id, trackEvents.eventId))
+            .where(inArray(trackEvents.trackId, trackIds))
+            .groupBy(trackEvents.trackId);
+
+          for (const s of stats) {
+            eventStats.set(s.trackId, {
+              count: Number(s.eventCount),
+              firstDate: s.firstEventDate,
+            });
+          }
+        }
+
+        // Get booking counts
+        const bookingCounts = new Map<string, number>();
+        if (trackIds.length > 0) {
+          const bookings = await db
+            .select({
+              trackId: trackBookings.trackId,
+              bookingCount: count(trackBookings.id),
+            })
+            .from(trackBookings)
+            .where(inArray(trackBookings.trackId, trackIds))
+            .groupBy(trackBookings.trackId);
+
+          for (const b of bookings) {
+            bookingCounts.set(b.trackId, Number(b.bookingCount));
+          }
+        }
+
+        const items = trackList.map((t) => {
+          const stats = eventStats.get(t.id) ?? { count: 0, firstDate: null };
+          const currentBookings = bookingCounts.get(t.id) ?? 0;
+          return {
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            imageUrl: t.imageUrl,
+            eventCount: stats.count,
+            firstEventDate: stats.firstDate,
+            trackBookingStart: t.trackBookingStart,
+            trackBookingEnd: t.trackBookingEnd,
+            spotsRemaining:
+              t.maxTrackBookings !== null ? t.maxTrackBookings - currentBookings : null,
+            priceInCents: t.priceInCents,
+            location: t.location,
+            locationUrl: null, // Only reveal URL to booked users (via detail endpoint)
+          };
+        });
+
+        // Sort by first event date (upcoming first)
+        items.sort((a, b) => {
+          if (!a.firstEventDate && !b.firstEventDate) return 0;
+          if (!a.firstEventDate) return 1;
+          if (!b.firstEventDate) return -1;
+          return new Date(a.firstEventDate).getTime() - new Date(b.firstEventDate).getTime();
+        });
+
+        return c.json({
+          items,
+          pagination: { page, pageSize, total: Number(totalResult?.value ?? 0) },
+        });
+      },
+      'TRACKS_PUBLIC_FAILED',
+      'Unable to load tracks.',
+      'list public tracks',
+    ),
+  );
 
   // Public track detail (no auth required for published tracks)
-  app.get('/tracks/:id/public', async (c) => {
-    const idValidation = validateUuid(c.req.param('id'), 'track ID');
-    if (!idValidation.valid) {
-      return c.json({ error: idValidation.error }, 400);
-    }
-    const id = idValidation.value;
-    const session = await getSessionFromRequest(c);
+  app.get(
+    '/tracks/:id/public',
+    handleRoute(
+      async (c) => {
+        const idValidation = validateUuid(c.req.param('id'), 'track ID');
+        if (!idValidation.valid) {
+          return c.json({ error: idValidation.error }, 400);
+        }
+        const id = idValidation.value;
+        const session = await getSessionFromRequest(c);
 
-    const [track] = await db
-      .select({
-        id: tracks.id,
-        title: tracks.title,
-        description: tracks.description,
-        imageUrl: tracks.imageUrl,
-        isPublished: tracks.isPublished,
-        trackBookingStart: tracks.trackBookingStart,
-        trackBookingEnd: tracks.trackBookingEnd,
-        singleBookingStart: tracks.singleBookingStart,
-        singleBookingEnd: tracks.singleBookingEnd,
-        allowIndividualBooking: tracks.allowIndividualBooking,
-        maxTrackBookings: tracks.maxTrackBookings,
-        priceInCents: tracks.priceInCents,
-      })
-      .from(tracks)
-      .where(eq(tracks.id, id))
-      .limit(1);
+        const [track] = await db
+          .select({
+            id: tracks.id,
+            title: tracks.title,
+            description: tracks.description,
+            imageUrl: tracks.imageUrl,
+            isPublished: tracks.isPublished,
+            trackBookingStart: tracks.trackBookingStart,
+            trackBookingEnd: tracks.trackBookingEnd,
+            singleBookingStart: tracks.singleBookingStart,
+            singleBookingEnd: tracks.singleBookingEnd,
+            allowIndividualBooking: tracks.allowIndividualBooking,
+            maxTrackBookings: tracks.maxTrackBookings,
+            priceInCents: tracks.priceInCents,
+            location: tracks.location,
+            locationUrl: tracks.locationUrl,
+          })
+          .from(tracks)
+          .where(eq(tracks.id, id))
+          .limit(1);
 
-    if (!track || !track.isPublished) {
-      return c.json({ error: { code: 'TRACK_NOT_FOUND', message: 'Track not found.' } }, 404);
-    }
+        if (!track || !track.isPublished) {
+          return c.json({ error: { code: 'TRACK_NOT_FOUND', message: 'Track not found.' } }, 404);
+        }
 
-    // Get events in track
-    const trackEventsList = await db
-      .select({
-        eventId: trackEvents.eventId,
-        sortOrder: trackEvents.sortOrder,
-        event: {
-          id: events.id,
-          title: events.title,
-          description: events.eventDescription,
-          date: events.date,
-          location: events.location,
-          eventType: events.eventType,
-          imageUrl: events.imageUrl,
-          maxAttendees: events.maxAttendees,
-        },
-      })
-      .from(trackEvents)
-      .innerJoin(events, eq(events.id, trackEvents.eventId))
-      .where(eq(trackEvents.trackId, id))
-      .orderBy(trackEvents.sortOrder);
+        // Get events in track
+        const trackEventsList = await db
+          .select({
+            eventId: trackEvents.eventId,
+            sortOrder: trackEvents.sortOrder,
+            event: {
+              id: events.id,
+              title: events.title,
+              description: events.eventDescription,
+              date: events.date,
+              location: events.location,
+              eventType: events.eventType,
+              imageUrl: events.imageUrl,
+              maxAttendees: events.maxAttendees,
+            },
+          })
+          .from(trackEvents)
+          .innerJoin(events, eq(events.id, trackEvents.eventId))
+          .where(eq(trackEvents.trackId, id))
+          .orderBy(trackEvents.sortOrder);
 
-    // Get attendee counts for each event
-    const eventIds = trackEventsList.map((te) => te.eventId);
-    const attendeeCountsMap = new Map<string, number>();
+        // Get attendee counts for each event
+        const eventIds = trackEventsList.map((te) => te.eventId);
+        const attendeeCountsMap = new Map<string, number>();
 
-    if (eventIds.length > 0) {
-      const attendeeCounts = await db
-        .select({
-          eventId: eventAttendees.eventId,
-          attendeeCount: count(),
-        })
-        .from(eventAttendees)
-        .where(and(inArray(eventAttendees.eventId, eventIds), eq(eventAttendees.status, 'active')))
-        .groupBy(eventAttendees.eventId);
+        if (eventIds.length > 0) {
+          const attendeeCounts = await db
+            .select({
+              eventId: eventAttendees.eventId,
+              attendeeCount: count(),
+            })
+            .from(eventAttendees)
+            .where(
+              and(inArray(eventAttendees.eventId, eventIds), eq(eventAttendees.status, 'active')),
+            )
+            .groupBy(eventAttendees.eventId);
 
-      for (const ac of attendeeCounts) {
-        attendeeCountsMap.set(ac.eventId, Number(ac.attendeeCount));
-      }
-    }
+          for (const ac of attendeeCounts) {
+            attendeeCountsMap.set(ac.eventId, Number(ac.attendeeCount));
+          }
+        }
 
-    const trackEvents_formatted = trackEventsList.map((te) => ({
-      id: te.event.id,
-      title: te.event.title,
-      description: te.event.description,
-      date: te.event.date,
-      location: te.event.location,
-      event_type: te.event.eventType,
-      image_url: te.event.imageUrl,
-      max_attendees: te.event.maxAttendees,
-      attendee_count: attendeeCountsMap.get(te.eventId) ?? 0,
-    }));
+        const trackEventsFormatted = trackEventsList.map((te) => ({
+          id: te.event.id,
+          title: te.event.title,
+          description: te.event.description,
+          date: te.event.date,
+          location: te.event.location,
+          eventType: te.event.eventType,
+          imageUrl: te.event.imageUrl,
+          maxAttendees: te.event.maxAttendees,
+          attendeeCount: attendeeCountsMap.get(te.eventId) ?? 0,
+        }));
 
-    // Get booking stats
-    const [bookingStats] = await db
-      .select({ value: count(trackBookings.id) })
-      .from(trackBookings)
-      .where(eq(trackBookings.trackId, id));
+        // Get booking stats
+        const [bookingStats] = await db
+          .select({ value: count(trackBookings.id) })
+          .from(trackBookings)
+          .where(eq(trackBookings.trackId, id));
 
-    // Check if current user has booked
-    let userHasBooked = false;
-    if (session?.user) {
-      const [booking] = await db
-        .select({ id: trackBookings.id })
-        .from(trackBookings)
-        .where(and(eq(trackBookings.trackId, id), eq(trackBookings.userId, session.user.id)))
-        .limit(1);
-      userHasBooked = Boolean(booking);
-    }
+        // Check if current user has booked
+        let userHasBooked = false;
+        let isStaff = false;
+        if (session?.user) {
+          const [booking, role] = await Promise.all([
+            db
+              .select({ id: trackBookings.id })
+              .from(trackBookings)
+              .where(and(eq(trackBookings.trackId, id), eq(trackBookings.userId, session.user.id)))
+              .limit(1),
+            getOptionalUserRole(session.user.id),
+          ]);
+          userHasBooked = Boolean(booking);
+          isStaff = role ? ['owner', 'admin', 'manager'].includes(role) : false;
+        }
 
-    return c.json({
-      track: {
-        id: track.id,
-        title: track.title,
-        description: track.description,
-        image_url: track.imageUrl,
-        track_booking_start: track.trackBookingStart,
-        track_booking_end: track.trackBookingEnd,
-        single_booking_start: track.singleBookingStart,
-        single_booking_end: track.singleBookingEnd,
-        max_track_bookings: track.maxTrackBookings,
-        current_bookings: Number(bookingStats?.value ?? 0),
-        spots_remaining:
-          track.maxTrackBookings !== null
-            ? track.maxTrackBookings - Number(bookingStats?.value ?? 0)
-            : null,
-        event_count: trackEvents_formatted.length,
-        user_has_booked: userHasBooked,
-        price_in_cents: track.priceInCents,
+        return c.json({
+          track: {
+            id: track.id,
+            title: track.title,
+            description: track.description,
+            imageUrl: track.imageUrl,
+            trackBookingStart: track.trackBookingStart,
+            trackBookingEnd: track.trackBookingEnd,
+            singleBookingStart: track.singleBookingStart,
+            singleBookingEnd: track.singleBookingEnd,
+            maxTrackBookings: track.maxTrackBookings,
+            currentBookings: Number(bookingStats?.value ?? 0),
+            spotsRemaining:
+              track.maxTrackBookings !== null
+                ? track.maxTrackBookings - Number(bookingStats?.value ?? 0)
+                : null,
+            eventCount: trackEventsFormatted.length,
+            userHasBooked,
+            priceInCents: track.priceInCents,
+            location: track.location,
+            locationUrl: userHasBooked || isStaff ? track.locationUrl : null, // Only reveal URL to booked users or staff
+          },
+          events: trackEventsFormatted,
+        });
       },
-      events: trackEvents_formatted,
-    });
-  });
+      'TRACK_PUBLIC_DETAIL_FAILED',
+      'Unable to load track.',
+      'get public track',
+    ),
+  );
 
   // List tracks (users see published only, admins see all)
   app.get('/tracks', async (c) => {
@@ -496,6 +565,8 @@ export function registerTrackRoutes(app: Hono) {
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
         priceInCents: tracks.priceInCents,
+        location: tracks.location,
+        locationUrl: tracks.locationUrl,
       })
       .from(tracks)
       .where(whereClause)
@@ -565,6 +636,8 @@ export function registerTrackRoutes(app: Hono) {
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
         priceInCents: tracks.priceInCents,
+        location: tracks.location,
+        locationUrl: tracks.locationUrl,
       })
       .from(tracks)
       .where(eq(tracks.id, id))
@@ -775,6 +848,8 @@ export function registerTrackRoutes(app: Hono) {
               allowIndividualBooking: payload.allowIndividualBooking ?? false,
               maxTrackBookings: payload.maxTrackBookings ?? null,
               priceInCents: payload.priceInCents ?? null,
+              location: payload.location || null,
+              locationUrl: payload.locationUrl || null,
             })
             .returning();
 
@@ -818,7 +893,8 @@ export function registerTrackRoutes(app: Hono) {
         }
 
         const updates = parsed.data;
-        const updateValues: Record<string, unknown> = { updatedAt: new Date() };
+        const updatedAt = new Date();
+        const updateValues: Record<string, unknown> = { updatedAt };
 
         if (updates.title !== undefined) updateValues.title = updates.title;
         if (updates.description !== undefined)
@@ -840,6 +916,9 @@ export function registerTrackRoutes(app: Hono) {
           updateValues.maxTrackBookings = updates.maxTrackBookings ?? null;
         if (updates.priceInCents !== undefined)
           updateValues.priceInCents = updates.priceInCents ?? null;
+        if (updates.location !== undefined) updateValues.location = updates.location || null;
+        if (updates.locationUrl !== undefined)
+          updateValues.locationUrl = updates.locationUrl || null;
 
         const [currentTrack] = await db.select().from(tracks).where(eq(tracks.id, id)).limit(1);
         if (!currentTrack) {
@@ -911,11 +990,45 @@ export function registerTrackRoutes(app: Hono) {
           }
         }
 
-        const [updated] = await db
-          .update(tracks)
-          .set(updateValues)
-          .where(eq(tracks.id, id))
-          .returning();
+        const shouldPublishSeries = shouldPublishTrackSeries({
+          previousIsPublished: currentTrack.isPublished,
+          nextIsPublished: updates.isPublished,
+        });
+
+        const mergedPriceInCents = updates.priceInCents ?? currentTrack.priceInCents;
+        const trackIsPaid = shouldPublishSeries ? isPaidTrack(mergedPriceInCents) : false;
+
+        const updated = await db.transaction(async (tx) => {
+          const [trackResult] = await tx
+            .update(tracks)
+            .set(updateValues)
+            .where(eq(tracks.id, id))
+            .returning();
+
+          if (shouldPublishSeries) {
+            const seriesUpdate: Record<string, unknown> = { isPublished: true, updatedAt };
+            if (trackIsPaid) {
+              seriesUpdate.isPremium = true;
+            }
+
+            await tx.update(series).set(seriesUpdate).where(eq(series.trackId, id));
+
+            if (trackIsPaid) {
+              const assetIdsInSeries = tx
+                .select({ assetId: seriesAssets.assetId })
+                .from(seriesAssets)
+                .innerJoin(series, eq(series.id, seriesAssets.seriesId))
+                .where(eq(series.trackId, id));
+
+              await tx
+                .update(libraryAssets)
+                .set({ isPremium: true, updatedAt })
+                .where(inArray(libraryAssets.id, assetIdsInSeries));
+            }
+          }
+
+          return trackResult;
+        });
 
         return c.json({ track: updated });
       },
@@ -966,12 +1079,18 @@ export function registerTrackRoutes(app: Hono) {
 
         // Verify track exists
         const [track] = await db
-          .select({ id: tracks.id, maxTrackBookings: tracks.maxTrackBookings })
+          .select({
+            id: tracks.id,
+            maxTrackBookings: tracks.maxTrackBookings,
+            priceInCents: tracks.priceInCents,
+          })
           .from(tracks)
           .where(eq(tracks.id, trackId));
         if (!track) {
           throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
         }
+
+        const trackIsPaid = isPaidTrack(track.priceInCents);
 
         const [{ count: bookingCount }] = await db
           .select({ count: count(trackBookings.id) })
@@ -1033,44 +1152,59 @@ export function registerTrackRoutes(app: Hono) {
         const toInsert = newEventIds.filter((id) => validIds.has(id));
 
         if (toInsert.length > 0) {
-          await db.insert(trackEvents).values(
-            toInsert.map((eventId) => ({
-              trackId,
-              eventId,
-              sortOrder: sortOrder++,
-            })),
-          );
+          await db.transaction(async (tx) => {
+            await tx.insert(trackEvents).values(
+              toInsert.map((eventId) => ({
+                trackId,
+                eventId,
+                sortOrder: sortOrder++,
+              })),
+            );
 
-          // Link event assets to track's Series
-          const [trackSeries] = await db
-            .select({ id: series.id })
-            .from(series)
-            .where(eq(series.trackId, trackId))
-            .limit(1);
+            // Link event assets to track's Series
+            const [trackSeries] = await tx
+              .select({ id: series.id })
+              .from(series)
+              .where(eq(series.trackId, trackId))
+              .limit(1);
 
-          if (trackSeries) {
-            const eventAssets = await db
-              .select({ id: libraryAssets.id })
-              .from(libraryAssets)
-              .where(inArray(libraryAssets.eventId, toInsert));
+            if (trackSeries) {
+              const eventAssets = await tx
+                .select({ id: libraryAssets.id })
+                .from(libraryAssets)
+                .where(inArray(libraryAssets.eventId, toInsert));
 
-            if (eventAssets.length > 0) {
-              const [maxSeriesSort] = await db
-                .select({ maxOrder: sql<number>`COALESCE(MAX(${seriesAssets.sortOrder}), -1)` })
-                .from(seriesAssets)
-                .where(eq(seriesAssets.seriesId, trackSeries.id));
+              if (eventAssets.length > 0) {
+                const [maxSeriesSort] = await tx
+                  .select({ maxOrder: sql<number>`COALESCE(MAX(${seriesAssets.sortOrder}), -1)` })
+                  .from(seriesAssets)
+                  .where(eq(seriesAssets.seriesId, trackSeries.id));
 
-              let assetSortOrder = (maxSeriesSort?.maxOrder ?? -1) + 1;
+                let assetSortOrder = (maxSeriesSort?.maxOrder ?? -1) + 1;
 
-              await db.insert(seriesAssets).values(
-                eventAssets.map((asset) => ({
-                  seriesId: trackSeries.id,
-                  assetId: asset.id,
-                  sortOrder: assetSortOrder++,
-                })),
-              );
+                await tx.insert(seriesAssets).values(
+                  eventAssets.map((asset) => ({
+                    seriesId: trackSeries.id,
+                    assetId: asset.id,
+                    sortOrder: assetSortOrder++,
+                  })),
+                );
+
+                if (trackIsPaid) {
+                  const updatedAt = new Date();
+                  await tx
+                    .update(libraryAssets)
+                    .set({ isPremium: true, updatedAt })
+                    .where(
+                      inArray(
+                        libraryAssets.id,
+                        eventAssets.map((asset) => asset.id),
+                      ),
+                    );
+                }
+              }
             }
-          }
+          });
         }
 
         return c.json({ success: true, addedCount: toInsert.length });
@@ -1148,6 +1282,46 @@ export function registerTrackRoutes(app: Hono) {
     }
 
     const { eventIds } = parsed.data;
+
+    const [trackExists] = await db
+      .select({ id: tracks.id })
+      .from(tracks)
+      .where(eq(tracks.id, trackId))
+      .limit(1);
+    if (!trackExists) {
+      return c.json({ error: { code: 'TRACK_NOT_FOUND', message: 'Track not found.' } }, 404);
+    }
+
+    const existingEvents = await db
+      .select({ eventId: trackEvents.eventId })
+      .from(trackEvents)
+      .where(eq(trackEvents.trackId, trackId));
+
+    const existingIds = existingEvents.map((event) => event.eventId);
+    const existingIdSet = new Set(existingIds);
+    const uniqueEventIds = new Set(eventIds);
+
+    if (uniqueEventIds.size !== eventIds.length) {
+      return c.json(
+        { error: { code: 'INVALID_REQUEST', message: 'Event IDs must be unique.' } },
+        400,
+      );
+    }
+
+    const missingIds = existingIds.filter((id) => !uniqueEventIds.has(id));
+    const extraIds = eventIds.filter((id) => !existingIdSet.has(id));
+
+    if (missingIds.length > 0 || extraIds.length > 0) {
+      return c.json(
+        {
+          error: {
+            code: 'INVALID_REQUEST',
+            message: 'Event IDs must include all events in this track.',
+          },
+        },
+        400,
+      );
+    }
 
     // Update sort order for all events in parallel within a transaction
     await db.transaction(async (tx) => {

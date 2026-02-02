@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -27,12 +27,16 @@ const GRRCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const startingMRRId = useId();
+  const contractionMRRId = useId();
+  const churnMRRId = useId();
+
   // GRR = (Starting MRR - Contraction - Churn) / Starting MRR × 100
   const calculateGRR = (): number | null => {
     const starting = parseFloat(startingMRR);
     const contraction = parseFloat(contractionMRR) || 0;
     const churn = parseFloat(churnMRR) || 0;
-    if (isNaN(starting) || starting === 0) return null;
+    if (Number.isNaN(starting) || starting === 0) return null;
     const grr = ((starting - contraction - churn) / starting) * 100;
     return Math.min(grr, 100); // GRR cannot exceed 100%
   };
@@ -41,7 +45,7 @@ const GRRCalculator = () => {
     const starting = parseFloat(startingMRR);
     const contraction = parseFloat(contractionMRR) || 0;
     const churn = parseFloat(churnMRR) || 0;
-    if (isNaN(starting)) return null;
+    if (Number.isNaN(starting)) return null;
     return Math.max(starting - contraction - churn, 0);
   };
 
@@ -320,12 +324,12 @@ const GRRCalculator = () => {
                   <div className="space-y-4 lg:space-y-6">
                     {/* Starting MRR Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="startingMRR" className="text-sm text-neutral-600">
+                      <Label htmlFor={startingMRRId} className="text-sm text-neutral-600">
                         Starting MRR (from existing customers)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="startingMRR"
+                          id={startingMRRId}
                           type="number"
                           placeholder="0"
                           value={startingMRR}
@@ -354,12 +358,12 @@ const GRRCalculator = () => {
 
                     {/* Contraction MRR Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="contractionMRR" className="text-sm text-neutral-600">
+                      <Label htmlFor={contractionMRRId} className="text-sm text-neutral-600">
                         Contraction MRR (downgrades, reduced usage)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="contractionMRR"
+                          id={contractionMRRId}
                           type="number"
                           placeholder="0"
                           value={contractionMRR}
@@ -374,12 +378,12 @@ const GRRCalculator = () => {
 
                     {/* Churn MRR Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="churnMRR" className="text-sm text-neutral-600">
+                      <Label htmlFor={churnMRRId} className="text-sm text-neutral-600">
                         Churn MRR (cancellations)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="churnMRR"
+                          id={churnMRRId}
                           type="number"
                           placeholder="0"
                           value={churnMRR}

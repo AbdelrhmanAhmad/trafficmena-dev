@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   Accordion,
@@ -30,6 +30,13 @@ const SEOROICalculator = () => {
   const [seoCost, setSeoCost] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
+
+  const monthlyTrafficId = useId();
+  const conversionRateId = useId();
+  const averageOrderValueId = useId();
+  const customerLifetimeValueId = useId();
+  const monthlyGrowthRateId = useId();
+  const seoCostId = useId();
 
   // Generate 12-month projections
   const projections = useMemo(() => {
@@ -264,9 +271,9 @@ const SEOROICalculator = () => {
                 <div className="space-y-4">
                   {/* Monthly Traffic */}
                   <div className="space-y-2">
-                    <Label htmlFor="monthlyTraffic">Monthly Traffic</Label>
+                    <Label htmlFor={monthlyTrafficId}>Monthly Traffic</Label>
                     <Input
-                      id="monthlyTraffic"
+                      id={monthlyTrafficId}
                       type="number"
                       placeholder="e.g., 20000"
                       value={monthlyTraffic}
@@ -277,9 +284,9 @@ const SEOROICalculator = () => {
 
                   {/* Conversion Rate */}
                   <div className="space-y-2">
-                    <Label htmlFor="conversionRate">Conversion Rate (%)</Label>
+                    <Label htmlFor={conversionRateId}>Conversion Rate (%)</Label>
                     <Input
-                      id="conversionRate"
+                      id={conversionRateId}
                       type="number"
                       placeholder="e.g., 3"
                       value={conversionRate}
@@ -290,10 +297,10 @@ const SEOROICalculator = () => {
 
                   {/* Average Order Value */}
                   <div className="space-y-2">
-                    <Label htmlFor="averageOrderValue">Average Order Value</Label>
+                    <Label htmlFor={averageOrderValueId}>Average Order Value</Label>
                     <div className="relative">
                       <Input
-                        id="averageOrderValue"
+                        id={averageOrderValueId}
                         type="number"
                         placeholder="e.g., 50"
                         value={averageOrderValue}
@@ -322,10 +329,10 @@ const SEOROICalculator = () => {
 
                   {/* Customer Lifetime Value */}
                   <div className="space-y-2">
-                    <Label htmlFor="customerLifetimeValue">Customer Lifetime Value</Label>
+                    <Label htmlFor={customerLifetimeValueId}>Customer Lifetime Value</Label>
                     <div className="relative">
                       <Input
-                        id="customerLifetimeValue"
+                        id={customerLifetimeValueId}
                         type="number"
                         placeholder="e.g., 300"
                         value={customerLifetimeValue}
@@ -367,9 +374,9 @@ const SEOROICalculator = () => {
                 <div className="space-y-4">
                   {/* Monthly Growth Rate */}
                   <div className="space-y-2">
-                    <Label htmlFor="monthlyGrowthRate">Monthly Growth Rate (%)</Label>
+                    <Label htmlFor={monthlyGrowthRateId}>Monthly Growth Rate (%)</Label>
                     <Input
-                      id="monthlyGrowthRate"
+                      id={monthlyGrowthRateId}
                       type="number"
                       placeholder="e.g., 10"
                       value={monthlyGrowthRate}
@@ -383,10 +390,10 @@ const SEOROICalculator = () => {
 
                   {/* SEO Investment (Optional) */}
                   <div className="space-y-2">
-                    <Label htmlFor="seoCost">Monthly SEO Investment (Optional)</Label>
+                    <Label htmlFor={seoCostId}>Monthly SEO Investment (Optional)</Label>
                     <div className="relative">
                       <Input
-                        id="seoCost"
+                        id={seoCostId}
                         type="number"
                         placeholder="e.g., 5000"
                         value={seoCost}

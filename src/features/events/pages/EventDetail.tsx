@@ -6,6 +6,7 @@ import {
   CheckCircle,
   Clock,
   ClockIcon,
+  ExternalLink,
   MapPin,
   Sparkles,
   Users,
@@ -21,12 +22,15 @@ import { PaymentCheckoutDialog, PriceDisplayCard } from '@/shared/components/pay
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
-import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
+import { useIsManager } from '@/shared/hooks/custom/useIsManager';
+import {
+  isValidLocationUrl,
+  useLocationVisibility,
+} from '@/shared/hooks/custom/useLocationVisibility';
 import {
   clearPendingEventContext,
   storePendingEventContext,
 } from '@/shared/utils/eventRedirectUtils';
-import { stripHtmlTags } from '@/shared/utils/inputSanitization';
 import { CancellationConfirmDialog } from '../components/CancellationConfirmDialog';
 import { useEventBooking } from '../hooks/useEventBooking';
 import { useEvent } from '../hooks/useEvents';
@@ -102,13 +106,16 @@ const EventDetail: React.FC = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const { data: event, isLoading, error } = useEvent(id);
-  const { isAdmin, loading: adminLoading } = useIsAdmin();
+  const { isManager: isStaff, loading: adminLoading } = useIsManager();
   const { bookEvent, bookEventAsync, cancelBooking, isBooking, isCancelling } = useEventBooking();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Get price preview for logged-in users
-  const { data: pricePreview } = usePricePreview(user && id ? 'event' : undefined, id);
+  // Skip for track events where individual booking is not allowed (avoids 400 errors)
+  const canFetchPricePreview =
+    user && id && (!event?.trackInfo || event?.trackInfo?.singleBookingStart);
+  const { data: pricePreview } = usePricePreview(canFetchPricePreview ? 'event' : undefined, id);
 
   const isPaidEvent = !!(event?.price_in_cents && event.price_in_cents > 0);
   const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
@@ -139,9 +146,22 @@ const EventDetail: React.FC = () => {
 
   const showMeetingLink = useMemo(() => {
     if (!event?.meeting_link || adminLoading) return false;
-    if (isAdmin) return true;
+    if (isStaff) return true;
+    if (event?.trackInfo?.booked) return true;
     return Boolean(event.attending);
-  }, [adminLoading, event?.attending, event?.meeting_link, isAdmin]);
+  }, [adminLoading, event?.attending, event?.meeting_link, event?.trackInfo?.booked, isStaff]);
+
+  // For track events: check track booking status, not event.attending
+  // (users can't register for individual track events, they must book the track)
+  const isTrackEvent = Boolean(event?.trackInfo);
+  const hasAccess = isTrackEvent ? Boolean(event?.trackInfo?.booked) : Boolean(event?.attending);
+
+  const showLocationUrl = useLocationVisibility(
+    event?.location_url,
+    hasAccess,
+    isStaff,
+    adminLoading,
+  );
 
   const handleRegister = async () => {
     if (!id || !event) return;
@@ -192,10 +212,6 @@ const EventDetail: React.FC = () => {
 
   const sanitizedDescription = useMemo(
     () => (event?.description ? DOMPurify.sanitize(event.description) : null),
-    [event?.description],
-  );
-  const summaryText = useMemo(
-    () => (event?.description ? stripHtmlTags(event.description) : ''),
     [event?.description],
   );
   const eventImageUrl =
@@ -273,13 +289,6 @@ const EventDetail: React.FC = () => {
                     {event.title}
                   </h1>
 
-                  {summaryText && (
-                    <p className="mt-4 max-w-2xl text-sm leading-relaxed text-neutral-600">
-                      {summaryText.slice(0, 280)}
-                      {summaryText.length > 280 ? '…' : ''}
-                    </p>
-                  )}
-
                   {sanitizedDescription && (
                     <div className="mt-8 space-y-4">
                       <h2 className="text-lg font-semibold text-neutral-900">What to Expect</h2>
@@ -293,18 +302,24 @@ const EventDetail: React.FC = () => {
 
                 <aside className="order-1 lg:order-2 lg:sticky lg:top-24">
                   <div className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-[0_10px_30px_-18px_rgba(16,16,16,0.35)]">
-                    <div className="relative aspect-[320/210] w-full overflow-hidden bg-neutral-900/60">
+                    <div className="aspect-[2/1] w-full overflow-hidden bg-neutral-100">
                       <img
                         src={eventImageUrl}
                         alt={`${event.title} cover`}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-contain"
                         loading="lazy"
                       />
-                      <span className="absolute left-5 top-5 inline-flex rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-neutral-800">
-                        {isUpcoming ? 'Upcoming Session' : 'Past Session'}
-                      </span>
                     </div>
                     <div className="space-y-4 p-6">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                          isUpcoming
+                            ? 'bg-[#05ef62]/10 text-[#059669]'
+                            : 'bg-neutral-100 text-neutral-600'
+                        }`}
+                      >
+                        {isUpcoming ? 'Upcoming Session' : 'Past Session'}
+                      </span>
                       <div className="space-y-3 text-sm">
                         <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
                           <Calendar className="h-5 w-5 text-[#05ef62]" />
@@ -334,9 +349,30 @@ const EventDetail: React.FC = () => {
                             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
                               Location
                             </p>
-                            <p className="text-sm font-semibold text-neutral-900">
-                              {locationLabel}
-                            </p>
+                            {showLocationUrl ? (
+                              <>
+                                <p className="text-sm font-semibold text-neutral-900">
+                                  {locationLabel}
+                                </p>
+                                {event?.location_url && isValidLocationUrl(event.location_url) && (
+                                  <a
+                                    href={event.location_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#05ef62] hover:underline"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                    View on Map
+                                  </a>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-sm text-neutral-500">
+                                {isTrackEvent
+                                  ? 'Book the track to view location'
+                                  : 'Register to view location'}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">

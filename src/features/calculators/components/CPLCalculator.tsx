@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -26,10 +26,13 @@ const CPLCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const totalSpendId = useId();
+  const leadsGeneratedId = useId();
+
   const calculateCPL = (): number | null => {
     const spend = parseFloat(totalSpend);
     const leads = parseFloat(leadsGenerated);
-    if (isNaN(spend) || isNaN(leads) || leads === 0) return null;
+    if (Number.isNaN(spend) || Number.isNaN(leads) || leads === 0) return null;
     return spend / leads;
   };
 
@@ -313,12 +316,12 @@ const CPLCalculator = () => {
               <AccordionContent className="pt-4 space-y-5">
                 {/* Total Marketing Spend Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="totalSpend" className="text-sm text-neutral-600">
+                  <Label htmlFor={totalSpendId} className="text-sm text-neutral-600">
                     Total Marketing/Ad Spend
                   </Label>
                   <div className="relative">
                     <Input
-                      id="totalSpend"
+                      id={totalSpendId}
                       type="number"
                       placeholder="Enter total spend"
                       value={totalSpend}
@@ -347,11 +350,11 @@ const CPLCalculator = () => {
 
                 {/* Leads Generated Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="leadsGenerated" className="text-sm text-neutral-600">
+                  <Label htmlFor={leadsGeneratedId} className="text-sm text-neutral-600">
                     Leads Generated
                   </Label>
                   <Input
-                    id="leadsGenerated"
+                    id={leadsGeneratedId}
                     type="number"
                     placeholder="Enter number of leads"
                     value={leadsGenerated}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -17,10 +17,14 @@ const CVRCalculator = () => {
   const [visitors, setVisitors] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
 
+  const conversionsId = useId();
+  const visitorsId = useId();
+
   const calculateCVR = (): number | null => {
     const totalConversions = parseFloat(conversions);
     const totalVisitors = parseFloat(visitors);
-    if (isNaN(totalConversions) || isNaN(totalVisitors) || totalVisitors === 0) return null;
+    if (Number.isNaN(totalConversions) || Number.isNaN(totalVisitors) || totalVisitors === 0)
+      return null;
     return (totalConversions / totalVisitors) * 100;
   };
 
@@ -29,7 +33,7 @@ const CVRCalculator = () => {
   const handleShare = () => {
     const text =
       cvr !== null
-        ? `My CVR: ${cvr.toFixed(2)}% | Conversions: ${parseInt(conversions).toLocaleString()} | Visitors: ${parseInt(visitors).toLocaleString()}`
+        ? `My CVR: ${cvr.toFixed(2)}% | Conversions: ${parseInt(conversions, 10).toLocaleString()} | Visitors: ${parseInt(visitors, 10).toLocaleString()}`
         : null;
     shareToClipboard(text);
   };
@@ -286,12 +290,12 @@ const CVRCalculator = () => {
                   <div className="space-y-4 lg:space-y-6">
                     {/* Conversions Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="conversions" className="text-sm text-neutral-600">
+                      <Label htmlFor={conversionsId} className="text-sm text-neutral-600">
                         Total conversions
                       </Label>
                       <div className="relative">
                         <Input
-                          id="conversions"
+                          id={conversionsId}
                           type="number"
                           placeholder="0"
                           value={conversions}
@@ -303,12 +307,12 @@ const CVRCalculator = () => {
 
                     {/* Visitors Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="visitors" className="text-sm text-neutral-600">
+                      <Label htmlFor={visitorsId} className="text-sm text-neutral-600">
                         Total visitors
                       </Label>
                       <div className="relative">
                         <Input
-                          id="visitors"
+                          id={visitorsId}
                           type="number"
                           placeholder="0"
                           value={visitors}

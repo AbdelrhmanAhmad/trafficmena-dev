@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -17,10 +17,13 @@ const CheckoutAbandonmentRateCalculator = () => {
   const [checkoutsCompleted, setCheckoutsCompleted] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
 
+  const checkoutsStartedId = useId();
+  const checkoutsCompletedId = useId();
+
   const calculateAbandonmentRate = (): number | null => {
     const started = parseFloat(checkoutsStarted);
     const completed = parseFloat(checkoutsCompleted);
-    if (isNaN(started) || isNaN(completed) || started === 0) return null;
+    if (Number.isNaN(started) || Number.isNaN(completed) || started === 0) return null;
     const abandoned = started - completed;
     return (abandoned / started) * 100;
   };
@@ -332,11 +335,11 @@ const CheckoutAbandonmentRateCalculator = () => {
               <AccordionContent className="pt-4 space-y-4 lg:space-y-6">
                 {/* Checkouts Started Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="checkoutsStarted" className="text-sm text-neutral-600">
+                  <Label htmlFor={checkoutsStartedId} className="text-sm text-neutral-600">
                     Checkouts Started
                   </Label>
                   <Input
-                    id="checkoutsStarted"
+                    id={checkoutsStartedId}
                     type="number"
                     placeholder="Enter number of checkouts initiated"
                     value={checkoutsStarted}
@@ -347,11 +350,11 @@ const CheckoutAbandonmentRateCalculator = () => {
 
                 {/* Checkouts Completed Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="checkoutsCompleted" className="text-sm text-neutral-600">
+                  <Label htmlFor={checkoutsCompletedId} className="text-sm text-neutral-600">
                     Checkouts Completed
                   </Label>
                   <Input
-                    id="checkoutsCompleted"
+                    id={checkoutsCompletedId}
                     type="number"
                     placeholder="Enter number of completed purchases"
                     value={checkoutsCompleted}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -17,17 +17,21 @@ const BreakevenROASCalculator = () => {
   const [currentROAS, setCurrentROAS] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
 
+  const grossMarginId = useId();
+  const beROASId = useId();
+  const currentROASId = useId();
+
   // Break-even ROAS = 1 / Gross Margin %
   const calculateBreakevenROAS = (): number | null => {
     const margin = parseFloat(grossMargin);
-    if (isNaN(margin) || margin <= 0 || margin > 100) return null;
+    if (Number.isNaN(margin) || margin <= 0 || margin > 100) return null;
     return 1 / (margin / 100);
   };
 
   const calculateProfitMarginPerDollar = (): number | null => {
     const beROAS = calculateBreakevenROAS();
     const current = parseFloat(currentROAS);
-    if (beROAS === null || isNaN(current) || current <= 0) return null;
+    if (beROAS === null || Number.isNaN(current) || current <= 0) return null;
     // Profit per dollar = (Current ROAS - BE ROAS) / Current ROAS * Margin
     const margin = parseFloat(grossMargin) / 100;
     return (current - beROAS) * margin;
@@ -37,7 +41,7 @@ const BreakevenROASCalculator = () => {
   const profitPerDollar = calculateProfitMarginPerDollar();
   const currentROASValue = parseFloat(currentROAS);
   const isProfitable =
-    breakevenROAS !== null && !isNaN(currentROASValue) && currentROASValue > breakevenROAS;
+    breakevenROAS !== null && !Number.isNaN(currentROASValue) && currentROASValue > breakevenROAS;
 
   const handleShare = () => {
     const results =
@@ -197,8 +201,8 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
           </h2>
           <ul className="list-disc list-inside text-neutral-600 space-y-2">
             <li>
-              <strong className="text-neutral-800">Increase gross margins:</strong> Negotiate
-              better supplier costs or raise prices strategically
+              <strong className="text-neutral-800">Increase gross margins:</strong> Negotiate better
+              supplier costs or raise prices strategically
             </li>
             <li>
               <strong className="text-neutral-800">Reduce COGS:</strong> Optimize manufacturing,
@@ -234,12 +238,12 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                 <div className="space-y-4 lg:space-y-6">
                   {/* Gross Margin Input */}
                   <div className="space-y-2">
-                    <Label htmlFor="grossMargin" className="text-sm text-neutral-600">
+                    <Label htmlFor={grossMarginId} className="text-sm text-neutral-600">
                       Gross Margin (%)
                     </Label>
                     <div className="relative">
                       <Input
-                        id="grossMargin"
+                        id={grossMarginId}
                         type="number"
                         placeholder="e.g., 40"
                         value={grossMargin}
@@ -260,12 +264,12 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
 
                   {/* Break-even ROAS Output */}
                   <div className="space-y-2">
-                    <Label htmlFor="beROAS" className="text-sm text-neutral-600">
+                    <Label htmlFor={beROASId} className="text-sm text-neutral-600">
                       Break-even ROAS
                     </Label>
                     <div className="relative">
                       <Input
-                        id="beROAS"
+                        id={beROASId}
                         type="text"
                         value={breakevenROAS !== null ? `${breakevenROAS.toFixed(2)}x` : ''}
                         readOnly
@@ -282,12 +286,12 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
 
                   {/* Optional: Current ROAS */}
                   <div className="space-y-2">
-                    <Label htmlFor="currentROAS" className="text-sm text-neutral-600">
+                    <Label htmlFor={currentROASId} className="text-sm text-neutral-600">
                       Current ROAS (Optional)
                     </Label>
                     <div className="relative">
                       <Input
-                        id="currentROAS"
+                        id={currentROASId}
                         type="number"
                         placeholder="e.g., 3.5"
                         value={currentROAS}

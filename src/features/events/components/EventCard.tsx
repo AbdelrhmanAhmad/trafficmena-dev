@@ -40,9 +40,7 @@ export const EventCard = memo(function EventCard({
     };
   }, [event.date]);
 
-  const imageUrl =
-    event.image_url ??
-    'https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?q=80&w=1200&auto=format&fit=crop';
+  const imageUrl = event.image_url ?? '/uploads/trafficmena-event.png';
 
   const primaryTag = event.tags?.[0];
   const descriptionPreview = useMemo(() => {

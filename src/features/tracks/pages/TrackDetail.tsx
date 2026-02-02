@@ -1,7 +1,16 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
-import { BookOpen, Calendar, CheckCircle, Loader2, MapPin, Sparkles, Users } from 'lucide-react';
+import {
+  BookOpen,
+  Calendar,
+  CheckCircle,
+  ExternalLink,
+  Loader2,
+  MapPin,
+  Sparkles,
+  Users,
+} from 'lucide-react';
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -12,7 +21,11 @@ import Layout from '@/shared/components/layout/Layout';
 import { PaymentCheckoutDialog, PriceDisplayCard } from '@/shared/components/payment';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
-import { stripHtmlTags } from '@/shared/utils/inputSanitization';
+import { useIsManager } from '@/shared/hooks/custom/useIsManager';
+import {
+  isValidLocationUrl,
+  useLocationVisibility,
+} from '@/shared/hooks/custom/useLocationVisibility';
 import { useBookTrack, usePublicTrack } from '../hooks/useTracks';
 
 type SanitizedHtmlProps = {
@@ -36,9 +49,7 @@ function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
   const formattedTime = format(eventDate, 'h:mm a');
   const isUpcoming = eventDate.getTime() > Date.now();
 
-  const imageUrl =
-    event.image_url ??
-    'https://images.unsplash.com/photo-1526948128573-703ee1aeb6fa?q=80&w=1200&auto=format&fit=crop';
+  const imageUrl = event.image_url ?? '/uploads/trafficmena-event.png';
 
   return (
     <button
@@ -103,6 +114,7 @@ const TrackDetail: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isManager: isStaff, loading: adminLoading } = useIsManager();
   const { data, isLoading, error } = usePublicTrack(id || '');
   const bookMutation = useBookTrack();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -116,19 +128,22 @@ const TrackDetail: React.FC = () => {
   const isPaidTrack = !!(track?.price_in_cents && track.price_in_cents > 0);
   const needsPayment = isPaidTrack;
 
+  const showLocationUrl = useLocationVisibility(
+    track?.location_url,
+    Boolean(track?.user_has_booked),
+    isStaff,
+    adminLoading,
+  );
+
   const sanitizedDescription = useMemo(
     () => (track?.description ? DOMPurify.sanitize(track.description) : null),
-    [track?.description],
-  );
-  const summaryText = useMemo(
-    () => (track?.description ? stripHtmlTags(track.description) : ''),
     [track?.description],
   );
 
   const trackImageUrl =
     track?.image_url && track.image_url.trim().length > 0
       ? track.image_url.trim()
-      : 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=1200&auto=format&fit=crop';
+      : '/uploads/trafficmena-track.png';
 
   // Booking status
   const bookingStatus = useMemo(() => {
@@ -228,13 +243,6 @@ const TrackDetail: React.FC = () => {
                       {track.title}
                     </h1>
 
-                    {summaryText && (
-                      <p className="mt-4 max-w-2xl text-sm leading-relaxed text-neutral-600">
-                        {summaryText.slice(0, 280)}
-                        {summaryText.length > 280 ? '…' : ''}
-                      </p>
-                    )}
-
                     {sanitizedDescription && (
                       <div className="mt-8 space-y-4">
                         <h2 className="text-lg font-semibold text-neutral-900">About This Track</h2>
@@ -278,18 +286,18 @@ const TrackDetail: React.FC = () => {
                 {/* Sidebar */}
                 <aside className="order-1 lg:order-2 lg:sticky lg:top-24">
                   <div className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-[0_10px_30px_-18px_rgba(16,16,16,0.35)]">
-                    <div className="relative aspect-[320/210] w-full overflow-hidden bg-neutral-900/60">
+                    <div className="aspect-[2/1] w-full overflow-hidden bg-neutral-100">
                       <img
                         src={trackImageUrl}
                         alt={`${track.title} cover`}
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-contain"
                         loading="lazy"
                       />
-                      <span className="absolute left-5 top-5 inline-flex rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-neutral-800">
-                        Learning Track
-                      </span>
                     </div>
                     <div className="space-y-4 p-6">
+                      <span className="inline-flex rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+                        Learning Track
+                      </span>
                       <div className="space-y-3 text-sm">
                         <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
                           <BookOpen className="h-5 w-5 text-purple-500" />
@@ -312,6 +320,38 @@ const TrackDetail: React.FC = () => {
                               <p className="text-sm font-semibold text-neutral-900">
                                 {format(firstEventDate, 'MMMM d, yyyy')}
                               </p>
+                            </div>
+                          </div>
+                        )}
+                        {track.location && (
+                          <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
+                            <MapPin className="h-5 w-5 text-purple-500" />
+                            <div>
+                              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                                Location
+                              </p>
+                              {showLocationUrl ? (
+                                <>
+                                  <p className="text-sm font-semibold text-neutral-900">
+                                    {track.location}
+                                  </p>
+                                  {track.location_url && isValidLocationUrl(track.location_url) && (
+                                    <a
+                                      href={track.location_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-purple-500 hover:underline"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                      View on Map
+                                    </a>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-sm text-neutral-500">
+                                  Book track to view location
+                                </p>
+                              )}
                             </div>
                           </div>
                         )}

@@ -10,9 +10,9 @@ import {
   DifferentiationSection,
   FAQSection,
   ROISection,
-  VideoReviewsSection,
   TrackDetailsSection,
   ValueMathSection,
+  VideoReviewsSection,
 } from '@/features/subscribe/components';
 import { FINAL_CTA_COPY, HERO_BENEFITS, PRICING } from '@/features/subscribe/content';
 import AppLayout from '@/shared/components/layout/AppLayout';

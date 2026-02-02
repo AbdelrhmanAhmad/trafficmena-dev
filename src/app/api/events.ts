@@ -7,6 +7,7 @@ type ApiEvent = {
   eventDescription: string | null;
   date: string;
   location: string | null;
+  locationUrl: string | null;
   maxAttendees: number | null;
   meetingLink: string | null;
   imageUrl: string | null;
@@ -26,6 +27,7 @@ type ApiEventDetail = ApiEvent & {
     trackBookingEnd: string | null;
     singleBookingStart: string | null;
     singleBookingEnd: string | null;
+    booked?: boolean;
   } | null;
 };
 
@@ -35,6 +37,7 @@ export type EventRecord = {
   description: string | null;
   date: string;
   location: string | null;
+  location_url: string | null;
   max_attendees: number | null;
   meeting_link: string | null;
   image_url: string | null;
@@ -57,6 +60,7 @@ export interface EventDetailRecord extends EventRecord {
     trackBookingEnd: Date | null;
     singleBookingStart: Date | null;
     singleBookingEnd: Date | null;
+    booked: boolean;
   } | null;
 }
 
@@ -66,6 +70,7 @@ const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
   description: event.eventDescription,
   date: event.date,
   location: event.location,
+  location_url: event.locationUrl ?? null,
   max_attendees: event.maxAttendees ?? null,
   meeting_link: event.meetingLink ?? null,
   image_url: event.imageUrl ?? null,
@@ -99,6 +104,7 @@ export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecor
           singleBookingEnd: api.trackInfo.singleBookingEnd
             ? new Date(api.trackInfo.singleBookingEnd)
             : null,
+          booked: api.trackInfo.booked ?? false,
         }
       : null,
   };
@@ -109,6 +115,7 @@ export type CreateEventPayload = {
   description: string;
   date: string;
   location?: string | null;
+  locationUrl?: string | null;
   meetingLink?: string | null;
   maxAttendees?: number | null;
   imageUrl?: string | null;

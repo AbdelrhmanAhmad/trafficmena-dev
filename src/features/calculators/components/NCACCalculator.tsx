@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -27,19 +27,23 @@ const NCACCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const totalSpendId = useId();
+  const newCustomersId = useId();
+  const aovId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   const calculateNCAC = (): number | null => {
     const spend = parseFloat(totalSpend);
     const customers = parseFloat(newCustomers);
-    if (isNaN(spend) || isNaN(customers) || customers === 0) return null;
+    if (Number.isNaN(spend) || Number.isNaN(customers) || customers === 0) return null;
     return spend / customers;
   };
 
   const calculateProfitPerCustomer = (): number | null => {
     const ncac = calculateNCAC();
     const avgOrderValue = parseFloat(aov);
-    if (ncac === null || isNaN(avgOrderValue)) return null;
+    if (ncac === null || Number.isNaN(avgOrderValue)) return null;
     return avgOrderValue - ncac;
   };
 
@@ -49,7 +53,7 @@ const NCACCalculator = () => {
   const handleShare = () => {
     const text =
       ncac !== null
-        ? `My nCAC: ${formatCurrency(ncac.toFixed(2), currency)} | Total Spend: ${formatCurrency(totalSpend, currency)} | New Customers: ${parseInt(newCustomers).toLocaleString()}${profitPerCustomer !== null ? ` | First-Purchase Profit: ${formatCurrency(profitPerCustomer.toFixed(2), currency)}` : ''}`
+        ? `My nCAC: ${formatCurrency(ncac.toFixed(2), currency)} | Total Spend: ${formatCurrency(totalSpend, currency)} | New Customers: ${parseInt(newCustomers, 10).toLocaleString()}${profitPerCustomer !== null ? ` | First-Purchase Profit: ${formatCurrency(profitPerCustomer.toFixed(2), currency)}` : ''}`
         : null;
     shareToClipboard(text);
   };
@@ -299,12 +303,12 @@ const NCACCalculator = () => {
                   <div className="space-y-5">
                     {/* Total Spend Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="totalSpend" className="text-sm text-neutral-600">
+                      <Label htmlFor={totalSpendId} className="text-sm text-neutral-600">
                         Total ad spend
                       </Label>
                       <div className="relative">
                         <Input
-                          id="totalSpend"
+                          id={totalSpendId}
                           type="number"
                           placeholder="0"
                           value={totalSpend}
@@ -333,12 +337,12 @@ const NCACCalculator = () => {
 
                     {/* New Customers Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="newCustomers" className="text-sm text-neutral-600">
+                      <Label htmlFor={newCustomersId} className="text-sm text-neutral-600">
                         Number of NEW customers only (first-time buyers)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="newCustomers"
+                          id={newCustomersId}
                           type="number"
                           placeholder="0"
                           value={newCustomers}
@@ -350,12 +354,12 @@ const NCACCalculator = () => {
 
                     {/* AOV Input (Optional) */}
                     <div className="space-y-2">
-                      <Label htmlFor="aov" className="text-sm text-neutral-600">
+                      <Label htmlFor={aovId} className="text-sm text-neutral-600">
                         Average order value (optional)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="aov"
+                          id={aovId}
                           type="number"
                           placeholder="0"
                           value={aov}

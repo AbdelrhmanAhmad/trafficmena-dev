@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -25,6 +25,9 @@ const CPMCalculator = () => {
   const [impressions, setImpressions] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
+
+  const adSpendId = useId();
+  const impressionsId = useId();
 
   const currentCurrency = CURRENCIES[currency];
 
@@ -249,12 +252,12 @@ const CPMCalculator = () => {
                   <div className="space-y-5">
                     {/* Ad Spend Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="adSpend" className="text-sm text-neutral-600">
+                      <Label htmlFor={adSpendId} className="text-sm text-neutral-600">
                         Total ad spend
                       </Label>
                       <div className="relative">
                         <Input
-                          id="adSpend"
+                          id={adSpendId}
                           type="number"
                           placeholder="0"
                           value={adSpend}
@@ -283,12 +286,12 @@ const CPMCalculator = () => {
 
                     {/* Impressions Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="impressions" className="text-sm text-neutral-600">
+                      <Label htmlFor={impressionsId} className="text-sm text-neutral-600">
                         Total impressions
                       </Label>
                       <div className="relative">
                         <Input
-                          id="impressions"
+                          id={impressionsId}
                           type="number"
                           placeholder="0"
                           value={impressions}

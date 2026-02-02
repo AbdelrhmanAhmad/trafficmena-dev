@@ -23,6 +23,9 @@ export interface ApiTrack {
   trackBookingSpotsRemaining?: number | null;
   userHasBooked?: boolean;
   priceInCents?: number | null;
+  // Location fields
+  location?: string | null;
+  locationUrl?: string | null;
 }
 
 type ApiTrackEvent = {
@@ -61,6 +64,9 @@ export interface TrackRecord {
   track_booking_spots_remaining: number | null;
   user_has_booked: boolean;
   price_in_cents: number | null;
+  // Location fields
+  location: string | null;
+  location_url: string | null;
 }
 
 export interface TrackBookingSuccess {
@@ -107,6 +113,8 @@ const mapTrack = (api: ApiTrack): TrackRecord => ({
   track_booking_spots_remaining: api.trackBookingSpotsRemaining ?? null,
   user_has_booked: api.userHasBooked ?? false,
   price_in_cents: api.priceInCents ?? null,
+  location: api.location ?? null,
+  location_url: api.locationUrl ?? null,
 });
 
 const mapTrackEvent = (event: ApiTrackEvent): TrackEventRecord => ({
@@ -145,6 +153,8 @@ export type CreateTrackPayload = {
   allowIndividualBooking?: boolean;
   maxTrackBookings?: number | null;
   priceInCents?: number | null;
+  location?: string | null;
+  locationUrl?: string | null;
 };
 
 export type UpdateTrackPayload = Partial<CreateTrackPayload> & {
@@ -273,6 +283,8 @@ export interface PublicTrackRecord {
   track_booking_end: Date | null;
   spots_remaining: number | null;
   price_in_cents: number | null;
+  location: string | null;
+  location_url: string | null;
 }
 
 export interface PublicTrackDetailRecord {
@@ -290,6 +302,8 @@ export interface PublicTrackDetailRecord {
   event_count: number;
   user_has_booked: boolean;
   price_in_cents: number | null;
+  location: string | null;
+  location_url: string | null;
 }
 
 export interface PublicTrackEventRecord {
@@ -323,6 +337,8 @@ export async function fetchPublicTracks(
     trackBookingEnd: string | null;
     spotsRemaining: number | null;
     priceInCents: number | null;
+    location: string | null;
+    locationUrl: string | null;
   };
 
   const data = await fetchJson<{
@@ -345,6 +361,8 @@ export async function fetchPublicTracks(
       track_booking_end: t.trackBookingEnd ? new Date(t.trackBookingEnd) : null,
       spots_remaining: t.spotsRemaining,
       price_in_cents: t.priceInCents ?? null,
+      location: t.location ?? null,
+      location_url: t.locationUrl ?? null,
     })),
     pagination: data.pagination,
   };
@@ -354,44 +372,79 @@ export async function fetchPublicTracks(
 export async function fetchPublicTrackById(
   id: string,
 ): Promise<{ track: PublicTrackDetailRecord; events: PublicTrackEventRecord[] }> {
+  type ApiPublicTrackDetail = {
+    id: string;
+    title: string;
+    description: string | null;
+    imageUrl: string | null;
+    trackBookingStart: string | null;
+    trackBookingEnd: string | null;
+    singleBookingStart: string | null;
+    singleBookingEnd: string | null;
+    maxTrackBookings: number | null;
+    currentBookings: number;
+    spotsRemaining: number | null;
+    eventCount: number;
+    userHasBooked: boolean;
+    priceInCents: number | null;
+    location: string | null;
+    locationUrl: string | null;
+  };
+
+  type ApiPublicTrackEvent = {
+    id: string;
+    title: string;
+    description: string | null;
+    date: string;
+    location: string | null;
+    eventType: string;
+    imageUrl: string | null;
+    maxAttendees: number | null;
+    attendeeCount: number;
+  };
+
   const data = await fetchJson<{
-    track: {
-      id: string;
-      title: string;
-      description: string | null;
-      image_url: string | null;
-      track_booking_start: string | null;
-      track_booking_end: string | null;
-      single_booking_start: string | null;
-      single_booking_end: string | null;
-      max_track_bookings: number | null;
-      current_bookings: number;
-      spots_remaining: number | null;
-      event_count: number;
-      user_has_booked: boolean;
-      price_in_cents: number | null;
-    };
-    events: PublicTrackEventRecord[];
+    track: ApiPublicTrackDetail;
+    events: ApiPublicTrackEvent[];
   }>(`${API_BASE}/tracks/${id}/public`, {
     method: 'GET',
   });
 
   return {
     track: {
-      ...data.track,
-      track_booking_start: data.track.track_booking_start
-        ? new Date(data.track.track_booking_start)
+      id: data.track.id,
+      title: data.track.title,
+      description: data.track.description,
+      image_url: data.track.imageUrl,
+      track_booking_start: data.track.trackBookingStart
+        ? new Date(data.track.trackBookingStart)
         : null,
-      track_booking_end: data.track.track_booking_end
-        ? new Date(data.track.track_booking_end)
+      track_booking_end: data.track.trackBookingEnd ? new Date(data.track.trackBookingEnd) : null,
+      single_booking_start: data.track.singleBookingStart
+        ? new Date(data.track.singleBookingStart)
         : null,
-      single_booking_start: data.track.single_booking_start
-        ? new Date(data.track.single_booking_start)
+      single_booking_end: data.track.singleBookingEnd
+        ? new Date(data.track.singleBookingEnd)
         : null,
-      single_booking_end: data.track.single_booking_end
-        ? new Date(data.track.single_booking_end)
-        : null,
+      max_track_bookings: data.track.maxTrackBookings,
+      current_bookings: data.track.currentBookings,
+      spots_remaining: data.track.spotsRemaining,
+      event_count: data.track.eventCount,
+      user_has_booked: data.track.userHasBooked,
+      price_in_cents: data.track.priceInCents,
+      location: data.track.location,
+      location_url: data.track.locationUrl,
     },
-    events: data.events,
+    events: data.events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      location: event.location,
+      event_type: event.eventType,
+      image_url: event.imageUrl,
+      max_attendees: event.maxAttendees,
+      attendee_count: event.attendeeCount,
+    })),
   };
 }

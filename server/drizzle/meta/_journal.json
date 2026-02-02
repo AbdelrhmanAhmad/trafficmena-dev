@@ -64,6 +64,20 @@
       "when": 1769385516484,
       "tag": "0008_nice_toad",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769973195597,
+      "tag": "0009_moaning_bug",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769975125637,
+      "tag": "0010_next_wraith",
+      "breakpoints": true
     }
   ]
 }

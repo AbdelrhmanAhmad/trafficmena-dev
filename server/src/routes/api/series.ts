@@ -8,8 +8,10 @@ import {
   series,
   seriesAssets,
   subscriptions,
+  trackBookings,
 } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { resolveSeriesAccess, resolveSeriesAssetAccess } from './seriesAccess.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -169,7 +171,7 @@ export function registerSeriesRoutes(app: Hono) {
     const id = idParsed.data;
 
     const role = await getOptionalUserRole(session.user.id);
-    const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
+    const isStaff = role ? ['owner', 'admin', 'manager'].includes(role) : false;
 
     const [seriesRecord] = await db
       .select({
@@ -180,6 +182,7 @@ export function registerSeriesRoutes(app: Hono) {
         sortOrder: series.sortOrder,
         isPublished: series.isPublished,
         isPremium: series.isPremium,
+        trackId: series.trackId,
         createdAt: series.createdAt,
         updatedAt: series.updatedAt,
       })
@@ -197,7 +200,29 @@ export function registerSeriesRoutes(app: Hono) {
     }
 
     const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
-    const isPremiumLocked = seriesRecord.isPremium && !isStaff && !isSubscriber;
+    let hasTrackBooking = false;
+    if (!isStaff && !isSubscriber && seriesRecord.trackId) {
+      const [booking] = await db
+        .select({ id: trackBookings.id })
+        .from(trackBookings)
+        .where(
+          and(
+            eq(trackBookings.trackId, seriesRecord.trackId),
+            eq(trackBookings.userId, session.user.id),
+          ),
+        )
+        .limit(1);
+      hasTrackBooking = Boolean(booking);
+    }
+
+    const accessContext = {
+      isStaff,
+      isSubscriber,
+      hasTrackBooking,
+      seriesIsPremium: seriesRecord.isPremium,
+    };
+    const hasSeriesAccess = resolveSeriesAccess(accessContext);
+    const isPremiumLocked = !hasSeriesAccess;
 
     // Get assets in series with permission fields
     const seriesAssetsList = await db
@@ -228,7 +253,7 @@ export function registerSeriesRoutes(app: Hono) {
 
     // Get user's registered event IDs for permission checking
     let userEventIds = new Set<string>();
-    if (!isStaff && !isSubscriber && !isPremiumLocked) {
+    if (!isStaff && !isSubscriber && !hasTrackBooking && !isPremiumLocked) {
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
@@ -240,13 +265,13 @@ export function registerSeriesRoutes(app: Hono) {
 
     // Map assets with access control
     const assets = seriesAssetsList.map((sa) => {
-      const isAssetPremiumLocked = sa.asset.isPremium && !isStaff && !isSubscriber;
-      const hasAccess =
-        isStaff || isSubscriber
-          ? true
-          : isPremiumLocked || isAssetPremiumLocked
-            ? false
-            : sa.asset.isPublic || !sa.asset.eventId || userEventIds.has(sa.asset.eventId);
+      const hasAccess = resolveSeriesAssetAccess({
+        ...accessContext,
+        assetIsPremium: sa.asset.isPremium,
+        assetIsPublic: sa.asset.isPublic,
+        assetEventId: sa.asset.eventId,
+        userEventIds,
+      });
 
       return {
         id: sa.asset.id,
@@ -273,7 +298,7 @@ export function registerSeriesRoutes(app: Hono) {
       ...seriesRecord,
       assetCount: assets.length,
       assets,
-      hasAccess: !isPremiumLocked,
+      hasAccess: hasSeriesAccess,
     });
   });
 

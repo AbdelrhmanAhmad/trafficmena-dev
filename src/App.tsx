@@ -34,6 +34,7 @@ const LibraryComingSoon = lazy(() => import('./pages/Library'));
 const SubscribeLanding = lazy(() => import('./pages/SubscribeLanding'));
 const ThankYou = lazy(() => import('./pages/ThankYou'));
 const ThankYouEvent = lazy(() => import('./pages/ThankYouEvent'));
+const ThankYouTrack = lazy(() => import('./pages/ThankYouTrack'));
 const PrivacyPolicy = lazy(() => import('./pages/Privacy'));
 const TermsOfService = lazy(() => import('./pages/Terms'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -341,6 +342,16 @@ const App = () => {
                       <ProtectedRoute>
                         <ErrorBoundary>
                           <ThankYouEvent />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/thank-you-track/:id"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <ThankYouTrack />
                         </ErrorBoundary>
                       </ProtectedRoute>
                     }

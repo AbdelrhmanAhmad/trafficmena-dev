@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -16,6 +16,9 @@ const LeadToCustomerRateCalculator = () => {
   const [totalLeads, setTotalLeads] = useState('');
   const [customersAcquired, setCustomersAcquired] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
+
+  const totalLeadsId = useId();
+  const customersAcquiredId = useId();
 
   const calculateConversionRate = (): number | null => {
     const leads = parseFloat(totalLeads);
@@ -309,8 +312,8 @@ const LeadToCustomerRateCalculator = () => {
             <li className="flex items-start gap-2">
               <span className="text-primary font-bold">2.</span>
               <span>
-                <strong>Improve Lead Scoring:</strong> Tighten MQL definitions and align with
-                sales. The MQL→SQL gap causes most losses
+                <strong>Improve Lead Scoring:</strong> Tighten MQL definitions and align with sales.
+                The MQL→SQL gap causes most losses
               </span>
             </li>
             <li className="flex items-start gap-2">
@@ -355,11 +358,11 @@ const LeadToCustomerRateCalculator = () => {
               <AccordionContent className="pt-4 space-y-4 lg:space-y-6">
                 {/* Total Leads Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="totalLeads" className="text-sm text-neutral-600">
+                  <Label htmlFor={totalLeadsId} className="text-sm text-neutral-600">
                     Total Leads
                   </Label>
                   <Input
-                    id="totalLeads"
+                    id={totalLeadsId}
                     type="number"
                     placeholder="Enter total number of leads"
                     value={totalLeads}
@@ -370,11 +373,11 @@ const LeadToCustomerRateCalculator = () => {
 
                 {/* Customers Acquired Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="customersAcquired" className="text-sm text-neutral-600">
+                  <Label htmlFor={customersAcquiredId} className="text-sm text-neutral-600">
                     Customers Acquired
                   </Label>
                   <Input
-                    id="customersAcquired"
+                    id={customersAcquiredId}
                     type="number"
                     placeholder="Enter number of new customers"
                     value={customersAcquired}

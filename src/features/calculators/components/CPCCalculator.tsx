@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -26,18 +26,21 @@ const CPCCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const adSpendId = useId();
+  const clicksId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   const calculateCPC = (): number | null => {
     const spend = parseFloat(adSpend);
     const totalClicks = parseFloat(clicks);
-    if (isNaN(spend) || isNaN(totalClicks) || totalClicks === 0) return null;
+    if (Number.isNaN(spend) || Number.isNaN(totalClicks) || totalClicks === 0) return null;
     return spend / totalClicks;
   };
 
   const calculateTotalClicks = (): number | null => {
     const totalClicks = parseFloat(clicks);
-    if (isNaN(totalClicks)) return null;
+    if (Number.isNaN(totalClicks)) return null;
     return totalClicks;
   };
 
@@ -47,7 +50,7 @@ const CPCCalculator = () => {
   const handleShare = () => {
     const text =
       cpc !== null
-        ? `My CPC: ${formatCurrency(cpc.toFixed(2), currency)} | Ad Spend: ${formatCurrency(adSpend, currency)} | Clicks: ${parseInt(clicks).toLocaleString()}`
+        ? `My CPC: ${formatCurrency(cpc.toFixed(2), currency)} | Ad Spend: ${formatCurrency(adSpend, currency)} | Clicks: ${parseInt(clicks, 10).toLocaleString()}`
         : null;
     shareToClipboard(text);
   };
@@ -256,12 +259,12 @@ const CPCCalculator = () => {
                   <div className="space-y-5">
                     {/* Ad Spend Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="adSpend" className="text-sm text-neutral-600">
+                      <Label htmlFor={adSpendId} className="text-sm text-neutral-600">
                         Total ad spend
                       </Label>
                       <div className="relative">
                         <Input
-                          id="adSpend"
+                          id={adSpendId}
                           type="number"
                           placeholder="0"
                           value={adSpend}
@@ -290,12 +293,12 @@ const CPCCalculator = () => {
 
                     {/* Clicks Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="clicks" className="text-sm text-neutral-600">
+                      <Label htmlFor={clicksId} className="text-sm text-neutral-600">
                         Total clicks
                       </Label>
                       <div className="relative">
                         <Input
-                          id="clicks"
+                          id={clicksId}
                           type="number"
                           placeholder="0"
                           value={clicks}
@@ -350,9 +353,7 @@ const CPCCalculator = () => {
                       >
                         {cpc > 5 &&
                           'High CPC. Consider improving ad quality or adjusting targeting.'}
-                        {cpc > 2 &&
-                          cpc <= 5 &&
-                          'Above average CPC. May be a competitive industry.'}
+                        {cpc > 2 && cpc <= 5 && 'Above average CPC. May be a competitive industry.'}
                         {cpc > 0.5 && cpc <= 2 && 'Average CPC range for most platforms.'}
                         {cpc <= 0.5 && 'Excellent CPC. Very cost-efficient clicks!'}
                       </p>

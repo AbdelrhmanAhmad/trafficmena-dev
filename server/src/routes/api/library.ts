@@ -1,12 +1,14 @@
-import { and, count, eq, gte, ilike, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, count, eq, gte, ilike, inArray, isNull, notInArray, or } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
   libraryAssets,
+  series,
   seriesAssets,
   subscriptions,
+  trackBookings,
 } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
@@ -149,29 +151,26 @@ export function registerLibraryRoutes(app: Hono) {
     let registeredEventIds = new Set<string>();
 
     if (!isStaff && !isSubscriber) {
-      const userEventIds = db
-        .select({ eventId: eventAttendees.eventId })
-        .from(eventAttendees)
-        .where(
-          and(eq(eventAttendees.userId, session.user.id), eq(eventAttendees.status, 'active')),
-        );
-
-      filters.push(
-        sql`(
-          ${libraryAssets.isPremium} = true
-          OR ${libraryAssets.isPublic} = true
-          OR ${libraryAssets.eventId} IS NULL
-          OR ${libraryAssets.eventId} IN (${userEventIds})
-        )`,
-      );
-
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
         .where(
           and(eq(eventAttendees.userId, session.user.id), eq(eventAttendees.status, 'active')),
         );
-      registeredEventIds = new Set(registrations.map((r) => r.eventId));
+      const registeredEventList = registrations.map((r) => r.eventId);
+      registeredEventIds = new Set(registeredEventList);
+
+      const accessConditions = [
+        eq(libraryAssets.isPremium, true),
+        eq(libraryAssets.isPublic, true),
+        isNull(libraryAssets.eventId),
+      ];
+
+      if (registeredEventList.length > 0) {
+        accessConditions.push(inArray(libraryAssets.eventId, registeredEventList));
+      }
+
+      filters.push(or(...accessConditions));
     }
 
     if (type) {
@@ -236,13 +235,38 @@ export function registerLibraryRoutes(app: Hono) {
       .limit(pageSize)
       .offset(offset);
 
+    let bookedAssetIds = new Set<string>();
+    if (!isStaff && !isSubscriber) {
+      const premiumAssetIds = items.filter((item) => item.isPremium).map((item) => item.id);
+
+      if (premiumAssetIds.length > 0) {
+        const bookedAssets = await db
+          .select({ assetId: seriesAssets.assetId })
+          .from(seriesAssets)
+          .innerJoin(series, eq(series.id, seriesAssets.seriesId))
+          .innerJoin(trackBookings, eq(trackBookings.trackId, series.trackId))
+          .where(
+            and(
+              eq(trackBookings.userId, session.user.id),
+              inArray(seriesAssets.assetId, premiumAssetIds),
+            ),
+          );
+
+        bookedAssetIds = new Set(bookedAssets.map((asset) => asset.assetId));
+      }
+    }
+
     const mappedItems = items.map((item) => {
-      const hasAccess =
-        isStaff || isSubscriber
-          ? true
-          : item.isPremium
-            ? false
-            : item.isPublic || !item.eventId || registeredEventIds.has(item.eventId);
+      let hasAccess = isStaff || isSubscriber;
+      if (!hasAccess) {
+        if (item.isPremium) {
+          hasAccess =
+            bookedAssetIds.has(item.id) ||
+            (item.eventId ? registeredEventIds.has(item.eventId) : false);
+        } else {
+          hasAccess = item.isPublic || !item.eventId || registeredEventIds.has(item.eventId);
+        }
+      }
 
       if (hasAccess) {
         return { ...item, hasAccess };
@@ -333,24 +357,10 @@ export function registerLibraryRoutes(app: Hono) {
     const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
 
     if (!isStaff && !isSubscriber) {
-      if (asset[0].isPremium) {
-        return c.json(
-          {
-            id: asset[0].id,
-            title: asset[0].title,
-            description: asset[0].description,
-            fileType: asset[0].fileType,
-            thumbnailUrl: asset[0].thumbnailUrl,
-            eventId: asset[0].eventId,
-            isPremium: asset[0].isPremium,
-            hasAccess: false,
-            error: { code: 'SUBSCRIPTION_REQUIRED', message: 'Subscribe to access this content.' },
-          },
-          403,
-        );
-      }
+      let hasTrackBooking = false;
+      let hasRegistration = false;
 
-      if (asset[0].eventId && !asset[0].isPublic) {
+      if (asset[0].eventId) {
         const [registration] = await db
           .select({ id: eventAttendees.id })
           .from(eventAttendees)
@@ -363,8 +373,23 @@ export function registerLibraryRoutes(app: Hono) {
           )
           .limit(1);
 
-        if (!registration) {
-          // Return metadata without content URLs
+        hasRegistration = Boolean(registration);
+      }
+
+      if (asset[0].isPremium) {
+        const [booking] = await db
+          .select({ assetId: seriesAssets.assetId })
+          .from(seriesAssets)
+          .innerJoin(series, eq(series.id, seriesAssets.seriesId))
+          .innerJoin(trackBookings, eq(trackBookings.trackId, series.trackId))
+          .where(
+            and(eq(trackBookings.userId, session.user.id), eq(seriesAssets.assetId, asset[0].id)),
+          )
+          .limit(1);
+
+        hasTrackBooking = Boolean(booking);
+
+        if (!hasTrackBooking && !hasRegistration) {
           return c.json(
             {
               id: asset[0].id,
@@ -375,11 +400,32 @@ export function registerLibraryRoutes(app: Hono) {
               eventId: asset[0].eventId,
               isPremium: asset[0].isPremium,
               hasAccess: false,
-              error: { code: 'REGISTRATION_REQUIRED', message: 'Register for event to access.' },
+              error: {
+                code: 'SUBSCRIPTION_REQUIRED',
+                message: 'Subscribe to access this content.',
+              },
             },
             403,
           );
         }
+      }
+
+      if (!asset[0].isPremium && asset[0].eventId && !asset[0].isPublic && !hasRegistration) {
+        // Return metadata without content URLs
+        return c.json(
+          {
+            id: asset[0].id,
+            title: asset[0].title,
+            description: asset[0].description,
+            fileType: asset[0].fileType,
+            thumbnailUrl: asset[0].thumbnailUrl,
+            eventId: asset[0].eventId,
+            isPremium: asset[0].isPremium,
+            hasAccess: false,
+            error: { code: 'REGISTRATION_REQUIRED', message: 'Register for event to access.' },
+          },
+          403,
+        );
       }
     }
 

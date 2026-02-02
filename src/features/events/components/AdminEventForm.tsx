@@ -43,7 +43,32 @@ const eventFormSchema = z.object({
   date: z.string().min(1, 'Pick a date and time.'),
   eventType: z.enum(['Event', 'Meetup', 'Mastermind', 'Retreat']),
   location: z.string().trim().max(255).optional(),
-  meetingLink: z.string().trim().max(500).optional(),
+  locationUrl: z
+    .string()
+    .url()
+    .max(500)
+    .refine((value) => {
+      try {
+        return new URL(value).protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }, 'Location URL must start with https://')
+    .optional()
+    .or(z.literal('')),
+  meetingLink: z
+    .string()
+    .url('Enter a valid URL')
+    .max(500)
+    .refine((value) => {
+      try {
+        return new URL(value).protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }, 'Meeting link must start with https://')
+    .optional()
+    .or(z.literal('')),
   maxAttendees: z
     .string()
     .optional()
@@ -138,6 +163,7 @@ export function AdminEventForm({
     date: toDateTimeLocalString(event?.date),
     eventType: event?.event_type ?? 'Event',
     location: event?.location ?? '',
+    locationUrl: event?.location_url ?? '',
     meetingLink: event?.meeting_link ?? '',
     maxAttendees: defaultCapacity,
     imageUrl: event?.image_url ?? '',
@@ -204,6 +230,7 @@ export function AdminEventForm({
       date: new Date(formValues.date).toISOString(),
       eventType: formValues.eventType,
       location: formValues.location?.trim() ? formValues.location.trim() : null,
+      locationUrl: formValues.locationUrl?.trim() ? formValues.locationUrl.trim() : null,
       meetingLink: formValues.meetingLink?.trim() ? formValues.meetingLink.trim() : null,
       maxAttendees: formValues.maxAttendees ? Number(formValues.maxAttendees) : null,
       imageUrl: formValues.imageUrl?.trim() ? formValues.imageUrl.trim() : null,
@@ -299,18 +326,39 @@ export function AdminEventForm({
 
                 <FormField
                   control={form.control}
-                  name="meetingLink"
+                  name="locationUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Meeting link (optional)</FormLabel>
+                      <FormLabel>Location URL (Map Link)</FormLabel>
                       <FormControl>
-                        <Input placeholder="https://zoom.us/..." {...field} />
+                        <Input
+                          placeholder="https://maps.google.com/..."
+                          {...field}
+                          value={field.value ?? ''}
+                        />
                       </FormControl>
+                      <FormDescription>
+                        Paste a link from Google Maps, Apple Maps, or Waze
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="meetingLink"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Meeting link (optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://zoom.us/..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField

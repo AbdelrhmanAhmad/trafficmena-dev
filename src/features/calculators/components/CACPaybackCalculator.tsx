@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -27,6 +27,10 @@ const CACPaybackCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const cacId = useId();
+  const monthlyRevenueId = useId();
+  const grossMarginId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   // CAC Payback = CAC / (Monthly Revenue × Gross Margin %)
@@ -34,7 +38,13 @@ const CACPaybackCalculator = () => {
     const cacValue = parseFloat(cac);
     const revenue = parseFloat(monthlyRevenue);
     const margin = parseFloat(grossMargin);
-    if (isNaN(cacValue) || isNaN(revenue) || isNaN(margin) || revenue === 0 || margin === 0)
+    if (
+      Number.isNaN(cacValue) ||
+      Number.isNaN(revenue) ||
+      Number.isNaN(margin) ||
+      revenue === 0 ||
+      margin === 0
+    )
       return null;
     const monthlyGrossProfit = revenue * (margin / 100);
     if (monthlyGrossProfit === 0) return null;
@@ -44,7 +54,7 @@ const CACPaybackCalculator = () => {
   const calculateMonthlyGrossProfit = (): number | null => {
     const revenue = parseFloat(monthlyRevenue);
     const margin = parseFloat(grossMargin);
-    if (isNaN(revenue) || isNaN(margin)) return null;
+    if (Number.isNaN(revenue) || Number.isNaN(margin)) return null;
     return revenue * (margin / 100);
   };
 
@@ -289,8 +299,8 @@ const CACPaybackCalculator = () => {
               <li className="flex items-start gap-2">
                 <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
                 <span>
-                  <strong className="text-neutral-800">LTV:CAC:</strong> Value-focused. Total
-                  return on acquisition investment
+                  <strong className="text-neutral-800">LTV:CAC:</strong> Value-focused. Total return
+                  on acquisition investment
                 </span>
               </li>
             </ul>
@@ -315,12 +325,12 @@ const CACPaybackCalculator = () => {
                   <div className="space-y-5">
                     {/* CAC Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="cac" className="text-sm text-neutral-600">
+                      <Label htmlFor={cacId} className="text-sm text-neutral-600">
                         Customer acquisition cost (CAC)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="cac"
+                          id={cacId}
                           type="number"
                           placeholder="0"
                           value={cac}
@@ -349,12 +359,12 @@ const CACPaybackCalculator = () => {
 
                     {/* Monthly Revenue Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="monthlyRevenue" className="text-sm text-neutral-600">
+                      <Label htmlFor={monthlyRevenueId} className="text-sm text-neutral-600">
                         Monthly revenue per customer (ARPU)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="monthlyRevenue"
+                          id={monthlyRevenueId}
                           type="number"
                           placeholder="0"
                           value={monthlyRevenue}
@@ -369,12 +379,12 @@ const CACPaybackCalculator = () => {
 
                     {/* Gross Margin Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="grossMargin" className="text-sm text-neutral-600">
+                      <Label htmlFor={grossMarginId} className="text-sm text-neutral-600">
                         Gross margin (%)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="grossMargin"
+                          id={grossMarginId}
                           type="number"
                           placeholder="80"
                           value={grossMargin}

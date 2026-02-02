@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -31,25 +31,31 @@ const ROASCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const adSpendId = useId();
+  const yesId = useId();
+  const noId = useId();
+  const adRevenueId = useId();
+  const targetRoasId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   const calculateROAS = (): number | null => {
     if (knowsRevenue === 'yes') {
       const spend = parseFloat(adSpend);
       const revenue = parseFloat(adRevenue);
-      if (isNaN(spend) || isNaN(revenue) || spend === 0) return null;
+      if (Number.isNaN(spend) || Number.isNaN(revenue) || spend === 0) return null;
       return (revenue / spend) * 100;
     }
     // When user doesn't know revenue, return the target ROAS they input
     const target = parseFloat(targetRoas);
-    if (isNaN(target)) return null;
+    if (Number.isNaN(target)) return null;
     return target;
   };
 
   const calculateRequiredRevenue = (): number | null => {
     const spend = parseFloat(adSpend);
     const target = parseFloat(targetRoas);
-    if (isNaN(spend) || isNaN(target) || spend === 0) return null;
+    if (Number.isNaN(spend) || Number.isNaN(target) || spend === 0) return null;
     return (target / 100) * spend;
   };
 
@@ -215,12 +221,12 @@ const ROASCalculator = () => {
                   <div className="space-y-5">
                     {/* Ad Spend Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="adSpend" className="text-sm text-neutral-600">
+                      <Label htmlFor={adSpendId} className="text-sm text-neutral-600">
                         Ad spend
                       </Label>
                       <div className="relative">
                         <Input
-                          id="adSpend"
+                          id={adSpendId}
                           type="number"
                           placeholder="0"
                           value={adSpend}
@@ -258,16 +264,16 @@ const ROASCalculator = () => {
                         <div className="flex items-center space-x-3">
                           <RadioGroupItem
                             value="yes"
-                            id="yes"
+                            id={yesId}
                             className="border-emerald-500 text-emerald-500"
                           />
-                          <Label htmlFor="yes" className="text-neutral-800 cursor-pointer">
+                          <Label htmlFor={yesId} className="text-neutral-800 cursor-pointer">
                             Yes
                           </Label>
                         </div>
                         <div className="flex items-center space-x-3">
-                          <RadioGroupItem value="no" id="no" className="border-neutral-600" />
-                          <Label htmlFor="no" className="text-neutral-800 cursor-pointer">
+                          <RadioGroupItem value="no" id={noId} className="border-neutral-600" />
+                          <Label htmlFor={noId} className="text-neutral-800 cursor-pointer">
                             No
                           </Label>
                         </div>
@@ -277,12 +283,12 @@ const ROASCalculator = () => {
                     {/* Ad Revenue Input - shown when user knows revenue */}
                     {knowsRevenue === 'yes' && (
                       <div className="space-y-2">
-                        <Label htmlFor="adRevenue" className="text-sm text-neutral-600">
+                        <Label htmlFor={adRevenueId} className="text-sm text-neutral-600">
                           Ad revenue
                         </Label>
                         <div className="relative">
                           <Input
-                            id="adRevenue"
+                            id={adRevenueId}
                             type="number"
                             placeholder="0"
                             value={adRevenue}
@@ -300,12 +306,12 @@ const ROASCalculator = () => {
                     {knowsRevenue === 'no' && (
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="targetRoas" className="text-sm text-neutral-600">
+                          <Label htmlFor={targetRoasId} className="text-sm text-neutral-600">
                             Target ROAS (enter 100% for breakeven)
                           </Label>
                           <div className="relative">
                             <Input
-                              id="targetRoas"
+                              id={targetRoasId}
                               type="number"
                               placeholder="100"
                               value={targetRoas}

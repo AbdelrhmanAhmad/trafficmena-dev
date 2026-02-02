@@ -15,7 +15,9 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type EventRecord, fetchEvents } from '@/app/api/events';
+import { fetchPublicTracks, type PublicTrackRecord } from '@/app/api/tracks';
 import { EventCard } from '@/features/events/components/EventCard';
+import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
@@ -148,6 +150,24 @@ const Index: React.FC = () => {
 
   const events = meetups ?? [];
 
+  // Fetch published tracks for the landing page
+  const { data: tracksData, isLoading: tracksLoading } = useQuery({
+    queryKey: ['landing-tracks'],
+    queryFn: async (): Promise<PublicTrackRecord[]> => {
+      try {
+        const response = await fetchPublicTracks({ page: 1, pageSize: 6 });
+        return response.items;
+      } catch {
+        // Silently fail - tracks section is optional
+        return [];
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const tracks = tracksData ?? [];
+
   // Intersection Observer for lazy loading
   useEffect(() => {
     if (!loadMoreRef.current) return;
@@ -214,9 +234,9 @@ const Index: React.FC = () => {
                   <p
                     className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
                   >
-                    TrafficMENA connects you with practitioners, not professors, through
-                    expert-led meetups, structured learning tracks, and a community that actually
-                    helps you grow.
+                    TrafficMENA connects you with practitioners, not professors, through expert-led
+                    meetups, structured learning tracks, and a community that actually helps you
+                    grow.
                   </p>
 
                   <div
@@ -348,6 +368,33 @@ const Index: React.FC = () => {
               </div>
             )}
           </section>
+
+          {/* Learning Tracks Section - Only show if tracks exist */}
+          {!tracksLoading && tracks.length > 0 && (
+            <section className="relative w-full rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8">
+              {/* Background patterns - Same as events */}
+              <div className="absolute inset-0 opacity-10 pointer-events-none">
+                <div className="absolute top-1/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent"></div>
+                <div className="absolute top-3/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-300 to-transparent"></div>
+                <div className="absolute top-0 bottom-0 left-1/3 w-px bg-gradient-to-b from-transparent via-neutral-300 to-transparent"></div>
+                <div className="absolute top-0 bottom-0 right-1/3 w-px bg-gradient-to-b from-transparent via-neutral-300 to-transparent"></div>
+              </div>
+
+              <div className="relative z-10 mx-auto max-w-3xl text-center">
+                <span className="text-sm font-normal text-neutral-500">Structured Learning</span>
+                <h2 className="text-[44px] sm:text-6xl lg:text-7xl leading-[0.95] text-neutral-900 mt-2 tracking-tight">
+                  Learning Tracks
+                </h2>
+              </div>
+
+              {/* Tracks Grid */}
+              <div className="relative z-10 mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {tracks.map((track) => (
+                  <PublicTrackCard key={track.id} track={track} />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* What You Get FREE Section */}
           <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-6 sm:p-8">
@@ -497,10 +544,11 @@ const Index: React.FC = () => {
                             {/* Numbered badge with conditional styling */}
                             <div className="relative z-10 flex-shrink-0">
                               <div
-                                className={`flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] bg-white text-lg sm:text-xl font-semibold shadow-sm ${isPremium
-                                  ? 'border-amber-400 text-amber-500'
-                                  : 'border-[#05ef62] text-[#05ef62]'
-                                  }`}
+                                className={`flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-[3px] bg-white text-lg sm:text-xl font-semibold shadow-sm ${
+                                  isPremium
+                                    ? 'border-amber-400 text-amber-500'
+                                    : 'border-[#05ef62] text-[#05ef62]'
+                                }`}
                               >
                                 {benefit.id}
                               </div>
@@ -525,8 +573,9 @@ const Index: React.FC = () => {
                                 {benefit.points.map((point) => (
                                   <li key={point} className="flex items-start gap-2.5">
                                     <CheckCircle2
-                                      className={`h-5 w-5 flex-shrink-0 mt-0.5 ${isPremium ? 'text-amber-500' : 'text-[#05ef62]'
-                                        }`}
+                                      className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+                                        isPremium ? 'text-amber-500' : 'text-[#05ef62]'
+                                      }`}
                                     />
                                     <span className="text-sm text-neutral-600 leading-relaxed">
                                       {point}

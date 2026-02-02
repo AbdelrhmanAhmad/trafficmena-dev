@@ -170,7 +170,10 @@ export const VALUE_MATH_ITEMS = [
   { label: '24 Monthly Q&A Sessions (value at 1000 EGP avg each)', value: 24000 },
   { label: 'Offline Discount Savings (8 events × avg 350 EGP Discount)', value: 2800 },
   { label: 'Exclusive Resources (playbooks, templates, guides) avg', value: 5000 },
-  { label: 'All Future Online Tracks & Offline Recordings (estimated 5-8 new tracks/year)', value: 17600 },
+  {
+    label: 'All Future Online Tracks & Offline Recordings (estimated 5-8 new tracks/year)',
+    value: 17600,
+  },
 ];
 
 export const TOTAL_VALUE = VALUE_MATH_ITEMS.reduce((sum, item) => sum + item.value, 0);

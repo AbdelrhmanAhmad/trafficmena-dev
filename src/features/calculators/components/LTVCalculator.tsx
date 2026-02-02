@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -28,20 +28,25 @@ const LTVCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const aovId = useId();
+  const purchaseFrequencyId = useId();
+  const grossMarginId = useId();
+  const cacId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   const calculateLTV = (): number | null => {
     const avgOrderValue = parseFloat(aov);
     const frequency = parseFloat(purchaseFrequency);
     const margin = parseFloat(grossMargin);
-    if (isNaN(avgOrderValue) || isNaN(frequency) || isNaN(margin)) return null;
+    if (Number.isNaN(avgOrderValue) || Number.isNaN(frequency) || Number.isNaN(margin)) return null;
     return avgOrderValue * frequency * (margin / 100);
   };
 
   const calculateLTVtoCACRatio = (): number | null => {
     const ltv = calculateLTV();
     const cacValue = parseFloat(cac);
-    if (ltv === null || isNaN(cacValue) || cacValue === 0) return null;
+    if (ltv === null || Number.isNaN(cacValue) || cacValue === 0) return null;
     return ltv / cacValue;
   };
 
@@ -296,12 +301,12 @@ const LTVCalculator = () => {
                   <div className="space-y-4 lg:space-y-6">
                     {/* AOV Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="aov" className="text-sm text-neutral-600">
+                      <Label htmlFor={aovId} className="text-sm text-neutral-600">
                         Average order value (AOV)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="aov"
+                          id={aovId}
                           type="number"
                           placeholder="0"
                           value={aov}
@@ -330,12 +335,12 @@ const LTVCalculator = () => {
 
                     {/* Purchase Frequency Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="purchaseFrequency" className="text-sm text-neutral-600">
+                      <Label htmlFor={purchaseFrequencyId} className="text-sm text-neutral-600">
                         Purchases per customer (lifetime)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="purchaseFrequency"
+                          id={purchaseFrequencyId}
                           type="number"
                           step="0.1"
                           placeholder="0"
@@ -348,12 +353,12 @@ const LTVCalculator = () => {
 
                     {/* Gross Margin Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="grossMargin" className="text-sm text-neutral-600">
+                      <Label htmlFor={grossMarginId} className="text-sm text-neutral-600">
                         Gross margin (%)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="grossMargin"
+                          id={grossMarginId}
                           type="number"
                           placeholder="0"
                           value={grossMargin}
@@ -368,12 +373,12 @@ const LTVCalculator = () => {
 
                     {/* CAC Input (Optional) */}
                     <div className="space-y-2">
-                      <Label htmlFor="cac" className="text-sm text-neutral-600">
+                      <Label htmlFor={cacId} className="text-sm text-neutral-600">
                         Customer acquisition cost (optional, for ratio)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="cac"
+                          id={cacId}
                           type="number"
                           placeholder="0"
                           value={cac}
@@ -441,9 +446,7 @@ const LTVCalculator = () => {
                         {ltv >= 50 &&
                           ltv < 150 &&
                           'Moderate LTV. Typical for lower-price products.'}
-                        {ltv >= 150 &&
-                          ltv < 500 &&
-                          'Strong LTV. Healthy customer lifetime profit.'}
+                        {ltv >= 150 && ltv < 500 && 'Strong LTV. Healthy customer lifetime profit.'}
                         {ltv >= 500 && 'Excellent LTV. High-value customer relationships!'}
                       </p>
                     )}

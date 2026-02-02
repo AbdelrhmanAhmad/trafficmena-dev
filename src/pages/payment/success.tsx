@@ -29,12 +29,12 @@ export default function PaymentSuccessPage() {
   }, [invoiceId, user, verificationAttempted, verifyPayment]);
 
   useEffect(() => {
-    if (
-      verifyPayment.data?.status === 'paid' &&
-      verifyPayment.data.itemType === 'event' &&
-      verifyPayment.data.itemId
-    ) {
-      navigate(`/thank-you-event/${verifyPayment.data.itemId}?paid=1`, { replace: true });
+    if (verifyPayment.data?.status === 'paid' && verifyPayment.data.itemId) {
+      if (verifyPayment.data.itemType === 'event') {
+        navigate(`/thank-you-event/${verifyPayment.data.itemId}?paid=1`, { replace: true });
+      } else if (verifyPayment.data.itemType === 'track') {
+        navigate(`/thank-you-track/${verifyPayment.data.itemId}?paid=1`, { replace: true });
+      }
     }
   }, [verifyPayment.data, navigate]);
 

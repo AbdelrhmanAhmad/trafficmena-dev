@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -28,6 +28,11 @@ const SaaSLTVCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const arpuId = useId();
+  const grossMarginId = useId();
+  const monthlyChurnRateId = useId();
+  const cacId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   // LTV = ARPU × Gross Margin % × (1 / Monthly Churn Rate)
@@ -35,20 +40,21 @@ const SaaSLTVCalculator = () => {
     const arpuValue = parseFloat(arpu);
     const margin = parseFloat(grossMargin);
     const churn = parseFloat(monthlyChurnRate);
-    if (isNaN(arpuValue) || isNaN(margin) || isNaN(churn) || churn === 0) return null;
+    if (Number.isNaN(arpuValue) || Number.isNaN(margin) || Number.isNaN(churn) || churn === 0)
+      return null;
     return arpuValue * (margin / 100) * (1 / (churn / 100));
   };
 
   const calculateCustomerLifetimeMonths = (): number | null => {
     const churn = parseFloat(monthlyChurnRate);
-    if (isNaN(churn) || churn === 0) return null;
+    if (Number.isNaN(churn) || churn === 0) return null;
     return 1 / (churn / 100);
   };
 
   const calculateLTVtoCACRatio = (): number | null => {
     const ltv = calculateLTV();
     const cacValue = parseFloat(cac);
-    if (ltv === null || isNaN(cacValue) || cacValue === 0) return null;
+    if (ltv === null || Number.isNaN(cacValue) || cacValue === 0) return null;
     return ltv / cacValue;
   };
 
@@ -357,12 +363,12 @@ const SaaSLTVCalculator = () => {
                   <div className="space-y-5">
                     {/* ARPU Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="arpu" className="text-sm text-neutral-500">
+                      <Label htmlFor={arpuId} className="text-sm text-neutral-500">
                         Average revenue per user (ARPU) / month
                       </Label>
                       <div className="relative">
                         <Input
-                          id="arpu"
+                          id={arpuId}
                           type="number"
                           placeholder="0"
                           value={arpu}
@@ -391,12 +397,12 @@ const SaaSLTVCalculator = () => {
 
                     {/* Gross Margin Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="grossMargin" className="text-sm text-neutral-500">
+                      <Label htmlFor={grossMarginId} className="text-sm text-neutral-500">
                         Gross margin (%)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="grossMargin"
+                          id={grossMarginId}
                           type="number"
                           placeholder="80"
                           value={grossMargin}
@@ -414,12 +420,12 @@ const SaaSLTVCalculator = () => {
 
                     {/* Monthly Churn Rate Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="monthlyChurnRate" className="text-sm text-neutral-500">
+                      <Label htmlFor={monthlyChurnRateId} className="text-sm text-neutral-500">
                         Monthly churn rate (%)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="monthlyChurnRate"
+                          id={monthlyChurnRateId}
                           type="number"
                           step="0.1"
                           placeholder="5"
@@ -435,12 +441,12 @@ const SaaSLTVCalculator = () => {
 
                     {/* CAC Input (Optional) */}
                     <div className="space-y-2">
-                      <Label htmlFor="cac" className="text-sm text-neutral-500">
+                      <Label htmlFor={cacId} className="text-sm text-neutral-500">
                         Customer acquisition cost (optional, for ratio)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="cac"
+                          id={cacId}
                           type="number"
                           placeholder="0"
                           value={cac}

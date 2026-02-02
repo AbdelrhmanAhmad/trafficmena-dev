@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -28,13 +28,18 @@ const NRRCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const startingMRRId = useId();
+  const expansionMRRId = useId();
+  const contractionMRRId = useId();
+  const churnMRRId = useId();
+
   // NRR = (Starting MRR + Expansion - Contraction - Churn) / Starting MRR × 100
   const calculateNRR = (): number | null => {
     const starting = parseFloat(startingMRR);
     const expansion = parseFloat(expansionMRR) || 0;
     const contraction = parseFloat(contractionMRR) || 0;
     const churn = parseFloat(churnMRR) || 0;
-    if (isNaN(starting) || starting === 0) return null;
+    if (Number.isNaN(starting) || starting === 0) return null;
     return ((starting + expansion - contraction - churn) / starting) * 100;
   };
 
@@ -43,7 +48,7 @@ const NRRCalculator = () => {
     const starting = parseFloat(startingMRR);
     const contraction = parseFloat(contractionMRR) || 0;
     const churn = parseFloat(churnMRR) || 0;
-    if (isNaN(starting) || starting === 0) return null;
+    if (Number.isNaN(starting) || starting === 0) return null;
     const grr = ((starting - contraction - churn) / starting) * 100;
     return Math.min(grr, 100); // GRR cannot exceed 100%
   };
@@ -53,7 +58,7 @@ const NRRCalculator = () => {
     const expansion = parseFloat(expansionMRR) || 0;
     const contraction = parseFloat(contractionMRR) || 0;
     const churn = parseFloat(churnMRR) || 0;
-    if (isNaN(starting)) return null;
+    if (Number.isNaN(starting)) return null;
     return starting + expansion - contraction - churn;
   };
 
@@ -259,8 +264,8 @@ const NRRCalculator = () => {
               <li className="flex items-start gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
                 <span>
-                  <strong className="text-neutral-800">NRR:</strong> Includes expansion. Shows
-                  total growth potential from existing customers
+                  <strong className="text-neutral-800">NRR:</strong> Includes expansion. Shows total
+                  growth potential from existing customers
                 </span>
               </li>
               <li className="flex items-start gap-2">
@@ -329,12 +334,12 @@ const NRRCalculator = () => {
                   <div className="space-y-5">
                     {/* Starting MRR Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="startingMRR" className="text-sm text-neutral-600">
+                      <Label htmlFor={startingMRRId} className="text-sm text-neutral-600">
                         Starting MRR (from existing customers)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="startingMRR"
+                          id={startingMRRId}
                           type="number"
                           placeholder="0"
                           value={startingMRR}
@@ -363,12 +368,12 @@ const NRRCalculator = () => {
 
                     {/* Expansion MRR Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="expansionMRR" className="text-sm text-neutral-600">
+                      <Label htmlFor={expansionMRRId} className="text-sm text-neutral-600">
                         Expansion MRR (upsells, cross-sells, upgrades)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="expansionMRR"
+                          id={expansionMRRId}
                           type="number"
                           placeholder="0"
                           value={expansionMRR}
@@ -383,12 +388,12 @@ const NRRCalculator = () => {
 
                     {/* Contraction MRR Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="contractionMRR" className="text-sm text-neutral-600">
+                      <Label htmlFor={contractionMRRId} className="text-sm text-neutral-600">
                         Contraction MRR (downgrades, reduced usage)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="contractionMRR"
+                          id={contractionMRRId}
                           type="number"
                           placeholder="0"
                           value={contractionMRR}
@@ -403,12 +408,12 @@ const NRRCalculator = () => {
 
                     {/* Churn MRR Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="churnMRR" className="text-sm text-neutral-600">
+                      <Label htmlFor={churnMRRId} className="text-sm text-neutral-600">
                         Churn MRR (cancellations)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="churnMRR"
+                          id={churnMRRId}
                           type="number"
                           placeholder="0"
                           value={churnMRR}

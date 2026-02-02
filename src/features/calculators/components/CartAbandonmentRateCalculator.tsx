@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -17,10 +17,13 @@ const CartAbandonmentRateCalculator = () => {
   const [cartsCompleted, setCartsCompleted] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
 
+  const cartsCreatedId = useId();
+  const cartsCompletedId = useId();
+
   const calculateAbandonmentRate = (): number | null => {
     const created = parseFloat(cartsCreated);
     const completed = parseFloat(cartsCompleted);
-    if (isNaN(created) || isNaN(completed) || created === 0) return null;
+    if (Number.isNaN(created) || Number.isNaN(completed) || created === 0) return null;
     const abandoned = created - completed;
     return (abandoned / created) * 100;
   };
@@ -332,11 +335,11 @@ const CartAbandonmentRateCalculator = () => {
               <AccordionContent className="pt-4 space-y-4 lg:space-y-6">
                 {/* Carts Created Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="cartsCreated" className="text-sm text-neutral-600">
+                  <Label htmlFor={cartsCreatedId} className="text-sm text-neutral-600">
                     Shopping Carts Created
                   </Label>
                   <Input
-                    id="cartsCreated"
+                    id={cartsCreatedId}
                     type="number"
                     placeholder="Enter number of carts created"
                     value={cartsCreated}
@@ -347,11 +350,11 @@ const CartAbandonmentRateCalculator = () => {
 
                 {/* Carts Completed Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="cartsCompleted" className="text-sm text-neutral-600">
+                  <Label htmlFor={cartsCompletedId} className="text-sm text-neutral-600">
                     Completed Purchases
                   </Label>
                   <Input
-                    id="cartsCompleted"
+                    id={cartsCompletedId}
                     type="number"
                     placeholder="Enter number of completed purchases"
                     value={cartsCompleted}

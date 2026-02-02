@@ -24,6 +24,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
+import { isValidLocationUrl } from '@/shared/hooks/custom/useLocationVisibility';
 import { clearPendingEventContext } from '@/shared/utils/eventRedirectUtils';
 
 const ThankYouEvent: React.FC = () => {
@@ -252,14 +253,24 @@ const ThankYouEvent: React.FC = () => {
                           Location
                         </div>
                         <div className="font-semibold text-neutral-900">{locationLabel}</div>
+                        {event.location_url && isValidLocationUrl(event.location_url) && (
+                          <a
+                            href={event.location_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#05ef62] hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            View on Map
+                          </a>
+                        )}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
                       <Users className="h-5 w-5 text-[#05ef62]" />
                       <div className="font-semibold text-neutral-900">
-                        {event.max_attendees &&
-                        event.attendee_count >= event.max_attendees
+                        {event.max_attendees && event.attendee_count >= event.max_attendees
                           ? 'Sold Out'
                           : 'Limited Spots'}
                       </div>

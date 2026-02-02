@@ -9,6 +9,7 @@ import {
   libraryAssets,
   profiles,
   subscriptions,
+  trackBookings,
   trackEvents,
   tracks,
   users,
@@ -34,6 +35,14 @@ const rejectionReasonSchema = z.object({
   reason: z.string().trim().max(1000).optional(),
 });
 
+function parseEventIdParam(eventId: string): string {
+  const parsed = uuidParamSchema.safeParse(eventId);
+  if (!parsed.success) {
+    throw new ApiError('INVALID_PARAM', 'Event ID must be a valid UUID.', 400);
+  }
+  return parsed.data;
+}
+
 const registerBodySchema = z.object({});
 
 const isoDateSchema = z
@@ -41,13 +50,28 @@ const isoDateSchema = z
   .refine((value) => !Number.isNaN(Date.parse(value)), { message: 'Invalid date value.' })
   .transform((value) => new Date(value));
 
-const meetingLinkSchema = z
-  .string()
-  .url('Provide a valid URL.')
-  .max(500, 'Meeting link is too long.')
+const httpsUrlSchema = (label: string) =>
+  z
+    .string()
+    .url('Provide a valid URL.')
+    .max(500, `${label} is too long.`)
+    .refine((value) => {
+      try {
+        return new URL(value).protocol === 'https:';
+      } catch {
+        return false;
+      }
+    }, `${label} must start with https://`);
+
+const meetingLinkSchema = httpsUrlSchema('Meeting link')
   .optional()
-  .or(z.literal('').transform(() => undefined))
-  .or(z.null().transform(() => undefined));
+  .or(z.literal('').transform(() => null))
+  .or(z.null());
+
+const locationUrlSchema = httpsUrlSchema('Location URL')
+  .optional()
+  .or(z.literal('').transform(() => null))
+  .or(z.null());
 
 const imageUrlSchema = z
   .string()
@@ -103,6 +127,7 @@ const baseEventSchema = z.object({
   description: z.string().trim().min(1, 'Description is required.').max(8000),
   date: isoDateSchema,
   location: stringOrNull,
+  locationUrl: locationUrlSchema,
   meetingLink: meetingLinkSchema,
   maxAttendees: maxAttendeesSchema,
   imageUrl: imageUrlSchema,
@@ -177,6 +202,7 @@ export function registerEventRoutes(app: Hono) {
             eventDescription: events.eventDescription,
             date: events.date,
             location: events.location,
+            locationUrl: events.locationUrl,
             maxAttendees: events.maxAttendees,
             meetingLink: events.meetingLink,
             imageUrl: events.imageUrl,
@@ -193,9 +219,10 @@ export function registerEventRoutes(app: Hono) {
           .limit(pageSize)
           .offset(offset);
 
-        const sanitizedItems = items.map(({ meetingLink, ...rest }) => ({
+        const sanitizedItems = items.map(({ meetingLink, locationUrl, ...rest }) => ({
           ...rest,
           meetingLink: null,
+          locationUrl: null,
         }));
 
         return c.json({
@@ -233,6 +260,7 @@ export function registerEventRoutes(app: Hono) {
             eventDescription: events.eventDescription,
             date: events.date,
             location: events.location,
+            locationUrl: events.locationUrl,
             maxAttendees: events.maxAttendees,
             meetingLink: events.meetingLink,
             imageUrl: events.imageUrl,
@@ -287,6 +315,17 @@ export function registerEventRoutes(app: Hono) {
           return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
         }
 
+        // Check if user has booked the track (for track events)
+        let trackBooked = false;
+        if (trackInfo && viewerId) {
+          const [booking] = await db
+            .select({ id: trackBookings.id })
+            .from(trackBookings)
+            .where(and(eq(trackBookings.trackId, trackInfo.id), eq(trackBookings.userId, viewerId)))
+            .limit(1);
+          trackBooked = Boolean(booking);
+        }
+
         const attendeeCount = Number(attendeeCountResult?.[0]?.value ?? 0);
 
         let attending = false;
@@ -297,7 +336,8 @@ export function registerEventRoutes(app: Hono) {
           attending = existing.status === 'active';
         }
 
-        const canAccessMeetingLink = attending || isStaff;
+        const canAccessMeetingLink = attending || trackBooked || isStaff;
+        const locationUrl = canAccessMeetingLink ? event.locationUrl : null;
 
         return c.json({
           ...event,
@@ -305,6 +345,7 @@ export function registerEventRoutes(app: Hono) {
           attending,
           registrationStatus,
           meetingLink: canAccessMeetingLink ? event.meetingLink : null,
+          locationUrl,
           trackInfo: trackInfo
             ? {
                 id: trackInfo.id,
@@ -313,6 +354,7 @@ export function registerEventRoutes(app: Hono) {
                 trackBookingEnd: trackInfo.trackBookingEnd,
                 singleBookingStart: trackInfo.singleBookingStart,
                 singleBookingEnd: trackInfo.singleBookingEnd,
+                booked: trackBooked,
               }
             : null,
         });
@@ -330,7 +372,7 @@ export function registerEventRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const eventId = c.req.param('id');
+        const eventId = parseEventIdParam(c.req.param('id'));
         const parsed = listQuerySchema.safeParse({
           page: c.req.query('page'),
           pageSize: c.req.query('pageSize'),
@@ -416,6 +458,7 @@ export function registerEventRoutes(app: Hono) {
               eventDescription: normalizeDescription(payload.description),
               date: new Date(payload.date),
               location: payload.location ?? null,
+              locationUrl: payload.locationUrl ?? null,
               meetingLink: payload.meetingLink ?? null,
               maxAttendees: payload.maxAttendees === undefined ? null : payload.maxAttendees,
               imageUrl: payload.imageUrl ?? null,
@@ -430,6 +473,7 @@ export function registerEventRoutes(app: Hono) {
               eventDescription: events.eventDescription,
               date: events.date,
               location: events.location,
+              locationUrl: events.locationUrl,
               maxAttendees: events.maxAttendees,
               meetingLink: events.meetingLink,
               imageUrl: events.imageUrl,
@@ -470,7 +514,7 @@ export function registerEventRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const eventId = c.req.param('id');
+        const eventId = parseEventIdParam(c.req.param('id'));
         const body = await c.req.json().catch(() => ({}));
         const parsed = updateEventSchema.safeParse(body);
 
@@ -486,6 +530,8 @@ export function registerEventRoutes(app: Hono) {
           updateValues.eventDescription = normalizeDescription(updates.description);
         if (updates.date !== undefined) updateValues.date = new Date(updates.date);
         if (updates.location !== undefined) updateValues.location = updates.location ?? null;
+        if (updates.locationUrl !== undefined)
+          updateValues.locationUrl = updates.locationUrl ?? null;
         if (updates.meetingLink !== undefined)
           updateValues.meetingLink = updates.meetingLink ?? null;
         if (updates.maxAttendees !== undefined)
@@ -541,6 +587,7 @@ export function registerEventRoutes(app: Hono) {
             eventDescription: events.eventDescription,
             date: events.date,
             location: events.location,
+            locationUrl: events.locationUrl,
             maxAttendees: events.maxAttendees,
             meetingLink: events.meetingLink,
             imageUrl: events.imageUrl,
@@ -568,7 +615,7 @@ export function registerEventRoutes(app: Hono) {
         const admin = await requireAdmin(c);
         if ('response' in admin) return admin.response;
 
-        const eventId = c.req.param('id');
+        const eventId = parseEventIdParam(c.req.param('id'));
 
         const deleted = await db
           .delete(events)
@@ -592,7 +639,7 @@ export function registerEventRoutes(app: Hono) {
     '/events/:id/register',
     handleRoute(
       async (c) => {
-        const eventId = c.req.param('id');
+        const eventId = parseEventIdParam(c.req.param('id'));
         const session = await getSessionFromRequest(c);
 
         if (!session || !session.user) {
@@ -800,7 +847,7 @@ export function registerEventRoutes(app: Hono) {
     '/events/:id/register',
     handleRoute(
       async (c) => {
-        const eventId = c.req.param('id');
+        const eventId = parseEventIdParam(c.req.param('id'));
         const session = await getSessionFromRequest(c);
 
         if (!session || !session.user) {

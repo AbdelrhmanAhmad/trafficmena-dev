@@ -9,6 +9,7 @@ TrafficMENA Hub is an MVP digital marketing education platform for the MENA regi
 1. This current project codebase is a production codebase and must be treated as such you must be very careful and make sure that the code is production ready without over-engineering and always follow the MVP mindset and don't build unrequested features or you must use the libraries and tools that are already available in the codebase and don't build custom code.
 2. You must always start from an MVP approach and always must act from first principle thinking and use the second order thinking to uncover hidden patterns and connections and be pragmatic and avoid over engineering
 3. Add concise, high-signal comments only when the intent isn’t obvious from clean code—think of them as quick guidance for the next engineer, not a narrative. Prioritize first-principles clarity and second-order awareness: never trade maintainable, well-structured code for commentary, and avoid over-engineering in the process
+4. When I report a bug, don't start by trying to fix it. Instead, start by writing a test that reproduces the bug. Then, have subagents try to fix the bug and prove it with a passing test.
 
 ## Development Standards & Conventions
 

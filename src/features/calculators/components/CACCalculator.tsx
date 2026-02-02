@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -26,12 +26,15 @@ const CACCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const totalSpendId = useId();
+  const customersAcquiredId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   const calculateCAC = (): number | null => {
     const spend = parseFloat(totalSpend);
     const customers = parseFloat(customersAcquired);
-    if (isNaN(spend) || isNaN(customers) || customers === 0) return null;
+    if (Number.isNaN(spend) || Number.isNaN(customers) || customers === 0) return null;
     return spend / customers;
   };
 
@@ -40,7 +43,7 @@ const CACCalculator = () => {
   const handleShare = () => {
     const text =
       cac !== null
-        ? `My CAC: ${formatCurrency(cac.toFixed(2), currency)} | Total Spend: ${formatCurrency(totalSpend, currency)} | Customers Acquired: ${parseInt(customersAcquired).toLocaleString()}`
+        ? `My CAC: ${formatCurrency(cac.toFixed(2), currency)} | Total Spend: ${formatCurrency(totalSpend, currency)} | Customers Acquired: ${parseInt(customersAcquired, 10).toLocaleString()}`
         : null;
     shareToClipboard(text);
   };
@@ -300,12 +303,12 @@ const CACCalculator = () => {
                   <div className="space-y-4 lg:space-y-6">
                     {/* Total Spend Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="totalSpend" className="text-sm text-neutral-600">
+                      <Label htmlFor={totalSpendId} className="text-sm text-neutral-600">
                         Total sales & marketing spend
                       </Label>
                       <div className="relative">
                         <Input
-                          id="totalSpend"
+                          id={totalSpendId}
                           type="number"
                           placeholder="0"
                           value={totalSpend}
@@ -334,12 +337,12 @@ const CACCalculator = () => {
 
                     {/* Customers Acquired Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="customersAcquired" className="text-sm text-neutral-600">
+                      <Label htmlFor={customersAcquiredId} className="text-sm text-neutral-600">
                         Number of new customers acquired
                       </Label>
                       <div className="relative">
                         <Input
-                          id="customersAcquired"
+                          id={customersAcquiredId}
                           type="number"
                           placeholder="0"
                           value={customersAcquired}
@@ -380,8 +383,7 @@ const CACCalculator = () => {
                                 : 'text-performance-excellent'
                         }`}
                       >
-                        {cac > 1000 &&
-                          'High CAC. Ensure your LTV justifies this acquisition cost.'}
+                        {cac > 1000 && 'High CAC. Ensure your LTV justifies this acquisition cost.'}
                         {cac > 500 &&
                           cac <= 1000 &&
                           'Above average CAC. Typical for B2B and SaaS industries.'}

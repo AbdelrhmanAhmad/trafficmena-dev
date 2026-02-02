@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -26,13 +26,16 @@ const LTVCACCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const ltvId = useId();
+  const cacId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   // LTV:CAC Ratio = LTV / CAC
   const calculateLTVCACRatio = (): number | null => {
     const ltvValue = parseFloat(ltv);
     const cacValue = parseFloat(cac);
-    if (isNaN(ltvValue) || isNaN(cacValue) || cacValue === 0) return null;
+    if (Number.isNaN(ltvValue) || Number.isNaN(cacValue) || cacValue === 0) return null;
     return ltvValue / cacValue;
   };
 
@@ -263,12 +266,12 @@ const LTVCACCalculator = () => {
                   <div className="space-y-4 lg:space-y-6">
                     {/* LTV Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="ltv" className="text-sm text-neutral-600">
+                      <Label htmlFor={ltvId} className="text-sm text-neutral-600">
                         Customer lifetime value (LTV)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="ltv"
+                          id={ltvId}
                           type="number"
                           placeholder="0"
                           value={ltv}
@@ -297,12 +300,12 @@ const LTVCACCalculator = () => {
 
                     {/* CAC Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="cac" className="text-sm text-neutral-600">
+                      <Label htmlFor={cacId} className="text-sm text-neutral-600">
                         Customer acquisition cost (CAC)
                       </Label>
                       <div className="relative">
                         <Input
-                          id="cac"
+                          id={cacId}
                           type="number"
                           placeholder="0"
                           value={cac}

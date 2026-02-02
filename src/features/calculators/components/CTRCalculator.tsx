@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -17,10 +17,14 @@ const CTRCalculator = () => {
   const [impressions, setImpressions] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
 
+  const clicksId = useId();
+  const impressionsId = useId();
+
   const calculateCTR = (): number | null => {
     const totalClicks = parseFloat(clicks);
     const totalImpressions = parseFloat(impressions);
-    if (isNaN(totalClicks) || isNaN(totalImpressions) || totalImpressions === 0) return null;
+    if (Number.isNaN(totalClicks) || Number.isNaN(totalImpressions) || totalImpressions === 0)
+      return null;
     return (totalClicks / totalImpressions) * 100;
   };
 
@@ -29,7 +33,7 @@ const CTRCalculator = () => {
   const handleShare = () => {
     const text =
       ctr !== null
-        ? `My CTR: ${ctr.toFixed(2)}% | Clicks: ${parseInt(clicks).toLocaleString()} | Impressions: ${parseInt(impressions).toLocaleString()}`
+        ? `My CTR: ${ctr.toFixed(2)}% | Clicks: ${parseInt(clicks, 10).toLocaleString()} | Impressions: ${parseInt(impressions, 10).toLocaleString()}`
         : null;
     shareToClipboard(text);
   };
@@ -166,8 +170,8 @@ const CTRCalculator = () => {
               <li className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
                 <span>
-                  <strong className="text-neutral-800">Above 3%:</strong> Excellent. Highly
-                  engaging ads
+                  <strong className="text-neutral-800">Above 3%:</strong> Excellent. Highly engaging
+                  ads
                 </span>
               </li>
             </ul>
@@ -244,12 +248,12 @@ const CTRCalculator = () => {
                   <div className="space-y-5">
                     {/* Clicks Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="clicks" className="text-sm text-neutral-600">
+                      <Label htmlFor={clicksId} className="text-sm text-neutral-600">
                         Total clicks
                       </Label>
                       <div className="relative">
                         <Input
-                          id="clicks"
+                          id={clicksId}
                           type="number"
                           placeholder="0"
                           value={clicks}
@@ -261,12 +265,12 @@ const CTRCalculator = () => {
 
                     {/* Impressions Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="impressions" className="text-sm text-neutral-600">
+                      <Label htmlFor={impressionsId} className="text-sm text-neutral-600">
                         Total impressions
                       </Label>
                       <div className="relative">
                         <Input
-                          id="impressions"
+                          id={impressionsId}
                           type="number"
                           placeholder="0"
                           value={impressions}

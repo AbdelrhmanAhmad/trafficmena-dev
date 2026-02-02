@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -26,12 +26,15 @@ const MERCalculator = () => {
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
 
+  const totalRevenueId = useId();
+  const totalMarketingSpendId = useId();
+
   const currentCurrency = CURRENCIES[currency];
 
   const calculateMER = (): number | null => {
     const revenue = parseFloat(totalRevenue);
     const spend = parseFloat(totalMarketingSpend);
-    if (isNaN(revenue) || isNaN(spend) || spend === 0) return null;
+    if (Number.isNaN(revenue) || Number.isNaN(spend) || spend === 0) return null;
     return revenue / spend;
   };
 
@@ -44,7 +47,7 @@ const MERCalculator = () => {
   const calculateSpendAsPercentOfRevenue = (): number | null => {
     const revenue = parseFloat(totalRevenue);
     const spend = parseFloat(totalMarketingSpend);
-    if (isNaN(revenue) || isNaN(spend) || revenue === 0) return null;
+    if (Number.isNaN(revenue) || Number.isNaN(spend) || revenue === 0) return null;
     return (spend / revenue) * 100;
   };
 
@@ -252,12 +255,12 @@ const MERCalculator = () => {
                   <div className="space-y-4 lg:space-y-6">
                     {/* Total Revenue Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="totalRevenue" className="text-sm text-neutral-600">
+                      <Label htmlFor={totalRevenueId} className="text-sm text-neutral-600">
                         Total revenue
                       </Label>
                       <div className="relative">
                         <Input
-                          id="totalRevenue"
+                          id={totalRevenueId}
                           type="number"
                           placeholder="0"
                           value={totalRevenue}
@@ -286,12 +289,12 @@ const MERCalculator = () => {
 
                     {/* Total Marketing Spend Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="totalMarketingSpend" className="text-sm text-neutral-600">
+                      <Label htmlFor={totalMarketingSpendId} className="text-sm text-neutral-600">
                         Total marketing spend
                       </Label>
                       <div className="relative">
                         <Input
-                          id="totalMarketingSpend"
+                          id={totalMarketingSpendId}
                           type="number"
                           placeholder="0"
                           value={totalMarketingSpend}

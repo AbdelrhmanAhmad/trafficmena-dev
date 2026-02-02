@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -17,10 +17,13 @@ const RepeatPurchaseRateCalculator = () => {
   const [totalCustomers, setTotalCustomers] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
 
+  const repeatCustomersId = useId();
+  const totalCustomersId = useId();
+
   const calculateRPR = (): number | null => {
     const repeat = parseFloat(repeatCustomers);
     const total = parseFloat(totalCustomers);
-    if (isNaN(repeat) || isNaN(total) || total === 0) return null;
+    if (Number.isNaN(repeat) || Number.isNaN(total) || total === 0) return null;
     return (repeat / total) * 100;
   };
 
@@ -108,8 +111,8 @@ const RepeatPurchaseRateCalculator = () => {
               brand loyalty
             </li>
             <li>
-              <strong>Sustainable Growth:</strong> Some brands barely break even on first
-              sales. Profit comes from repeat purchases
+              <strong>Sustainable Growth:</strong> Some brands barely break even on first sales.
+              Profit comes from repeat purchases
             </li>
             <li>
               <strong>Predictable Revenue:</strong> Repeat customers create more stable, predictable
@@ -320,9 +323,9 @@ const RepeatPurchaseRateCalculator = () => {
               <AccordionContent className="pt-4 space-y-4 lg:space-y-6">
                 {/* Repeat Customers Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="repeatCustomers">Customers Who Bought More Than Once</Label>
+                  <Label htmlFor={repeatCustomersId}>Customers Who Bought More Than Once</Label>
                   <Input
-                    id="repeatCustomers"
+                    id={repeatCustomersId}
                     type="number"
                     placeholder="Enter number of repeat customers"
                     value={repeatCustomers}
@@ -333,9 +336,9 @@ const RepeatPurchaseRateCalculator = () => {
 
                 {/* Total Customers Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="totalCustomers">Total Customers</Label>
+                  <Label htmlFor={totalCustomersId}>Total Customers</Label>
                   <Input
-                    id="totalCustomers"
+                    id={totalCustomersId}
                     type="number"
                     placeholder="Enter total number of customers"
                     value={totalCustomers}
