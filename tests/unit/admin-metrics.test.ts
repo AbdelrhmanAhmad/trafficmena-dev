@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { getActiveSubscriptionMetrics } from '../../server/src/routes/api/adminMetrics.js';
+import { getActiveSubscriptionMetrics } from '../../server/src/routes/api/adminMetricsUtils.ts';
 
 describe('admin metrics subscription revenue', () => {
   it('returns zero revenue when no active subscriptions exist', () => {

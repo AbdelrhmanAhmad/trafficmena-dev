@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { shouldPublishTrackSeries } from '../../server/src/routes/api/trackSeriesPublishing.js';
+import { shouldPublishTrackSeries } from '../../server/src/routes/api/trackSeriesPublishing.ts';
 
 describe('track series publishing', () => {
   it('publishes the series when a track transitions to published', () => {

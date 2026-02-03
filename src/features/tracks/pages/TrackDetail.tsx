@@ -28,6 +28,7 @@ import {
 } from '@/shared/hooks/custom/useLocationVisibility';
 import { storePendingTrackContext } from '@/shared/utils/trackRedirectUtils';
 import { useBookTrack, usePublicTrack } from '../hooks/useTracks';
+import { getTrackBookingState } from '../utils/trackBookingState';
 
 type SanitizedHtmlProps = {
   className?: string;
@@ -117,7 +118,7 @@ const TrackDetail: React.FC = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const { isManager: isStaff, loading: adminLoading } = useIsManager();
-  const { data, isLoading, error } = usePublicTrack(id || '');
+  const { data, isLoading, error } = usePublicTrack(id || '', user?.id);
   const bookMutation = useBookTrack();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
@@ -129,6 +130,30 @@ const TrackDetail: React.FC = () => {
 
   const isPaidTrack = !!(track?.price_in_cents && track.price_in_cents > 0);
   const needsPayment = isPaidTrack;
+
+  const bookingState = useMemo(
+    () =>
+      getTrackBookingState({
+        userHasBooked: track?.user_has_booked,
+        userHasPendingPayment: track?.user_has_pending_payment,
+      }),
+    [track?.user_has_booked, track?.user_has_pending_payment],
+  );
+
+  const pendingPaymentUrl = useMemo(() => {
+    if (!track?.user_has_pending_payment || !id) return null;
+    const params = new URLSearchParams();
+    params.set('item_type', 'track');
+    params.set('item_id', id);
+    if (track.pending_invoice_id) {
+      params.set('invoice_id', String(track.pending_invoice_id));
+    }
+    if (track.pending_payment_id) {
+      params.set('payment_id', track.pending_payment_id);
+    }
+    const query = params.toString();
+    return query ? `/payment/pending?${query}` : '/payment/pending';
+  }, [id, track?.pending_invoice_id, track?.pending_payment_id, track?.user_has_pending_payment]);
 
   const showLocationUrl = useLocationVisibility(
     track?.location_url,
@@ -217,6 +242,18 @@ const TrackDetail: React.FC = () => {
 
     // Free track - book directly
     bookMutation.mutate(id);
+  };
+
+  const handleResumePayment = () => {
+    if (pendingPaymentUrl) {
+      navigate(pendingPaymentUrl);
+      return;
+    }
+    setShowPaymentDialog(true);
+  };
+
+  const handleRequestNewCode = () => {
+    setShowPaymentDialog(true);
   };
 
   // First event date
@@ -400,10 +437,32 @@ const TrackDetail: React.FC = () => {
                         )}
                       </div>
 
-                      {track.user_has_booked ? (
+                      {bookingState === 'booked' ? (
                         <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
                           <CheckCircle className="h-4 w-4" />
                           <span>You're enrolled in this track</span>
+                        </div>
+                      ) : bookingState === 'pending' ? (
+                        <div className="space-y-3">
+                          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                            <p className="font-medium">Payment pending</p>
+                            <p className="mt-1">
+                              Complete your payment to secure your spot in this track.
+                            </p>
+                          </div>
+                          <Button
+                            className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                            onClick={handleResumePayment}
+                          >
+                            Resume payment
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full rounded-xl"
+                            onClick={handleRequestNewCode}
+                          >
+                            Request new code
+                          </Button>
                         </div>
                       ) : bookingStatus.canBook ? (
                         <Button

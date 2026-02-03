@@ -3,12 +3,12 @@ import { beforeEach, describe, it } from 'node:test';
 import {
   storePendingEventContext,
   getPendingEventContext,
-} from '../../src/shared/utils/eventRedirectUtils.js';
-import { getPostSignupRedirectUrl } from '../../src/shared/utils/postSignupRedirect.js';
+} from '../../src/shared/utils/eventRedirectUtils.ts';
+import { getPostSignupRedirectUrl } from '../../src/shared/utils/postSignupRedirect.ts';
 import {
   getPendingTrackContext,
   storePendingTrackContext,
-} from '../../src/shared/utils/trackRedirectUtils.js';
+} from '../../src/shared/utils/trackRedirectUtils.ts';
 
 const installLocalStorageMock = () => {
   const store = new Map<string, string>();

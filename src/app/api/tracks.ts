@@ -301,6 +301,9 @@ export interface PublicTrackDetailRecord {
   spots_remaining: number | null;
   event_count: number;
   user_has_booked: boolean;
+  user_has_pending_payment: boolean;
+  pending_payment_id?: string | null;
+  pending_invoice_id?: number | null;
   price_in_cents: number | null;
   location: string | null;
   location_url: string | null;
@@ -386,6 +389,9 @@ export async function fetchPublicTrackById(
     spotsRemaining: number | null;
     eventCount: number;
     userHasBooked: boolean;
+    userHasPendingPayment: boolean;
+    pendingPaymentId?: string | null;
+    pendingInvoiceId?: number | null;
     priceInCents: number | null;
     location: string | null;
     locationUrl: string | null;
@@ -431,6 +437,9 @@ export async function fetchPublicTrackById(
       spots_remaining: data.track.spotsRemaining,
       event_count: data.track.eventCount,
       user_has_booked: data.track.userHasBooked,
+      user_has_pending_payment: data.track.userHasPendingPayment,
+      pending_payment_id: data.track.pendingPaymentId ?? null,
+      pending_invoice_id: data.track.pendingInvoiceId ?? null,
       price_in_cents: data.track.priceInCents,
       location: data.track.location,
       location_url: data.track.locationUrl,

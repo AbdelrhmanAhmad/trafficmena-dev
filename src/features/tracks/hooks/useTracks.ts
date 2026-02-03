@@ -207,9 +207,10 @@ export const usePublicTracks = (page = 1, pageSize = 12) => {
   });
 };
 
-export const usePublicTrack = (id: string) => {
+export const usePublicTrack = (id: string, viewerKey?: string) => {
+  const safeViewerKey = viewerKey ?? 'guest';
   return useQuery({
-    queryKey: ['tracks', 'public', 'detail', id],
+    queryKey: ['tracks', 'public', 'detail', id, safeViewerKey],
     queryFn: () => fetchPublicTrackById(id),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,

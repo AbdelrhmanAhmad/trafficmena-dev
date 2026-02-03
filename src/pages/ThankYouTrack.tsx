@@ -32,7 +32,7 @@ const ThankYouTrack: React.FC = () => {
   const [searchParams] = useSearchParams();
   const isPaidFlow = searchParams.get('paid') === '1';
 
-  const { data, isLoading, error } = usePublicTrack(id || '');
+  const { data, isLoading, error } = usePublicTrack(id || '', user?.id);
   const { mutate: bookTrack } = useBookTrack();
   const { data: subscription } = useCurrentSubscription({ enabled: Boolean(user) });
 

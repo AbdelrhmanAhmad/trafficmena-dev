@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import {
   resolveSeriesAccess,
   resolveSeriesAssetAccess,
-} from '../../server/src/routes/api/seriesAccess.js';
+} from '../../server/src/routes/api/seriesAccess.ts';
 
 describe('series access', () => {
   it('grants premium series access when user booked the track', () => {

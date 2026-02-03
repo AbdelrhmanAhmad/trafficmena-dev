@@ -2,6 +2,7 @@ import { and, eq, gt, gte, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { db } from '../../db/client.js';
 import { payments, subscriptions, users } from '../../db/schema/index.js';
+import { getActiveSubscriptionMetrics } from './adminMetricsUtils.js';
 import { requireRole } from './utils.js';
 
 type SalesSummary = {
@@ -27,23 +28,7 @@ type AdminMetricsOverview = {
   };
 };
 
-type ActiveSubscriptionRow = {
-  userId: string;
-  pricePaidCents: number | null;
-};
-
 const toNumber = (value: number | string | null | undefined) => Number(value ?? 0);
-
-export function getActiveSubscriptionMetrics(rows: ActiveSubscriptionRow[]) {
-  const uniqueUsers = new Set(rows.map((row) => row.userId)).size;
-  const revenueCents = rows.reduce((total, row) => total + (row.pricePaidCents ?? 0), 0);
-
-  return {
-    premiumUsers: uniqueUsers,
-    activeSubscriptions: uniqueUsers,
-    revenueCents,
-  };
-}
 
 export function registerAdminMetricsRoutes(app: Hono) {
   app.get('/admin/metrics/overview', async (c) => {

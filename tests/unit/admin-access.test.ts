@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { getAdminDashboardPath } from '../../src/shared/utils/adminAccess.js';
+import { getAdminDashboardPath } from '../../src/shared/utils/adminAccess.ts';
 
 describe('admin access', () => {
   it('routes managers to the library dashboard', () => {

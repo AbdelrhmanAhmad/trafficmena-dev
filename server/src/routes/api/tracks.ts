@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, ilike, inArray, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -6,11 +6,13 @@ import {
   eventAttendees,
   events,
   libraryAssets,
+  payments,
   profiles,
   series,
   seriesAssets,
   trackBookings,
   trackEvents,
+  trackReservations,
   tracks,
   users,
 } from '../../db/schema/index.js';
@@ -465,17 +467,59 @@ export function registerTrackRoutes(app: Hono) {
         // Check if current user has booked
         let userHasBooked = false;
         let isStaff = false;
+        let userHasPendingPayment = false;
+        let pendingPaymentId: string | null = null;
+        let pendingInvoiceId: number | null = null;
         if (session?.user) {
-          const [booking, role] = await Promise.all([
+          const [booking, role, pendingPayment] = await Promise.all([
             db
               .select({ id: trackBookings.id })
               .from(trackBookings)
               .where(and(eq(trackBookings.trackId, id), eq(trackBookings.userId, session.user.id)))
               .limit(1),
             getOptionalUserRole(session.user.id),
+            db
+              .select({
+                id: payments.id,
+                invoiceId: payments.fawaterkInvoiceId,
+              })
+              .from(payments)
+              .where(
+                and(
+                  eq(payments.userId, session.user.id),
+                  eq(payments.itemType, 'track'),
+                  eq(payments.itemId, id),
+                  eq(payments.status, 'pending'),
+                ),
+              )
+              .orderBy(desc(payments.createdAt))
+              .limit(1),
           ]);
           userHasBooked = Boolean(booking);
           isStaff = role ? ['owner', 'admin', 'manager'].includes(role) : false;
+
+          const [pending] = pendingPayment;
+          if (pending) {
+            const now = new Date();
+            const [reservation] = await db
+              .select({ id: trackReservations.id })
+              .from(trackReservations)
+              .where(
+                and(
+                  eq(trackReservations.paymentId, pending.id),
+                  eq(trackReservations.trackId, id),
+                  eq(trackReservations.userId, session.user.id),
+                  gt(trackReservations.expiresAt, now),
+                ),
+              )
+              .limit(1);
+
+            if (reservation) {
+              userHasPendingPayment = true;
+              pendingPaymentId = pending.id;
+              pendingInvoiceId = pending.invoiceId ?? null;
+            }
+          }
         }
 
         return c.json({
@@ -496,6 +540,9 @@ export function registerTrackRoutes(app: Hono) {
                 : null,
             eventCount: trackEventsFormatted.length,
             userHasBooked,
+            userHasPendingPayment,
+            pendingPaymentId,
+            pendingInvoiceId,
             priceInCents: track.priceInCents,
             location: track.location,
             locationUrl: userHasBooked || isStaff ? track.locationUrl : null, // Only reveal URL to booked users or staff

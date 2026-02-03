@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { isPaidTrack } from '../../server/src/routes/api/trackPaidStatus.js';
+import { isPaidTrack } from '../../server/src/routes/api/trackPaidStatus.ts';
 
 describe('track paid status', () => {
   it('returns true for positive prices', () => {

@@ -10,6 +10,7 @@
     "lint": "npx ultracite lint",
     "format": "npx ultracite format",
     "preview": "vite preview",
+    "test:unit": "node --test --experimental-strip-types --loader ./tests/node-loader.mjs \"tests/unit/**/*.test.ts\"",
     "db:start": "bash ./local/postgres/bin/pg-start",
     "db:stop": "bash ./local/postgres/bin/pg-stop",
     "db:status": "bash ./local/postgres/bin/pg-status",
