@@ -42,6 +42,8 @@ const envSchema = z.object({
   API_BASE_URL: z.string().url().optional(),
   // Cloudflare Turnstile CAPTCHA
   TURNSTILE_SECRET_KEY: z.string().optional(),
+  // Invitation daily limit per admin (default: 1000 for launch)
+  INVITATION_DAILY_LIMIT: z.coerce.number().min(1).default(1000),
 });
 
 const parsed = envSchema.safeParse(process.env);

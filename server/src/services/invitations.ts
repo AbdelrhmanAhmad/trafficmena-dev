@@ -6,6 +6,8 @@ import { db } from '../db/client.js';
 import { invitations, profiles, users } from '../db/schema/index.js';
 import { sendInvitationEmail } from './email.js';
 
+const DAILY_LIMIT = env.INVITATION_DAILY_LIMIT;
+
 export type AdminContext = {
   id: string;
   firstName: string | null;
@@ -28,7 +30,6 @@ export type BulkInvitationResult = {
 };
 
 const INVITATION_EXPIRY_HOURS = 72;
-const DAILY_LIMIT = 50;
 
 export class InvitationError extends Error {
   code: string;
