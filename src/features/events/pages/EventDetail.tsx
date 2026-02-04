@@ -18,7 +18,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { usePricePreview } from '@/app/hooks/usePayments';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
-import { PaymentCheckoutDialog, PriceDisplayCard } from '@/shared/components/payment';
+import {
+  PaymentCheckoutDialog,
+  PriceDisplayCard,
+  PromoCodeInput,
+} from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -110,16 +114,33 @@ const EventDetail: React.FC = () => {
   const { bookEvent, bookEventAsync, cancelBooking, isBooking, isCancelling } = useEventBooking();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
 
   // Get price preview for logged-in users
   // Skip for track events where individual booking is not allowed (avoids 400 errors)
   const canFetchPricePreview =
     user && id && (!event?.trackInfo || event?.trackInfo?.singleBookingStart);
-  const { data: pricePreview } = usePricePreview(canFetchPricePreview ? 'event' : undefined, id);
+  const { data: pricePreview, isLoading: pricePreviewLoading } = usePricePreview(
+    canFetchPricePreview ? 'event' : undefined,
+    id,
+    appliedPromoCode ?? undefined,
+  );
 
   const isPaidEvent = !!(event?.price_in_cents && event.price_in_cents > 0);
   const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
   const needsPayment = isPaidEvent && !(pricePreview?.isSubscriber && isOnlineEvent);
+  const promoError = pricePreview?.promoError ?? null;
+  const isPromoApplied =
+    Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !promoError;
+  const promoDisabledReason = !user
+    ? 'Sign in to apply a promo code.'
+    : pricePreview?.discountSource === 'subscriber'
+      ? 'Subscriber discount already applied.'
+      : pricePreview?.isFree
+        ? 'Promo codes are not available for free items.'
+        : null;
+  const promoDisabled = Boolean(promoDisabledReason);
+  const isStandaloneEvent = !event?.trackInfo;
 
   useEffect(() => {
     if (!id || !event) return;
@@ -143,6 +164,13 @@ const EventDetail: React.FC = () => {
     const nextQuery = next.toString();
     navigate(`/meetups/${id}${nextQuery ? `?${nextQuery}` : ''}`, { replace: true });
   }, [event, id, navigate, needsPayment, searchParams, user]);
+
+  useEffect(() => {
+    if (!appliedPromoCode) return;
+    if (promoDisabled && pricePreview) {
+      setAppliedPromoCode(null);
+    }
+  }, [appliedPromoCode, promoDisabled, pricePreview]);
 
   const attendeeCountLabel = useMemo(() => {
     if (!event) return 'Limited Spots';
@@ -396,11 +424,25 @@ const EventDetail: React.FC = () => {
 
                         {/* Price display */}
                         {isPaidEvent && (
-                          <PriceDisplayCard
-                            itemType="event"
-                            basePriceCents={event.price_in_cents}
-                            pricePreview={pricePreview}
-                          />
+                          <div className="space-y-3">
+                            <PriceDisplayCard
+                              itemType="event"
+                              basePriceCents={event.price_in_cents}
+                              pricePreview={pricePreview}
+                            />
+                            {isStandaloneEvent && (
+                              <PromoCodeInput
+                                onApply={(code) => setAppliedPromoCode(code)}
+                                onRemove={() => setAppliedPromoCode(null)}
+                                appliedCode={appliedPromoCode ?? undefined}
+                                isApplied={isPromoApplied}
+                                error={promoError}
+                                isLoading={pricePreviewLoading}
+                                disabled={promoDisabled}
+                                disabledMessage={promoDisabledReason ?? undefined}
+                              />
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -573,6 +615,7 @@ const EventDetail: React.FC = () => {
           itemType="event"
           itemId={id}
           itemName={event.title}
+          appliedPromoCode={isPromoApplied ? (appliedPromoCode ?? undefined) : undefined}
           onSuccess={() => {
             // Refresh the event data after successful payment
             queryClient.invalidateQueries({ queryKey: ['event', id] });

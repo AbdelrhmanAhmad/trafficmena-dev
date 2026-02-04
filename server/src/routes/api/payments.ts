@@ -24,8 +24,10 @@ import {
   invoiceInitPay,
   verifyFawaterkWebhook,
 } from '../../services/fawaterk.js';
+import { validatePromoCode } from '../../services/promoCodes.js';
 import { paymentRateLimiter } from '../../services/rateLimiter.js';
 import { ApiError } from '../../utils/errors.js';
+import { isInvoicePaid } from '../../utils/invoiceStatus.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 
 // --- Rate Limit Rules ---
@@ -42,6 +44,7 @@ const checkoutSchema = z.object({
   itemId: z.string().uuid().optional(),
   paymentMethodId: z.number().int().positive(),
   forceNewCode: z.boolean().optional(),
+  promoCode: z.string().optional(),
 });
 
 const verifySchema = z.object({
@@ -75,6 +78,19 @@ type TrackBookingParams = {
   paidAt: Date;
 };
 
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type PriceResult = {
+  amountCents: number;
+  itemName: string;
+  originalAmountCents: number;
+  discountAppliedCents: number;
+  discountSource: 'subscriber' | 'promo' | null;
+  promoCodeId: string | null;
+  isSubscriber: boolean;
+  isFree: boolean;
+};
+
 // --- Helpers ---
 
 /**
@@ -88,7 +104,7 @@ type TrackBookingParams = {
  * Used by both paid and free track booking flows.
  */
 async function executeAtomicTrackBooking(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  tx: DbTransaction,
   params: TrackBookingParams,
 ): Promise<TrackBookingResult> {
   const { trackId, userId, paymentId, pricePaidCents, maxTrackBookings, paidAt } = params;
@@ -202,10 +218,15 @@ async function calculatePrice(
   userId: string,
   itemType: 'event' | 'track' | 'subscription',
   itemId: string | null,
-): Promise<{ amountCents: number; itemName: string }> {
+  promoCode?: string,
+  tx?: DbTransaction,
+): Promise<PriceResult> {
+  const dbClient = tx ?? db;
+  const normalizedPromoCode = promoCode?.trim() || undefined;
+
   // Parallel fetch: subscription status + platform settings (independent queries)
   const [subscriptionResult, settingsResult] = await Promise.all([
-    db
+    dbClient
       .select()
       .from(subscriptions)
       .where(
@@ -215,7 +236,7 @@ async function calculatePrice(
           gte(subscriptions.endsAt, new Date()),
         ),
       ),
-    db.select().from(platformSettings).limit(1),
+    dbClient.select().from(platformSettings).limit(1),
   ]);
   const [subscription] = subscriptionResult;
   const [settings] = settingsResult;
@@ -237,14 +258,24 @@ async function calculatePrice(
     if (!settings?.annualSubscriptionPriceCents) {
       throw new ApiError('NOT_CONFIGURED', 'Subscription price not set', 400);
     }
-    return { amountCents: settings.annualSubscriptionPriceCents, itemName: 'Annual Subscription' };
+    const amountCents = settings.annualSubscriptionPriceCents;
+    return {
+      amountCents,
+      itemName: 'Annual Subscription',
+      originalAmountCents: amountCents,
+      discountAppliedCents: 0,
+      discountSource: null,
+      promoCodeId: null,
+      isSubscriber,
+      isFree: amountCents === 0,
+    };
   }
 
   if (itemType === 'event' && itemId) {
     // Parallel fetch: event details + track event info + existing registration (all use itemId/userId)
     const [eventResult, trackEventResult, existingRegResult] = await Promise.all([
-      db.select().from(events).where(eq(events.id, itemId)),
-      db
+      dbClient.select().from(events).where(eq(events.id, itemId)),
+      dbClient
         .select({
           allowIndividualBooking: tracks.allowIndividualBooking,
           singleBookingStart: tracks.singleBookingStart,
@@ -253,7 +284,7 @@ async function calculatePrice(
         .from(trackEvents)
         .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
         .where(eq(trackEvents.eventId, itemId)),
-      db
+      dbClient
         .select()
         .from(eventAttendees)
         .where(and(eq(eventAttendees.eventId, itemId), eq(eventAttendees.userId, userId))),
@@ -297,7 +328,7 @@ async function calculatePrice(
 
     // Capacity check - sequential since it depends on event.maxAttendees
     if (event.maxAttendees) {
-      const [countResult] = await db
+      const [countResult] = await dbClient
         .select({ count: sql<number>`count(*)::int` })
         .from(eventAttendees)
         .where(
@@ -313,27 +344,73 @@ async function calculatePrice(
     }
 
     const basePrice = event.priceInCents ?? 0;
+    let amountCents = basePrice;
+    let discountAppliedCents = 0;
+    let discountSource: PriceResult['discountSource'] = null;
+    let promoCodeId: string | null = null;
 
     // Online event = FREE for subscribers (derive from existing fields)
     const isOnline = event.meetingLink && !event.location;
     if (isSubscriber && isOnline) {
-      return { amountCents: 0, itemName: event.title };
+      amountCents = 0;
+      discountAppliedCents = basePrice > 0 ? basePrice : 0;
+      discountSource = basePrice > 0 ? 'subscriber' : null;
+      return {
+        amountCents,
+        itemName: event.title,
+        originalAmountCents: basePrice,
+        discountAppliedCents,
+        discountSource,
+        promoCodeId,
+        isSubscriber,
+        isFree: amountCents === 0,
+      };
     }
 
-    // Apply global discount for subscribers on offline/hybrid events
+    // Apply global discount for subscribers on offline/hybrid events (promo excluded)
     if (isSubscriber && basePrice > 0) {
       const discounted = Math.round(basePrice * (1 - discountPercent / 100));
-      return { amountCents: discounted, itemName: event.title };
+      amountCents = discounted;
+      discountAppliedCents = basePrice - discounted;
+      discountSource = 'subscriber';
+      return {
+        amountCents,
+        itemName: event.title,
+        originalAmountCents: basePrice,
+        discountAppliedCents,
+        discountSource,
+        promoCodeId,
+        isSubscriber,
+        isFree: amountCents === 0,
+      };
     }
 
-    return { amountCents: basePrice, itemName: event.title };
+    if (normalizedPromoCode && basePrice > 0) {
+      const promo = await validatePromoCode(normalizedPromoCode, 'event', itemId, tx);
+      const promoDiscountCents = Math.floor((basePrice * promo.discountPercent) / 100);
+      amountCents = basePrice - promoDiscountCents;
+      discountAppliedCents = promoDiscountCents;
+      discountSource = 'promo';
+      promoCodeId = promo.id;
+    }
+
+    return {
+      amountCents,
+      itemName: event.title,
+      originalAmountCents: basePrice,
+      discountAppliedCents,
+      discountSource,
+      promoCodeId,
+      isSubscriber,
+      isFree: amountCents === 0,
+    };
   }
 
   if (itemType === 'track' && itemId) {
     // Parallel fetch: track details + existing booking (both use itemId/userId)
     const [trackResult, existingBookingResult] = await Promise.all([
-      db.select().from(tracks).where(eq(tracks.id, itemId)),
-      db
+      dbClient.select().from(tracks).where(eq(tracks.id, itemId)),
+      dbClient
         .select()
         .from(trackBookings)
         .where(and(eq(trackBookings.trackId, itemId), eq(trackBookings.userId, userId))),
@@ -363,14 +440,48 @@ async function calculatePrice(
     }
 
     const basePrice = track.priceInCents ?? 0;
+    let amountCents = basePrice;
+    let discountAppliedCents = 0;
+    let discountSource: PriceResult['discountSource'] = null;
+    let promoCodeId: string | null = null;
 
-    // Apply global discount for subscribers
+    // Apply global discount for subscribers (promo excluded)
     if (isSubscriber && basePrice > 0) {
       const discounted = Math.round(basePrice * (1 - discountPercent / 100));
-      return { amountCents: discounted, itemName: track.title };
+      amountCents = discounted;
+      discountAppliedCents = basePrice - discounted;
+      discountSource = 'subscriber';
+      return {
+        amountCents,
+        itemName: track.title,
+        originalAmountCents: basePrice,
+        discountAppliedCents,
+        discountSource,
+        promoCodeId,
+        isSubscriber,
+        isFree: amountCents === 0,
+      };
     }
 
-    return { amountCents: basePrice, itemName: track.title };
+    if (normalizedPromoCode && basePrice > 0) {
+      const promo = await validatePromoCode(normalizedPromoCode, 'track', itemId, tx);
+      const promoDiscountCents = Math.floor((basePrice * promo.discountPercent) / 100);
+      amountCents = basePrice - promoDiscountCents;
+      discountAppliedCents = promoDiscountCents;
+      discountSource = 'promo';
+      promoCodeId = promo.id;
+    }
+
+    return {
+      amountCents,
+      itemName: track.title,
+      originalAmountCents: basePrice,
+      discountAppliedCents,
+      discountSource,
+      promoCodeId,
+      isSubscriber,
+      isFree: amountCents === 0,
+    };
   }
 
   throw new ApiError('INVALID_ITEM', 'Invalid item type', 400);
@@ -715,6 +826,7 @@ export function registerPaymentRoutes(app: Hono) {
     }
 
     const { itemType, itemId, paymentMethodId, forceNewCode } = result.data;
+    const promoCode = result.data.promoCode?.trim() || undefined;
 
     // Validate subscription doesn't need itemId
     if (itemType === 'subscription' && itemId) {
@@ -800,11 +912,11 @@ export function registerPaymentRoutes(app: Hono) {
         }
       }
 
-      // Calculate price and validate
-      const { amountCents, itemName } = await calculatePrice(userId, itemType, itemId ?? null);
+      // Calculate base price (promo is validated later inside transaction for paid items)
+      const prePriceResult = await calculatePrice(userId, itemType, itemId ?? null);
 
       // If free, process immediately without payment
-      if (amountCents === 0) {
+      if (prePriceResult.amountCents === 0) {
         // Handle free registration/booking in a transaction
         const result = await db.transaction(async (tx) => {
           // Create payment record for tracking
@@ -818,6 +930,9 @@ export function registerPaymentRoutes(app: Hono) {
               itemType,
               itemId: itemId ?? null,
               paidAt: new Date(),
+              promoCodeId: prePriceResult.promoCodeId,
+              discountAppliedCents: prePriceResult.discountAppliedCents,
+              originalAmountCents: prePriceResult.originalAmountCents,
             })
             .returning();
 
@@ -859,6 +974,9 @@ export function registerPaymentRoutes(app: Hono) {
 
         return c.json({ data: { free: true, paymentId: result.id } });
       }
+
+      let amountCents = prePriceResult.amountCents;
+      let itemName = prePriceResult.itemName;
 
       // Get user info for Fawaterk
       const [user] = await db
@@ -907,7 +1025,7 @@ export function registerPaymentRoutes(app: Hono) {
       let paymentId: string;
 
       if (itemType === 'event' && itemId) {
-        paymentId = await db.transaction(async (tx) => {
+        const eventResult = await db.transaction(async (tx) => {
           const [event] = await tx
             .select({
               id: events.id,
@@ -997,15 +1115,20 @@ export function registerPaymentRoutes(app: Hono) {
             }
           }
 
+          const priceResult = await calculatePrice(userId, itemType, itemId, promoCode, tx);
+
           const [payment] = await tx
             .insert(payments)
             .values({
               userId,
               status: 'pending',
-              amountCents,
+              amountCents: priceResult.amountCents,
               currency: 'EGP',
               itemType,
               itemId,
+              promoCodeId: priceResult.promoCodeId,
+              discountAppliedCents: priceResult.discountAppliedCents,
+              originalAmountCents: priceResult.originalAmountCents,
             })
             .returning({ id: payments.id });
 
@@ -1017,10 +1140,17 @@ export function registerPaymentRoutes(app: Hono) {
             expiresAt,
           });
 
-          return payment.id;
+          return {
+            paymentId: payment.id,
+            amountCents: priceResult.amountCents,
+            itemName: priceResult.itemName,
+          };
         });
+        paymentId = eventResult.paymentId;
+        amountCents = eventResult.amountCents;
+        itemName = eventResult.itemName;
       } else if (itemType === 'track' && itemId) {
-        paymentId = await db.transaction(async (tx) => {
+        const trackResult = await db.transaction(async (tx) => {
           const [track] = await tx
             .select({
               id: tracks.id,
@@ -1160,15 +1290,20 @@ export function registerPaymentRoutes(app: Hono) {
             throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
           }
 
+          const priceResult = await calculatePrice(userId, itemType, itemId, promoCode, tx);
+
           const [payment] = await tx
             .insert(payments)
             .values({
               userId,
               status: 'pending',
-              amountCents,
+              amountCents: priceResult.amountCents,
               currency: 'EGP',
               itemType,
               itemId,
+              promoCodeId: priceResult.promoCodeId,
+              discountAppliedCents: priceResult.discountAppliedCents,
+              originalAmountCents: priceResult.originalAmountCents,
             })
             .returning({ id: payments.id });
 
@@ -1194,8 +1329,15 @@ export function registerPaymentRoutes(app: Hono) {
             await tx.insert(eventReservations).values(reservationValues);
           }
 
-          return payment.id;
+          return {
+            paymentId: payment.id,
+            amountCents: priceResult.amountCents,
+            itemName: priceResult.itemName,
+          };
         });
+        paymentId = trackResult.paymentId;
+        amountCents = trackResult.amountCents;
+        itemName = trackResult.itemName;
       } else {
         const [payment] = await db
           .insert(payments)
@@ -1206,6 +1348,9 @@ export function registerPaymentRoutes(app: Hono) {
             currency: 'EGP',
             itemType,
             itemId: itemId ?? null,
+            promoCodeId: prePriceResult.promoCodeId,
+            discountAppliedCents: prePriceResult.discountAppliedCents,
+            originalAmountCents: prePriceResult.originalAmountCents,
           })
           .returning({ id: payments.id });
         paymentId = payment.id;
@@ -1390,7 +1535,7 @@ export function registerPaymentRoutes(app: Hono) {
       // Call Fawaterk to verify
       const invoiceData = await getInvoiceData(invoiceId);
 
-      if (invoiceData.paid !== 1) {
+      if (!isInvoicePaid(invoiceData)) {
         return c.json({
           data: {
             status: 'pending',
@@ -1438,11 +1583,13 @@ export function registerPaymentRoutes(app: Hono) {
     const pricePreviewSchema = z.object({
       itemType: z.enum(['event', 'track', 'subscription']),
       itemId: z.string().uuid().optional(),
+      promoCode: z.string().optional(),
     });
 
     const parseResult = pricePreviewSchema.safeParse({
       itemType: c.req.query('itemType'),
       itemId: c.req.query('itemId') || undefined,
+      promoCode: c.req.query('promoCode') || undefined,
     });
 
     if (!parseResult.success) {
@@ -1450,33 +1597,34 @@ export function registerPaymentRoutes(app: Hono) {
     }
 
     const { itemType, itemId } = parseResult.data;
+    const promoCode = parseResult.data.promoCode?.trim() || undefined;
 
     try {
-      const { amountCents, itemName } = await calculatePrice(
-        session.user.id,
-        itemType,
-        itemId ?? null,
-      );
+      let promoError: string | null = null;
+      let priceResult: PriceResult;
 
-      // Get subscription status for context
-      const [subscription] = await db
-        .select()
-        .from(subscriptions)
-        .where(
-          and(
-            eq(subscriptions.userId, session.user.id),
-            eq(subscriptions.status, 'active'),
-            gte(subscriptions.endsAt, new Date()),
-          ),
-        );
+      try {
+        priceResult = await calculatePrice(session.user.id, itemType, itemId ?? null, promoCode);
+      } catch (error) {
+        if (error instanceof ApiError && error.code === 'PROMO_INVALID') {
+          promoError = error.message;
+          priceResult = await calculatePrice(session.user.id, itemType, itemId ?? null);
+        } else {
+          throw error;
+        }
+      }
 
       return c.json({
         data: {
-          itemName,
-          amountCents,
-          amountFormatted: `${(amountCents / 100).toFixed(2)} EGP`,
-          isSubscriber: !!subscription,
-          isFree: amountCents === 0,
+          itemName: priceResult.itemName,
+          amountCents: priceResult.amountCents,
+          amountFormatted: `${(priceResult.amountCents / 100).toFixed(2)} EGP`,
+          originalAmountCents: priceResult.originalAmountCents,
+          discountAppliedCents: priceResult.discountAppliedCents,
+          discountSource: priceResult.discountSource,
+          isSubscriber: priceResult.isSubscriber,
+          isFree: priceResult.isFree,
+          promoError,
         },
       });
     } catch (error) {
@@ -1597,6 +1745,11 @@ export function registerPaymentRoutes(app: Hono) {
     }
 
     try {
+      const invoiceData = await getInvoiceData(webhookData.invoice_id);
+      if (!isInvoicePaid(invoiceData)) {
+        return c.json({ data: { status: 'pending' } });
+      }
+
       // Process the successful payment
       const processResult = await processSuccessfulPayment(payment.id);
       console.log('[payments/webhook] Payment processed:', payment.id);

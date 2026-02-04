@@ -40,6 +40,7 @@ export function PriceBadge({
   const { data: fetchedPricePreview, isLoading } = usePricePreview(
     shouldFetch ? itemType : undefined,
     itemId,
+    undefined,
     { enabled: shouldFetch },
   );
 

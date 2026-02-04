@@ -24,6 +24,7 @@ interface PaymentCheckoutDialogProps {
   itemType: PaymentItemType;
   itemId?: string;
   itemName: string;
+  appliedPromoCode?: string;
   onSuccess?: () => void;
 }
 
@@ -33,6 +34,7 @@ export function PaymentCheckoutDialog({
   itemType,
   itemId,
   itemName,
+  appliedPromoCode,
   onSuccess,
 }: PaymentCheckoutDialogProps) {
   const { user } = useAuth();
@@ -43,11 +45,14 @@ export function PaymentCheckoutDialog({
   const { data: pricePreview, isLoading: priceLoading } = usePricePreview(
     shouldFetchPricing ? itemType : undefined,
     itemId,
+    appliedPromoCode,
   );
   const createCheckout = useCreateCheckout();
   const { data: methods } = usePaymentMethods({ enabled: shouldFetchPricing });
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
   const shouldRedirect = shouldRedirectToGateway(selectedMethod);
+  const hasPromoApplied =
+    Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !pricePreview.isFree;
 
   const goToPending = (payload: {
     invoiceId?: number;
@@ -86,6 +91,7 @@ export function PaymentCheckoutDialog({
         itemId,
         paymentMethodId: selectedMethodId,
         forceNewCode: shouldRedirect ? true : undefined,
+        promoCode: appliedPromoCode,
       });
 
       if (result.free) {
@@ -180,12 +186,19 @@ export function PaymentCheckoutDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {pricePreview?.isSubscriber && !pricePreview.isFree && (
+        {pricePreview?.discountSource === 'subscriber' && !pricePreview.isFree && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
             <span className="font-medium">Subscriber discount applied!</span>
             <p className="text-xs text-amber-700">
               As a subscriber, you're getting the best price.
             </p>
+          </div>
+        )}
+
+        {hasPromoApplied && (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            <span className="font-medium">Promo {appliedPromoCode} applied</span>
+            <p className="text-xs text-emerald-700">Your discount is locked in for checkout.</p>
           </div>
         )}
 

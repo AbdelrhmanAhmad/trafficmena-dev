@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { beforeEach, describe, it } from 'node:test';
 import {
-  storePendingEventContext,
   getPendingEventContext,
+  storePendingEventContext,
 } from '../../src/shared/utils/eventRedirectUtils.ts';
 import { getPostSignupRedirectUrl } from '../../src/shared/utils/postSignupRedirect.ts';
 import {
@@ -13,7 +13,7 @@ import {
 const installLocalStorageMock = () => {
   const store = new Map<string, string>();
   const mock = {
-    getItem: (key) => (store.has(key) ? store.get(key) ?? null : null),
+    getItem: (key) => (store.has(key) ? (store.get(key) ?? null) : null),
     setItem: (key, value) => {
       store.set(key, value);
     },

@@ -9,14 +9,14 @@ import {
   getPendingEventContext,
 } from './eventRedirectUtils';
 import {
+  clearPendingSubscriptionContext,
+  getPendingSubscriptionContext,
+} from './subscriptionRedirectUtils';
+import {
   clearPendingTrackContext,
   generateTrackRedirectUrl,
   getPendingTrackContext,
 } from './trackRedirectUtils';
-import {
-  clearPendingSubscriptionContext,
-  getPendingSubscriptionContext,
-} from './subscriptionRedirectUtils';
 
 /**
  * Get the appropriate redirect URL after signup completion.

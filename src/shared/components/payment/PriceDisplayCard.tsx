@@ -44,11 +44,17 @@ export function PriceDisplayCard({
   // Determine what price to show
   const showSubscriberPrice =
     pricePreview?.isFree || (pricePreview && pricePreview.amountCents > 0);
+  const originalAmount = pricePreview?.originalAmountCents ?? basePriceCents ?? 0;
   const hasDiscount =
-    pricePreview?.isSubscriber &&
-    !pricePreview.isFree &&
-    basePriceCents &&
-    pricePreview.amountCents < basePriceCents;
+    pricePreview &&
+    pricePreview.discountAppliedCents > 0 &&
+    pricePreview.amountCents < originalAmount;
+  const discountLabel =
+    pricePreview?.discountSource === 'promo'
+      ? 'Promo applied'
+      : pricePreview?.discountSource === 'subscriber'
+        ? 'Subscriber discount'
+        : null;
 
   return (
     <div
@@ -66,10 +72,17 @@ export function PriceDisplayCard({
             <p className={cn('text-sm font-semibold', colors.price)}>
               {pricePreview.isFree ? 'Free' : pricePreview.amountFormatted}
             </p>
-            {hasDiscount && basePriceCents && (
-              <span className="text-xs text-muted-foreground line-through">
-                {(basePriceCents / 100).toFixed(0)} EGP
-              </span>
+            {hasDiscount && originalAmount > 0 && (
+              <>
+                <span className="text-xs text-muted-foreground line-through">
+                  {(originalAmount / 100).toFixed(0)} EGP
+                </span>
+                {discountLabel && (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                    {discountLabel}
+                  </span>
+                )}
+              </>
             )}
           </div>
         ) : (

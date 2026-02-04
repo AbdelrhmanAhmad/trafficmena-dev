@@ -18,7 +18,11 @@ import type { PublicTrackEventRecord } from '@/app/api/tracks';
 import { usePricePreview } from '@/app/hooks/usePayments';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
-import { PaymentCheckoutDialog, PriceDisplayCard } from '@/shared/components/payment';
+import {
+  PaymentCheckoutDialog,
+  PriceDisplayCard,
+  PromoCodeInput,
+} from '@/shared/components/payment';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useIsManager } from '@/shared/hooks/custom/useIsManager';
@@ -121,15 +125,31 @@ const TrackDetail: React.FC = () => {
   const { data, isLoading, error } = usePublicTrack(id || '', user?.id);
   const bookMutation = useBookTrack();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
 
   const track = data?.track;
   const events = data?.events ?? [];
 
   // Get price preview for logged-in users
-  const { data: pricePreview } = usePricePreview(user && id ? 'track' : undefined, id);
+  const { data: pricePreview, isLoading: pricePreviewLoading } = usePricePreview(
+    user && id ? 'track' : undefined,
+    id,
+    appliedPromoCode ?? undefined,
+  );
 
   const isPaidTrack = !!(track?.price_in_cents && track.price_in_cents > 0);
   const needsPayment = isPaidTrack;
+  const promoError = pricePreview?.promoError ?? null;
+  const isPromoApplied =
+    Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !promoError;
+  const promoDisabledReason = !user
+    ? 'Sign in to apply a promo code.'
+    : pricePreview?.discountSource === 'subscriber'
+      ? 'Subscriber discount already applied.'
+      : pricePreview?.isFree
+        ? 'Promo codes are not available for free items.'
+        : null;
+  const promoDisabled = Boolean(promoDisabledReason);
 
   const bookingState = useMemo(
     () =>
@@ -212,6 +232,13 @@ const TrackDetail: React.FC = () => {
     const nextQuery = next.toString();
     navigate(`/tracks/${id}${nextQuery ? `?${nextQuery}` : ''}`, { replace: true });
   }, [id, navigate, needsPayment, searchParams, track, user]);
+
+  useEffect(() => {
+    if (!appliedPromoCode) return;
+    if (promoDisabled && pricePreview) {
+      setAppliedPromoCode(null);
+    }
+  }, [appliedPromoCode, promoDisabled, pricePreview]);
 
   const handleBook = () => {
     if (!id) return;
@@ -429,11 +456,23 @@ const TrackDetail: React.FC = () => {
 
                         {/* Price display */}
                         {isPaidTrack && (
-                          <PriceDisplayCard
-                            itemType="track"
-                            basePriceCents={track.price_in_cents}
-                            pricePreview={pricePreview}
-                          />
+                          <div className="space-y-3">
+                            <PriceDisplayCard
+                              itemType="track"
+                              basePriceCents={track.price_in_cents}
+                              pricePreview={pricePreview}
+                            />
+                            <PromoCodeInput
+                              onApply={(code) => setAppliedPromoCode(code)}
+                              onRemove={() => setAppliedPromoCode(null)}
+                              appliedCode={appliedPromoCode ?? undefined}
+                              isApplied={isPromoApplied}
+                              error={promoError}
+                              isLoading={pricePreviewLoading}
+                              disabled={promoDisabled}
+                              disabledMessage={promoDisabledReason ?? undefined}
+                            />
+                          </div>
                         )}
                       </div>
 
@@ -521,6 +560,7 @@ const TrackDetail: React.FC = () => {
           itemType="track"
           itemId={id}
           itemName={track.title}
+          appliedPromoCode={isPromoApplied ? (appliedPromoCode ?? undefined) : undefined}
           onSuccess={() => {
             // Refresh the track data after successful payment
             queryClient.invalidateQueries({ queryKey: ['tracks', 'public', 'detail', id] });

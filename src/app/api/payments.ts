@@ -19,6 +19,7 @@ export type CheckoutRequest = {
   itemId?: string;
   paymentMethodId: number;
   forceNewCode?: boolean;
+  promoCode?: string;
 };
 
 export type CheckoutResponse = {
@@ -68,8 +69,12 @@ export type PricePreview = {
   itemName: string;
   amountCents: number;
   amountFormatted: string;
+  originalAmountCents: number;
+  discountAppliedCents: number;
+  discountSource: 'subscriber' | 'promo' | null;
   isSubscriber: boolean;
   isFree: boolean;
+  promoError: string | null;
 };
 
 // --- API Functions ---
@@ -107,10 +112,14 @@ export async function fetchPayment(paymentId: string): Promise<Payment> {
 export async function fetchPricePreview(
   itemType: PaymentItemType,
   itemId?: string,
+  promoCode?: string,
 ): Promise<PricePreview> {
   const params = new URLSearchParams({ itemType });
   if (itemId) {
     params.set('itemId', itemId);
+  }
+  if (promoCode) {
+    params.set('promoCode', promoCode);
   }
   const response = await fetchJson<{ data: PricePreview }>(
     `${API_BASE}/payments/price-preview?${params.toString()}`,

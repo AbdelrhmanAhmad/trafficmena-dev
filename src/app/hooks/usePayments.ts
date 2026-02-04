@@ -75,13 +75,14 @@ export function usePayment(paymentId: string | undefined) {
 export function usePricePreview(
   itemType: PaymentItemType | undefined,
   itemId?: string,
+  promoCode?: string,
   options?: { enabled?: boolean },
 ) {
   return useQuery<PricePreview>({
-    queryKey: [...PRICE_PREVIEW_KEY, itemType, itemId],
+    queryKey: [...PRICE_PREVIEW_KEY, itemType, itemId, promoCode],
     queryFn: () => {
       if (!itemType) throw new Error('Item type required');
-      return fetchPricePreview(itemType, itemId);
+      return fetchPricePreview(itemType, itemId, promoCode);
     },
     enabled: (options?.enabled ?? true) && !!itemType,
     staleTime: 60 * 1000, // 1 minute - depends on subscription status

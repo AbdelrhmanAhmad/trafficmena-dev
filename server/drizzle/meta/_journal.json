@@ -78,6 +78,20 @@
       "when": 1769975125637,
       "tag": "0010_next_wraith",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1770151255481,
+      "tag": "0011_odd_sauron",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1770160308410,
+      "tag": "0012_grant_app_privileges",
+      "breakpoints": true
     }
   ]
 }

@@ -479,6 +479,27 @@ export const authVerifications = pgTable(
 
 // --- Payment Tables -----------------------------------------------------------
 
+export const promoCodes = pgTable(
+  'promo_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code').notNull(),
+    targetType: text('target_type').notNull(),
+    targetId: uuid('target_id').notNull(),
+    discountPercent: integer('discount_percent').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    isDeleted: boolean('is_deleted').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    codeUnique: uniqueIndex('promo_codes_code_unique')
+      .on(table.code)
+      .where(sql`is_deleted = false`),
+    targetIdx: index('promo_codes_target_idx').on(table.targetType, table.targetId),
+  }),
+);
+
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'expired']);
 
 export const paymentItemTypeEnum = pgEnum('payment_item_type', ['event', 'track', 'subscription']);
@@ -495,6 +516,9 @@ export const payments = pgTable(
     currency: text('currency').default('EGP').notNull(),
     itemType: paymentItemTypeEnum('item_type').notNull(),
     itemId: uuid('item_id'),
+    promoCodeId: uuid('promo_code_id').references(() => promoCodes.id, { onDelete: 'set null' }),
+    discountAppliedCents: integer('discount_applied_cents'),
+    originalAmountCents: integer('original_amount_cents'),
     fawaterkInvoiceId: integer('fawaterk_invoice_id'),
     fawaterkInvoiceKey: text('fawaterk_invoice_key'),
     fawryCode: text('fawry_code'),
@@ -509,6 +533,7 @@ export const payments = pgTable(
     userIdx: index('payments_user_idx').on(table.userId),
     statusIdx: index('payments_status_idx').on(table.status),
     invoiceIdx: index('payments_fawaterk_invoice_idx').on(table.fawaterkInvoiceId),
+    promoCodeIdx: index('payments_promo_code_idx').on(table.promoCodeId),
     uniquePendingPayment: uniqueIndex('payments_unique_pending')
       .on(table.userId, table.itemType, table.itemId)
       .where(sql`status = 'pending'`),

@@ -17,6 +17,7 @@ import {
   users,
 } from '../../db/schema/index.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
+import { hasTrackBookingRow } from '../../utils/booking.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { isPaidTrack } from './trackPaidStatus.js';
 import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
@@ -471,7 +472,7 @@ export function registerTrackRoutes(app: Hono) {
         let pendingPaymentId: string | null = null;
         let pendingInvoiceId: number | null = null;
         if (session?.user) {
-          const [booking, role, pendingPayment] = await Promise.all([
+          const [bookingRows, role, pendingPayment] = await Promise.all([
             db
               .select({ id: trackBookings.id })
               .from(trackBookings)
@@ -495,7 +496,7 @@ export function registerTrackRoutes(app: Hono) {
               .orderBy(desc(payments.createdAt))
               .limit(1),
           ]);
-          userHasBooked = Boolean(booking);
+          userHasBooked = hasTrackBookingRow(bookingRows);
           isStaff = role ? ['owner', 'admin', 'manager'].includes(role) : false;
 
           const [pending] = pendingPayment;

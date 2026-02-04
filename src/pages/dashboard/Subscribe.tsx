@@ -275,7 +275,7 @@ function SubscribePaymentView() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const { data: subscriptionInfo } = useSubscriptionInfo();
-  const { data: pricePreview } = usePricePreview('subscription');
+  const { data: pricePreview } = usePricePreview('subscription', undefined, undefined);
   const createCheckout = useCreateCheckout();
   const { data: methods } = usePaymentMethods();
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;

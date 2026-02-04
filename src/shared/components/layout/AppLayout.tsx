@@ -11,6 +11,7 @@ import {
   Settings,
   Shield,
   Sparkles,
+  Tag,
   Users,
 } from 'lucide-react';
 import type React from 'react';
@@ -102,6 +103,13 @@ const adminMenuItems = [
     icon: Mail,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
     description: 'Send & manage invitations',
+  },
+  {
+    title: 'Promo Codes',
+    url: '/admin/promo-codes',
+    icon: Tag,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+    description: 'Discount codes',
   },
   {
     title: 'Events & Tracks',
