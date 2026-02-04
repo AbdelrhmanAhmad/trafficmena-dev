@@ -12,7 +12,7 @@ export function createApp() {
   const allowedOrigins = env.CORS_ALLOWLIST;
   const connectSources = new Set<string>([
     "'self'",
-    'https://api.useplunk.com',
+    'https://next-api.useplunk.com',
     'https://challenges.cloudflare.com',
   ]);
   for (const origin of allowedOrigins) {
