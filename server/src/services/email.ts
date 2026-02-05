@@ -15,7 +15,7 @@ type SendInvitationEmailArgs = {
   customMessage?: string | null;
 };
 
-const PLUNK_ENDPOINT = 'https://api.useplunk.com/v1/send';
+const PLUNK_ENDPOINT = 'https://next-api.useplunk.com/v1/send';
 
 const escapeHtml = (input: string) =>
   input
