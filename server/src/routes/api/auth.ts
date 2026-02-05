@@ -10,8 +10,10 @@ import { getRequestIp, normalizeEmail } from './utils.js';
 
 const OTP_SHORT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_SHORT_LIMIT = 3;
+const OTP_SHORT_LIMIT_EVENT_MODE = 15;
 const OTP_DAILY_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 const OTP_DAILY_LIMIT = 10;
+const OTP_DAILY_LIMIT_EVENT_MODE = 50;
 const OTP_IP_WINDOW_MS = 10 * 60 * 1000;
 const OTP_IP_LIMIT_DEFAULT = 8;
 const OTP_IP_LIMIT_EVENT_MODE = 300; // Event mode supports high-density sessions
@@ -52,6 +54,15 @@ export function registerAuthRoutes(app: Hono) {
       const intent = body.data.intent ?? 'signin';
       const clientIp = getRequestIp(c);
       const now = Date.now();
+      const [settings] = await db
+        .select({
+          inviteOnlySignup: platformSettings.inviteOnlySignup,
+          eventMode: platformSettings.eventMode,
+        })
+        .from(platformSettings)
+        .limit(1);
+      const shortLimit = settings?.eventMode ? OTP_SHORT_LIMIT_EVENT_MODE : OTP_SHORT_LIMIT;
+      const dailyLimit = settings?.eventMode ? OTP_DAILY_LIMIT_EVENT_MODE : OTP_DAILY_LIMIT;
 
       const [recentOtpStats, dailyOtpStats] = await Promise.all([
         db
@@ -75,7 +86,7 @@ export function registerAuthRoutes(app: Hono) {
       ]);
 
       const recentOtpCount = Number(recentOtpStats?.[0]?.total ?? 0);
-      if (recentOtpCount >= OTP_SHORT_LIMIT) {
+      if (recentOtpCount >= shortLimit) {
         return c.json(
           {
             error: {
@@ -88,7 +99,7 @@ export function registerAuthRoutes(app: Hono) {
       }
 
       const dailyOtpCount = Number(dailyOtpStats?.[0]?.total ?? 0);
-      if (dailyOtpCount >= OTP_DAILY_LIMIT) {
+      if (dailyOtpCount >= dailyLimit) {
         return c.json(
           {
             error: {
@@ -102,7 +113,7 @@ export function registerAuthRoutes(app: Hono) {
       }
 
       const shortWindow = otpRateLimiter.consume(`otp:email:short:${email}`, {
-        limit: OTP_SHORT_LIMIT,
+        limit: shortLimit,
         windowMs: OTP_SHORT_WINDOW_MS,
       });
 
@@ -119,7 +130,7 @@ export function registerAuthRoutes(app: Hono) {
       }
 
       const dailyWindow = otpRateLimiter.consume(`otp:email:daily:${email}`, {
-        limit: OTP_DAILY_LIMIT,
+        limit: dailyLimit,
         windowMs: OTP_DAILY_WINDOW_MS,
       });
 
@@ -135,14 +146,6 @@ export function registerAuthRoutes(app: Hono) {
           429,
         );
       }
-
-      const [settings] = await db
-        .select({
-          inviteOnlySignup: platformSettings.inviteOnlySignup,
-          eventMode: platformSettings.eventMode,
-        })
-        .from(platformSettings)
-        .limit(1);
 
       const ipLimit = settings?.eventMode ? OTP_IP_LIMIT_EVENT_MODE : OTP_IP_LIMIT_DEFAULT;
 
