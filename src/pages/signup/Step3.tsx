@@ -2,7 +2,10 @@ import { Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
+import SignUpLayout, {
+  SIGNUP_TOTAL_STEPS,
+  useSignUpContext,
+} from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -54,7 +57,7 @@ const Step3: React.FC = () => {
   const isValid = phoneNumber.trim() && !errors.phoneNumber && !isLoading;
 
   return (
-    <SignUpLayout currentStep={3} totalSteps={5} onBack={handleBack}>
+    <SignUpLayout currentStep={3} totalSteps={SIGNUP_TOTAL_STEPS} onBack={handleBack}>
       <div className="space-y-6">
         <div className="mb-8 text-center">
           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">

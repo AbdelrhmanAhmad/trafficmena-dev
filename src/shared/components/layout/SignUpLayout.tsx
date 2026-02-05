@@ -9,6 +9,8 @@ import {
   removeLocalStorageItem,
   setLocalStorageItem,
 } from '@/shared/utils/localStorage';
+import { SIGNUP_TOTAL_STEPS } from './signupSteps';
+export { SIGNUP_OTP_STEP, SIGNUP_TOTAL_STEPS } from './signupSteps';
 
 /**
  * Bug #16 Fix: Comprehensive TypeScript interface documentation
@@ -81,7 +83,7 @@ interface SignUpLayoutProps {
 const SignUpLayout: React.FC<SignUpLayoutProps> = ({
   children,
   currentStep,
-  totalSteps = 5,
+  totalSteps = SIGNUP_TOTAL_STEPS,
   onBack,
   showBackButton = true,
 }) => {

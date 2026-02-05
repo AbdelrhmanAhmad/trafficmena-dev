@@ -6,14 +6,6 @@ import { activateInvitation } from '@/app/api/invitations';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
-import { Label } from '@/shared/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
@@ -37,7 +29,7 @@ const Step5: React.FC = () => {
   const [primaryChallenge, setPrimaryChallenge] = useState(formData.primaryChallenge);
   const [isSending, setIsSending] = useState(false);
   const [showTurnstile, setShowTurnstile] = useState(false);
-  const primaryChallengeId = useId();
+  const challengeGroupId = useId();
   const acceptanceCacheKey = 'trafficmena:invitation-acceptance';
 
   const handleComplete = async () => {
@@ -149,25 +141,34 @@ const Step5: React.FC = () => {
           </p>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor={primaryChallengeId} className="text-sm font-medium text-neutral-700">
-              Primary Challenge *
-            </Label>
-            <Select value={primaryChallenge} onValueChange={setPrimaryChallenge}>
-              <SelectTrigger id={primaryChallengeId} className="mt-1 rounded-xl border-neutral-200">
-                <SelectValue placeholder="Select your primary challenge" />
-              </SelectTrigger>
-              <SelectContent>
-                {challengeOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-medium text-neutral-700">Primary Challenge *</legend>
+          {challengeOptions.map((option, index) => {
+            const optionId = `${challengeGroupId}-${index}`;
+            const isSelected = primaryChallenge === option;
+            return (
+              <label
+                key={option}
+                htmlFor={optionId}
+                className={`flex cursor-pointer items-center rounded-xl border p-3 transition-colors ${
+                  isSelected
+                    ? 'border-[#05ef62] bg-[#05ef62]/10'
+                    : 'border-neutral-200 hover:border-[#05ef62]/60'
+                }`}
+              >
+                <input
+                  id={optionId}
+                  type="radio"
+                  name={challengeGroupId}
+                  checked={isSelected}
+                  onChange={() => setPrimaryChallenge(option)}
+                  className="mr-3"
+                />
+                <span>{option}</span>
+              </label>
+            );
+          })}
+        </fieldset>
 
         {showTurnstile && (
           <div className="flex justify-center pt-4">
