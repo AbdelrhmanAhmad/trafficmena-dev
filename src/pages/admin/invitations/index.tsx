@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertTriangle, Loader2, Mail, Send, Upload, Users } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { InvitationStatus } from '@/app/api/invitations';
@@ -65,6 +65,9 @@ const statusStyles: Record<InvitationStatus, string> = {
   failed: 'bg-rose-100 text-rose-900 border-rose-200',
 };
 
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200] as const;
+
 function formatDate(value: string | null) {
   if (!value) return '—';
   const date = new Date(value);
@@ -81,7 +84,13 @@ export default function AdminInvitations() {
   const lastNameFieldId = useId();
   const customMessageFieldId = useId();
   const statusFilterFieldId = useId();
+  const searchFieldId = useId();
+  const pageSizeFieldId = useId();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [bulkSummary, setBulkSummary] = useState<{
     created: number;
     errors: Array<{ line: number; email: string; reason: string }>;
@@ -89,10 +98,19 @@ export default function AdminInvitations() {
   const { toast } = useToast();
   const { handleError } = useErrorHandler();
 
-  const { data, isLoading } = useInvitations({
-    page: 1,
-    pageSize: 25,
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
+
+  const { data, isLoading, isError } = useInvitations({
+    page,
+    pageSize,
     status: statusFilter === 'all' ? undefined : statusFilter,
+    search: debouncedSearch || undefined,
   });
   const { data: statsData, isLoading: statsLoading } = useInvitationStats();
 
@@ -128,6 +146,17 @@ export default function AdminInvitations() {
     { label: 'Expired', value: stats.expired, accent: 'text-neutral-600' },
     { label: 'Failed', value: stats.failed, accent: 'text-rose-600' },
   ];
+  const invitationItems = data?.items ?? [];
+  const invitationTotal = data?.pagination.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(invitationTotal / pageSize));
+
+  const handlePrevious = () => {
+    setPage((currentPage) => Math.max(1, currentPage - 1));
+  };
+
+  const handleNext = () => {
+    setPage((currentPage) => Math.min(totalPages, currentPage + 1));
+  };
 
   const onSubmit = async (values: InvitationFormValues) => {
     try {
@@ -259,7 +288,7 @@ export default function AdminInvitations() {
 
                   <p className="text-xs text-muted-foreground">
                     • Invitations include a secure signup link and expire in 72 hours.
-                    <br />• Simple guardrail: up to 50 invites per admin per day.
+                    <br />• Simple guardrail: up to 1,000 invites per admin per day.
                   </p>
 
                   <Button
@@ -355,10 +384,13 @@ export default function AdminInvitations() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="statusFilter">Filter by status</Label>
+                    <Label htmlFor={statusFilterFieldId}>Filter by status</Label>
                     <Select
                       value={statusFilter}
-                      onValueChange={(value: StatusFilter) => setStatusFilter(value)}
+                      onValueChange={(value: StatusFilter) => {
+                        setStatusFilter(value);
+                        setPage(1);
+                      }}
                     >
                       <SelectTrigger id={statusFilterFieldId}>
                         <SelectValue placeholder="Select status" />
@@ -397,15 +429,59 @@ export default function AdminInvitations() {
                 Invitation log
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="w-full sm:max-w-sm">
+                  <Label htmlFor={searchFieldId} className="sr-only">
+                    Search invitations by email
+                  </Label>
+                  <Input
+                    id={searchFieldId}
+                    value={searchInput}
+                    onChange={(event) => {
+                      setSearchInput(event.target.value);
+                      setPage(1);
+                    }}
+                    placeholder="Search by email"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor={pageSizeFieldId} className="sr-only">
+                    Invitations per page
+                  </Label>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(value) => {
+                      setPageSize(Number(value));
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger id={pageSizeFieldId} className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAGE_SIZE_OPTIONS.map((option) => (
+                        <SelectItem key={option} value={String(option)}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               {isLoading ? (
                 <div className="flex items-center justify-center py-20 text-muted-foreground">
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading invitations…
                 </div>
-              ) : (data?.items?.length ?? 0) === 0 ? (
+              ) : isError ? (
+                <div className="flex items-center justify-center py-16 text-rose-600">
+                  Unable to load invitation log right now.
+                </div>
+              ) : invitationItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground">
                   <Mail className="h-10 w-10" />
-                  <p>No invitations yet. Start by inviting your first member.</p>
+                  <p>No invitations match your current filters.</p>
                 </div>
               ) : (
                 <Table>
@@ -421,7 +497,7 @@ export default function AdminInvitations() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data?.items?.map((invite) => (
+                    {invitationItems.map((invite) => (
                       <TableRow key={invite.id}>
                         <TableCell className="font-medium text-primary">{invite.email}</TableCell>
                         <TableCell>
@@ -448,6 +524,35 @@ export default function AdminInvitations() {
                   </TableBody>
                 </Table>
               )}
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-neutral-500">
+                  Showing {invitationItems.length} of {invitationTotal} invitations
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevious}
+                    disabled={page === 1 || isLoading}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-neutral-600">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNext}
+                    disabled={page >= totalPages || isLoading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

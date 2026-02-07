@@ -4,13 +4,13 @@ This file provides guidance to AI Coder when working with code in this repositor
 
 ## Project Overview
 
-TrafficMENA Hub is an MVP digital marketing education platform for the MENA region. The core user loop is: **Signup -> Browse Events -> Register -> Access Library**. Built with a modern TypeScript stack using Hono (backend) + React (frontend) + Drizzle ORM (PostgreSQL).
+TrafficMENA Hub is a production digital marketing education platform for the MENA region. The core user loop is: **Signup -> Browse Events/Tracks -> Register/Pay -> Access Library**. Built with a modern TypeScript stack using Hono (backend) + React (frontend) + Drizzle ORM (PostgreSQL).
 
 ## Most Important Rules
 
 1. This current project codebase is a production codebase and must be treated as such you must be very careful and make sure that the code is production ready without over-engineering and always follow the MVP mindset and don't build unrequested features or you must use the libraries and tools that are already available in the codebase and don't build custom code.
 2. You must always start from an MVP approach and always must act from first principle thinking and use the second order thinking to uncover hidden patterns and connections and be pragmatic and avoid over engineering
-3. Add concise, high-signal comments only when the intent isn’t obvious from clean code—think of them as quick guidance for the next engineer, not a narrative. Prioritize first-principles clarity and second-order awareness: never trade maintainable, well-structured code for commentary, and avoid over-engineering in the process
+3. Add concise, high-signal comments only when the intent isn't obvious from clean code—think of them as quick guidance for the next engineer, not a narrative. Prioritize first-principles clarity and second-order awareness: never trade maintainable, well-structured code for commentary, and avoid over-engineering in the process
 4. When I report a bug, don't start by trying to fix it. Instead, start by writing a test that reproduces the bug. Then, have subagents try to fix the bug and prove it with a passing test.
 
 ## Development Standards & Conventions
@@ -30,12 +30,16 @@ TrafficMENA Hub is an MVP digital marketing education platform for the MENA regi
 *   **API:** All endpoints must be protected (Better Auth).
 *   **Validation:** Zod for payload validation.
 *   **Sanitization:** DOMPurify for user content.
+*   **CSRF:** Token-based CSRF protection on all API routes.
+*   **Payments:** HMAC-verified Fawaterk webhooks. Fawaterk API key required in production.
 
 ## Key Files for Reference
 *   `AGENTS.md`: Detailed "AI Coder" instructions and status reports.
 *   `server/src/index.ts`: Backend entry point.
 *   `src/app/api/client.ts`: Frontend API client configuration.
-*   `drizzle.config.ts`: Database schema configuration.
+*   `server/src/db/schema/index.ts`: Database schema (all tables).
+*   `server/src/routes/api/index.ts`: All registered API routes.
+*   `server/src/routes/api/utils.ts`: Auth helpers (`requireAdmin`, `requireManager`, `escapeLikePattern`).
 
 ## Development Commands
 
@@ -48,6 +52,7 @@ npm --prefix server install           # API dependencies
 npm run db:start                      # Start PG on port 5433
 npm run db:stop                       # Stop local Postgres
 npm run db:status                     # Health check
+npm run db:health                     # Health check (alias)
 npm run db:reset                      # Recreate with clean schema
 npm run db:psql                       # Open psql shell
 
@@ -59,6 +64,9 @@ npm --prefix server run db:studio     # Open Drizzle Studio
 # Development servers (run in separate terminals)
 npm run dev                           # Vite frontend on http://localhost:8080
 npm --prefix server run dev           # Hono API on http://localhost:3001
+
+# Testing
+npm run test:unit                     # Run unit tests (node --test)
 
 # Build & lint
 npm run build                         # Production frontend build
@@ -76,32 +84,42 @@ npm run format                        # Ultracite format
 ├── src/                    # React SPA (Vite + React 18 + TypeScript)
 │   ├── app/               # API client layer, auth context, hooks
 │   │   ├── api/           # Typed fetch helpers (fetchJson, typed fetchers)
-│   │   ├── auth/          # AuthContext with OTP-based auth
 │   │   └── hooks/         # App-wide data hooks
-│   ├── features/          # Feature modules (events, library)
+│   ├── features/          # Feature modules
 │   │   ├── events/        # Event CRUD, pages, components, hooks
-│   │   └── library/       # Knowledge library components
-│   ├── pages/             # Route pages (signup wizard, dashboard, admin)
+│   │   ├── tracks/        # Track (course bundle) management
+│   │   ├── series/        # Content series/collections
+│   │   ├── library/       # Knowledge library components
+│   │   ├── calculators/   # 23 marketing/financial calculators
+│   │   └── subscribe/     # Subscription landing page components
+│   ├── pages/             # Route pages (signup wizard, dashboard, admin, payment)
 │   ├── shared/            # Shared UI components, contexts, hooks
 │   │   ├── components/ui/ # Shadcn/Radix UI primitives
-│   │   └── context/       # Theme, Auth providers
+│   │   ├── context/       # Theme, Auth providers
+│   │   ├── hooks/custom/  # Shared hooks (usePagination, useRolePermissions, etc.)
+│   │   └── utils/         # Shared utilities (date, validation, sanitization)
 │   └── components/        # TipTap editor components
 ├── server/                # Hono API (Node 20)
 │   ├── src/
 │   │   ├── routes/api/    # API route handlers
 │   │   ├── db/            # Drizzle client + schema
-│   │   ├── services/      # Business logic (email, rate limiting, invitations)
-│   │   ├── auth/          # Better Auth config + plugins
-│   │   └── config/        # Environment validation (Zod)
+│   │   ├── services/      # Business logic (email, fawaterk, rate limiting, invitations, promoCodes, turnstile)
+│   │   ├── auth/          # Better Auth config + plugins (inviteSession)
+│   │   ├── config/        # Environment validation (Zod)
+│   │   └── jobs/          # Background jobs (payment expiration)
 │   └── drizzle/           # Generated migration SQL files
+├── tests/                 # Unit tests (node --test runner)
+│   ├── unit/              # Unit test files
+│   └── node-loader.mjs    # Custom loader for TypeScript tests
 ├── local/postgres/bin/    # Project-scoped Postgres scripts
-└── docs/                  # Operational documentation
+└── docs/                  # Operational documentation + solution learnings
 ```
 
 ### Key Architectural Patterns
 
 **Frontend Data Flow:**
 - All API calls go through `src/app/api/client.ts` using `fetchJson()`
+- CSRF token auto-extracted from cookies via `getCsrfHeaders()`
 - Always include `credentials: 'include'` for session cookies
 - Path alias `@/` maps to `./src/`
 - Vite proxies `/api` requests to `http://localhost:3001`
@@ -111,19 +129,31 @@ npm run format                        # Ultracite format
 - Each route file exports a `registerXxxRoutes(app: Hono)` function
 - Request validation with Zod schemas
 - RBAC via `requireAdmin()`, `requireManager()` helpers from `utils.ts`
+- CSRF middleware on all API routes
 
 **Authentication:**
 - Better Auth with email OTP plugin
-- Session cookies managed automatically
+- Session cookies (7-day expiration, 1-day update age)
 - Auth endpoints: `/api/auth/otp/request`, `/api/auth/otp/verify`, `/api/auth/session`, `/api/auth/logout`
 - OTP sent via Plunk email service
-- Rate limiting: 3 OTPs/10min, 10 OTPs/day per email
+- Rate limiting: normal mode (3 OTPs/10min, 10/day), event mode (15/10min, 50/day)
+- Turnstile CAPTCHA support for high-load scenarios
+- Invite-only signup enforcement (toggleable in settings)
 
 **Database:**
 - Drizzle ORM with PostgreSQL 17.x
 - Schema defined in `server/src/db/schema/index.ts`
 - Uses UUID primary keys
-- Key tables: `users`, `profiles`, `events`, `eventAttendees`, `libraryAssets`, `invitations`
+- Key tables: `users`, `profiles`, `events`, `eventAttendees`, `eventReservations`, `tracks`, `trackEvents`, `trackBookings`, `trackReservations`, `series`, `seriesAssets`, `libraryAssets`, `subscriptions`, `payments`, `promoCodes`, `invitations`, `platformSettings`
+
+**Payment System:**
+- Fawaterk payment gateway (Fawry, Meeza, Aman, Masary, Mobile Wallet)
+- Reservation system with 72-hour TTL for capacity holds
+- Atomic fulfillment within DB transactions (CTE-based for tracks)
+- Subscriber discounts (configurable %, default 20% on offline/track events; free online events)
+- Promo code validation with time windows and usage tracking
+- Background job for payment expiration cleanup
+- No standalone "create subscription" endpoint; subscriptions created during payment fulfillment when `itemType = subscription`
 
 ### RBAC Role Hierarchy
 
@@ -132,46 +162,112 @@ owner  > admin > manager > expert > user
   4        3        2         1       0
 ```
 
-- **user**: Read-only access to events and library
+- **user**: Read-only access to events, library; register for free events
 - **expert**: Can co-host/author content
-- **manager**: CRUD events + library (no delete), manage invitations, view-only user directory
+- **manager**: CRUD events, tracks, series, library, promo codes (no delete, no user management)
 - **admin**: Full control except removing owners
 - **owner**: Full system control
 
-Role stored in `profiles.role`, normalized to lowercase. Legacy `member` values auto-converted to `user`.
+Role stored in `profiles.role`, normalized to lowercase.
 
 ## API Endpoints
 
 ```
-POST /api/auth/otp/request     # Request OTP
-POST /api/auth/otp/verify      # Verify OTP, create session
-GET  /api/auth/session         # Get current session
-POST /api/auth/logout          # Sign out
+# Authentication
+POST /api/auth/otp/request             # Request OTP (with Turnstile support)
+POST /api/auth/otp/verify              # Verify OTP, create session
+GET  /api/auth/session                 # Get current session
+POST /api/auth/logout                  # Sign out
 
-GET  /api/events               # List events (paginated, filterable)
-GET  /api/events/:id           # Event detail
-POST /api/events               # Create event (manager+)
-PUT  /api/events/:id           # Update event (manager+)
-DELETE /api/events/:id         # Delete event (admin+)
-POST /api/events/:id/register  # Register for event
-DELETE /api/events/:id/register # Cancel registration
+# Users
+GET  /api/users                        # List users (manager+, paginated)
+GET  /api/users/me                     # Current user profile
+PUT  /api/users/me                     # Update own profile
+GET  /api/users/:id                    # User detail (stub)
+PUT  /api/users/:id                    # Update user role (admin+)
+DELETE /api/users/:id                  # Delete user (admin+)
 
-GET  /api/library              # List library assets
-GET  /api/library/:id          # Asset detail
-POST /api/library              # Create asset (stub)
-DELETE /api/library/:id        # Delete asset (stub)
+# Events
+GET  /api/events                       # List events (paginated, filterable, searchable)
+GET  /api/events/:id                   # Event detail (with attendance status)
+POST /api/events                       # Create event (manager+)
+PUT  /api/events/:id                   # Update event (manager+)
+DELETE /api/events/:id                 # Delete event (admin+)
+GET  /api/events/:id/attendees         # List attendees (manager+)
+POST /api/events/:id/register          # Register for event
+DELETE /api/events/:id/register        # Cancel/request refund
+GET  /api/events/:id/cancellation-requests      # List refund requests (admin+)
+POST /api/events/:id/cancellation-requests/:regId/approve  # Approve refund
+POST /api/events/:id/cancellation-requests/:regId/reject   # Reject refund
 
-GET  /api/users/me             # Current user profile
-GET  /api/invitations          # List invitations (manager+)
-POST /api/invitations          # Single invite (manager+)
-POST /api/invitations/csv      # Bulk CSV invite (manager+)
+# Tracks (Course Bundles)
+GET  /api/tracks                       # List published tracks (searchable)
+GET  /api/tracks/:id                   # Track detail with booking status
+POST /api/tracks                       # Create track (manager+)
+PUT  /api/tracks/:id                   # Update track (manager+)
+DELETE /api/tracks/:id                 # Delete track (admin+)
+GET  /api/tracks/:id/events            # List events in track
+POST /api/tracks/:id/events            # Add event to track (manager+)
+DELETE /api/tracks/:id/events/:eventId # Remove event from track (manager+)
+POST /api/tracks/:id/book              # Book entire track
 
-POST /api/uploads              # File upload to BunnyCDN (<=20MB)
-GET  /api/settings             # Platform settings
-PUT  /api/settings             # Update settings (admin)
+# Series (Content Collections)
+GET  /api/series                       # List published series
+GET  /api/series/:id                   # Series detail
+POST /api/series                       # Create series (manager+)
+PUT  /api/series/:id                   # Update series (manager+)
+DELETE /api/series/:id                 # Delete series (admin+)
+GET  /api/series/:id/assets            # List assets in series
+POST /api/series/:id/assets            # Add asset to series (manager+)
+DELETE /api/series/:id/assets/:assetId # Remove asset from series (manager+)
+
+# Library
+GET  /api/library                      # List assets (with subscription access control)
+GET  /api/library/:id                  # Asset detail
+POST /api/library                      # Create asset (manager+)
+DELETE /api/library/:id                # Delete asset (admin+)
+
+# Payments
+GET  /api/payments/methods             # Available payment methods
+POST /api/payments/checkout            # Create payment invoice (rate limited)
+POST /api/payments/verify              # Poll for payment confirmation
+GET  /api/payments/price-preview       # Preview price with discounts
+GET  /api/payments/:id                 # Payment status
+POST /api/payments/webhook             # Fawaterk webhook (HMAC verified)
+POST /api/payments/webhook_json        # Alternative webhook
+
+# Subscriptions
+GET  /api/subscriptions/current        # User's active subscription
+GET  /api/subscriptions/settings       # Subscription settings (manager+)
+PUT  /api/subscriptions/settings       # Update settings (admin+)
+GET  /api/subscriptions/info           # Public subscription info with benefits
+
+# Promo Codes
+GET  /api/promo-codes                  # List promo codes (manager+)
+POST /api/promo-codes                  # Create promo code (manager+)
+GET  /api/promo-codes/:id              # Promo detail with usage count
+PUT  /api/promo-codes/:id              # Update promo code (manager+)
+DELETE /api/promo-codes/:id            # Soft-delete promo code (manager+)
+
+# Invitations
+GET  /api/invitations                  # List invitations (admin+)
+GET  /api/invitations/stats            # Invitation statistics
+POST /api/invitations/single           # Send single invitation (admin+)
+POST /api/invitations/bulk             # Bulk CSV invitations (admin+)
+POST /api/invitations/accept           # Accept invitation (public)
+POST /api/invitations/activate         # Activate invitation (public)
+
+# Admin Metrics
+GET  /api/admin/metrics/summary        # Dashboard summary (admin+)
+GET  /api/admin/metrics/revenue        # Revenue analytics (admin+)
+GET  /api/admin/metrics/registrations  # Registration trends (admin+)
+
+# Other
+POST /api/uploads                      # File upload to BunnyCDN (<=20MB)
+GET  /api/settings                     # Platform settings
+PUT  /api/settings                     # Update settings (admin+)
+GET  /api/health                       # Health check
 ```
-
-Note: There is no standalone “create subscription” endpoint. Subscriptions are created during payment fulfillment when `itemType = subscription` in `server/src/routes/api/payments.ts`.
 
 ## Environment Configuration
 
@@ -179,27 +275,40 @@ Copy `server/.env.example` to `server/.env`. Key variables:
 
 ```bash
 DATABASE_URL=postgresql://user:pass@localhost:5433/trafficmena_dev
-DATABASE_ADMIN_URL=...        # For migrations (optional)
-BETTER_AUTH_SECRET=...        # >=32 chars, unique in production
+DATABASE_ADMIN_URL=...            # For migrations (optional)
+DB_SSL=false                      # Enable SSL for production
+BETTER_AUTH_SECRET=...            # >=32 chars, unique in production
 BETTER_AUTH_ISSUER=http://localhost:3001
-CORS_ORIGIN=http://localhost:8080  # Comma-separated for multiple origins
-PLUNK_API_KEY=...             # Email delivery
-BUNNY_STORAGE_ZONE=...        # CDN storage
+APP_BASE_URL=http://localhost:8080
+CORS_ORIGIN=http://localhost:8080 # Comma-separated for multiple origins
+PLUNK_API_KEY=...                 # Email delivery
+BUNNY_STORAGE_ZONE=...           # CDN storage
 BUNNY_STORAGE_ACCESS_KEY=...
 BUNNY_STORAGE_CDN_URL=https://trafficmena.b-cdn.net
+FAWATERK_API_KEY=...              # Payment gateway (required in production)
+FAWATERK_ENV=staging              # staging or live
+API_BASE_URL=...                  # For webhook callbacks (optional)
+TURNSTILE_SECRET_KEY=...          # Cloudflare CAPTCHA (optional)
+INVITE_SESSION_SECRET=...         # >=16 chars in production
+INVITATION_DAILY_LIMIT=1000       # Max invitations per admin per day
 ```
 
-## Feature Status (MVP)
+## Feature Status
 
 | Module | Status | Notes |
 |--------|--------|-------|
-| Events | Complete | CRUD + registration |
-| Invitations | Complete | Single + CSV, invite-only toggle |
-| Knowledge Library | 60% | List/read live; create/delete stubs |
-| Users | 80% | Service layer done, UI polish pending |
-| Admin Dashboard | 70% | CRUD flows, analytics hidden |
-
-Removed from MVP: products/commerce, subscriptions.
+| Events | Complete | CRUD + registration + cancellation/refund workflow |
+| Tracks | Complete | Course bundles with booking windows, atomic capacity |
+| Series | Complete | Content collections with track association |
+| Library | Complete | Asset CRUD, premium access control, view tracking |
+| Subscriptions | Complete | Annual subscriptions, subscriber discounts, benefits |
+| Payments | Complete | Fawaterk gateway, 5 payment methods, reservations |
+| Promo Codes | Complete | Time-bounded discount codes with usage tracking |
+| Calculators | Complete | 23 marketing/financial calculators |
+| Invitations | Complete | Single + CSV bulk, invite-only toggle |
+| User Management | Complete | CRUD, role management, profile editing |
+| Admin Dashboard | Complete | Metrics, settings, content management |
+| Auth | Complete | OTP, Turnstile CAPTCHA, rate limiting |
 
 ## Important Conventions
 
@@ -216,35 +325,28 @@ Removed from MVP: products/commerce, subscriptions.
 
 5. **Security Headers** - CSP, HSTS (production), secure headers configured in `server/src/app.ts`.
 
-## OpenSpec Integration
+6. **Payment Flow** - Calculate price -> Create payment + reservation -> Fawaterk invoice -> Verify -> Atomic fulfillment -> Mark paid.
 
-This project uses OpenSpec for change proposals. When working on new features, breaking changes, or architectural shifts:
-
-1. Read `@/openspec/AGENTS.md` for spec format and conventions
-2. Use slash commands: `/openspec:proposal`, `/openspec:apply`, `/openspec:archive`
+7. **Reservation System** - 72-hour TTL capacity holds for events and tracks. Background job cleans expired payments.
 
 ## Quick Reference
 
 - API routes: `server/src/routes/api/index.ts`
 - Frontend hooks: `src/app/api/` and `src/features/**/hooks`
-- Auth context: `src/app/auth/AuthContext.tsx`
+- Auth context: `src/shared/context/AuthContext.tsx`
 - DB schema: `server/src/db/schema/index.ts`
+- Payment gateway: `server/src/services/fawaterk.ts`
+- Rate limiter: `server/src/services/rateLimiter.ts`
 - Admin runbook: `docs/admin-content-workflow.md`
 - RBAC decision: `docs/rbac-decision.md`
-
-## Status of Core Features
-*   **Events:** Complete (Vertical slice).
-*   **Invitations:** Functional (Single + CSV).
-*   **Library:** Functional (Needs consolidation).
-*   **User Management:** Service layer ready, UI needs updates.
-*   **Products/Subscriptions:** **REMOVED** from MVP scope.
+- Tests: `tests/unit/` (run with `npm run test:unit`)
 
 ## AI Agent Operational Guidelines
 
 ### Agent Behavior Principles
 - Prefer end-to-end verification; if blocked, state what's missing
 - New dependencies: quick health check (recent releases/commits, community adoption)
-- Web research: search early; quote exact errors; prefer 2024-2025 sources
+- Web research: search early; quote exact errors; prefer 2025-2026 sources
 - Keep files <~500 LOC; split and refactor when exceeded
 - Use Conventional Commits format (`feat|fix|refactor|build|ci|chore|docs|style|perf|test`)
 - Add regression tests when fixing bugs (when it fits the scope)
@@ -403,11 +505,12 @@ This project uses OpenSpec for change proposals. When working on new features, b
 
 ### API & Security Specific
 - Gate every Hono endpoint behind Better Auth sessions and role checks where required
-- Keep Plunk / Better Auth secrets on the server only; never leak them into the bundle
+- Keep Plunk / Better Auth / Fawaterk secrets on the server only; never leak them into the bundle
 - Validate request payloads with Zod (or equivalent) before touching the database
 - Use the shared `AppErrorHandler` helpers when raising API errors back to the SPA
 - Sanitize any user-generated HTML with DOMPurify before storage or rendering
 - Avoid logging PII (email, OTP codes, session tokens) except in secure audit tables
+- Use `escapeLikePattern` from `server/src/routes/api/utils.ts` for all SQL LIKE searches
 
 ### Style and Consistency
 - Don't use global `eval()`
@@ -436,6 +539,8 @@ This project uses OpenSpec for change proposals. When working on new features, b
 - Don't use focused tests (`.only`)
 - Place assertions inside test blocks
 - Don't use disabled tests (`.skip`) in production code
+- Tests use Node.js built-in test runner (`node --test`)
+- Test files located in `tests/unit/` with `.test.ts` extension
 
 ### Common Ultracite Commands
 - `npx ultracite init` - Initialize Ultracite in your project

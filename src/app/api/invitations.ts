@@ -64,7 +64,8 @@ export async function fetchInvitations(
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(params.pageSize));
   if (params.status) query.set('status', params.status);
-  if (params.search) query.set('search', params.search);
+  const normalizedSearch = params.search?.trim();
+  if (normalizedSearch) query.set('search', normalizedSearch);
 
   const data = await fetchJson<{
     items: InvitationRecord[];

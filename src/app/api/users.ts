@@ -91,6 +91,14 @@ export type AdminUsersResponse = {
 };
 
 export type UserRoleValue = 'owner' | 'admin' | 'manager' | 'expert' | 'user';
+export type AdminUsersSubscriptionFilter = 'all' | 'subscribed' | 'not_subscribed';
+export type FetchUsersAdminParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  role?: UserRoleValue;
+  subscription?: AdminUsersSubscriptionFilter;
+};
 
 export async function fetchCurrentUser(): Promise<CurrentUserResponse> {
   const data = await fetchJson<ApiUsersMeResponse>(`${API_BASE}/users/me`, {
@@ -104,11 +112,17 @@ export async function fetchCurrentUser(): Promise<CurrentUserResponse> {
 }
 
 export async function fetchUsersAdmin(
-  params: { page?: number; pageSize?: number } = {},
+  params: FetchUsersAdminParams = {},
 ): Promise<AdminUsersResponse> {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(params.pageSize));
+  const normalizedSearch = params.search?.trim();
+  if (normalizedSearch) query.set('search', normalizedSearch);
+  if (params.role) query.set('role', params.role);
+  if (params.subscription && params.subscription !== 'all') {
+    query.set('subscription', params.subscription);
+  }
 
   const data = await fetchJson<{
     items: ApiAdminUser[];
