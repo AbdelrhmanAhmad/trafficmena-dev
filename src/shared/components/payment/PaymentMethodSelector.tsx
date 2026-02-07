@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import type { PaymentMethod } from '@/app/api/payments';
 import { usePaymentMethods } from '@/app/hooks/usePayments';
+import { Button } from '@/shared/components/ui/button';
 import { Label } from '@/shared/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/shared/components/ui/radio-group';
 import { cn } from '@/shared/lib/utils';
@@ -19,7 +20,13 @@ export function PaymentMethodSelector({
   enabled = true,
 }: PaymentMethodSelectorProps) {
   const shouldFetch = enabled;
-  const { data: methods, isLoading, error } = usePaymentMethods({ enabled: shouldFetch });
+  const {
+    data: methods,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = usePaymentMethods({ enabled: shouldFetch });
 
   if (!shouldFetch) {
     return (
@@ -29,7 +36,8 @@ export function PaymentMethodSelector({
     );
   }
 
-  if (isLoading) {
+  // Show spinner on initial load or while retrying after an error
+  if (isLoading || (isFetching && error)) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -38,10 +46,29 @@ export function PaymentMethodSelector({
     );
   }
 
-  if (error || !methods?.length) {
+  if (error) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-sm text-destructive">
-        Unable to load payment methods. Please try again later.
+        <p>Unable to load payment methods.</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          {isFetching && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  if (!methods?.length) {
+    return (
+      <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-center text-sm text-neutral-600">
+        No payment methods available at the moment.
       </div>
     );
   }

@@ -10,6 +10,7 @@ import {
   setLocalStorageItem,
 } from '@/shared/utils/localStorage';
 import { SIGNUP_TOTAL_STEPS } from './signupSteps';
+
 export { SIGNUP_OTP_STEP, SIGNUP_TOTAL_STEPS } from './signupSteps';
 
 /**

@@ -4,13 +4,18 @@ import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { profiles, users } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { normalizePhoneNumber, validatePhoneNumberUpdate } from './users-phone.js';
 import { notImplemented, requireRole } from './utils.js';
 
 const updateMeSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   firstName: z.string().max(255).optional(),
   lastName: z.string().max(255).optional(),
-  phoneNumber: z.string().max(50).optional(),
+  phoneNumber: z
+    .string()
+    .max(30)
+    .transform(normalizePhoneNumber)
+    .optional(),
   experienceLevel: z.string().max(255).optional(),
   primaryGoal: z.string().max(255).optional(),
   primaryChallenge: z.string().max(255).optional(),
@@ -236,6 +241,33 @@ export function registerUserRoutes(app: Hono) {
           .where(eq(profiles.id, session.user.id))
           .limit(1);
 
+        if (updates.phoneNumber !== undefined) {
+          const existingPhoneNumber = existingProfile?.phoneNumber ?? null;
+          const shouldValidatePhone = isEmptyValue(existingPhoneNumber);
+          const validation = validatePhoneNumberUpdate({
+            incomingNormalized: updates.phoneNumber,
+            existing: existingPhoneNumber,
+          });
+
+          if (validation.ok && validation.isUnchanged) {
+            delete cleanProfileUpdates.phoneNumber;
+          } else if (!validation.ok && shouldValidatePhone) {
+            return c.json(
+              {
+                error: {
+                  code: 'INVALID_REQUEST',
+                  message: validation.message,
+                },
+              },
+              400,
+            );
+          }
+        }
+
+        if (Object.keys(cleanProfileUpdates).length === 0) {
+          return c.json({ success: true });
+        }
+
         if (!existingProfile) {
           await db.insert(profiles).values({
             id: session.user.id,
@@ -257,13 +289,38 @@ export function registerUserRoutes(app: Hono) {
           }
         }
       } else {
-        const existing = await db
-          .select({ id: profiles.id })
+        const [existingProfile] = await db
+          .select({ id: profiles.id, phoneNumber: profiles.phoneNumber })
           .from(profiles)
           .where(eq(profiles.id, session.user.id))
           .limit(1);
 
-        if (existing.length === 0) {
+        if (updates.phoneNumber !== undefined) {
+          const validation = validatePhoneNumberUpdate({
+            incomingNormalized: updates.phoneNumber,
+            existing: existingProfile?.phoneNumber ?? null,
+          });
+
+          if (validation.ok && validation.isUnchanged) {
+            delete cleanProfileUpdates.phoneNumber;
+          } else if (!validation.ok) {
+            return c.json(
+              {
+                error: {
+                  code: 'INVALID_REQUEST',
+                  message: validation.message,
+                },
+              },
+              400,
+            );
+          }
+        }
+
+        if (Object.keys(cleanProfileUpdates).length === 0) {
+          return c.json({ success: true });
+        }
+
+        if (!existingProfile) {
           await db.insert(profiles).values({
             id: session.user.id,
             ...cleanProfileUpdates,

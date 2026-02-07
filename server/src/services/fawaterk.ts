@@ -9,6 +9,10 @@ const API_TIMEOUT_MS = 10_000;
 const CIRCUIT_FAILURE_THRESHOLD = 5;
 const CIRCUIT_COOLDOWN_MS = 30_000; // 30 seconds
 
+// In-memory cache for payment methods (single-instance; see rateLimiter.ts)
+const METHODS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+let methodsCache: { data: PaymentMethod[]; fetchedAt: number } | null = null;
+
 // Circuit breaker state for Fawaterk API
 type CircuitState = 'closed' | 'open' | 'half-open';
 let circuitState: CircuitState = 'closed';
@@ -227,26 +231,50 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
     throw new Error('FAWATERK_API_KEY not configured');
   }
 
-  const response = await fetchWithCircuitBreaker(`${getBaseUrl()}/getPaymentmethods`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.FAWATERK_API_KEY}`,
-    },
-  });
-
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Fawaterk getPaymentMethods failed: ${response.status} ${detail}`);
+  // Return fresh cache if within TTL
+  if (methodsCache && Date.now() - methodsCache.fetchedAt < METHODS_CACHE_TTL_MS) {
+    return methodsCache.data;
   }
 
-  const result = await response.json();
-  const parsed = z.array(paymentMethodSchema).safeParse(result.data);
-  if (!parsed.success) {
-    console.error('[fawaterk] Invalid getPaymentMethods response:', parsed.error.format());
-    throw new Error('Invalid payment methods response from gateway');
+  try {
+    const response = await fetchWithCircuitBreaker(`${getBaseUrl()}/getPaymentmethods`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.FAWATERK_API_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Fawaterk getPaymentMethods failed: ${response.status} ${detail}`);
+    }
+
+    const result = await response.json();
+    const parsed = z.array(paymentMethodSchema).safeParse(result.data);
+    if (!parsed.success) {
+      console.error('[fawaterk] Invalid getPaymentMethods response:', parsed.error.format());
+      throw new Error('Invalid payment methods response from gateway');
+    }
+
+    methodsCache = { data: parsed.data, fetchedAt: Date.now() };
+    return parsed.data;
+  } catch (error) {
+    // Stale-while-error: serve expired cache rather than failing
+    if (methodsCache) {
+      console.warn('[fawaterk] getPaymentMethods failed, serving stale cache', {
+        cacheAge: `${Math.round((Date.now() - methodsCache.fetchedAt) / 1000)}s`,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return methodsCache.data;
+    }
+    throw error;
   }
-  return parsed.data;
+}
+
+// Force-clear the methods cache (e.g. after disabling a payment method)
+export function invalidatePaymentMethodsCache() {
+  methodsCache = null;
 }
 
 export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{

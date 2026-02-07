@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import type { PaymentItemType } from '@/app/api/payments';
@@ -41,13 +41,32 @@ export function PaymentCheckoutDialog({
   const { toast } = useToast();
   const navigate = useNavigate();
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
-  const shouldFetchPricing = useMemo(() => open && !!user, [open, user]);
+  const [checkoutStuck, setCheckoutStuck] = useState(false);
+  const stuckTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const createCheckout = useCreateCheckout();
+
+  // Reset selection when dialog closes
+  useEffect(() => {
+    if (!open) setSelectedMethodId(null);
+  }, [open]);
+
+  // Allow dismissing dialog if checkout hangs for 20s (slow MENA connections)
+  useEffect(() => {
+    if (createCheckout.isPending) {
+      setCheckoutStuck(false);
+      stuckTimerRef.current = setTimeout(() => setCheckoutStuck(true), 20_000);
+    } else {
+      setCheckoutStuck(false);
+    }
+    return () => clearTimeout(stuckTimerRef.current);
+  }, [createCheckout.isPending]);
+
+  const shouldFetchPricing = open && !!user;
   const { data: pricePreview, isLoading: priceLoading } = usePricePreview(
     shouldFetchPricing ? itemType : undefined,
     itemId,
     appliedPromoCode,
   );
-  const createCheckout = useCreateCheckout();
   const { data: methods } = usePaymentMethods({ enabled: shouldFetchPricing });
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
   const shouldRedirect = shouldRedirectToGateway(selectedMethod);
@@ -168,7 +187,13 @@ export function PaymentCheckoutDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(val) => {
+        if (!val && createCheckout.isPending && !checkoutStuck) return;
+        onOpenChange(val);
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Complete Payment</DialogTitle>
@@ -215,8 +240,10 @@ export function PaymentCheckoutDialog({
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={createCheckout.isPending}
+            onClick={() => {
+              if (!createCheckout.isPending || checkoutStuck) onOpenChange(false);
+            }}
+            disabled={createCheckout.isPending && !checkoutStuck}
           >
             Cancel
           </Button>

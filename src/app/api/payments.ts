@@ -7,7 +7,7 @@ export type PaymentMethod = {
   name_en: string;
   name_ar: string;
   logo?: string;
-  redirect?: string | boolean;
+  redirect: string;
 };
 
 export type PaymentItemType = 'event' | 'track' | 'subscription';
@@ -79,9 +79,10 @@ export type PricePreview = {
 
 // --- API Functions ---
 
-export async function fetchPaymentMethods(): Promise<PaymentMethod[]> {
+export async function fetchPaymentMethods(signal?: AbortSignal): Promise<PaymentMethod[]> {
   const response = await fetchJson<{ data: PaymentMethod[] }>(`${API_BASE}/payments/methods`, {
     method: 'GET',
+    signal,
   });
   return response.data;
 }
@@ -113,6 +114,7 @@ export async function fetchPricePreview(
   itemType: PaymentItemType,
   itemId?: string,
   promoCode?: string,
+  signal?: AbortSignal,
 ): Promise<PricePreview> {
   const params = new URLSearchParams({ itemType });
   if (itemId) {
@@ -125,6 +127,7 @@ export async function fetchPricePreview(
     `${API_BASE}/payments/price-preview?${params.toString()}`,
     {
       method: 'GET',
+      signal,
     },
   );
   return response.data;

@@ -24,8 +24,9 @@ const PRICE_PREVIEW_KEY = ['price-preview'];
 export function usePaymentMethods(options?: { enabled?: boolean }) {
   return useQuery<PaymentMethod[]>({
     queryKey: PAYMENT_METHODS_KEY,
-    queryFn: fetchPaymentMethods,
+    queryFn: ({ signal }) => fetchPaymentMethods(signal),
     staleTime: 5 * 60 * 1000, // 5 minutes - methods rarely change
+    retry: 1, // Server-side cache handles resilience; one retry for transient blips
     enabled: options?.enabled ?? true,
   });
 }
@@ -80,9 +81,9 @@ export function usePricePreview(
 ) {
   return useQuery<PricePreview>({
     queryKey: [...PRICE_PREVIEW_KEY, itemType, itemId, promoCode],
-    queryFn: () => {
+    queryFn: ({ signal }) => {
       if (!itemType) throw new Error('Item type required');
-      return fetchPricePreview(itemType, itemId, promoCode);
+      return fetchPricePreview(itemType, itemId, promoCode, signal);
     },
     enabled: (options?.enabled ?? true) && !!itemType,
     staleTime: 60 * 1000, // 1 minute - depends on subscription status

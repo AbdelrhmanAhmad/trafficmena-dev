@@ -38,7 +38,6 @@ function parseArgs(argv: string[]): Args {
         throw new Error(`Invalid --limit value: ${raw}`);
       }
       args.limit = Math.floor(value);
-      continue;
     }
   }
   return args;

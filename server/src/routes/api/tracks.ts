@@ -16,8 +16,8 @@ import {
   tracks,
   users,
 } from '../../db/schema/index.js';
-import { ApiError, handleRoute } from '../../utils/errors.js';
 import { hasTrackBookingRow } from '../../utils/booking.js';
+import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { isPaidTrack } from './trackPaidStatus.js';
 import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
