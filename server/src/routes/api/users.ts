@@ -1,29 +1,21 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { profiles, users } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { parseUsersListQuery } from './users-list.js';
 import { normalizePhoneNumber, validatePhoneNumberUpdate } from './users-phone.js';
-import { notImplemented, requireRole } from './utils.js';
+import { escapeLikePattern, notImplemented, requireRole } from './utils.js';
 
 const updateMeSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   firstName: z.string().max(255).optional(),
   lastName: z.string().max(255).optional(),
-  phoneNumber: z
-    .string()
-    .max(30)
-    .transform(normalizePhoneNumber)
-    .optional(),
+  phoneNumber: z.string().max(30).transform(normalizePhoneNumber).optional(),
   experienceLevel: z.string().max(255).optional(),
   primaryGoal: z.string().max(255).optional(),
   primaryChallenge: z.string().max(255).optional(),
-});
-
-const listUsersSchema = z.object({
-  page: z.coerce.number().min(1).default(1),
-  pageSize: z.coerce.number().min(1).max(50).default(10),
 });
 
 const roleValues = ['owner', 'admin', 'manager', 'expert', 'user'] as const;
@@ -69,9 +61,12 @@ export function registerUserRoutes(app: Hono) {
       );
     }
 
-    const parsed = listUsersSchema.safeParse({
+    const parsed = parseUsersListQuery({
       page: c.req.query('page'),
       pageSize: c.req.query('pageSize'),
+      search: c.req.query('search'),
+      role: c.req.query('role'),
+      subscription: c.req.query('subscription'),
     });
 
     if (!parsed.success) {
@@ -86,10 +81,47 @@ export function registerUserRoutes(app: Hono) {
       );
     }
 
-    const { page, pageSize } = parsed.data;
+    const { page, pageSize, role, search, subscription } = parsed.data;
     const offset = (page - 1) * pageSize;
 
     const now = new Date();
+    const subscriptionExistsCondition = sql<boolean>`EXISTS (
+      SELECT 1
+      FROM subscriptions s
+      WHERE s.user_id = ${users.id}
+        AND s.subscription_status = 'active'
+        AND s.ends_at >= ${now}
+    )`;
+    const subscriptionMissingCondition = sql<boolean>`NOT EXISTS (
+      SELECT 1
+      FROM subscriptions s
+      WHERE s.user_id = ${users.id}
+        AND s.subscription_status = 'active'
+        AND s.ends_at >= ${now}
+    )`;
+
+    const filters: any[] = [];
+
+    if (search) {
+      const pattern = `%${escapeLikePattern(search)}%`;
+      filters.push(or(ilike(users.email, pattern), ilike(users.name, pattern)));
+    }
+
+    if (role) {
+      if (role === 'user') {
+        filters.push(or(eq(profiles.role, role), isNull(profiles.role)));
+      } else {
+        filters.push(eq(profiles.role, role));
+      }
+    }
+
+    if (subscription === 'subscribed') {
+      filters.push(subscriptionExistsCondition);
+    } else if (subscription === 'not_subscribed') {
+      filters.push(subscriptionMissingCondition);
+    }
+
+    const whereClause = filters.length > 0 ? and(...filters) : undefined;
 
     const items = await db
       .select({
@@ -100,21 +132,20 @@ export function registerUserRoutes(app: Hono) {
         role: profiles.role,
         userType: profiles.userType,
         phoneNumber: profiles.phoneNumber,
-        isSubscriber: sql<boolean>`EXISTS (
-          SELECT 1
-          FROM subscriptions s
-          WHERE s.user_id = ${users.id}
-            AND s.subscription_status = 'active'
-            AND s.ends_at >= ${now}
-        )`,
+        isSubscriber: subscriptionExistsCondition,
       })
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.id))
-      .orderBy(users.createdAt)
+      .where(whereClause)
+      .orderBy(desc(users.createdAt), desc(users.id))
       .limit(pageSize)
       .offset(offset);
 
-    const totalResult = await db.select({ count: sql<number>`COUNT(*)` }).from(users);
+    const totalResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(users)
+      .leftJoin(profiles, eq(users.id, profiles.id))
+      .where(whereClause);
 
     return c.json({
       items,

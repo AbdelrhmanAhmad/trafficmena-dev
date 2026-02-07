@@ -11,10 +11,7 @@ export function isE164PhoneNumber(value: string) {
   return PHONE_E164_REGEX.test(value);
 }
 
-export function isSamePhoneNumber(
-  incomingNormalized: string,
-  existing: string | null | undefined,
-) {
+export function isSamePhoneNumber(incomingNormalized: string, existing: string | null | undefined) {
   if (isEmptyString(existing)) return false;
   return incomingNormalized === normalizePhoneNumber(existing);
 }
@@ -25,9 +22,7 @@ export function validatePhoneNumberUpdate({
 }: {
   incomingNormalized: string;
   existing: string | null | undefined;
-}):
-  | { ok: true; isUnchanged: boolean }
-  | { ok: false; message: string } {
+}): { ok: true; isUnchanged: boolean } | { ok: false; message: string } {
   if (incomingNormalized.length === 0) {
     return { ok: true, isUnchanged: true };
   }

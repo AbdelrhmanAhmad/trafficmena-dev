@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Search, Shield } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import type { AdminUserRecord, UserRoleValue } from '@/app/api/users';
+import { useEffect, useMemo, useState } from 'react';
+import type { AdminUserRecord, AdminUsersSubscriptionFilter, UserRoleValue } from '@/app/api/users';
 import { deleteUser, fetchUsersAdmin, updateUserRole } from '@/app/api/users';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
@@ -36,7 +36,8 @@ import {
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200] as const;
 
 const roleLabels: Record<string, string> = {
   owner: 'Owner',
@@ -62,14 +63,22 @@ const AdminUsersPage = () => {
   const isManagerRole = currentRole === 'manager';
 
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<
     'all' | 'owner' | 'admin' | 'manager' | 'expert' | 'user'
   >('all');
-  const [subscriptionFilter, setSubscriptionFilter] = useState<
-    'all' | 'subscribed' | 'not_subscribed'
-  >('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<AdminUsersSubscriptionFilter>('all');
   const [deleteDialog, setDeleteDialog] = useState<{ user: AdminUserRecord } | null>(null);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
 
   const roleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: UserRoleValue }) =>
@@ -97,8 +106,15 @@ const AdminUsersPage = () => {
   });
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin-users', page],
-    queryFn: () => fetchUsersAdmin({ page, pageSize: PAGE_SIZE }),
+    queryKey: ['admin-users', page, pageSize, debouncedSearch, roleFilter, subscriptionFilter],
+    queryFn: () =>
+      fetchUsersAdmin({
+        page,
+        pageSize,
+        search: debouncedSearch || undefined,
+        role: roleFilter === 'all' ? undefined : roleFilter,
+        subscription: subscriptionFilter,
+      }),
     onError: () =>
       toast({
         title: 'Unable to load users',
@@ -108,33 +124,17 @@ const AdminUsersPage = () => {
     keepPreviousData: true,
   });
 
+  const users = data?.items ?? [];
+
   const hasOwner = useMemo(
-    () => data?.items?.some((user) => (user.role ?? 'user').toLowerCase() === 'owner') ?? false,
-    [data?.items],
+    () => users.some((user) => (user.role ?? 'user').toLowerCase() === 'owner'),
+    [users],
   );
 
   const bootstrapPromote = !hasOwner && currentRole === 'admin';
 
-  const filteredUsers = useMemo(() => {
-    if (!data?.items) return [];
-    return data.items.filter((user) => {
-      const normalizedRole = (user.role ?? 'user').toLowerCase();
-      const matchesRole = roleFilter === 'all' || normalizedRole === roleFilter;
-      const matchesSubscription =
-        subscriptionFilter === 'all' ||
-        (subscriptionFilter === 'subscribed' ? user.is_subscriber : !user.is_subscriber);
-      const query = search.trim().toLowerCase();
-      if (!query) return matchesRole && matchesSubscription;
-      return (
-        matchesRole &&
-        matchesSubscription &&
-        (`${user.name}`.toLowerCase().includes(query) || user.email.toLowerCase().includes(query))
-      );
-    });
-  }, [data?.items, roleFilter, search, subscriptionFilter]);
-
   const totalPages = data?.pagination.total
-    ? Math.max(1, Math.ceil(data.pagination.total / PAGE_SIZE))
+    ? Math.max(1, Math.ceil(data.pagination.total / pageSize))
     : 1;
 
   const handlePrev = () => {
@@ -166,15 +166,21 @@ const AdminUsersPage = () => {
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 <Input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  value={searchInput}
+                  onChange={(event) => {
+                    setSearchInput(event.target.value);
+                    setPage(1);
+                  }}
                   placeholder="Search by name or email"
                   className="pl-9 rounded-xl border-neutral-200 bg-white/70 backdrop-blur"
                 />
               </div>
               <Select
                 value={roleFilter}
-                onValueChange={(value: typeof roleFilter) => setRoleFilter(value)}
+                onValueChange={(value: typeof roleFilter) => {
+                  setRoleFilter(value);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger className="sm:w-40 rounded-xl border-neutral-200 bg-white/70 backdrop-blur">
                   <SelectValue placeholder="Role" />
@@ -190,7 +196,10 @@ const AdminUsersPage = () => {
               </Select>
               <Select
                 value={subscriptionFilter}
-                onValueChange={(value: typeof subscriptionFilter) => setSubscriptionFilter(value)}
+                onValueChange={(value: typeof subscriptionFilter) => {
+                  setSubscriptionFilter(value);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger className="sm:w-48 rounded-xl border-neutral-200 bg-white/70 backdrop-blur">
                   <SelectValue placeholder="Subscription" />
@@ -213,7 +222,7 @@ const AdminUsersPage = () => {
               <div className="flex min-h-[200px] items-center justify-center text-red-600">
                 Unable to fetch users.
               </div>
-            ) : filteredUsers.length === 0 ? (
+            ) : users.length === 0 ? (
               <div className="flex min-h-[200px] items-center justify-center text-neutral-500">
                 No users match your filters.
               </div>
@@ -230,7 +239,7 @@ const AdminUsersPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.map((user) => (
+                  {users.map((user) => (
                     <AdminUserRow
                       key={user.id}
                       user={user}
@@ -255,9 +264,27 @@ const AdminUsersPage = () => {
 
             <div className="mt-6 flex items-center justify-between">
               <p className="text-sm text-neutral-500">
-                Showing {filteredUsers.length} of {data?.pagination.total ?? 0} members
+                Showing {users.length} of {data?.pagination.total ?? 0} members
               </p>
               <div className="flex items-center gap-3">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-20 rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={String(option)}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="outline"
                   size="icon"
