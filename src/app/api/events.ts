@@ -222,6 +222,8 @@ type ApiEventAttendee = {
   phoneNumber: string | null;
   registeredAt: string;
   status: 'active' | 'cancelled' | 'refund_requested';
+  invoiceId: number | null;
+  invoiceNumber: string | null;
 };
 
 export type EventAttendeeRecord = {
@@ -233,15 +235,18 @@ export type EventAttendeeRecord = {
   phone_number: string | null;
   registered_at: string;
   status: 'active' | 'cancelled' | 'refund_requested';
+  invoice_id: number | null;
+  invoice_number: string | null;
 };
 
 export async function fetchEventAttendees(
   eventId: string,
-  params: { page?: number; pageSize?: number } = {},
+  params: { page?: number; pageSize?: number; search?: string } = {},
 ): Promise<PaginatedResult<EventAttendeeRecord>> {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(params.pageSize));
+  if (params.search?.trim()) query.set('search', params.search.trim());
 
   const data = await fetchJson<{
     items: ApiEventAttendee[];
@@ -260,6 +265,8 @@ export async function fetchEventAttendees(
       phone_number: item.phoneNumber,
       registered_at: item.registeredAt,
       status: item.status,
+      invoice_id: item.invoiceId,
+      invoice_number: item.invoiceNumber,
     })),
     pagination: data.pagination,
   };

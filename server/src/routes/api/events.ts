@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, gte, ilike, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, gte, ilike, inArray, or, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -7,6 +7,7 @@ import {
   eventReservations,
   events,
   libraryAssets,
+  payments,
   profiles,
   subscriptions,
   trackBookings,
@@ -376,14 +377,17 @@ export function registerEventRoutes(app: Hono) {
         const parsed = listQuerySchema.safeParse({
           page: c.req.query('page'),
           pageSize: c.req.query('pageSize'),
+          search: c.req.query('search'),
         });
 
         if (!parsed.success) {
           throw new ApiError('INVALID_QUERY', parsed.error.message, 400);
         }
 
-        const { page, pageSize } = parsed.data;
+        const { page, pageSize, search } = parsed.data;
         const offset = (page - 1) * pageSize;
+        const normalizedSearch = search?.trim();
+        const searchPattern = normalizedSearch ? `%${escapeLikePattern(normalizedSearch)}%` : null;
 
         const [eventExists] = await db
           .select({ id: events.id })
@@ -395,10 +399,26 @@ export function registerEventRoutes(app: Hono) {
           return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found.' } }, 404);
         }
 
+        const attendeeFilter = and(
+          eq(eventAttendees.eventId, eventId),
+          searchPattern
+            ? or(
+                ilike(users.name, searchPattern),
+                ilike(users.email, searchPattern),
+                ilike(sql`COALESCE(${profiles.phoneNumber}, '')`, searchPattern),
+                ilike(sql`COALESCE(${payments.fawaterkInvoiceKey}, '')`, searchPattern),
+                sql`CAST(${payments.fawaterkInvoiceId} AS TEXT) ILIKE ${searchPattern}`,
+              )
+            : undefined,
+        );
+
         const totalResult = await db
           .select({ value: count(eventAttendees.id) })
           .from(eventAttendees)
-          .where(eq(eventAttendees.eventId, eventId));
+          .leftJoin(users, eq(eventAttendees.userId, users.id))
+          .leftJoin(profiles, eq(users.id, profiles.id))
+          .leftJoin(payments, eq(eventAttendees.paymentId, payments.id))
+          .where(attendeeFilter);
 
         const items = await db
           .select({
@@ -410,11 +430,14 @@ export function registerEventRoutes(app: Hono) {
             phoneNumber: profiles.phoneNumber,
             registeredAt: eventAttendees.registeredAt,
             status: eventAttendees.status,
+            invoiceId: payments.fawaterkInvoiceId,
+            invoiceNumber: payments.fawaterkInvoiceKey,
           })
           .from(eventAttendees)
           .leftJoin(users, eq(eventAttendees.userId, users.id))
           .leftJoin(profiles, eq(users.id, profiles.id))
-          .where(eq(eventAttendees.eventId, eventId))
+          .leftJoin(payments, eq(eventAttendees.paymentId, payments.id))
+          .where(attendeeFilter)
           .orderBy(desc(eventAttendees.registeredAt))
           .limit(pageSize)
           .offset(offset);

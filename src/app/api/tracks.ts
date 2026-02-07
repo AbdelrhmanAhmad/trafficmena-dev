@@ -253,17 +253,21 @@ export interface TrackAttendee {
   name: string | null;
   firstName: string | null;
   lastName: string | null;
+  phoneNumber: string | null;
   bookedAt: string;
+  invoiceId: number | null;
+  invoiceNumber: string | null;
 }
 
 // Fetch track attendees (manager+ only)
 export async function fetchTrackAttendees(
   trackId: string,
-  params: { page?: number; pageSize?: number } = {},
+  params: { page?: number; pageSize?: number; search?: string } = {},
 ): Promise<PaginatedResult<TrackAttendee>> {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
+  if (params.search?.trim()) query.set('search', params.search.trim());
 
   return fetchJson<PaginatedResult<TrackAttendee>>(
     `${API_BASE}/tracks/${trackId}/attendees${query.toString() ? `?${query.toString()}` : ''}`,

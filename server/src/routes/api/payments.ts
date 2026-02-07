@@ -36,6 +36,7 @@ const VERIFY_RATE_LIMIT = { limit: 30, windowMs: 60_000 }; // 30 verifications p
 const METHODS_RATE_LIMIT = { limit: 60, windowMs: 60_000 }; // 60 method fetches per minute
 const WEBHOOK_RATE_LIMIT = { limit: 100, windowMs: 60_000 }; // 100 webhooks per minute per IP
 const RESERVATION_TTL_MS = 72 * 60 * 60 * 1000;
+const CHECKOUT_IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
 
 // --- Schemas ---
 
@@ -44,6 +45,7 @@ const checkoutSchema = z.object({
   itemId: z.string().uuid().optional(),
   paymentMethodId: z.number().int().positive(),
   forceNewCode: z.boolean().optional(),
+  idempotencyKey: z.string().trim().min(8).max(128).optional(),
   promoCode: z.string().optional(),
 });
 
@@ -90,6 +92,43 @@ type PriceResult = {
   isSubscriber: boolean;
   isFree: boolean;
 };
+
+type CheckoutSuccessPayload = {
+  paymentId: string;
+  free?: boolean;
+  invoiceId?: number;
+  redirectUrl?: string;
+  fawryCode?: string;
+  meezaReference?: string;
+  meezaQrCode?: string;
+  amanCode?: string;
+  masaryCode?: string;
+};
+
+type ConfirmationSource = 'verify' | 'webhook' | 'reconcile';
+
+type ConfirmGatewayInvoiceResult = {
+  status: 'pending' | 'paid' | 'failed' | 'expired';
+  paymentId: string;
+  itemType: 'event' | 'track' | 'subscription';
+  itemId: string | null;
+  fawaterkPaid: boolean;
+  alreadyProcessed?: boolean;
+  recoveredFromExpired?: boolean;
+  confirmationSource: ConfirmationSource;
+};
+
+type CheckoutInFlightReservation = {
+  createdAt: number;
+  waitForCompletion: Promise<void>;
+  release: () => void;
+};
+
+const checkoutIdempotencyCache = new Map<
+  string,
+  { createdAt: number; response: CheckoutSuccessPayload }
+>();
+const checkoutIdempotencyInFlight = new Map<string, CheckoutInFlightReservation>();
 
 // --- Helpers ---
 
@@ -212,6 +251,88 @@ function validateTrackBookingResult(
       throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
     }
   }
+}
+
+function buildCheckoutIdempotencyCacheKey(params: {
+  userId: string;
+  itemType: 'event' | 'track' | 'subscription';
+  itemId?: string;
+  paymentMethodId: number;
+  idempotencyKey: string;
+}): string {
+  const { userId, itemType, itemId, paymentMethodId, idempotencyKey } = params;
+  const normalizedItemId = itemId ?? 'none';
+  return [userId, itemType, normalizedItemId, String(paymentMethodId), idempotencyKey].join(':');
+}
+
+function readCheckoutIdempotencyResponse(cacheKey: string): CheckoutSuccessPayload | null {
+  const cached = checkoutIdempotencyCache.get(cacheKey);
+  if (!cached) {
+    return null;
+  }
+
+  const isExpired = Date.now() - cached.createdAt > CHECKOUT_IDEMPOTENCY_TTL_MS;
+  if (isExpired) {
+    checkoutIdempotencyCache.delete(cacheKey);
+    return null;
+  }
+
+  return cached.response;
+}
+
+function writeCheckoutIdempotencyResponse(cacheKey: string, response: CheckoutSuccessPayload): void {
+  checkoutIdempotencyCache.set(cacheKey, { createdAt: Date.now(), response });
+
+  // Opportunistic cleanup keeps map bounded without a dedicated timer.
+  for (const [key, cached] of checkoutIdempotencyCache.entries()) {
+    if (Date.now() - cached.createdAt > CHECKOUT_IDEMPOTENCY_TTL_MS) {
+      checkoutIdempotencyCache.delete(key);
+    }
+  }
+}
+
+function readCheckoutIdempotencyInFlight(cacheKey: string): CheckoutInFlightReservation | null {
+  const inFlight = checkoutIdempotencyInFlight.get(cacheKey);
+  if (!inFlight) {
+    return null;
+  }
+
+  const isExpired = Date.now() - inFlight.createdAt > CHECKOUT_IDEMPOTENCY_TTL_MS;
+  if (isExpired) {
+    checkoutIdempotencyInFlight.delete(cacheKey);
+    return null;
+  }
+
+  return inFlight;
+}
+
+function createCheckoutInFlightReservation(): CheckoutInFlightReservation {
+  let release = () => {};
+  const waitForCompletion = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    createdAt: Date.now(),
+    waitForCompletion,
+    release,
+  };
+}
+
+function extractDatabaseErrorCode(error: unknown, depth = 0): string | null {
+  if (!error || typeof error !== 'object' || depth > 3) {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  if (typeof code === 'string') {
+    return code;
+  }
+
+  return extractDatabaseErrorCode((error as { cause?: unknown }).cause, depth + 1);
+}
+
+function isPostgresUniqueViolation(error: unknown): boolean {
+  return extractDatabaseErrorCode(error) === '23505';
 }
 
 async function calculatePrice(
@@ -487,7 +608,22 @@ async function calculatePrice(
   throw new ApiError('INVALID_ITEM', 'Invalid item type', 400);
 }
 
-async function processSuccessfulPayment(paymentId: string) {
+type ProcessSuccessfulPaymentOptions = {
+  allowExpiredRecovery?: boolean;
+};
+
+type ProcessSuccessfulPaymentResult = {
+  status: 'pending' | 'paid' | 'failed' | 'expired';
+  alreadyProcessed?: boolean;
+};
+
+async function processSuccessfulPayment(
+  paymentId: string,
+  options: ProcessSuccessfulPaymentOptions = {},
+): Promise<ProcessSuccessfulPaymentResult> {
+  const { allowExpiredRecovery = false } = options;
+  let shouldMarkFailedOnError = false;
+
   // CRITICAL: Fulfillment happens before status is marked paid so failures persist.
   try {
     return await db.transaction(async (tx) => {
@@ -506,11 +642,13 @@ async function processSuccessfulPayment(paymentId: string) {
         return { alreadyProcessed: true, status: 'paid' };
       }
 
-      if (payment.status !== 'pending') {
+      const canRecoverExpired = allowExpiredRecovery && payment.status === 'expired';
+      if (payment.status !== 'pending' && !canRecoverExpired) {
         return { status: payment.status };
       }
+      shouldMarkFailedOnError = payment.status === 'pending';
+      let alreadyProcessed = false;
 
-      let itemName = 'Purchase';
       const paidAt = new Date();
 
       if (payment.itemType === 'event' && payment.itemId) {
@@ -522,8 +660,6 @@ async function processSuccessfulPayment(paymentId: string) {
         if (!event) {
           throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
         }
-        itemName = event.title ?? 'Event';
-
         const [eventReservation] = await tx
           .select({
             expiresAt: eventReservations.expiresAt,
@@ -715,8 +851,6 @@ async function processSuccessfulPayment(paymentId: string) {
           }
         }
 
-        itemName = track.title ?? 'Track';
-
         if (track.trackBookingStart === null || track.trackBookingEnd === null) {
           throw new ApiError('BOOKING_NOT_CONFIGURED', 'Track booking not configured.', 400);
         }
@@ -744,30 +878,184 @@ async function processSuccessfulPayment(paymentId: string) {
       }
 
       if (payment.itemType === 'subscription') {
-        itemName = 'Annual Subscription';
+        // Serialize subscription grants per user across concurrent invoice confirmations.
+        const [userLock] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.id, payment.userId))
+          .for('update')
+          .limit(1);
+        if (!userLock) {
+          throw new ApiError('USER_NOT_FOUND', 'User not found.', 404);
+        }
 
-        await tx.insert(subscriptions).values({
-          userId: payment.userId,
-          status: 'active',
-          startsAt: paidAt,
-          endsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
-          pricePaidCents: payment.amountCents,
-          paymentId: payment.id,
-        });
+        const [activeSubscription] = await tx
+          .select({
+            id: subscriptions.id,
+            paymentId: subscriptions.paymentId,
+          })
+          .from(subscriptions)
+          .where(
+            and(
+              eq(subscriptions.userId, payment.userId),
+              eq(subscriptions.status, 'active'),
+              gte(subscriptions.endsAt, paidAt),
+            ),
+          )
+          .for('update')
+          .limit(1);
+
+        // A second paid subscription invoice should not create duplicate active rows.
+        if (!activeSubscription) {
+          await tx.insert(subscriptions).values({
+            userId: payment.userId,
+            status: 'active',
+            startsAt: paidAt,
+            endsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
+            pricePaidCents: payment.amountCents,
+            paymentId: payment.id,
+          });
+        } else {
+          alreadyProcessed = true;
+        }
       }
 
       await tx.update(payments).set({ status: 'paid', paidAt }).where(eq(payments.id, paymentId));
-      return { success: true, itemName };
+      return { status: 'paid', alreadyProcessed };
     });
   } catch (error) {
-    await db
-      .update(payments)
-      .set({ status: 'failed' })
-      .where(and(eq(payments.id, paymentId), eq(payments.status, 'pending')));
+    if (shouldMarkFailedOnError) {
+      await db
+        .update(payments)
+        .set({ status: 'failed' })
+        .where(and(eq(payments.id, paymentId), eq(payments.status, 'pending')));
+    }
     await db.delete(eventReservations).where(eq(eventReservations.paymentId, paymentId));
     await db.delete(trackReservations).where(eq(trackReservations.paymentId, paymentId));
     throw error;
   }
+}
+
+export async function confirmGatewayInvoicePayment(args: {
+  invoiceId: number;
+  source: ConfirmationSource;
+  userId?: string;
+  expectedInvoiceKey?: string;
+}): Promise<ConfirmGatewayInvoiceResult> {
+  const whereClause = args.userId
+    ? and(eq(payments.fawaterkInvoiceId, args.invoiceId), eq(payments.userId, args.userId))
+    : eq(payments.fawaterkInvoiceId, args.invoiceId);
+
+  const [payment] = await db.select().from(payments).where(whereClause).limit(1);
+  if (!payment) {
+    throw new ApiError('PAYMENT_NOT_FOUND', 'Payment not found', 404);
+  }
+
+  if (args.expectedInvoiceKey && payment.fawaterkInvoiceKey !== args.expectedInvoiceKey) {
+    throw new ApiError('INVALID_INVOICE_KEY', 'Invalid invoice key', 401);
+  }
+
+  if (payment.status === 'paid') {
+    return {
+      status: 'paid',
+      paymentId: payment.id,
+      itemType: payment.itemType,
+      itemId: payment.itemId,
+      fawaterkPaid: true,
+      alreadyProcessed: true,
+      confirmationSource: args.source,
+    };
+  }
+
+  const invoiceData = await getInvoiceData(args.invoiceId);
+  const fawaterkPaid = isInvoicePaid(invoiceData);
+
+  if (!fawaterkPaid) {
+    return {
+      status: payment.status,
+      paymentId: payment.id,
+      itemType: payment.itemType,
+      itemId: payment.itemId,
+      fawaterkPaid: false,
+      confirmationSource: args.source,
+    };
+  }
+
+  const gatewayTotal = Number(invoiceData.total);
+  if (!Number.isFinite(gatewayTotal) || gatewayTotal < 0) {
+    throw new ApiError('INVALID_GATEWAY_AMOUNT', 'Gateway invoice amount is invalid.', 502);
+  }
+
+  const gatewayAmountCents = Math.round(gatewayTotal * 100);
+  if (gatewayAmountCents !== payment.amountCents) {
+    console.error('[payments/confirm] Gateway amount mismatch', {
+      source: args.source,
+      invoiceId: args.invoiceId,
+      paymentId: payment.id,
+      gatewayAmountCents,
+      localAmountCents: payment.amountCents,
+    });
+    throw new ApiError('INVOICE_AMOUNT_MISMATCH', 'Invoice amount does not match payment record.', 409);
+  }
+
+  const gatewayCurrency = String(invoiceData.currency ?? '')
+    .trim()
+    .toUpperCase();
+  const localCurrency = String(payment.currency ?? '')
+    .trim()
+    .toUpperCase();
+  if (!gatewayCurrency || gatewayCurrency !== localCurrency) {
+    console.error('[payments/confirm] Gateway currency mismatch', {
+      source: args.source,
+      invoiceId: args.invoiceId,
+      paymentId: payment.id,
+      gatewayCurrency,
+      localCurrency,
+    });
+    throw new ApiError(
+      'INVOICE_CURRENCY_MISMATCH',
+      'Invoice currency does not match payment record.',
+      409,
+    );
+  }
+
+  const initialStatus: 'pending' | 'paid' | 'failed' | 'expired' = payment.status;
+  if (initialStatus !== 'pending' && initialStatus !== 'expired') {
+    return {
+      status: initialStatus,
+      paymentId: payment.id,
+      itemType: payment.itemType,
+      itemId: payment.itemId,
+      fawaterkPaid: true,
+      confirmationSource: args.source,
+    };
+  }
+
+  const processResult = await processSuccessfulPayment(payment.id, {
+    allowExpiredRecovery: initialStatus === 'expired',
+  });
+  const processStatus = processResult.status;
+  const alreadyProcessed = Boolean(processResult.alreadyProcessed);
+  const recoveredFromExpired = initialStatus === 'expired' && processStatus === 'paid';
+
+  if (recoveredFromExpired) {
+    console.info('[payments/confirm] Recovered expired payment after paid gateway invoice', {
+      source: args.source,
+      invoiceId: args.invoiceId,
+      paymentId: payment.id,
+    });
+  }
+
+  return {
+    status: processStatus,
+    paymentId: payment.id,
+    itemType: payment.itemType,
+    itemId: payment.itemId,
+    fawaterkPaid: true,
+    alreadyProcessed,
+    recoveredFromExpired,
+    confirmationSource: args.source,
+  };
 }
 
 // --- Routes ---
@@ -819,13 +1107,22 @@ export function registerPaymentRoutes(app: Hono) {
       return c.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, 429);
     }
 
-    const body = await c.req.json();
+    const rawBody = await c.req.json();
+    const body =
+      rawBody && typeof rawBody === 'object' && !Array.isArray(rawBody)
+        ? { ...(rawBody as Record<string, unknown>) }
+        : {};
+    const idempotencyHeader = c.req.header('idempotency-key');
+    if (idempotencyHeader && !('idempotencyKey' in body)) {
+      body.idempotencyKey = idempotencyHeader;
+    }
+
     const result = checkoutSchema.safeParse(body);
     if (!result.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: result.error.message } }, 400);
     }
 
-    const { itemType, itemId, paymentMethodId, forceNewCode } = result.data;
+    const { itemType, itemId, paymentMethodId, forceNewCode, idempotencyKey } = result.data;
     const promoCode = result.data.promoCode?.trim() || undefined;
 
     // Validate subscription doesn't need itemId
@@ -866,6 +1163,61 @@ export function registerPaymentRoutes(app: Hono) {
             eq(payments.status, 'pending'),
           );
 
+    const checkoutIdempotencyCacheKey = idempotencyKey
+      ? buildCheckoutIdempotencyCacheKey({
+          userId,
+          itemType,
+          itemId,
+          paymentMethodId,
+          idempotencyKey,
+        })
+      : null;
+
+    const cachedCheckoutResponse = checkoutIdempotencyCacheKey
+      ? readCheckoutIdempotencyResponse(checkoutIdempotencyCacheKey)
+      : null;
+    if (cachedCheckoutResponse) {
+      console.info('[payments/checkout] Returning cached idempotent response', {
+        userId,
+        itemType,
+        itemId: itemId ?? null,
+        paymentMethodId,
+      });
+      return c.json({ data: cachedCheckoutResponse });
+    }
+
+    const existingInFlight = checkoutIdempotencyCacheKey
+      ? readCheckoutIdempotencyInFlight(checkoutIdempotencyCacheKey)
+      : null;
+    if (checkoutIdempotencyCacheKey && existingInFlight) {
+      await existingInFlight.waitForCompletion;
+
+      const completedResponse = readCheckoutIdempotencyResponse(checkoutIdempotencyCacheKey);
+      if (completedResponse) {
+        console.info('[payments/checkout] Returning idempotent response after in-flight wait', {
+          userId,
+          itemType,
+          itemId: itemId ?? null,
+          paymentMethodId,
+        });
+        return c.json({ data: completedResponse });
+      }
+    }
+
+    const checkoutInFlightReservation = checkoutIdempotencyCacheKey
+      ? createCheckoutInFlightReservation()
+      : null;
+    if (checkoutIdempotencyCacheKey && checkoutInFlightReservation) {
+      checkoutIdempotencyInFlight.set(checkoutIdempotencyCacheKey, checkoutInFlightReservation);
+    }
+
+    const respondCheckoutSuccess = (payload: CheckoutSuccessPayload) => {
+      if (checkoutIdempotencyCacheKey) {
+        writeCheckoutIdempotencyResponse(checkoutIdempotencyCacheKey, payload);
+      }
+      return c.json({ data: payload });
+    };
+
     try {
       // Note: Stale payment expiration moved to background job (see jobs/paymentExpiration.ts)
 
@@ -886,6 +1238,11 @@ export function registerPaymentRoutes(app: Hono) {
                 message: 'A pending payment already exists.',
                 paymentId: existingPending.id,
                 invoiceId: existingPending.fawaterkInvoiceId,
+                fawryCode: existingPending.fawryCode,
+                amanCode: existingPending.amanCode,
+                masaryCode: existingPending.masaryCode,
+                meezaReference: existingPending.meezaReference,
+                meezaQrCode: existingPending.meezaQrCode,
                 itemType,
                 itemId,
                 paymentMethodId,
@@ -972,7 +1329,7 @@ export function registerPaymentRoutes(app: Hono) {
           return payment;
         });
 
-        return c.json({ data: { free: true, paymentId: result.id } });
+        return respondCheckoutSuccess({ free: true, paymentId: result.id });
       }
 
       let amountCents = prePriceResult.amountCents;
@@ -1368,6 +1725,8 @@ export function registerPaymentRoutes(app: Hono) {
       pendingParams.set('method_id', String(paymentMethodId));
       pendingParams.set('payment_id', paymentId);
       const pendingUrl = `${env.APP_BASE_URL}/payment/pending?${pendingParams.toString()}`;
+      const webhookBaseUrl = (env.API_BASE_URL ?? env.BETTER_AUTH_ISSUER ?? '').replace(/\/+$/, '');
+      const webhookUrl = webhookBaseUrl ? `${webhookBaseUrl}/api/payments/webhook_json` : undefined;
 
       let invoiceResult: Awaited<ReturnType<typeof invoiceInitPay>>;
       try {
@@ -1401,6 +1760,7 @@ export function registerPaymentRoutes(app: Hono) {
             successUrl: `${env.APP_BASE_URL}/payment/success`,
             failUrl: `${env.APP_BASE_URL}/payment/failed`,
             pendingUrl,
+            webhookUrl,
           },
           redirectOption: forceRedirect ? true : undefined,
           payload: { paymentId },
@@ -1426,17 +1786,15 @@ export function registerPaymentRoutes(app: Hono) {
         })
         .where(eq(payments.id, paymentId));
 
-      return c.json({
-        data: {
-          paymentId,
-          invoiceId: invoiceResult.invoiceId,
-          redirectUrl: invoiceResult.paymentData.redirectTo,
-          fawryCode: invoiceResult.paymentData.fawryCode,
-          meezaReference: invoiceResult.paymentData.meezaReference,
-          meezaQrCode: invoiceResult.paymentData.meezaQrCode,
-          amanCode: invoiceResult.paymentData.amanCode,
-          masaryCode: invoiceResult.paymentData.masaryCode,
-        },
+      return respondCheckoutSuccess({
+        paymentId,
+        invoiceId: invoiceResult.invoiceId,
+        redirectUrl: invoiceResult.paymentData.redirectTo,
+        fawryCode: invoiceResult.paymentData.fawryCode,
+        meezaReference: invoiceResult.paymentData.meezaReference,
+        meezaQrCode: invoiceResult.paymentData.meezaQrCode,
+        amanCode: invoiceResult.paymentData.amanCode,
+        masaryCode: invoiceResult.paymentData.masaryCode,
       });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -1445,7 +1803,7 @@ export function registerPaymentRoutes(app: Hono) {
           error.status as ContentfulStatusCode,
         );
       }
-      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+      if (isPostgresUniqueViolation(error)) {
         const [pendingPayment] = await db
           .select()
           .from(payments)
@@ -1461,6 +1819,11 @@ export function registerPaymentRoutes(app: Hono) {
                 message: 'A pending payment already exists.',
                 paymentId: pendingPayment.id,
                 invoiceId: pendingPayment.fawaterkInvoiceId,
+                fawryCode: pendingPayment.fawryCode,
+                amanCode: pendingPayment.amanCode,
+                masaryCode: pendingPayment.masaryCode,
+                meezaReference: pendingPayment.meezaReference,
+                meezaQrCode: pendingPayment.meezaQrCode,
                 itemType,
                 itemId,
                 paymentMethodId,
@@ -1472,6 +1835,14 @@ export function registerPaymentRoutes(app: Hono) {
       }
       console.error('[payments/checkout] Error:', error);
       return c.json({ error: { code: 'PAYMENT_ERROR', message: 'Failed to create payment' } }, 500);
+    } finally {
+      if (checkoutIdempotencyCacheKey && checkoutInFlightReservation) {
+        const activeReservation = checkoutIdempotencyInFlight.get(checkoutIdempotencyCacheKey);
+        if (activeReservation === checkoutInFlightReservation) {
+          checkoutIdempotencyInFlight.delete(checkoutIdempotencyCacheKey);
+        }
+        checkoutInFlightReservation.release();
+      }
     }
   });
 
@@ -1500,64 +1871,18 @@ export function registerPaymentRoutes(app: Hono) {
 
     const { invoiceId } = result.data;
 
-    // CRITICAL: Verify user ownership
-    const [payment] = await db
-      .select()
-      .from(payments)
-      .where(and(eq(payments.fawaterkInvoiceId, invoiceId), eq(payments.userId, session.user.id)));
-
-    if (!payment) {
-      return c.json({ error: { code: 'NOT_FOUND', message: 'Payment not found' } }, 404);
-    }
-
-    if (payment.status === 'paid') {
-      return c.json({
-        data: {
-          status: 'paid',
-          alreadyProcessed: true,
-          itemType: payment.itemType,
-          itemId: payment.itemId,
-        },
-      });
-    }
-
-    if (payment.status !== 'pending') {
-      return c.json({
-        data: {
-          status: payment.status,
-          itemType: payment.itemType,
-          itemId: payment.itemId,
-        },
-      });
-    }
-
     try {
-      // Call Fawaterk to verify
-      const invoiceData = await getInvoiceData(invoiceId);
-
-      if (!isInvoicePaid(invoiceData)) {
-        return c.json({
-          data: {
-            status: 'pending',
-            fawaterkPaid: false,
-            itemType: payment.itemType,
-            itemId: payment.itemId,
-          },
-        });
-      }
-
-      // Payment confirmed - process it
-      const processResult = await processSuccessfulPayment(payment.id);
-      return c.json({
-        data: {
-          status: 'paid',
-          itemType: payment.itemType,
-          itemId: payment.itemId,
-          ...processResult,
-        },
+      const processResult = await confirmGatewayInvoicePayment({
+        invoiceId,
+        source: 'verify',
+        userId: session.user.id,
       });
+      return c.json({ data: processResult });
     } catch (error) {
       if (error instanceof ApiError) {
+        if (error.code === 'PAYMENT_NOT_FOUND') {
+          return c.json({ error: { code: 'NOT_FOUND', message: 'Payment not found' } }, 404);
+        }
         return c.json(
           { error: { code: error.code, message: error.message } },
           error.status as ContentfulStatusCode,
@@ -1718,44 +2043,32 @@ export function registerPaymentRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_SIGNATURE' } }, 401);
     }
 
-    // Find payment by Fawaterk invoice ID
-    const [payment] = await db
-      .select()
-      .from(payments)
-      .where(eq(payments.fawaterkInvoiceId, webhookData.invoice_id));
-
-    if (!payment) {
-      console.error('[payments/webhook] Payment not found for invoice:', webhookData.invoice_id);
-      return c.json({ error: { code: 'PAYMENT_NOT_FOUND' } }, 404);
-    }
-
-    // SECURITY: Verify invoice key matches stored value
-    if (payment.fawaterkInvoiceKey !== webhookData.invoice_key) {
-      console.error('[payments/webhook] Invoice key mismatch');
-      return c.json({ error: { code: 'INVALID_INVOICE_KEY' } }, 401);
-    }
-
-    // Skip if already processed
-    if (payment.status === 'paid') {
-      return c.json({ data: { status: 'paid', alreadyProcessed: true } });
-    }
-
-    if (payment.status !== 'pending') {
-      return c.json({ data: { status: payment.status } });
-    }
-
     try {
-      const invoiceData = await getInvoiceData(webhookData.invoice_id);
-      if (!isInvoicePaid(invoiceData)) {
-        return c.json({ data: { status: 'pending' } });
-      }
+      const processResult = await confirmGatewayInvoicePayment({
+        invoiceId: webhookData.invoice_id,
+        expectedInvoiceKey: webhookData.invoice_key,
+        source: 'webhook',
+      });
 
-      // Process the successful payment
-      const processResult = await processSuccessfulPayment(payment.id);
-      console.log('[payments/webhook] Payment processed:', payment.id);
-      return c.json({ data: { status: 'paid', ...processResult } });
+      console.info('[payments/webhook] Confirmation processed', {
+        invoiceId: webhookData.invoice_id,
+        paymentId: processResult.paymentId,
+        status: processResult.status,
+        fawaterkPaid: processResult.fawaterkPaid,
+        recoveredFromExpired: processResult.recoveredFromExpired ?? false,
+      });
+
+      return c.json({ data: processResult });
     } catch (error) {
       if (error instanceof ApiError) {
+        if (error.code === 'PAYMENT_NOT_FOUND') {
+          console.error('[payments/webhook] Payment not found for invoice:', webhookData.invoice_id);
+          return c.json({ error: { code: 'PAYMENT_NOT_FOUND' } }, 404);
+        }
+        if (error.code === 'INVALID_INVOICE_KEY') {
+          console.error('[payments/webhook] Invoice key mismatch');
+          return c.json({ error: { code: 'INVALID_INVOICE_KEY' } }, 401);
+        }
         console.error('[payments/webhook] Processing error:', error.code, error.message);
         return c.json(
           { error: { code: error.code, message: error.message } },

@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, User } from 'lucide-react';
-import { Badge } from '@/shared/components/ui/badge';
+import { ChevronLeft, ChevronRight, Search, User } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Input } from '@/shared/components/ui/input';
 import {
   Table,
   TableBody,
@@ -18,8 +19,8 @@ interface EventAttendeesListProps {
 }
 
 export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
-  // Page size 20 as per plan
-  const { data, isLoading, isError, page, setPage, pageSize } = useEventAttendees(eventId, 20);
+  const [search, setSearch] = useState('');
+  const { data, isLoading, isError, page, setPage, pageSize } = useEventAttendees(eventId, 20, search);
 
   const totalPages = data?.total ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
 
@@ -43,14 +44,25 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <User className="h-5 w-5" />
-          Attendees
-          {data?.total ? (
-            <span className="text-muted-foreground ml-2 text-sm font-normal">({data.total})</span>
-          ) : null}
-        </CardTitle>
+      <CardHeader className="space-y-4">
+        <div className="flex flex-row items-center justify-between gap-4">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Attendees
+            {data?.total ? (
+              <span className="text-muted-foreground ml-2 text-sm font-normal">({data.total})</span>
+            ) : null}
+          </CardTitle>
+        </div>
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Quick search by name, email, phone, invoice ID, or invoice number"
+            className="pl-9"
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -69,8 +81,9 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>Registered</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Invoice ID</TableHead>
+                  <TableHead>Invoice Number</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -84,21 +97,8 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
                     <TableCell>
                       {format(new Date(attendee.registered_at), 'MMM d, yyyy h:mm a')}
                     </TableCell>
-                    <TableCell>
-                      {attendee.status === 'active' && (
-                        <Badge variant="default" className="bg-green-600">
-                          Active
-                        </Badge>
-                      )}
-                      {attendee.status === 'cancelled' && (
-                        <Badge variant="destructive">Cancelled</Badge>
-                      )}
-                      {attendee.status === 'refund_requested' && (
-                        <Badge variant="outline" className="border-amber-500 text-amber-600">
-                          Refund Pending
-                        </Badge>
-                      )}
-                    </TableCell>
+                    <TableCell>{attendee.invoice_id ?? '-'}</TableCell>
+                    <TableCell>{attendee.invoice_number ?? '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

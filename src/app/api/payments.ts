@@ -19,6 +19,7 @@ export type CheckoutRequest = {
   itemId?: string;
   paymentMethodId: number;
   forceNewCode?: boolean;
+  idempotencyKey?: string;
   promoCode?: string;
 };
 
@@ -40,8 +41,11 @@ export type VerifyPaymentRequest = {
 
 export type VerifyPaymentResponse = {
   status: PaymentStatus;
+  paymentId?: string;
   alreadyProcessed?: boolean;
   fawaterkPaid?: boolean;
+  recoveredFromExpired?: boolean;
+  confirmationSource?: 'verify' | 'webhook' | 'reconcile';
   success?: boolean;
   itemName?: string;
   itemType?: PaymentItemType;

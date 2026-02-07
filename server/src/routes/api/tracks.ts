@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, ilike, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, ilike, inArray, or, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -794,14 +794,17 @@ export function registerTrackRoutes(app: Hono) {
     const parsed = listQuerySchema.safeParse({
       page: c.req.query('page'),
       pageSize: c.req.query('pageSize'),
+      search: c.req.query('search'),
     });
 
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_QUERY', message: parsed.error.message } }, 400);
     }
 
-    const { page, pageSize } = parsed.data;
+    const { page, pageSize, search } = parsed.data;
     const offset = (page - 1) * pageSize;
+    const normalizedSearch = search?.trim();
+    const searchPattern = normalizedSearch ? `%${escapeLikePattern(normalizedSearch)}%` : null;
 
     // Verify track exists
     const [trackExists] = await db
@@ -814,10 +817,26 @@ export function registerTrackRoutes(app: Hono) {
       return c.json({ error: { code: 'TRACK_NOT_FOUND', message: 'Track not found.' } }, 404);
     }
 
+    const attendeeFilter = and(
+      eq(trackBookings.trackId, trackId),
+      searchPattern
+        ? or(
+            ilike(users.name, searchPattern),
+            ilike(users.email, searchPattern),
+            ilike(sql`COALESCE(${profiles.phoneNumber}, '')`, searchPattern),
+            ilike(sql`COALESCE(${payments.fawaterkInvoiceKey}, '')`, searchPattern),
+            sql`CAST(${payments.fawaterkInvoiceId} AS TEXT) ILIKE ${searchPattern}`,
+          )
+        : undefined,
+    );
+
     const totalResult = await db
       .select({ value: count(trackBookings.id) })
       .from(trackBookings)
-      .where(eq(trackBookings.trackId, trackId));
+      .leftJoin(users, eq(trackBookings.userId, users.id))
+      .leftJoin(profiles, eq(users.id, profiles.id))
+      .leftJoin(payments, eq(trackBookings.paymentId, payments.id))
+      .where(attendeeFilter);
 
     const items = await db
       .select({
@@ -826,12 +845,16 @@ export function registerTrackRoutes(app: Hono) {
         name: users.name,
         firstName: profiles.firstName,
         lastName: profiles.lastName,
+        phoneNumber: profiles.phoneNumber,
         bookedAt: trackBookings.bookedAt,
+        invoiceId: payments.fawaterkInvoiceId,
+        invoiceNumber: payments.fawaterkInvoiceKey,
       })
       .from(trackBookings)
       .leftJoin(users, eq(trackBookings.userId, users.id))
       .leftJoin(profiles, eq(users.id, profiles.id))
-      .where(eq(trackBookings.trackId, trackId))
+      .leftJoin(payments, eq(trackBookings.paymentId, payments.id))
+      .where(attendeeFilter)
       .orderBy(desc(trackBookings.bookedAt))
       .limit(pageSize)
       .offset(offset);

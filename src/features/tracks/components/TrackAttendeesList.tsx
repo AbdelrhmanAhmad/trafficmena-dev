@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, Users } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { Input } from '@/shared/components/ui/input';
 import {
   Table,
   TableBody,
@@ -17,7 +19,12 @@ interface TrackAttendeesListProps {
 }
 
 export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
-  const { data, isLoading, isError, page, setPage, pageSize } = useTrackAttendees(trackId, 20);
+  const [search, setSearch] = useState('');
+  const { data, isLoading, isError, page, setPage, pageSize } = useTrackAttendees(
+    trackId,
+    20,
+    search,
+  );
 
   const totalPages = data?.total ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
 
@@ -41,14 +48,25 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Enrolled Users
-          {data?.total ? (
-            <span className="text-muted-foreground ml-2 text-sm font-normal">({data.total})</span>
-          ) : null}
-        </CardTitle>
+      <CardHeader className="space-y-4">
+        <div className="flex flex-row items-center justify-between gap-4">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Enrolled Users
+            {data?.total ? (
+              <span className="text-muted-foreground ml-2 text-sm font-normal">({data.total})</span>
+            ) : null}
+          </CardTitle>
+        </div>
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Quick search by name, email, phone, invoice ID, or invoice number"
+            className="pl-9"
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -66,7 +84,10 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Enrolled</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Invoice ID</TableHead>
+                  <TableHead>Invoice Number</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -78,9 +99,12 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
                         'Unknown Member'}
                     </TableCell>
                     <TableCell>{attendee.email}</TableCell>
+                    <TableCell>{attendee.phoneNumber || '-'}</TableCell>
                     <TableCell>
                       {format(new Date(attendee.bookedAt), 'MMM d, yyyy h:mm a')}
                     </TableCell>
+                    <TableCell>{attendee.invoiceId ?? '-'}</TableCell>
+                    <TableCell>{attendee.invoiceNumber ?? '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

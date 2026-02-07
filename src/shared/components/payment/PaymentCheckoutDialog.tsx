@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
-import type { PaymentItemType } from '@/app/api/payments';
+import { fetchPayment, type PaymentItemType } from '@/app/api/payments';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -28,6 +28,13 @@ interface PaymentCheckoutDialogProps {
   onSuccess?: () => void;
 }
 
+function createCheckoutIdempotencyKey(scope: string): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${scope}:${crypto.randomUUID()}`;
+  }
+  return `${scope}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`;
+}
+
 export function PaymentCheckoutDialog({
   open,
   onOpenChange,
@@ -43,6 +50,7 @@ export function PaymentCheckoutDialog({
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
   const [checkoutStuck, setCheckoutStuck] = useState(false);
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const checkoutRequestLockRef = useRef(false);
   const createCheckout = useCreateCheckout();
 
   // Reset selection when dialog closes
@@ -104,12 +112,19 @@ export function PaymentCheckoutDialog({
       return;
     }
 
+    if (checkoutRequestLockRef.current) {
+      return;
+    }
+    checkoutRequestLockRef.current = true;
+
     try {
       const result = await createCheckout.mutateAsync({
         itemType,
         itemId,
         paymentMethodId: selectedMethodId,
-        forceNewCode: shouldRedirect ? true : undefined,
+        idempotencyKey: createCheckoutIdempotencyKey(
+          `${itemType}:${itemId ?? 'subscription'}:${selectedMethodId}`,
+        ),
         promoCode: appliedPromoCode,
       });
 
@@ -129,10 +144,10 @@ export function PaymentCheckoutDialog({
       }
 
       if (shouldRedirect) {
-        toast({
-          title: 'Unable to open payment page',
-          description: 'Please try again to generate a new payment link.',
-          variant: 'destructive',
+        goToPending({
+          invoiceId: result.invoiceId,
+          paymentMethodId: selectedMethodId,
+          paymentId: result.paymentId,
         });
         return;
       }
@@ -153,25 +168,37 @@ export function PaymentCheckoutDialog({
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
-        if (shouldRedirect) {
-          toast({
-            title: 'Payment already pending',
-            description: 'Please try again to generate a new payment link.',
-            variant: 'destructive',
-          });
-          return;
-        }
         const invoiceId = error.extra?.invoiceId as number | undefined;
         const fawryCode = error.extra?.fawryCode as string | undefined;
         const meezaReference = error.extra?.meezaReference as string | undefined;
         const meezaQrCode = error.extra?.meezaQrCode as string | undefined;
         const amanCode = error.extra?.amanCode as string | undefined;
         const masaryCode = error.extra?.masaryCode as string | undefined;
-        if (invoiceId || fawryCode || meezaReference || meezaQrCode || amanCode || masaryCode) {
+        const pendingPaymentId = error.extra?.paymentId as string | undefined;
+        let resolvedInvoiceId = invoiceId;
+
+        if (!resolvedInvoiceId && pendingPaymentId) {
+          try {
+            const pendingPayment = await fetchPayment(pendingPaymentId);
+            resolvedInvoiceId = pendingPayment.fawaterkInvoiceId ?? undefined;
+          } catch {
+            // Fallback to payment_id-only pending flow; pending page will keep polling for invoice_id.
+          }
+        }
+
+        if (
+          resolvedInvoiceId ||
+          pendingPaymentId ||
+          fawryCode ||
+          meezaReference ||
+          meezaQrCode ||
+          amanCode ||
+          masaryCode
+        ) {
           goToPending({
-            invoiceId,
+            invoiceId: resolvedInvoiceId,
             paymentMethodId: selectedMethodId,
-            paymentId: error.extra?.paymentId as string | undefined,
+            paymentId: pendingPaymentId,
           });
           return;
         }
@@ -183,6 +210,8 @@ export function PaymentCheckoutDialog({
         description: message,
         variant: 'destructive',
       });
+    } finally {
+      checkoutRequestLockRef.current = false;
     }
   };
 

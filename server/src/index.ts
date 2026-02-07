@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { connectionPool } from './db/client.js';
 import { startPaymentExpirationJob } from './jobs/paymentExpiration.js';
+import { startPaymentReconciliationJob } from './jobs/paymentReconciliation.js';
 
 // Log environment configuration at startup
 console.log('[trafficmena] Environment Configuration:');
@@ -47,3 +48,4 @@ console.log(`[trafficmena] ✅ Server listening on http://localhost:${port}`);
 
 // Start background jobs
 startPaymentExpirationJob();
+startPaymentReconciliationJob();

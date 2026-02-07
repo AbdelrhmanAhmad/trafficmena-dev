@@ -1,6 +1,6 @@
 import { Clock, Loader2 } from 'lucide-react';
 import * as QRCode from 'qrcode';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import type { PaymentItemType } from '@/app/api/payments';
@@ -23,6 +23,13 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
 
+function createCheckoutIdempotencyKey(scope: string): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${scope}:${crypto.randomUUID()}`;
+  }
+  return `${scope}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2)}`;
+}
+
 export default function PaymentPendingPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -30,9 +37,10 @@ export default function PaymentPendingPage() {
   const { user } = useAuth();
   const verifyPayment = useVerifyPayment();
   const createCheckout = useCreateCheckout();
+  const requestNewCodeLockRef = useRef(false);
   const paymentIdParam = searchParams.get('payment_id');
   const paymentId = user ? (paymentIdParam ?? undefined) : undefined;
-  const { data: payment } = usePayment(paymentId);
+  const { data: payment, refetch: refetchPayment } = usePayment(paymentId);
   const rawMeezaQrCode = payment?.meezaQrCode ?? undefined;
   const maxMeezaQrLength = 2048;
   const meezaQrCode =
@@ -129,10 +137,38 @@ export default function PaymentPendingPage() {
   }, [meezaQrCode]);
 
   useEffect(() => {
-    if (verifyPayment.data?.status === 'paid' && invoiceIdParam) {
-      navigate(`/payment/success?invoice_id=${invoiceIdParam}`);
+    if (verifyPayment.data?.status === 'paid' && isInvoiceIdValid && invoiceId !== null) {
+      navigate(`/payment/success?invoice_id=${invoiceId}`);
     }
-  }, [verifyPayment.data?.status, invoiceIdParam, navigate]);
+  }, [verifyPayment.data?.status, isInvoiceIdValid, invoiceId, navigate]);
+
+  useEffect(() => {
+    if (!paymentId || isInvoiceIdValid) {
+      return undefined;
+    }
+
+    const pollTimer = setInterval(() => {
+      void refetchPayment();
+    }, 3000);
+
+    return () => {
+      clearInterval(pollTimer);
+    };
+  }, [paymentId, isInvoiceIdValid, refetchPayment]);
+
+  useEffect(() => {
+    if (!paymentId || !isInvoiceIdValid || invoiceIdParam || invoiceId === null) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams);
+    params.set('invoice_id', String(invoiceId));
+    params.set('payment_id', paymentId);
+    navigate(`/payment/pending?${params.toString()}`, {
+      replace: true,
+      state: undefined,
+    });
+  }, [paymentId, isInvoiceIdValid, invoiceIdParam, invoiceId, searchParams, navigate]);
 
   const handleVerify = () => {
     if (!user || !isInvoiceIdValid || invoiceId === null) return;
@@ -166,12 +202,20 @@ export default function PaymentPendingPage() {
       return;
     }
 
+    if (requestNewCodeLockRef.current) {
+      return;
+    }
+    requestNewCodeLockRef.current = true;
+
     try {
       const result = await createCheckout.mutateAsync({
         itemType,
         itemId: itemType === 'subscription' ? undefined : itemId,
         paymentMethodId,
         forceNewCode: true,
+        idempotencyKey: createCheckoutIdempotencyKey(
+          `${itemType}:${itemId ?? 'subscription'}:${paymentMethodId}:replace`,
+        ),
       });
 
       if (result.free) {
@@ -201,7 +245,7 @@ export default function PaymentPendingPage() {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
         const invoiceId = error.extra?.invoiceId as number | undefined;
         const pendingPaymentId = error.extra?.paymentId as string | undefined;
-        if (invoiceId) {
+        if (invoiceId || pendingPaymentId) {
           goToPending({ invoiceId, paymentId: pendingPaymentId });
           return;
         }
@@ -214,6 +258,8 @@ export default function PaymentPendingPage() {
         description: message,
         variant: 'destructive',
       });
+    } finally {
+      requestNewCodeLockRef.current = false;
     }
   };
 
@@ -294,6 +340,11 @@ export default function PaymentPendingPage() {
                 {createCheckout.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Request new code
               </Button>
+              {canRequestNewCode && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Requesting a new code replaces the current pending invoice.
+                </p>
+              )}
               {!canRequestNewCode && (
                 <p className="text-center text-xs text-muted-foreground">
                   {user
