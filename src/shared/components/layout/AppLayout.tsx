@@ -46,31 +46,26 @@ const memberMenuItems = [
     title: 'Dashboard',
     url: '/dashboard',
     icon: Home,
-    description: 'Overview & welcome',
   },
   {
     title: 'Edit Profile',
     url: '/dashboard/profile',
     icon: Edit,
-    description: 'Update your info',
   },
   {
     title: 'Events & Tracks',
     url: '/dashboard/meetups',
     icon: Calendar,
-    description: 'Your events & bookings',
   },
   {
     title: 'Library',
     url: '/dashboard/library',
     icon: Library,
-    description: 'Resources & content',
   },
   {
     title: 'Calculators',
     url: '/dashboard/calculators',
     icon: Calculator,
-    description: 'Marketing metrics & tools',
   },
 ];
 
@@ -81,49 +76,42 @@ const adminMenuItems = [
     url: '/admin',
     icon: BarChart3,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
-    description: 'Analytics & overview',
   },
   {
     title: 'General Settings',
     url: '/admin/settings',
     icon: Settings,
     roles: ['owner', 'admin'] as UserRole[],
-    description: 'Control platform access',
   },
   {
     title: 'User Management',
     url: '/admin/users',
     icon: Users,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
-    description: 'Manage users & roles',
   },
   {
     title: 'User Invitations',
     url: '/admin/invitations',
     icon: Mail,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
-    description: 'Send & manage invitations',
   },
   {
     title: 'Promo Codes',
     url: '/admin/promo-codes',
     icon: Tag,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
-    description: 'Discount codes',
   },
   {
     title: 'Events & Tracks',
     url: '/admin/meetups',
     icon: Calendar,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
-    description: 'Events & workshops',
   },
   {
     title: 'Content Library',
     url: '/admin/library',
     icon: BookOpen,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
-    description: 'Resources & assets',
   },
 ];
 
@@ -227,7 +215,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
         <SidebarGroup>
           <SidebarGroupLabel className="text-neutral-700">{panelLabel}</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="px-2 py-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 // Match exact path or sub-paths for sections like library and calculators
@@ -235,36 +223,30 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                   location.pathname === item.url ||
                   (item.url !== '/dashboard' && location.pathname.startsWith(`${item.url}/`));
                 return (
-                  <SidebarMenuItem key={item.title} className="mb-2">
+                  <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="h-auto hover:bg-neutral-100 rounded-xl transition-colors"
+                      className="h-10 rounded-lg px-3 text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-neutral-900 data-[active=true]:bg-neutral-100 data-[active=true]:text-neutral-900"
                     >
-                      <Link to={item.url} className="flex items-center gap-3 py-3.5">
-                        <Icon className="h-4 w-4 shrink-0 text-neutral-700" />
-                        <div className="flex flex-col items-start">
-                          <span className="font-medium text-neutral-900">{item.title}</span>
-                          <span className="text-xs text-neutral-500">{item.description}</span>
-                        </div>
+                      <Link to={item.url} className="flex items-center gap-2.5">
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate font-medium">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
               {variant === 'member' && !hasActiveSubscription && (
-                <SidebarMenuItem className="mb-2">
+                <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
                     isActive={location.pathname === '/dashboard/subscribe'}
-                    className="h-auto hover:bg-amber-50 rounded-xl transition-colors border border-amber-200 bg-amber-50/50"
+                    className="h-10 rounded-lg border border-amber-200 bg-amber-50/50 px-3 text-amber-700 transition-colors hover:bg-amber-100 hover:text-amber-800 data-[active=true]:bg-amber-100 data-[active=true]:text-amber-800"
                   >
-                    <Link to="/dashboard/subscribe" className="flex items-center gap-3 py-3.5">
-                      <Crown className="h-4 w-4 shrink-0 text-amber-600" />
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium text-amber-700">Subscribe</span>
-                        <span className="text-xs text-amber-600">Unlock premium content</span>
-                      </div>
+                    <Link to="/dashboard/subscribe" className="flex items-center gap-2.5">
+                      <Crown className="h-4 w-4 shrink-0" />
+                      <span className="truncate font-medium">Subscribe</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

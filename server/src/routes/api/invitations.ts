@@ -16,6 +16,7 @@ import {
 } from '../../services/invitations.js';
 import { invitationRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { parseInvitationListQuery } from './invitations-list.js';
 import { escapeLikePattern, getRequestIp, normalizeEmail } from './utils.js';
 
 const singleInviteSchema = z.object({
@@ -23,13 +24,6 @@ const singleInviteSchema = z.object({
   firstName: z.string().max(120).optional(),
   lastName: z.string().max(120).optional(),
   customMessage: z.string().max(600).optional(),
-});
-
-const listQuerySchema = z.object({
-  page: z.coerce.number().min(1).optional(),
-  pageSize: z.coerce.number().min(1).max(100).optional(),
-  status: z.enum(['pending', 'sent', 'accepted', 'expired', 'failed']).optional(),
-  search: z.string().max(120).optional(),
 });
 
 const acceptSchema = z.object({
@@ -46,7 +40,7 @@ export function registerInvitationRoutes(app: Hono) {
   app.get(
     '/invitations',
     adminRoute(async (c) => {
-      const params = parseQuery(c, listQuerySchema, {
+      const params = parseQuery(c, parseInvitationListQuery, {
         page: c.req.query('page'),
         pageSize: c.req.query('pageSize'),
         status: c.req.query('status'),
@@ -288,8 +282,12 @@ async function parseJson<T>(c: Context, schema: z.ZodSchema<T>) {
   return result.data;
 }
 
-function parseQuery<T>(_c: Context, schema: z.ZodSchema<T>, value: unknown) {
-  const result = schema.safeParse(value);
+function parseQuery<T>(
+  _c: Context,
+  parser: (value: unknown) => { success: true; data: T } | { success: false; error: z.ZodError },
+  value: unknown,
+) {
+  const result = parser(value);
   if (!result.success) {
     throw new InvitationError('INVALID_QUERY', result.error.message, 400);
   }
@@ -297,8 +295,8 @@ function parseQuery<T>(_c: Context, schema: z.ZodSchema<T>, value: unknown) {
 }
 
 type InvitationListParams = {
-  page?: number;
-  pageSize?: number;
+  page: number;
+  pageSize: number;
   status?: string;
   search?: string;
 };
@@ -338,8 +336,8 @@ async function fetchInvitationStats(): Promise<InvitationStats> {
 }
 
 async function fetchInvitations(params: InvitationListParams) {
-  const page = Math.max(1, params.page ?? 1);
-  const pageSize = Math.min(Math.max(1, params.pageSize ?? 25), 100);
+  const page = params.page;
+  const pageSize = params.pageSize;
   const offset = (page - 1) * pageSize;
 
   const filters: any[] = [];
