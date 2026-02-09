@@ -280,7 +280,10 @@ function readCheckoutIdempotencyResponse(cacheKey: string): CheckoutSuccessPaylo
   return cached.response;
 }
 
-function writeCheckoutIdempotencyResponse(cacheKey: string, response: CheckoutSuccessPayload): void {
+function writeCheckoutIdempotencyResponse(
+  cacheKey: string,
+  response: CheckoutSuccessPayload,
+): void {
   checkoutIdempotencyCache.set(cacheKey, { createdAt: Date.now(), response });
 
   // Opportunistic cleanup keeps map bounded without a dedicated timer.
@@ -995,7 +998,11 @@ export async function confirmGatewayInvoicePayment(args: {
       gatewayAmountCents,
       localAmountCents: payment.amountCents,
     });
-    throw new ApiError('INVOICE_AMOUNT_MISMATCH', 'Invoice amount does not match payment record.', 409);
+    throw new ApiError(
+      'INVOICE_AMOUNT_MISMATCH',
+      'Invoice amount does not match payment record.',
+      409,
+    );
   }
 
   const gatewayCurrency = String(invoiceData.currency ?? '')
@@ -2062,7 +2069,10 @@ export function registerPaymentRoutes(app: Hono) {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.code === 'PAYMENT_NOT_FOUND') {
-          console.error('[payments/webhook] Payment not found for invoice:', webhookData.invoice_id);
+          console.error(
+            '[payments/webhook] Payment not found for invoice:',
+            webhookData.invoice_id,
+          );
           return c.json({ error: { code: 'PAYMENT_NOT_FOUND' } }, 404);
         }
         if (error.code === 'INVALID_INVOICE_KEY') {
