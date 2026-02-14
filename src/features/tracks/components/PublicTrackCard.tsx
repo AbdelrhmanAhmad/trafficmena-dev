@@ -1,9 +1,9 @@
-import { format } from 'date-fns';
 import { BookOpen, Calendar, Users } from 'lucide-react';
 import type React from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicTrackRecord } from '@/app/api/tracks';
 import { cn } from '@/shared/lib/utils';
+import { formatShortDate } from '@/shared/utils/dateUtils';
 import { stripHtmlTags } from '@/shared/utils/inputSanitization';
 
 interface PublicTrackCardProps {
@@ -17,7 +17,7 @@ export function PublicTrackCard({ track, to, className, onClick }: PublicTrackCa
   const destination = to ?? `/tracks/${track.id}`;
 
   const formattedDate = track.first_event_date
-    ? format(track.first_event_date, 'MMM d, yyyy')
+    ? formatShortDate(track.first_event_date.toString())
     : null;
 
   const imageUrl = track.image_url ?? '/uploads/trafficmena-track.png';
@@ -54,14 +54,6 @@ export function PublicTrackCard({ track, to, className, onClick }: PublicTrackCa
               decoding="async"
             />
           </div>
-          <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-neutral-800 shadow-sm">
-            <span className="rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 px-2 py-0.5 text-[10px] font-semibold text-white">
-              Track
-            </span>
-            <span className="rounded-full bg-neutral-900/80 px-2 py-0.5 text-[10px] font-medium text-white">
-              {track.event_count} {track.event_count === 1 ? 'Session' : 'Sessions'}
-            </span>
-          </div>
           {isBookingOpen && track.spots_remaining !== null && track.spots_remaining <= 0 && (
             <div className="absolute top-3 right-3">
               <span className="rounded-full bg-red-500 px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
@@ -71,6 +63,14 @@ export function PublicTrackCard({ track, to, className, onClick }: PublicTrackCa
           )}
         </div>
         <div className="p-5">
+          <div className="mb-3 inline-flex items-center gap-1 rounded-full bg-neutral-50 px-2 py-1 text-[11px] font-medium text-neutral-800">
+            <span className="rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+              Track
+            </span>
+            <span className="rounded-full bg-neutral-900/80 px-2 py-0.5 text-[10px] font-medium text-white">
+              {track.event_count} {track.event_count === 1 ? 'Session' : 'Sessions'}
+            </span>
+          </div>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h3 className="line-clamp-2 font-semibold tracking-tight text-neutral-900">

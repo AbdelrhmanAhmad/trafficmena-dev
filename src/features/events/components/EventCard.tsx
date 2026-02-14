@@ -4,6 +4,7 @@ import { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { Event } from '@/features/events/types';
 import { cn } from '@/shared/lib/utils';
+import { isUpcoming as checkUpcoming, formatCardDate, formatTime } from '@/shared/utils/dateUtils';
 import { stripHtmlTags } from '@/shared/utils/inputSanitization';
 
 interface EventCardProps {
@@ -25,18 +26,10 @@ export const EventCard = memo(function EventCard({
 }: EventCardProps) {
   const destination = to ?? `/meetups/${event.id}`;
   const { formattedDate, formattedTime, isUpcoming } = useMemo(() => {
-    const eventDate = new Date(event.date);
     return {
-      formattedDate: eventDate.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      }),
-      formattedTime: eventDate.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }),
-      isUpcoming: eventDate.getTime() > Date.now(),
+      formattedDate: formatCardDate(event.date),
+      formattedTime: formatTime(event.date),
+      isUpcoming: checkUpcoming(event.date),
     };
   }, [event.date]);
 
@@ -77,7 +70,18 @@ export const EventCard = memo(function EventCard({
               decoding="async"
             />
           </div>
-          <div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[11px] font-medium text-neutral-800 shadow-sm">
+          {showFavoriteButton && (
+            <button
+              type="button"
+              onClick={handleFavoriteClick}
+              className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-all hover:bg-white hover:scale-110"
+            >
+              <Heart className="h-4 w-4 text-neutral-700" />
+            </button>
+          )}
+        </div>
+        <div className="p-5">
+          <div className="mb-3 inline-flex items-center gap-1 rounded-full bg-neutral-50 px-2 py-1 text-[11px] font-medium text-neutral-800">
             <span className="rounded-full bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-2 py-0.5 text-[10px] font-semibold text-[#101010]">
               {isUpcoming ? 'Upcoming' : 'Past'}
             </span>
@@ -90,17 +94,6 @@ export const EventCard = memo(function EventCard({
               </span>
             )}
           </div>
-          {showFavoriteButton && (
-            <button
-              type="button"
-              onClick={handleFavoriteClick}
-              className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 backdrop-blur-sm transition-all hover:bg-white hover:scale-110"
-            >
-              <Heart className="h-4 w-4 text-neutral-700" />
-            </button>
-          )}
-        </div>
-        <div className="p-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h3 className="line-clamp-2 font-semibold tracking-tight text-neutral-900">
@@ -129,7 +122,7 @@ export const EventCard = memo(function EventCard({
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              {(event as { duration?: string }).duration ?? '90 min'}
+              90 min
             </span>
             <span className="flex items-center gap-1">
               <Mic className="h-4 w-4" />

@@ -113,11 +113,7 @@ const normalizeDescription = (description: string) =>
 
 const priceInCentsSchema = z
   .union([
-    z.coerce
-      .number()
-      .int()
-      .min(0, 'Price cannot be negative.')
-      .max(10000000, 'Price too large.'), // Max 100,000 EGP
+    z.coerce.number().int().min(0, 'Price cannot be negative.').max(10000000, 'Price too large.'), // Max 100,000 EGP
     z.null(),
   ])
   .optional()

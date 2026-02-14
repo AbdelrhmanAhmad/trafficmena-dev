@@ -1,5 +1,4 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
 import {
   Calendar,
@@ -31,6 +30,7 @@ import {
   isValidLocationUrl,
   useLocationVisibility,
 } from '@/shared/hooks/custom/useLocationVisibility';
+import { formatLongDate, formatTime } from '@/shared/utils/dateUtils';
 import {
   clearPendingEventContext,
   storePendingEventContext,
@@ -38,22 +38,6 @@ import {
 import { CancellationConfirmDialog } from '../components/CancellationConfirmDialog';
 import { useEventBooking } from '../hooks/useEventBooking';
 import { useEvent } from '../hooks/useEvents';
-
-const formatEventDate = (value: string) => {
-  try {
-    return format(new Date(value), 'MMMM d, yyyy');
-  } catch {
-    return value;
-  }
-};
-
-const formatEventTime = (value: string) => {
-  try {
-    return format(new Date(value), 'h:mm a');
-  } catch {
-    return 'Time TBD';
-  }
-};
 
 const trustedMeetingDomains = [
   'zoom.us',
@@ -368,7 +352,7 @@ const EventDetail: React.FC = () => {
                               Date
                             </p>
                             <p className="text-sm font-semibold text-neutral-900">
-                              {formatEventDate(event.date)}
+                              {formatLongDate(event.date)}
                             </p>
                           </div>
                         </div>
@@ -379,7 +363,7 @@ const EventDetail: React.FC = () => {
                               Time
                             </p>
                             <p className="text-sm font-semibold text-neutral-900">
-                              {formatEventTime(event.date)}
+                              {formatTime(event.date)}
                             </p>
                           </div>
                         </div>
