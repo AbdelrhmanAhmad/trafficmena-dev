@@ -6,7 +6,7 @@ import { useAuth } from '@/shared/context/AuthContext';
 
 export function PhoneCompletionBanner() {
   const { user } = useAuth();
-  const { data: profile, isLoading } = useCurrentUser({ enabled: !!user });
+  const { data, isLoading } = useCurrentUser({ enabled: !!user });
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
 
@@ -15,7 +15,7 @@ export function PhoneCompletionBanner() {
   // Reserve space while loading to prevent layout shift
   if (isLoading) return <div className="h-[44px] border-b border-transparent" />;
 
-  if (profile?.phone_number) return null;
+  if (data?.profile?.phone_number) return null;
 
   return (
     <div
