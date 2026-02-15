@@ -78,23 +78,6 @@ const TrackCard: React.FC<TrackCardProps> = ({
           </div>
         )}
 
-        {/* Track Badge */}
-        <div className="absolute top-3 left-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/90 backdrop-blur-sm text-white">
-            <FolderOpen className="h-3 w-3" />
-            Track
-          </span>
-        </div>
-
-        {/* Draft Badge */}
-        {!track.is_published && (
-          <div className="absolute top-3 left-20">
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-500/90 text-white">
-              Draft
-            </span>
-          </div>
-        )}
-
         {(canManage || canDelete) && (
           <div className="absolute top-3 right-3 z-10 flex gap-2">
             {canManage && onEdit && (
@@ -129,6 +112,17 @@ const TrackCard: React.FC<TrackCardProps> = ({
 
       <div className="flex flex-1 flex-col">
         <CardHeader className="space-y-3 pb-4">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/90 text-white">
+              <FolderOpen className="h-3 w-3" />
+              Track
+            </span>
+            {!track.is_published && (
+              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-500/90 text-white">
+                Draft
+              </span>
+            )}
+          </div>
           <CardTitle className="text-lg font-semibold text-neutral-900 line-clamp-2">
             {track.title}
           </CardTitle>

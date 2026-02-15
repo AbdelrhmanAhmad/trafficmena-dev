@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import { CalendarDays, ExternalLink, GraduationCap, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DataLoader from '@/shared/components/DataLoader';
@@ -7,6 +6,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { formatMeetupDate } from '@/shared/utils/dateUtils';
 import { TrackAttendeesList } from '../components/TrackAttendeesList';
 import { useTrack } from '../hooks/useTracks';
 
@@ -18,11 +18,7 @@ const AdminTrackDetail = () => {
 
   const formatDate = (date: Date | null) => {
     if (!date) return 'Not set';
-    try {
-      return format(date, 'MMM d, yyyy h:mm a');
-    } catch {
-      return 'Invalid date';
-    }
+    return formatMeetupDate(date.toISOString());
   };
 
   return (

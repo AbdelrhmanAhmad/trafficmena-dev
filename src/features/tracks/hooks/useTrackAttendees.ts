@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TrackAttendee } from '@/app/api/tracks';
 import { fetchTrackAttendees } from '@/app/api/tracks';
 
@@ -9,9 +9,19 @@ export const useTrackAttendees = (
   search: string | undefined = undefined,
 ) => {
   const [page, setPage] = useState(1);
+  const previousScopeRef = useRef({ trackId, pageSize, search });
 
   useEffect(() => {
-    setPage(1);
+    const previousScope = previousScopeRef.current;
+    const scopeChanged =
+      previousScope.trackId !== trackId ||
+      previousScope.pageSize !== pageSize ||
+      previousScope.search !== search;
+
+    if (scopeChanged) {
+      setPage(1);
+      previousScopeRef.current = { trackId, pageSize, search };
+    }
   }, [trackId, pageSize, search]);
 
   const query = useQuery<{ items: TrackAttendee[]; total: number }>({

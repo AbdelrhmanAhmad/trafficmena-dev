@@ -18,6 +18,7 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
+import { PhoneCompletionBanner } from '@/shared/components/PhoneCompletionBanner';
 import {
   Sidebar,
   SidebarContent,
@@ -328,6 +329,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ variant, children }) => {
             </div>
             <UserProfileDropdown />
           </header>
+          {variant === 'member' && <PhoneCompletionBanner />}
           <main className="relative flex-1 overflow-x-hidden overflow-y-auto">
             <div className="pointer-events-none absolute -left-1/4 top-0 -z-10 h-[50vh] w-[60vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/50 via-[#f4fff9]/30 to-transparent blur-3xl" />
             <div className="pointer-events-none absolute right-0 top-1/3 -z-10 h-[50vh] w-[50vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/20 via-[#05ef62]/15 to-transparent blur-[90px]" />

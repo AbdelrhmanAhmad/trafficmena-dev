@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import DOMPurify from 'dompurify';
 import { CalendarDays, Clock, MapPin, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -8,6 +7,7 @@ import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { formatLongDate, formatTime } from '@/shared/utils/dateUtils';
 import { CancellationRequestsList } from '../components/CancellationRequestsList';
 import { EventAttendeesList } from '../components/EventAttendeesList';
 import { useEvent } from '../hooks/useEvents';
@@ -79,27 +79,11 @@ const AdminEventDetail = () => {
               <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CalendarDays className="h-4 w-4" />
-                  <span>
-                    {(() => {
-                      try {
-                        return format(new Date(event.date), 'MMMM d, yyyy');
-                      } catch {
-                        return event.date;
-                      }
-                    })()}
-                  </span>
+                  <span>{formatLongDate(event.date)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />
-                  <span>
-                    {(() => {
-                      try {
-                        return format(new Date(event.date), 'h:mm a');
-                      } catch {
-                        return 'Time TBD';
-                      }
-                    })()}
-                  </span>
+                  <span>{formatTime(event.date)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4" />

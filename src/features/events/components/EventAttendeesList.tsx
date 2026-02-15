@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Search, User } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
@@ -20,7 +20,11 @@ interface EventAttendeesListProps {
 
 export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
   const [search, setSearch] = useState('');
-  const { data, isLoading, isError, page, setPage, pageSize } = useEventAttendees(eventId, 20, search);
+  const { data, isLoading, isError, page, setPage, pageSize } = useEventAttendees(
+    eventId,
+    20,
+    search,
+  );
 
   const totalPages = data?.total ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
 

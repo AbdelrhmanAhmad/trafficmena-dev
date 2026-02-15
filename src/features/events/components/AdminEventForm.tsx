@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { CAIRO_TZ, getCairoOffsetString, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 
 const eventFormSchema = z.object({
   title: z
@@ -111,12 +112,6 @@ type AdminEventFormProps = {
   trackInfo?: TrackInfo;
 };
 
-function toDateTimeLocalString(input: string | Date | undefined) {
-  const date = input ? new Date(input) : new Date(Date.now() + 24 * 60 * 60 * 1000);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
-  return local.toISOString().slice(0, 16);
-}
-
 type SanitizedHtmlProps = {
   className?: string;
   html: string;
@@ -135,6 +130,7 @@ function formatPreviewDate(iso: string | undefined) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return 'TBC';
   return new Intl.DateTimeFormat('en-GB', {
+    timeZone: CAIRO_TZ,
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
@@ -160,7 +156,7 @@ export function AdminEventForm({
   const defaultValues: AdminEventFormValues = {
     title: event?.title ?? '',
     description: (event?.description ?? '').trim(),
-    date: toDateTimeLocalString(event?.date),
+    date: toCairoDatetimeLocal(event?.date),
     eventType: event?.event_type ?? 'Event',
     location: event?.location ?? '',
     locationUrl: event?.location_url ?? '',
@@ -227,7 +223,7 @@ export function AdminEventForm({
     const payload: CreateEventPayload = {
       title: formValues.title.trim(),
       description: DOMPurify.sanitize(formValues.description.trim()),
-      date: new Date(formValues.date).toISOString(),
+      date: new Date(`${formValues.date}${getCairoOffsetString()}`).toISOString(),
       eventType: formValues.eventType,
       location: formValues.location?.trim() ? formValues.location.trim() : null,
       locationUrl: formValues.locationUrl?.trim() ? formValues.locationUrl.trim() : null,

@@ -1,4 +1,3 @@
-import { format } from 'date-fns';
 import {
   ArrowRight,
   BadgeCheck,
@@ -25,6 +24,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { isValidLocationUrl } from '@/shared/hooks/custom/useLocationVisibility';
+import { formatDateWithDay, formatShortDate, formatTime } from '@/shared/utils/dateUtils';
 import { clearPendingEventContext } from '@/shared/utils/eventRedirectUtils';
 
 const ThankYouEvent: React.FC = () => {
@@ -50,30 +50,6 @@ const ThankYouEvent: React.FC = () => {
     }
     clearPendingEventContext();
   }, [user, id, event, bookEvent, requiresPayment]);
-
-  const formatEventDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'EEEE, MMMM d, yyyy');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const formatEventTime = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'h:mm a');
-    } catch {
-      return 'Time TBD';
-    }
-  };
-
-  const formatSubscriptionEnd = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy');
-    } catch {
-      return dateString;
-    }
-  };
 
   // Generate Google Calendar URL
   const googleCalendarUrl = useMemo(() => {
@@ -228,7 +204,7 @@ const ThankYouEvent: React.FC = () => {
                           Date
                         </div>
                         <div className="font-semibold text-neutral-900">
-                          {formatEventDate(event.date)}
+                          {formatDateWithDay(event.date)}
                         </div>
                       </div>
                     </div>
@@ -240,7 +216,7 @@ const ThankYouEvent: React.FC = () => {
                           Time
                         </div>
                         <div className="font-semibold text-neutral-900">
-                          {formatEventTime(event.date)}
+                          {formatTime(event.date)}
                         </div>
                       </div>
                     </div>
@@ -340,7 +316,7 @@ const ThankYouEvent: React.FC = () => {
                         <p>
                           Your subscription is active
                           {subscription?.endsAt
-                            ? ` until ${formatSubscriptionEnd(subscription.endsAt)}.`
+                            ? ` until ${formatShortDate(subscription.endsAt)}.`
                             : '.'}
                         </p>
                         <p>You have full library access, member discounts, and priority support.</p>

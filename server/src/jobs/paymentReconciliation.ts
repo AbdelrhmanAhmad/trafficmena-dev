@@ -154,7 +154,9 @@ export async function reconcileRecentAtRiskPayments(): Promise<ReconciliationSum
 export function startPaymentReconciliationJob(): void {
   const runReconciliation = async (trigger: 'startup' | 'interval') => {
     if (reconciliationInProgress) {
-      console.warn('[payment-reconciliation] Previous run still in progress, skipping', { trigger });
+      console.warn('[payment-reconciliation] Previous run still in progress, skipping', {
+        trigger,
+      });
       return;
     }
 

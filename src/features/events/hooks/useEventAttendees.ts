@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { EventAttendeeRecord } from '@/app/api/events';
 import { fetchEventAttendees } from '@/app/api/events';
 
@@ -13,9 +13,19 @@ export const useEventAttendees = (
   search: string | undefined = undefined,
 ) => {
   const [page, setPage] = useState(1);
+  const previousScopeRef = useRef({ eventId, pageSize, search });
 
   useEffect(() => {
-    setPage(1);
+    const previousScope = previousScopeRef.current;
+    const scopeChanged =
+      previousScope.eventId !== eventId ||
+      previousScope.pageSize !== pageSize ||
+      previousScope.search !== search;
+
+    if (scopeChanged) {
+      setPage(1);
+      previousScopeRef.current = { eventId, pageSize, search };
+    }
   }, [eventId, pageSize, search]);
 
   const query = useQuery<{ items: EventAttendeeRecord[]; total: number }>({
