@@ -172,7 +172,8 @@ export async function handleSeriesBulkGrant(c: Context, actorUserId: string): Pr
         tx
           .select({ id: series.id, isPremium: series.isPremium })
           .from(series)
-          .where(inArray(series.id, txSeriesIds)),
+          .where(inArray(series.id, txSeriesIds))
+          .for('update'),
       ]);
 
       const txUserSet = new Set(txUsers.map((row) => row.id));

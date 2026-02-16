@@ -40,16 +40,12 @@ const revokeGrantSchema = z.object({
   reason: z.string().trim().min(3).max(500),
 });
 
-function parseUuidPathParam(input: unknown) {
-  return uuidPathParamSchema.safeParse(input);
-}
-
 export function registerSeriesGrantsRoutes(app: Hono) {
   app.get('/series/:id/grants', async (c) => {
     const actor = await requireManager(c);
     if ('response' in actor) return actor.response;
 
-    const idParsed = parseUuidPathParam(c.req.param('id'));
+    const idParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
       return c.json(
         { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
@@ -152,7 +148,7 @@ export function registerSeriesGrantsRoutes(app: Hono) {
       );
     }
 
-    const idParsed = parseUuidPathParam(c.req.param('id'));
+    const idParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
       return c.json(
         { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
@@ -180,7 +176,8 @@ export function registerSeriesGrantsRoutes(app: Hono) {
             .select({ id: series.id, isPremium: series.isPremium })
             .from(series)
             .where(eq(series.id, seriesId))
-            .limit(1),
+            .limit(1)
+            .for('update'),
           tx.select({ id: users.id }).from(users).where(inArray(users.id, uniqueUserIds)),
         ]);
 
@@ -288,7 +285,7 @@ export function registerSeriesGrantsRoutes(app: Hono) {
       );
     }
 
-    const idParsed = parseUuidPathParam(c.req.param('id'));
+    const idParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
       return c.json(
         { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
@@ -296,7 +293,7 @@ export function registerSeriesGrantsRoutes(app: Hono) {
       );
     }
 
-    const userIdParsed = parseUuidPathParam(c.req.param('userId'));
+    const userIdParsed = uuidPathParamSchema.safeParse(c.req.param('userId'));
     if (!userIdParsed.success) {
       return c.json(
         { error: { code: 'INVALID_PARAM', message: 'User ID must be a valid UUID.' } },
@@ -337,7 +334,7 @@ export function registerSeriesGrantsRoutes(app: Hono) {
       );
     }
 
-    return c.json({ success: true });
+    return c.json({ success: true, revokedGrantId: updated.id });
   });
 
   app.post('/series/grants/bulk', async (c) => {

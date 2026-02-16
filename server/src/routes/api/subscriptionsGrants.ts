@@ -214,7 +214,7 @@ export function registerSubscriptionGrantRoutes(app: Hono) {
       );
     }
 
-    return c.json({ success: true });
+    return c.json({ success: true, revokedSubscriptionId: revoked.id });
   });
 
   app.post('/subscriptions/grants/bulk', async (c) => {
