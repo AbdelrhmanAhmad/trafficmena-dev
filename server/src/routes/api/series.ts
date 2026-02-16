@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, ilike, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -6,12 +6,13 @@ import {
   eventAttendees,
   libraryAssets,
   series,
+  seriesAccessGrants,
   seriesAssets,
-  subscriptions,
   trackBookings,
 } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { resolveSeriesAccess, resolveSeriesAssetAccess } from './seriesAccess.js';
+import { hasActiveSubscription } from './subscriptionShared.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -48,22 +49,6 @@ const reorderAssetsSchema = z.object({
 });
 
 const uuidParamSchema = z.string().uuid();
-
-const hasActiveSubscription = async (userId: string): Promise<boolean> => {
-  const [subscription] = await db
-    .select({ id: subscriptions.id })
-    .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.userId, userId),
-        eq(subscriptions.status, 'active'),
-        gte(subscriptions.endsAt, new Date()),
-      ),
-    )
-    .limit(1);
-
-  return subscription !== undefined;
-};
 
 export function registerSeriesRoutes(app: Hono) {
   // List series (users see published only, staff see all)
@@ -170,25 +155,27 @@ export function registerSeriesRoutes(app: Hono) {
     }
     const id = idParsed.data;
 
-    const role = await getOptionalUserRole(session.user.id);
+    const [role, seriesRows] = await Promise.all([
+      getOptionalUserRole(session.user.id),
+      db
+        .select({
+          id: series.id,
+          title: series.title,
+          description: series.description,
+          imageUrl: series.imageUrl,
+          sortOrder: series.sortOrder,
+          isPublished: series.isPublished,
+          isPremium: series.isPremium,
+          trackId: series.trackId,
+          createdAt: series.createdAt,
+          updatedAt: series.updatedAt,
+        })
+        .from(series)
+        .where(eq(series.id, id))
+        .limit(1),
+    ]);
     const isStaff = role ? ['owner', 'admin', 'manager'].includes(role) : false;
-
-    const [seriesRecord] = await db
-      .select({
-        id: series.id,
-        title: series.title,
-        description: series.description,
-        imageUrl: series.imageUrl,
-        sortOrder: series.sortOrder,
-        isPublished: series.isPublished,
-        isPremium: series.isPremium,
-        trackId: series.trackId,
-        createdAt: series.createdAt,
-        updatedAt: series.updatedAt,
-      })
-      .from(series)
-      .where(eq(series.id, id))
-      .limit(1);
+    const [seriesRecord] = seriesRows;
 
     if (!seriesRecord) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
@@ -201,24 +188,45 @@ export function registerSeriesRoutes(app: Hono) {
 
     const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
     let hasTrackBooking = false;
-    if (!isStaff && !isSubscriber && seriesRecord.trackId) {
-      const [booking] = await db
-        .select({ id: trackBookings.id })
-        .from(trackBookings)
-        .where(
-          and(
-            eq(trackBookings.trackId, seriesRecord.trackId),
-            eq(trackBookings.userId, session.user.id),
-          ),
-        )
-        .limit(1);
-      hasTrackBooking = Boolean(booking);
+    let hasSeriesGrant = false;
+    if (!isStaff && !isSubscriber) {
+      const [bookingRows, grantRows] = await Promise.all([
+        seriesRecord.trackId
+          ? db
+              .select({ id: trackBookings.id })
+              .from(trackBookings)
+              .where(
+                and(
+                  eq(trackBookings.trackId, seriesRecord.trackId),
+                  eq(trackBookings.userId, session.user.id),
+                ),
+              )
+              .limit(1)
+          : Promise.resolve([]),
+        seriesRecord.isPremium
+          ? db
+              .select({ id: seriesAccessGrants.id })
+              .from(seriesAccessGrants)
+              .where(
+                and(
+                  eq(seriesAccessGrants.seriesId, seriesRecord.id),
+                  eq(seriesAccessGrants.userId, session.user.id),
+                  isNull(seriesAccessGrants.revokedAt),
+                ),
+              )
+              .limit(1)
+          : Promise.resolve([]),
+      ]);
+
+      hasTrackBooking = Boolean(bookingRows[0]);
+      hasSeriesGrant = Boolean(grantRows[0]);
     }
 
     const accessContext = {
       isStaff,
       isSubscriber,
       hasTrackBooking,
+      hasSeriesGrant,
       seriesIsPremium: seriesRecord.isPremium,
     };
     const hasSeriesAccess = resolveSeriesAccess(accessContext);
@@ -253,7 +261,7 @@ export function registerSeriesRoutes(app: Hono) {
 
     // Get user's registered event IDs for permission checking
     let userEventIds = new Set<string>();
-    if (!isStaff && !isSubscriber && !hasTrackBooking && !isPremiumLocked) {
+    if (!isStaff && !isSubscriber && !hasTrackBooking && !hasSeriesGrant && !isPremiumLocked) {
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)

@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, type SQL, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -24,7 +24,32 @@ const updateUserRoleSchema = z.object({
   role: z.enum(roleValues),
 });
 
+const uuidPathParamSchema = z.string().uuid();
+
 const isEmptyValue = (value: string | null | undefined) => !value || value.trim().length === 0;
+
+const parseUuidPathParam = (value: unknown) => uuidPathParamSchema.safeParse(value);
+
+const getActiveSubscriptionSelectors = (now: Date) => ({
+  exists: sql<boolean>`EXISTS (
+    SELECT 1
+    FROM subscriptions s
+    WHERE s.user_id = ${users.id}
+      AND s.subscription_status = 'active'
+      AND s.revoked_at IS NULL
+      AND s.ends_at >= ${now}
+  )`,
+  source: sql<'paid' | 'legacy' | 'gift' | null>`(
+    SELECT s.source
+    FROM subscriptions s
+    WHERE s.user_id = ${users.id}
+      AND s.subscription_status = 'active'
+      AND s.revoked_at IS NULL
+      AND s.ends_at >= ${now}
+    ORDER BY s.ends_at DESC
+    LIMIT 1
+  )`,
+});
 
 export function registerUserRoutes(app: Hono) {
   app.get('/users', async (c) => {
@@ -85,31 +110,33 @@ export function registerUserRoutes(app: Hono) {
     const offset = (page - 1) * pageSize;
 
     const now = new Date();
-    const subscriptionExistsCondition = sql<boolean>`EXISTS (
-      SELECT 1
-      FROM subscriptions s
-      WHERE s.user_id = ${users.id}
-        AND s.subscription_status = 'active'
-        AND s.ends_at >= ${now}
-    )`;
+    const subscriptionSelectors = getActiveSubscriptionSelectors(now);
+    const subscriptionExistsCondition = subscriptionSelectors.exists;
     const subscriptionMissingCondition = sql<boolean>`NOT EXISTS (
       SELECT 1
       FROM subscriptions s
       WHERE s.user_id = ${users.id}
         AND s.subscription_status = 'active'
+        AND s.revoked_at IS NULL
         AND s.ends_at >= ${now}
     )`;
 
-    const filters: any[] = [];
+    const filters: SQL<unknown>[] = [];
 
     if (search) {
       const pattern = `%${escapeLikePattern(search)}%`;
-      filters.push(or(ilike(users.email, pattern), ilike(users.name, pattern)));
+      const searchFilter = or(ilike(users.email, pattern), ilike(users.name, pattern));
+      if (searchFilter) {
+        filters.push(searchFilter);
+      }
     }
 
     if (role) {
       if (role === 'user') {
-        filters.push(or(eq(profiles.role, role), isNull(profiles.role)));
+        const userRoleFilter = or(eq(profiles.role, role), isNull(profiles.role));
+        if (userRoleFilter) {
+          filters.push(userRoleFilter);
+        }
       } else {
         filters.push(eq(profiles.role, role));
       }
@@ -133,6 +160,7 @@ export function registerUserRoutes(app: Hono) {
         userType: profiles.userType,
         phoneNumber: profiles.phoneNumber,
         isSubscriber: subscriptionExistsCondition,
+        activeSubscriptionSource: subscriptionSelectors.source,
       })
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.id))
@@ -376,18 +404,19 @@ export function registerUserRoutes(app: Hono) {
     });
     if ('response' in actor) return actor.response;
 
-    const targetId = c.req.param('id');
-    if (!targetId) {
+    const targetIdParsed = parseUuidPathParam(c.req.param('id'));
+    if (!targetIdParsed.success) {
       return c.json(
         {
           error: {
-            code: 'INVALID_REQUEST',
-            message: 'User id parameter is required.',
+            code: 'INVALID_PARAM',
+            message: 'User ID must be a valid UUID.',
           },
         },
         400,
       );
     }
+    const targetId = targetIdParsed.data;
 
     const body = updateUserRoleSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) {
@@ -461,6 +490,7 @@ export function registerUserRoutes(app: Hono) {
       .where(eq(profiles.id, targetId));
 
     const now = new Date();
+    const subscriptionSelectors = getActiveSubscriptionSelectors(now);
 
     const [updated] = await db
       .select({
@@ -468,15 +498,11 @@ export function registerUserRoutes(app: Hono) {
         email: users.email,
         name: users.name,
         createdAt: users.createdAt,
+        phoneNumber: profiles.phoneNumber,
         role: profiles.role,
         userType: profiles.userType,
-        isSubscriber: sql<boolean>`EXISTS (
-          SELECT 1
-          FROM subscriptions s
-          WHERE s.user_id = ${users.id}
-            AND s.subscription_status = 'active'
-            AND s.ends_at >= ${now}
-        )`,
+        isSubscriber: subscriptionSelectors.exists,
+        activeSubscriptionSource: subscriptionSelectors.source,
       })
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.id))
@@ -504,18 +530,19 @@ export function registerUserRoutes(app: Hono) {
     });
     if ('response' in actor) return actor.response;
 
-    const targetId = c.req.param('id');
-    if (!targetId) {
+    const targetIdParsed = parseUuidPathParam(c.req.param('id'));
+    if (!targetIdParsed.success) {
       return c.json(
         {
           error: {
-            code: 'INVALID_REQUEST',
-            message: 'User id parameter is required.',
+            code: 'INVALID_PARAM',
+            message: 'User ID must be a valid UUID.',
           },
         },
         400,
       );
     }
+    const targetId = targetIdParsed.data;
 
     if (actor.userId === targetId) {
       return c.json(
