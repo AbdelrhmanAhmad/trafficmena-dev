@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
 import type { ChangeEvent } from 'react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useState, useRef } from 'react';
 import { fetchAllSeriesGrantUserIds } from '@/app/api/seriesGrants';
 import { fetchUsersAdmin } from '@/app/api/users';
 import {
@@ -40,6 +40,8 @@ import {
 } from '@/shared/components/ui/table';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 
+const GRANTS_PAGE_SIZE = 50;
+
 type SeriesAccessManagerProps = {
   seriesId: string;
   seriesTitle: string;
@@ -59,19 +61,12 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     email: string;
     reason: string;
   } | null>(null);
-  const [pendingRevokeUserIds, setPendingRevokeUserIds] = useState<Set<string>>(new Set());
+  const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
+  const [grantsPage, setGrantsPage] = useState(1);
   const bulkInputRef = useRef<HTMLInputElement | null>(null);
-  const isMountedRef = useRef(true);
   const searchId = useId();
   const reasonId = useId();
   const revokeReasonId = useId();
-
-  useEffect(
-    () => () => {
-      isMountedRef.current = false;
-    },
-    [],
-  );
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -80,14 +75,22 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     return () => window.clearTimeout(timeout);
   }, [searchInput]);
 
+  // Reset grants page when search changes
+  useEffect(() => {
+    setGrantsPage(1);
+  }, [debouncedSearch]);
+
   const grantsQuery = useSeriesGrants(seriesId, {
-    page: 1,
-    pageSize: 100,
+    page: grantsPage,
+    pageSize: GRANTS_PAGE_SIZE,
     search: debouncedSearch,
   });
   const grantMutation = useGrantSeriesAccess(seriesId);
   const revokeMutation = useRevokeSeriesAccess(seriesId);
   const bulkMutation = useBulkSeriesGrants(seriesId);
+
+  const grantsTotal = grantsQuery.data?.pagination.total ?? 0;
+  const grantsTotalPages = Math.max(1, Math.ceil(grantsTotal / GRANTS_PAGE_SIZE));
 
   const usersQuery = useQuery({
     queryKey: ['series-grant-users-search', debouncedSearch],
@@ -112,7 +115,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   }, [grantedUserIds]);
 
   const isRevokeDialogPending = Boolean(
-    revokeDialog && pendingRevokeUserIds.has(revokeDialog.userId),
+    revokeDialog && revokingUserId === revokeDialog.userId,
   );
 
   const selectableUsers = (usersQuery.data?.items ?? []).filter(
@@ -183,11 +186,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
 
     const targetUserId = revokeDialog.userId;
     const targetEmail = revokeDialog.email;
-    setPendingRevokeUserIds((current) => {
-      const next = new Set(current);
-      next.add(targetUserId);
-      return next;
-    });
+    setRevokingUserId(targetUserId);
     try {
       await revokeMutation.mutateAsync({ userId: targetUserId, reason });
       toast({
@@ -202,11 +201,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
         variant: 'destructive',
       });
     } finally {
-      setPendingRevokeUserIds((current) => {
-        const next = new Set(current);
-        next.delete(targetUserId);
-        return next;
-      });
+      setRevokingUserId(null);
     }
   };
 
@@ -214,29 +209,23 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     const file = event.currentTarget.files?.[0];
     if (!file) return;
 
-    if (isMountedRef.current) {
-      setCsvErrors([]);
-    }
+    setCsvErrors([]);
 
     try {
       const result = await bulkMutation.mutateAsync(file);
-      if (isMountedRef.current) {
-        toast({
-          title: 'Bulk grants complete',
-          description: `${result.grantedCount} new grants, ${result.alreadyGrantedCount} already active.`,
-        });
-      }
+      toast({
+        title: 'Bulk grants complete',
+        description: `${result.grantedCount} new grants, ${result.alreadyGrantedCount} already active.`,
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Bulk upload failed.';
       const extra = (
         error as Error & { extra?: Array<{ line: number; email: string; reason: string }> }
       )?.extra;
-      if (isMountedRef.current) {
-        setCsvErrors(extra ?? []);
-        toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });
-      }
+      setCsvErrors(extra ?? []);
+      toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });
     } finally {
-      if (isMountedRef.current && bulkInputRef.current) {
+      if (bulkInputRef.current) {
         bulkInputRef.current.value = '';
       }
     }
@@ -358,7 +347,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-neutral-800">Active grants</h3>
-            <Badge variant="secondary">{grantsQuery.data?.pagination.total ?? 0}</Badge>
+            <Badge variant="secondary">{grantsTotal}</Badge>
           </div>
 
           {grantsQuery.isLoading ? (
@@ -385,9 +374,9 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
                         variant="destructive"
                         size="sm"
                         onClick={() => handleOpenRevokeDialog(grant.userId, grant.email)}
-                        disabled={pendingRevokeUserIds.has(grant.userId)}
+                        disabled={revokingUserId === grant.userId}
                       >
-                        {pendingRevokeUserIds.has(grant.userId) ? (
+                        {revokingUserId === grant.userId ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             Revoking…
@@ -403,6 +392,32 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
             </Table>
           ) : (
             <p className="text-sm text-muted-foreground">No active grants for this series.</p>
+          )}
+
+          {grantsTotalPages > 1 && (
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setGrantsPage((p) => Math.max(1, p - 1))}
+                disabled={grantsPage === 1}
+                className="rounded-lg"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-neutral-600">
+                Page {grantsPage} of {grantsTotalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setGrantsPage((p) => Math.min(grantsTotalPages, p + 1))}
+                disabled={grantsPage >= grantsTotalPages}
+                className="rounded-lg"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </div>
 
