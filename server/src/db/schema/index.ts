@@ -319,6 +319,38 @@ export const seriesAssets = pgTable(
   }),
 );
 
+export const seriesAccessGrants = pgTable(
+  'series_access_grants',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    seriesId: uuid('series_id')
+      .references(() => series.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
+    grantReason: text('grant_reason').notNull(),
+    grantedAt: timestamp('granted_at', { withTimezone: true }).defaultNow().notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedBy: uuid('revoked_by').references(() => users.id, { onDelete: 'set null' }),
+    revokeReason: text('revoke_reason'),
+  },
+  (table) => ({
+    activeBySeriesIdx: index('series_access_grants_active_by_series_idx').on(
+      table.seriesId,
+      table.revokedAt,
+    ),
+    activeByUserIdx: index('series_access_grants_active_by_user_idx').on(
+      table.userId,
+      table.revokedAt,
+    ),
+    activeSeriesUserUnique: uniqueIndex('series_access_grants_active_unique')
+      .on(table.seriesId, table.userId)
+      .where(sql`revoked_at is null`),
+  }),
+);
+
 export const skills = pgTable('skills', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
@@ -544,6 +576,7 @@ export const payments = pgTable(
 );
 
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'expired']);
+export const subscriptionSourceEnum = pgEnum('subscription_source', ['paid', 'legacy', 'gift']);
 
 export const subscriptions = pgTable(
   'subscriptions',
@@ -555,8 +588,14 @@ export const subscriptions = pgTable(
     status: subscriptionStatusEnum('subscription_status').default('active').notNull(),
     startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
     endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    source: subscriptionSourceEnum('source').default('paid').notNull(),
     pricePaidCents: integer('price_paid_cents').notNull(),
     paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+    grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
+    grantReason: text('grant_reason'),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedBy: uuid('revoked_by').references(() => users.id, { onDelete: 'set null' }),
+    revokeReason: text('revoke_reason'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
@@ -569,5 +608,8 @@ export const subscriptions = pgTable(
       table.status,
       table.endsAt,
     ),
+    oneActivePerUser: uniqueIndex('subscriptions_one_active_per_user')
+      .on(table.userId)
+      .where(sql`subscription_status = 'active' and revoked_at is null`),
   }),
 );
