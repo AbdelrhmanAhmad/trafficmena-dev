@@ -2,13 +2,12 @@ import { inArray, isNull } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { db } from '../../db/client.js';
 import { series, seriesAccessGrants, users } from '../../db/schema/index.js';
-import { paymentRateLimiter } from '../../services/rateLimiter.js';
 import { parseSeriesGrantCsv, type SeriesGrantCsvError } from './seriesGrantsCsv.js';
 import {
+  consumeRateLimit,
   DATABASE_ERROR_CODES,
   extractCsvPayload,
   extractDatabaseErrorCode,
-  getRequestIp,
 } from './utils.js';
 
 const BULK_GRANT_RATE_LIMIT = { limit: 40, windowMs: 60_000 };
@@ -33,23 +32,12 @@ function dedupeSeriesGrantRows(rows: NormalizedSeriesGrantRow[]): NormalizedSeri
 }
 
 export async function handleSeriesBulkGrant(c: Context, actorUserId: string): Promise<Response> {
-  const clientIp = getRequestIp(c);
-  const { allowed, resetAt } = paymentRateLimiter.consume(
-    `series-grant:bulk:${actorUserId}:${clientIp}`,
+  const rateLimited = consumeRateLimit(
+    c,
+    `series-grant:bulk:${actorUserId}`,
     BULK_GRANT_RATE_LIMIT,
   );
-  if (!allowed) {
-    c.header('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
-    return c.json(
-      {
-        error: {
-          code: 'RATE_LIMIT_EXCEEDED',
-          message: 'Too many grant operations. Please try again shortly.',
-        },
-      },
-      429,
-    );
-  }
+  if (rateLimited) return rateLimited;
 
   const csvResult = await extractCsvPayload(c);
   if (!csvResult.ok) {

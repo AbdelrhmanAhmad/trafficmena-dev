@@ -3,14 +3,13 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { series, seriesAccessGrants, users } from '../../db/schema/index.js';
-import { paymentRateLimiter } from '../../services/rateLimiter.js';
 import { extractJsonPayload } from './jsonPayload.js';
 import { handleSeriesBulkGrant } from './seriesGrantsBulk.js';
 import {
+  consumeRateLimit,
   DATABASE_ERROR_CODES,
   escapeLikePattern,
   extractDatabaseErrorCode,
-  getRequestIp,
   requireManager,
 } from './utils.js';
 
@@ -130,23 +129,12 @@ export function registerSeriesGrantsRoutes(app: Hono) {
     const actor = await requireManager(c);
     if ('response' in actor) return actor.response;
 
-    const clientIp = getRequestIp(c);
-    const { allowed, resetAt } = paymentRateLimiter.consume(
-      `series-grant:create:${actor.userId}:${clientIp}`,
+    const rateLimited = consumeRateLimit(
+      c,
+      `series-grant:create:${actor.userId}`,
       GRANT_MUTATION_RATE_LIMIT,
     );
-    if (!allowed) {
-      c.header('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
-      return c.json(
-        {
-          error: {
-            code: 'RATE_LIMIT_EXCEEDED',
-            message: 'Too many grant operations. Please try again shortly.',
-          },
-        },
-        429,
-      );
-    }
+    if (rateLimited) return rateLimited;
 
     const idParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
@@ -267,23 +255,12 @@ export function registerSeriesGrantsRoutes(app: Hono) {
     const actor = await requireManager(c);
     if ('response' in actor) return actor.response;
 
-    const clientIp = getRequestIp(c);
-    const { allowed, resetAt } = paymentRateLimiter.consume(
-      `series-grant:revoke:${actor.userId}:${clientIp}`,
+    const rateLimited = consumeRateLimit(
+      c,
+      `series-grant:revoke:${actor.userId}`,
       GRANT_MUTATION_RATE_LIMIT,
     );
-    if (!allowed) {
-      c.header('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
-      return c.json(
-        {
-          error: {
-            code: 'RATE_LIMIT_EXCEEDED',
-            message: 'Too many grant operations. Please try again shortly.',
-          },
-        },
-        429,
-      );
-    }
+    if (rateLimited) return rateLimited;
 
     const idParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {

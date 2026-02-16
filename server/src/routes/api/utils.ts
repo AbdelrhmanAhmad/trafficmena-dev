@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 import { db } from '../../db/client.js';
 import { profiles } from '../../db/schema/index.js';
+import { paymentRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 
 export type UserRole = 'owner' | 'admin' | 'manager' | 'expert' | 'user';
@@ -286,6 +287,27 @@ export async function extractCsvPayload(
   }
 
   return csvInvalid('Upload a CSV file.');
+}
+
+export type RateLimitRule = { limit: number; windowMs: number };
+
+// Returns a 429 Response if rate-limited, or null if the request is allowed.
+export function consumeRateLimit(c: Context, key: string, rule: RateLimitRule): Response | null {
+  const clientIp = getRequestIp(c);
+  const { allowed, resetAt } = paymentRateLimiter.consume(`${key}:${clientIp}`, rule);
+  if (!allowed) {
+    c.header('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
+    return c.json(
+      {
+        error: {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Too many requests. Please try again shortly.',
+        },
+      },
+      429,
+    );
+  }
+  return null;
 }
 
 export function extractDatabaseErrorCode(error: unknown, depth = 0): string | null {
