@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import { fetchUsersAdmin } from '../../src/app/api/users.ts';
+import { fetchUsersAdmin, updateUserRole } from '../../src/app/api/users.ts';
 
 const originalFetch = globalThis.fetch;
 
@@ -26,6 +26,7 @@ describe('fetchUsersAdmin', () => {
               role: 'user',
               userType: 'learner',
               isSubscriber: false,
+              activeSubscriptionSource: null,
             },
           ],
           pagination: {
@@ -55,6 +56,38 @@ describe('fetchUsersAdmin', () => {
     );
     assert.equal(result.items.length, 1);
     assert.equal(result.items[0]?.created_at, '2026-02-05T20:40:45.000Z');
+    assert.equal(result.items[0]?.active_subscription_source, null);
     assert.equal(result.pagination.total, 1);
+  });
+
+  it('maps phoneNumber when updating a user role', async () => {
+    globalThis.fetch = (async () => {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          user: {
+            id: 'u_2',
+            email: 'member@example.com',
+            name: 'Member',
+            createdAt: '2026-02-05T20:40:45.000Z',
+            phoneNumber: '+201000000000',
+            role: 'manager',
+            userType: 'learner',
+            isSubscriber: true,
+            activeSubscriptionSource: 'gift',
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    }) as typeof fetch;
+
+    const result = await updateUserRole('u_2', 'manager');
+
+    assert.equal(result.success, true);
+    assert.equal(result.user.phone_number, '+201000000000');
+    assert.equal(result.user.active_subscription_source, 'gift');
   });
 });

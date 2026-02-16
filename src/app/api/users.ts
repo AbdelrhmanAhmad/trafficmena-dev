@@ -68,6 +68,7 @@ export type AdminUserRecord = {
   role: string | null;
   user_type: string | null;
   is_subscriber: boolean;
+  active_subscription_source: 'paid' | 'legacy' | 'gift' | null;
 };
 
 type ApiAdminUser = {
@@ -79,6 +80,7 @@ type ApiAdminUser = {
   role: string | null;
   userType: string | null;
   isSubscriber: boolean;
+  activeSubscriptionSource: 'paid' | 'legacy' | 'gift' | null;
 };
 
 export type AdminUsersResponse = {
@@ -101,9 +103,7 @@ export type FetchUsersAdminParams = {
 };
 
 export async function fetchCurrentUser(): Promise<CurrentUserResponse> {
-  const data = await fetchJson<ApiUsersMeResponse>(`${API_BASE}/users/me`, {
-    method: 'GET',
-  });
+  const data = await fetchJson<ApiUsersMeResponse>(`${API_BASE}/users/me`);
 
   return {
     user: data.user,
@@ -127,9 +127,7 @@ export async function fetchUsersAdmin(
   const data = await fetchJson<{
     items: ApiAdminUser[];
     pagination: AdminUsersResponse['pagination'];
-  }>(`${API_BASE}/users${query.toString() ? `?${query.toString()}` : ''}`, {
-    method: 'GET',
-  });
+  }>(`${API_BASE}/users${query.toString() ? `?${query.toString()}` : ''}`);
 
   return {
     items: (data.items ?? []).map((item) => ({
@@ -141,6 +139,7 @@ export async function fetchUsersAdmin(
       role: item.role,
       user_type: item.userType,
       is_subscriber: item.isSubscriber,
+      active_subscription_source: item.activeSubscriptionSource ?? null,
     })),
     pagination: data.pagination,
   };
@@ -202,9 +201,11 @@ export async function updateUserRole(
       email: response.user.email,
       name: response.user.name,
       created_at: response.user.createdAt,
+      phone_number: response.user.phoneNumber ?? null,
       role: response.user.role,
       user_type: response.user.userType,
       is_subscriber: response.user.isSubscriber,
+      active_subscription_source: response.user.activeSubscriptionSource ?? null,
     },
   };
 }
