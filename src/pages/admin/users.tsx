@@ -99,7 +99,6 @@ const AdminUsersPage = () => {
   const [pendingRoleUserIds, setPendingRoleUserIds] = useState<Set<string>>(new Set());
   const bulkSubscriptionInputRef = useRef<HTMLInputElement | null>(null);
   const lastUsersErrorAtRef = useRef(0);
-  const isMountedRef = useRef(true);
   const subscriptionSourceId = useId();
   const subscriptionReasonId = useId();
   const revokeReasonId = useId();
@@ -111,13 +110,6 @@ const AdminUsersPage = () => {
 
     return () => window.clearTimeout(timeout);
   }, [searchInput]);
-
-  useEffect(
-    () => () => {
-      isMountedRef.current = false;
-    },
-    [],
-  );
 
   const roleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: UserRoleValue }) =>
@@ -233,31 +225,25 @@ const AdminUsersPage = () => {
         });
       }
 
-      if (isMountedRef.current) {
-        setSubscriptionDialog((current) =>
-          current?.user.id === targetUserId && current.mode === mode ? null : current,
-        );
-        setSubscriptionReason('Legacy yearly subscription grant');
-        setSubscriptionSource('legacy');
-      }
+      setSubscriptionDialog((current) =>
+        current?.user.id === targetUserId && current.mode === mode ? null : current,
+      );
+      setSubscriptionReason('Legacy yearly subscription grant');
+      setSubscriptionSource('legacy');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to update subscription.';
-      if (isMountedRef.current) {
-        toast({
-          title: 'Subscription update failed',
-          description: message,
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Subscription update failed',
+        description: message,
+        variant: 'destructive',
+      });
     }
   };
 
   const handleBulkSubscriptionUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     if (!file) return;
-    if (isMountedRef.current) {
-      setBulkSubscriptionErrors([]);
-    }
+    setBulkSubscriptionErrors([]);
 
     try {
       const result = await bulkSubscriptionGrantMutation.mutateAsync(file);
@@ -272,12 +258,10 @@ const AdminUsersPage = () => {
           extra?: Array<{ line: number; email: string; source: string; reason: string }>;
         }
       )?.extra;
-      if (isMountedRef.current) {
-        setBulkSubscriptionErrors(extra ?? []);
-        toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });
-      }
+      setBulkSubscriptionErrors(extra ?? []);
+      toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });
     } finally {
-      if (isMountedRef.current && bulkSubscriptionInputRef.current) {
+      if (bulkSubscriptionInputRef.current) {
         bulkSubscriptionInputRef.current.value = '';
       }
     }
@@ -289,9 +273,7 @@ const AdminUsersPage = () => {
     const targetUserId = deleteDialog.user.id;
     try {
       await deleteMutation.mutateAsync(targetUserId);
-      if (isMountedRef.current) {
-        setDeleteDialog((current) => (current?.user.id === targetUserId ? null : current));
-      }
+      setDeleteDialog((current) => (current?.user.id === targetUserId ? null : current));
     } catch {
       // Mutation onError already reports a toast.
     }

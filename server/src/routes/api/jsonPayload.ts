@@ -13,16 +13,13 @@ type JsonPayloadError = {
 
 export type JsonPayloadResult = JsonPayloadOk | JsonPayloadError;
 
-function isJsonContentType(contentType: string | null): boolean {
-  if (!contentType) {
-    return false;
-  }
-  const normalized = contentType.toLowerCase();
-  return normalized.includes('application/json') || normalized.includes('+json');
-}
-
-export async function parseJsonRequestBody(request: Request): Promise<JsonPayloadResult> {
-  if (!isJsonContentType(request.headers.get('content-type'))) {
+export async function extractJsonPayload(c: Context): Promise<JsonPayloadResult> {
+  const contentType = c.req.header('content-type');
+  if (
+    !contentType ||
+    (!contentType.toLowerCase().includes('application/json') &&
+      !contentType.toLowerCase().includes('+json'))
+  ) {
     return {
       ok: false,
       code: 'INVALID_CONTENT_TYPE',
@@ -31,7 +28,7 @@ export async function parseJsonRequestBody(request: Request): Promise<JsonPayloa
   }
 
   try {
-    const data = await request.json();
+    const data = await c.req.json();
     return { ok: true, data };
   } catch {
     return {
@@ -40,8 +37,4 @@ export async function parseJsonRequestBody(request: Request): Promise<JsonPayloa
       message: 'Request body must be valid JSON.',
     };
   }
-}
-
-export async function extractJsonPayload(c: Context): Promise<JsonPayloadResult> {
-  return parseJsonRequestBody(c.req.raw);
 }

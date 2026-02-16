@@ -99,6 +99,13 @@
       "when": 1771181174219,
       "tag": "0013_blue_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1771353600000,
+      "tag": "0014_add_subscription_check_constraints",
+      "breakpoints": true
     }
   ]
 }
