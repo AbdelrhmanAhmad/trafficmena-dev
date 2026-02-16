@@ -1,8 +1,8 @@
-import { and, eq, gt, gte, sql } from 'drizzle-orm';
+import { and, eq, gt, gte, isNull, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { db } from '../../db/client.js';
 import { payments, subscriptions, users } from '../../db/schema/index.js';
-import { getActiveSubscriptionMetrics } from './adminMetricsUtils.js';
+import { getActiveSubscriptionMetricsFromAggregate, toNumber } from './adminMetricsUtils.js';
 import { requireRole } from './utils.js';
 
 type SalesSummary = {
@@ -28,8 +28,6 @@ type AdminMetricsOverview = {
   };
 };
 
-const toNumber = (value: number | string | null | undefined) => Number(value ?? 0);
-
 export function registerAdminMetricsRoutes(app: Hono) {
   app.get('/admin/metrics/overview', async (c) => {
     const authResult = await requireRole(c, ['owner', 'admin'], {
@@ -49,12 +47,13 @@ export function registerAdminMetricsRoutes(app: Hono) {
 
       const activeSubscriptionFilter = and(
         eq(subscriptions.status, 'active'),
+        isNull(subscriptions.revokedAt),
         gte(subscriptions.endsAt, now),
       );
-      const activeSubscriptionRows = await db
+      const [activeSubscriptionAggregate] = await db
         .select({
-          userId: subscriptions.userId,
-          pricePaidCents: subscriptions.pricePaidCents,
+          premiumUsers: sql<number>`COUNT(DISTINCT ${subscriptions.userId})`,
+          revenueCents: sql<number>`COALESCE(SUM(CASE WHEN ${subscriptions.source} = 'paid' THEN ${subscriptions.pricePaidCents} ELSE 0 END), 0)`,
         })
         .from(subscriptions)
         .where(activeSubscriptionFilter);
@@ -89,7 +88,7 @@ export function registerAdminMetricsRoutes(app: Hono) {
         premiumUsers,
         activeSubscriptions,
         revenueCents: subscriptionRevenue,
-      } = getActiveSubscriptionMetrics(activeSubscriptionRows);
+      } = getActiveSubscriptionMetricsFromAggregate(activeSubscriptionAggregate);
       const totalUsers = toNumber(totalUsersRow?.count);
       const freeUsers = Math.max(totalUsers - premiumUsers, 0);
 
