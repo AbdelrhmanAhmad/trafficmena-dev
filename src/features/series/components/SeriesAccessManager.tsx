@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
 import type { ChangeEvent } from 'react';
-import { useEffect, useId, useMemo, useState, useRef } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { fetchAllSeriesGrantUserIds } from '@/app/api/seriesGrants';
 import { fetchUsersAdmin } from '@/app/api/users';
 import {
@@ -75,7 +75,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     return () => window.clearTimeout(timeout);
   }, [searchInput]);
 
-  // Reset grants page when search changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset page when search changes
   useEffect(() => {
     setGrantsPage(1);
   }, [debouncedSearch]);
@@ -114,9 +114,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     setSelectedUserIds((current) => current.filter((userId) => !grantedUserIds.has(userId)));
   }, [grantedUserIds]);
 
-  const isRevokeDialogPending = Boolean(
-    revokeDialog && revokingUserId === revokeDialog.userId,
-  );
+  const isRevokeDialogPending = Boolean(revokeDialog && revokingUserId === revokeDialog.userId);
 
   const selectableUsers = (usersQuery.data?.items ?? []).filter(
     (user) => !grantedUserIds.has(user.id),
