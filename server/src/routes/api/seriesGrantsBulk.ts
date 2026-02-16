@@ -3,12 +3,7 @@ import type { Context } from 'hono';
 import { db } from '../../db/client.js';
 import { series, seriesAccessGrants, users } from '../../db/schema/index.js';
 import { parseSeriesGrantCsv, type SeriesGrantCsvError } from './seriesGrantsCsv.js';
-import {
-  consumeRateLimit,
-  DATABASE_ERROR_CODES,
-  extractCsvPayload,
-  extractDatabaseErrorCode,
-} from './utils.js';
+import { consumeRateLimit, extractCsvPayload, isKnownDatabaseConflict } from './utils.js';
 
 const BULK_GRANT_RATE_LIMIT = { limit: 40, windowMs: 60_000 };
 
@@ -229,7 +224,7 @@ export async function handleSeriesBulkGrant(c: Context, actorUserId: string): Pr
 
     insertedCount = txResult.insertedCount;
   } catch (error) {
-    if (extractDatabaseErrorCode(error) === DATABASE_ERROR_CODES.FOREIGN_KEY_VIOLATION) {
+    if (isKnownDatabaseConflict(error) === 'fk') {
       return c.json(
         {
           error: {

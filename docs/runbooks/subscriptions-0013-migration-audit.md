@@ -142,19 +142,52 @@ Run all queries below immediately after migration:
    ```
    Expected: `0`.
 
+### 6.1 Pass/Fail Criteria
+
+| Check | Pass | Fail Action |
+|-------|------|-------------|
+| Null source rows (query 2) | = 0 | ROLLBACK: Full DB restore |
+| Duplicate active users (query 3) | = 0 | ROLLBACK: Full DB restore |
+| Backup table has rows (query 4) | > 0 if preflight found duplicates | Investigate — may indicate migration skipped backup |
+| Backup rows expired (query 5) | = 0 | Re-run expiration UPDATE manually against backup join |
+
+If any check fails, **stop all deployment activity** and follow Section 7.
+
 ## 7. Rollback and Mitigation
 
-Primary rollback path is full DB restore from pre-migration backup.
+### Option A: Full DB Restore (Preferred)
 
-If restore is not immediately possible:
+1. Stop application servers to prevent further writes.
+2. Restore from the pre-migration backup (`pg_restore` or cloud snapshot).
+3. Deploy the **previous** build (without migration 0013).
+4. Verify `/api/health` returns 200.
+5. Run Section 3 baseline counts to confirm data matches pre-migration state.
+6. Resume traffic after confirmation.
 
-1. Identify impacted users from `subscriptions_0013_backup`.
-2. Re-grant intended access via admin grant endpoints (`/api/subscriptions/grants`) after incident triage.
-3. Keep an incident log with user IDs and remediation timestamps.
+### Option B: Targeted Recovery (If Full Restore Unavailable)
 
-Do not attempt ad-hoc schema rollback during incident response.
+1. Query `subscriptions_0013_backup` to identify affected rows:
+   ```sql
+   SELECT id, user_id, backup_reason FROM subscriptions_0013_backup;
+   ```
+2. For `duplicate_expired` rows: re-grant via admin API if the user should still have access.
+3. For `past_end_expired` rows: verify with product whether these should remain expired.
+4. Log all manual interventions with user IDs, actions taken, and timestamps.
+5. Keep an incident log accessible to engineering and operations.
 
-## 8. Future Guardrails (Second-Order)
+Do not attempt ad-hoc schema rollback (e.g. dropping columns) during incident response.
+
+## 8. Backup Table Retention
+
+`subscriptions_0013_backup` is retained for **90 days** post-deployment. After 90 days with no reported issues:
+
+```sql
+DROP TABLE IF EXISTS subscriptions_0013_backup;
+```
+
+If issues arise within the 90-day window, the backup table provides the audit trail for recovery.
+
+## 9. Future Guardrails (Second-Order)
 
 For future migrations that derive new state from historical data:
 

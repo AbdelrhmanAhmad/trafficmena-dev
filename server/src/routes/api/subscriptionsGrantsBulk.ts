@@ -8,12 +8,7 @@ import {
   collectActiveSubscriptionConflicts,
   normalizeBulkSubscriptionGrantRows,
 } from './subscriptionsGrantUtils.js';
-import {
-  consumeRateLimit,
-  DATABASE_ERROR_CODES,
-  extractCsvPayload,
-  extractDatabaseErrorCode,
-} from './utils.js';
+import { consumeRateLimit, extractCsvPayload, isKnownDatabaseConflict } from './utils.js';
 
 const BULK_GRANT_RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 
@@ -226,15 +221,10 @@ export async function handleSubscriptionBulkGrant(
       grantedCount: bulkResult.grantedCount,
     });
   } catch (error) {
-    const errorCode = extractDatabaseErrorCode(error);
-    if (
-      errorCode !== DATABASE_ERROR_CODES.UNIQUE_VIOLATION &&
-      errorCode !== DATABASE_ERROR_CODES.FOREIGN_KEY_VIOLATION
-    ) {
-      throw error;
-    }
+    const conflict = isKnownDatabaseConflict(error);
+    if (!conflict) throw error;
 
-    if (errorCode === DATABASE_ERROR_CODES.FOREIGN_KEY_VIOLATION) {
+    if (conflict === 'fk') {
       return c.json(
         {
           error: {

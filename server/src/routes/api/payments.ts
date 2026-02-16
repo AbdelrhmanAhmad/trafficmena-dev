@@ -30,7 +30,7 @@ import { ApiError } from '../../utils/errors.js';
 import { isInvoicePaid } from '../../utils/invoiceStatus.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { ONE_YEAR_MS } from './subscriptionShared.js';
-import { DATABASE_ERROR_CODES, extractDatabaseErrorCode } from './utils.js';
+import { isKnownDatabaseConflict } from './utils.js';
 
 // --- Rate Limit Rules ---
 const CHECKOUT_RATE_LIMIT = { limit: 5, windowMs: 60_000 }; // 5 checkouts per minute
@@ -324,7 +324,7 @@ function createCheckoutInFlightReservation(): CheckoutInFlightReservation {
 }
 
 function isPostgresUniqueViolation(error: unknown): boolean {
-  return extractDatabaseErrorCode(error) === DATABASE_ERROR_CODES.UNIQUE_VIOLATION;
+  return isKnownDatabaseConflict(error) === 'unique';
 }
 
 async function calculatePrice(

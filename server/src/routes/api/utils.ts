@@ -327,3 +327,10 @@ export const DATABASE_ERROR_CODES = {
   UNIQUE_VIOLATION: '23505',
   FOREIGN_KEY_VIOLATION: '23503',
 } as const;
+
+export function isKnownDatabaseConflict(error: unknown): 'unique' | 'fk' | null {
+  const code = extractDatabaseErrorCode(error);
+  if (code === DATABASE_ERROR_CODES.UNIQUE_VIOLATION) return 'unique';
+  if (code === DATABASE_ERROR_CODES.FOREIGN_KEY_VIOLATION) return 'fk';
+  return null;
+}

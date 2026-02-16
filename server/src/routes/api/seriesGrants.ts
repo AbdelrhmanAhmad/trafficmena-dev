@@ -7,9 +7,8 @@ import { extractJsonPayload } from './jsonPayload.js';
 import { handleSeriesBulkGrant } from './seriesGrantsBulk.js';
 import {
   consumeRateLimit,
-  DATABASE_ERROR_CODES,
   escapeLikePattern,
-  extractDatabaseErrorCode,
+  isKnownDatabaseConflict,
   requireManager,
 } from './utils.js';
 
@@ -235,7 +234,7 @@ export function registerSeriesGrantsRoutes(app: Hono) {
         alreadyGrantedCount: uniqueUserIds.length - txResult.insertedCount,
       });
     } catch (error) {
-      if (extractDatabaseErrorCode(error) === DATABASE_ERROR_CODES.FOREIGN_KEY_VIOLATION) {
+      if (isKnownDatabaseConflict(error) === 'fk') {
         return c.json(
           {
             error: {
