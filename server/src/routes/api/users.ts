@@ -28,8 +28,6 @@ const uuidPathParamSchema = z.string().uuid();
 
 const isEmptyValue = (value: string | null | undefined) => !value || value.trim().length === 0;
 
-const parseUuidPathParam = (value: unknown) => uuidPathParamSchema.safeParse(value);
-
 const getActiveSubscriptionSelectors = (now: Date) => ({
   exists: sql<boolean>`EXISTS (
     SELECT 1
@@ -150,30 +148,31 @@ export function registerUserRoutes(app: Hono) {
 
     const whereClause = filters.length > 0 ? and(...filters) : undefined;
 
-    const items = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-        createdAt: users.createdAt,
-        role: profiles.role,
-        userType: profiles.userType,
-        phoneNumber: profiles.phoneNumber,
-        isSubscriber: subscriptionExistsCondition,
-        activeSubscriptionSource: subscriptionSelectors.source,
-      })
-      .from(users)
-      .leftJoin(profiles, eq(users.id, profiles.id))
-      .where(whereClause)
-      .orderBy(desc(users.createdAt), desc(users.id))
-      .limit(pageSize)
-      .offset(offset);
-
-    const totalResult = await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(users)
-      .leftJoin(profiles, eq(users.id, profiles.id))
-      .where(whereClause);
+    const [items, totalResult] = await Promise.all([
+      db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          createdAt: users.createdAt,
+          role: profiles.role,
+          userType: profiles.userType,
+          phoneNumber: profiles.phoneNumber,
+          isSubscriber: subscriptionExistsCondition,
+          activeSubscriptionSource: subscriptionSelectors.source,
+        })
+        .from(users)
+        .leftJoin(profiles, eq(users.id, profiles.id))
+        .where(whereClause)
+        .orderBy(desc(users.createdAt), desc(users.id))
+        .limit(pageSize)
+        .offset(offset),
+      db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(users)
+        .leftJoin(profiles, eq(users.id, profiles.id))
+        .where(whereClause),
+    ]);
 
     return c.json({
       items,
@@ -404,7 +403,7 @@ export function registerUserRoutes(app: Hono) {
     });
     if ('response' in actor) return actor.response;
 
-    const targetIdParsed = parseUuidPathParam(c.req.param('id'));
+    const targetIdParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
     if (!targetIdParsed.success) {
       return c.json(
         {
@@ -530,7 +529,7 @@ export function registerUserRoutes(app: Hono) {
     });
     if ('response' in actor) return actor.response;
 
-    const targetIdParsed = parseUuidPathParam(c.req.param('id'));
+    const targetIdParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
     if (!targetIdParsed.success) {
       return c.json(
         {
