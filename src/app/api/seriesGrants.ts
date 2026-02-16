@@ -54,9 +54,10 @@ export async function fetchAllSeriesGrantUserIds(
     throw new DOMException('The operation was aborted.', 'AbortError');
   }
 
+  const MAX_PAGES = 50;
   let page = 1;
   let total: number | null = null;
-  while (true) {
+  while (page <= MAX_PAGES) {
     if (signal?.aborted) {
       throw new DOMException('The operation was aborted.', 'AbortError');
     }
