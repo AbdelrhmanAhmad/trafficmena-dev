@@ -181,6 +181,11 @@ const AdminUsersPage = () => {
     ? Math.max(1, Math.ceil(data.pagination.total / pageSize))
     : 1;
 
+  // Clamp page when total shrinks below current page (e.g., user deletion)
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   const handlePrev = () => {
     setPage((prev) => Math.max(1, prev - 1));
   };

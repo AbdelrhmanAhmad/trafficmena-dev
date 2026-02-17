@@ -94,6 +94,11 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   const grantsTotal = grantsQuery.data?.pagination.total ?? 0;
   const grantsTotalPages = Math.max(1, Math.ceil(grantsTotal / GRANTS_PAGE_SIZE));
 
+  // Clamp page when total shrinks below current page (e.g., last-item revoke)
+  useEffect(() => {
+    if (grantsPage > grantsTotalPages) setGrantsPage(grantsTotalPages);
+  }, [grantsPage, grantsTotalPages]);
+
   const usersQuery = useQuery({
     queryKey: ['series-grant-users-search', debouncedSearch],
     queryFn: () => fetchUsersAdmin({ page: 1, pageSize: 20, search: debouncedSearch || undefined }),
