@@ -90,6 +90,8 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   const grantMutation = useGrantSeriesAccess(seriesId);
   const revokeMutation = useRevokeSeriesAccess(seriesId);
   const bulkMutation = useBulkSeriesGrants(seriesId);
+  const isAnyMutationPending =
+    grantMutation.isPending || revokeMutation.isPending || bulkMutation.isPending;
 
   const grantsTotal = grantsQuery.data?.pagination.total ?? 0;
   const grantsTotalPages = Math.max(1, Math.ceil(grantsTotal / GRANTS_PAGE_SIZE));
@@ -310,7 +312,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
             <Button
               type="button"
               onClick={handleGrant}
-              disabled={grantMutation.isPending || selectedUserIds.length === 0}
+              disabled={isAnyMutationPending || selectedUserIds.length === 0}
             >
               {grantMutation.isPending ? (
                 <>
@@ -331,7 +333,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
               type="file"
               accept=".csv,text/csv"
               onChange={handleBulkUpload}
-              disabled={bulkMutation.isPending}
+              disabled={isAnyMutationPending}
             />
             {bulkMutation.isPending ? (
               <p className="text-sm text-muted-foreground">Processing CSV…</p>
@@ -389,7 +391,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
                         variant="destructive"
                         size="sm"
                         onClick={() => handleOpenRevokeDialog(grant.userId, grant.email)}
-                        disabled={revokingUserId === grant.userId}
+                        disabled={isAnyMutationPending || revokingUserId === grant.userId}
                       >
                         {revokingUserId === grant.userId ? (
                           <>
@@ -474,14 +476,14 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
               <Button
                 variant="outline"
                 onClick={() => setRevokeDialog(null)}
-                disabled={isRevokeDialogPending}
+                disabled={isRevokeDialogPending || isAnyMutationPending}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleConfirmRevoke}
-                disabled={isRevokeDialogPending}
+                disabled={isRevokeDialogPending || isAnyMutationPending}
               >
                 {isRevokeDialogPending ? (
                   <>
