@@ -30,6 +30,8 @@ export function useGrantSeriesAccess(seriesId: string) {
       queryClient.invalidateQueries({ queryKey: ['series-grants', seriesId] });
       queryClient.invalidateQueries({ queryKey: grantedUserIdsKey });
       queryClient.invalidateQueries({ queryKey: ['series-detail', seriesId] });
+      // Defensive: ensure user search results refresh so the selectable list is current
+      queryClient.invalidateQueries({ queryKey: ['series-grant-users-search'] });
     },
   });
 }
@@ -45,6 +47,7 @@ export function useRevokeSeriesAccess(seriesId: string) {
       queryClient.invalidateQueries({ queryKey: ['series-grants', seriesId] });
       queryClient.invalidateQueries({ queryKey: grantedUserIdsKey });
       queryClient.invalidateQueries({ queryKey: ['series-detail', seriesId] });
+      queryClient.invalidateQueries({ queryKey: ['series-grant-users-search'] });
     },
   });
 }
@@ -58,6 +61,7 @@ export function useBulkSeriesGrants(seriesId: string) {
       queryClient.invalidateQueries({ queryKey: ['series-grants', seriesId] });
       queryClient.invalidateQueries({ queryKey: ['series-granted-user-ids', seriesId] });
       queryClient.invalidateQueries({ queryKey: ['series-detail', seriesId] });
+      queryClient.invalidateQueries({ queryKey: ['series-grant-users-search'] });
     },
   });
 }

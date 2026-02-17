@@ -105,13 +105,13 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     queryKey: ['series-grant-users-search', debouncedSearch],
     queryFn: () => fetchUsersAdmin({ page: 1, pageSize: 20, search: debouncedSearch || undefined }),
     staleTime: 30 * 1000,
-    enabled: hasSearch,
+    enabled: hasSearch && searchInput.trim() === debouncedSearch,
   });
 
   const allGrantedUserIdsQuery = useQuery({
     queryKey: ['series-granted-user-ids', seriesId, debouncedSearch],
     queryFn: ({ signal }) => fetchAllSeriesGrantUserIds(seriesId, 200, signal, debouncedSearch),
-    enabled: Boolean(seriesId) && hasSearch,
+    enabled: Boolean(seriesId) && hasSearch && searchInput.trim() === debouncedSearch,
     staleTime: 30 * 1000,
   });
 
@@ -285,7 +285,9 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
                 <p className="text-sm text-destructive">{grantUsersErrorMessage}</p>
               ) : selectableUsers.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No grantable users found for this search.
+                  {usersQuery.data?.items.length
+                    ? 'All matching users already have access to this series.'
+                    : 'No users found matching this search.'}
                 </p>
               ) : (
                 selectableUsers.map((user) => (
