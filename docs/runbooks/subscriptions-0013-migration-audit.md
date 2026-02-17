@@ -170,8 +170,8 @@ If any check fails, **stop all deployment activity** and follow Section 7.
    ```sql
    SELECT id, user_id, backup_reason FROM subscriptions_0013_backup;
    ```
-2. For `duplicate_expired` rows: re-grant via admin API if the user should still have access.
-3. For `past_end_expired` rows: verify with product whether these should remain expired.
+2. For `duplicate_active_subscription` rows: re-grant via admin API if the user should still have access.
+3. For `expired_active_subscription` rows: verify with product whether these should remain expired.
 4. Log all manual interventions with user IDs, actions taken, and timestamps.
 5. Keep an incident log accessible to engineering and operations.
 

@@ -73,7 +73,10 @@ EXCEPTION
 	WHEN duplicate_object THEN NULL;
 END $$;
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "subscriptions_0013_backup" AS
+CREATE TABLE IF NOT EXISTS "subscriptions_0013_backup" (LIKE "subscriptions" INCLUDING ALL);--> statement-breakpoint
+ALTER TABLE "subscriptions_0013_backup" ADD COLUMN IF NOT EXISTS "backup_reason" text;--> statement-breakpoint
+ALTER TABLE "subscriptions_0013_backup" ADD COLUMN IF NOT EXISTS "backed_up_at" timestamp with time zone;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "subscriptions_0013_backup_id_unique" ON "subscriptions_0013_backup" USING btree ("id");--> statement-breakpoint
 WITH ranked_active_subscriptions AS (
 	SELECT
 		user_id,
@@ -87,6 +90,7 @@ WITH ranked_active_subscriptions AS (
 	WHERE subscription_status = 'active'
 		AND revoked_at IS NULL
 )
+INSERT INTO "subscriptions_0013_backup"
 SELECT
 	s.*,
 	CASE
@@ -96,7 +100,24 @@ SELECT
 	now() AS backed_up_at
 FROM "subscriptions" AS s
 INNER JOIN ranked_active_subscriptions AS ranked ON ranked.id = s.id
-WHERE ranked.rn > 1 OR ranked.ends_at < now();--> statement-breakpoint
+WHERE ranked.rn > 1 OR ranked.ends_at < now()
+ON CONFLICT ("id") DO UPDATE
+SET
+	"user_id" = EXCLUDED."user_id",
+	"subscription_status" = EXCLUDED."subscription_status",
+	"starts_at" = EXCLUDED."starts_at",
+	"ends_at" = EXCLUDED."ends_at",
+	"source" = EXCLUDED."source",
+	"price_paid_cents" = EXCLUDED."price_paid_cents",
+	"payment_id" = EXCLUDED."payment_id",
+	"granted_by" = EXCLUDED."granted_by",
+	"grant_reason" = EXCLUDED."grant_reason",
+	"revoked_at" = EXCLUDED."revoked_at",
+	"revoked_by" = EXCLUDED."revoked_by",
+	"revoke_reason" = EXCLUDED."revoke_reason",
+	"created_at" = EXCLUDED."created_at",
+	"backup_reason" = EXCLUDED."backup_reason",
+	"backed_up_at" = EXCLUDED."backed_up_at";--> statement-breakpoint
 UPDATE "subscriptions" AS s
 SET
 	subscription_status = 'expired',
