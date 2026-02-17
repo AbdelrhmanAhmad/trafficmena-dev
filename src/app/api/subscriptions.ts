@@ -1,4 +1,4 @@
-import { API_BASE, fetchJson, getCsrfHeaders } from './client';
+import { API_BASE, ApiError, fetchJson, getCsrfHeaders } from './client';
 
 export type SubscriptionSettings = {
   annualSubscriptionPriceCents: number | null;
@@ -118,11 +118,12 @@ export async function createSubscriptionGrantsFromCsv(
   if (!response.ok) {
     if (isJson) {
       const payload = await response.json();
-      const error = new Error(payload?.error?.message ?? response.statusText) as Error & {
-        extra?: Array<{ line: number; email: string; source: string; reason: string }>;
-      };
-      error.extra = payload?.error?.errors;
-      throw error;
+      throw new ApiError(
+        payload?.error?.message ?? response.statusText,
+        response.status,
+        payload?.error?.code,
+        payload?.error?.errors ? { errors: payload.error.errors } : undefined,
+      );
     }
     throw new Error(response.statusText);
   }

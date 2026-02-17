@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { ApiError } from '@/app/api/client';
 import type { AdminUserRecord, AdminUsersSubscriptionFilter, UserRoleValue } from '@/app/api/users';
 import { deleteUser, fetchUsersAdmin, updateUserRole } from '@/app/api/users';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
@@ -254,11 +255,10 @@ const AdminUsersPage = () => {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Bulk subscription upload failed.';
-      const extra = (
-        error as Error & {
-          extra?: Array<{ line: number; email: string; source: string; reason: string }>;
-        }
-      )?.extra;
+      const extra =
+        error instanceof ApiError
+          ? (error.extra?.errors as Array<{ line: number; email: string; source: string; reason: string }> | undefined)
+          : undefined;
       setBulkSubscriptionErrors(extra ?? []);
       toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });
     } finally {

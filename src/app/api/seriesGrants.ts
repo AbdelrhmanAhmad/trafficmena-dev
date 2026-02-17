@@ -1,4 +1,4 @@
-import { API_BASE, fetchJson, getCsrfHeaders } from './client';
+import { API_BASE, ApiError, fetchJson, getCsrfHeaders } from './client';
 
 export type SeriesGrantRecord = {
   id: string;
@@ -46,9 +46,11 @@ export async function fetchAllSeriesGrantUserIds(
   seriesId: string,
   pageSize = 200,
   signal?: AbortSignal,
+  search?: string,
 ): Promise<string[]> {
   const safePageSize = Math.max(1, Math.min(pageSize, 200));
   const collected = new Set<string>();
+  const normalizedSearch = search?.trim();
 
   if (signal?.aborted) {
     throw new DOMException('The operation was aborted.', 'AbortError');
@@ -62,7 +64,11 @@ export async function fetchAllSeriesGrantUserIds(
       throw new DOMException('The operation was aborted.', 'AbortError');
     }
 
-    const response = await fetchSeriesGrants(seriesId, { page, pageSize: safePageSize }, signal);
+    const response = await fetchSeriesGrants(
+      seriesId,
+      { page, pageSize: safePageSize, search: normalizedSearch },
+      signal,
+    );
     for (const item of response.items) {
       collected.add(item.userId);
     }
@@ -89,7 +95,7 @@ export async function fetchAllSeriesGrantUserIds(
 
   if (page > MAX_PAGES && (total === null || collected.size < total)) {
     throw new Error(
-      'Series has too many grants to load safely in one request. Please refine the search and retry.',
+      'Series has too many grants to load safely in one request. Add or refine the search and retry.',
     );
   }
 
@@ -143,11 +149,12 @@ export async function createSeriesGrantsFromCsv(file: File): Promise<BulkSeriesG
   if (!response.ok) {
     if (isJson) {
       const payload = await response.json();
-      const error = new Error(payload?.error?.message ?? response.statusText) as Error & {
-        extra?: Array<{ line: number; email: string; seriesId?: string; reason: string }>;
-      };
-      error.extra = payload?.error?.errors;
-      throw error;
+      throw new ApiError(
+        payload?.error?.message ?? response.statusText,
+        response.status,
+        payload?.error?.code,
+        payload?.error?.errors ? { errors: payload.error.errors } : undefined,
+      );
     }
     throw new Error(response.statusText);
   }

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { ApiError } from '@/app/api/client';
 import { fetchAllSeriesGrantUserIds } from '@/app/api/seriesGrants';
 import { fetchUsersAdmin } from '@/app/api/users';
 import {
@@ -67,6 +68,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   const searchId = useId();
   const reasonId = useId();
   const revokeReasonId = useId();
+  const hasSearch = debouncedSearch.length > 0;
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -96,12 +98,13 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     queryKey: ['series-grant-users-search', debouncedSearch],
     queryFn: () => fetchUsersAdmin({ page: 1, pageSize: 20, search: debouncedSearch || undefined }),
     staleTime: 30 * 1000,
+    enabled: hasSearch,
   });
 
   const allGrantedUserIdsQuery = useQuery({
-    queryKey: ['series-granted-user-ids', seriesId],
-    queryFn: ({ signal }) => fetchAllSeriesGrantUserIds(seriesId, 200, signal),
-    enabled: Boolean(seriesId),
+    queryKey: ['series-granted-user-ids', seriesId, debouncedSearch],
+    queryFn: ({ signal }) => fetchAllSeriesGrantUserIds(seriesId, 200, signal, debouncedSearch),
+    enabled: Boolean(seriesId) && hasSearch,
     staleTime: 30 * 1000,
   });
 
@@ -223,9 +226,10 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Bulk upload failed.';
-      const extra = (
-        error as Error & { extra?: Array<{ line: number; email: string; reason: string }> }
-      )?.extra;
+      const extra =
+        error instanceof ApiError
+          ? (error.extra?.errors as Array<{ line: number; email: string; reason: string }> | undefined)
+          : undefined;
       setCsvErrors(extra ?? []);
       toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });
     } finally {
@@ -266,6 +270,10 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
             <div className="max-h-56 space-y-2 overflow-auto rounded-lg border border-neutral-200 p-2">
               {usersQuery.isLoading || allGrantedUserIdsQuery.isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading members…</p>
+              ) : !hasSearch ? (
+                <p className="text-sm text-muted-foreground">
+                  Search by email to load grantable members.
+                </p>
               ) : usersQuery.isError || allGrantedUserIdsQuery.isError ? (
                 <p className="text-sm text-destructive">{grantUsersErrorMessage}</p>
               ) : selectableUsers.length === 0 ? (
