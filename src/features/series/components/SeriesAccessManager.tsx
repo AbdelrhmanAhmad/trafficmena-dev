@@ -119,6 +119,12 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   const selectableUsers = (usersQuery.data?.items ?? []).filter(
     (user) => !grantedUserIds.has(user.id),
   );
+  let grantUsersErrorMessage = 'Unable to load member list right now. Please refresh.';
+  if (allGrantedUserIdsQuery.error instanceof Error) {
+    grantUsersErrorMessage = allGrantedUserIdsQuery.error.message;
+  } else if (usersQuery.error instanceof Error) {
+    grantUsersErrorMessage = usersQuery.error.message;
+  }
 
   const toggleUser = (userId: string) => {
     setSelectedUserIds((current) =>
@@ -261,9 +267,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
               {usersQuery.isLoading || allGrantedUserIdsQuery.isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading members…</p>
               ) : usersQuery.isError || allGrantedUserIdsQuery.isError ? (
-                <p className="text-sm text-destructive">
-                  Unable to load member list right now. Please refresh.
-                </p>
+                <p className="text-sm text-destructive">{grantUsersErrorMessage}</p>
               ) : selectableUsers.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No grantable users found for this search.

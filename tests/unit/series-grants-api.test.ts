@@ -123,4 +123,33 @@ describe('fetchAllSeriesGrantUserIds', () => {
     await assert.rejects(() => fetchAllSeriesGrantUserIds('series-1', 2), /page 3 failed/i);
     assert.equal(callCount, 3);
   });
+
+  it('throws when pagination guard is exhausted before loading all rows', async () => {
+    let callCount = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      callCount += 1;
+      const requestUrl = new URL(String(input), 'http://localhost');
+      const page = Number(requestUrl.searchParams.get('page') ?? '1');
+
+      const base = (page - 1) * 200;
+      return new Response(
+        JSON.stringify({
+          items: Array.from({ length: 200 }, (_, index) => ({
+            userId: `user-${base + index + 1}`,
+          })),
+          pagination: { page, pageSize: 200, total: 20_000 },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    }) as typeof fetch;
+
+    await assert.rejects(
+      () => fetchAllSeriesGrantUserIds('series-1', 200),
+      /too many grants to load safely/i,
+    );
+    assert.equal(callCount, 50);
+  });
 });

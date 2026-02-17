@@ -87,6 +87,12 @@ export async function fetchAllSeriesGrantUserIds(
     page += 1;
   }
 
+  if (page > MAX_PAGES && (total === null || collected.size < total)) {
+    throw new Error(
+      'Series has too many grants to load safely in one request. Please refine the search and retry.',
+    );
+  }
+
   return Array.from(collected);
 }
 
