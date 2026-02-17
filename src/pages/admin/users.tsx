@@ -167,6 +167,7 @@ const AdminUsersPage = () => {
     });
   }, [toast, usersQuery.errorUpdatedAt, usersQuery.isError]);
 
+  const isDebouncing = searchInput.trim() !== debouncedSearch;
   const { data, isLoading, isError } = usersQuery;
   const users = data?.items ?? [];
 
@@ -520,7 +521,7 @@ const AdminUsersPage = () => {
                   variant="outline"
                   size="icon"
                   onClick={handlePrev}
-                  disabled={page === 1}
+                  disabled={page === 1 || isDebouncing}
                   className="rounded-lg"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -532,7 +533,7 @@ const AdminUsersPage = () => {
                   variant="outline"
                   size="icon"
                   onClick={handleNext}
-                  disabled={page >= totalPages}
+                  disabled={page >= totalPages || isDebouncing}
                   className="rounded-lg"
                 >
                   <ChevronRight className="h-4 w-4" />
