@@ -54,7 +54,7 @@ export function useBulkSeriesGrants(seriesId: string) {
 
   return useMutation({
     mutationFn: (file: File) => createSeriesGrantsFromCsv(file),
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['series-grants', seriesId] });
       queryClient.invalidateQueries({ queryKey: ['series-granted-user-ids', seriesId] });
       queryClient.invalidateQueries({ queryKey: ['series-detail', seriesId] });

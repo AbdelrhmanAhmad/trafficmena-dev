@@ -106,6 +106,7 @@ const AdminUsersPage = () => {
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setDebouncedSearch(searchInput.trim());
+      setPage(1); // Reset when debounce settles, not on every keystroke
     }, 300);
 
     return () => window.clearTimeout(timeout);
@@ -346,7 +347,6 @@ const AdminUsersPage = () => {
                   value={searchInput}
                   onChange={(event) => {
                     setSearchInput(event.target.value);
-                    setPage(1);
                   }}
                   placeholder="Search by name or email"
                   className="pl-9 rounded-xl border-neutral-200 bg-white/70 backdrop-blur"
