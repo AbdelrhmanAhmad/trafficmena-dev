@@ -34,6 +34,8 @@ END $$;
 ALTER TABLE "subscriptions"
   VALIDATE CONSTRAINT "subscriptions_no_active_revoked";
 --> statement-breakpoint
+-- Permissive by design: revoked_at can be NOT NULL with revoked_by/revoke_reason NULL
+-- for system-initiated revocations (auto-expiry, migration cleanup).
 DO $$
 BEGIN
   IF NOT EXISTS (

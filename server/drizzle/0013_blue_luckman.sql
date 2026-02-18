@@ -74,6 +74,21 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "subscriptions_0013_backup" (LIKE "subscriptions" INCLUDING ALL);--> statement-breakpoint
+-- Drop inherited FK constraints from backup table to prevent CASCADE deletes
+-- from destroying rollback data if a user is deleted before rollback.
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT conname
+    FROM pg_constraint
+    WHERE conrelid = 'subscriptions_0013_backup'::regclass
+      AND contype = 'f'
+  LOOP
+    EXECUTE format('ALTER TABLE "subscriptions_0013_backup" DROP CONSTRAINT %I', r.conname);
+  END LOOP;
+END $$;--> statement-breakpoint
 ALTER TABLE "subscriptions_0013_backup" ADD COLUMN IF NOT EXISTS "backup_reason" text;--> statement-breakpoint
 ALTER TABLE "subscriptions_0013_backup" ADD COLUMN IF NOT EXISTS "backed_up_at" timestamp with time zone;--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "subscriptions_0013_backup_id_unique" ON "subscriptions_0013_backup" USING btree ("id");--> statement-breakpoint

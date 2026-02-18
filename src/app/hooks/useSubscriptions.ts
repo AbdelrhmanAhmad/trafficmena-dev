@@ -56,7 +56,7 @@ export function useCreateSubscriptionGrant() {
 
   return useMutation({
     mutationFn: createSubscriptionGrant,
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
       queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });
@@ -69,7 +69,7 @@ export function useRevokeSubscriptionGrant() {
 
   return useMutation({
     mutationFn: revokeSubscriptionGrant,
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
       queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });
@@ -82,7 +82,7 @@ export function useBulkSubscriptionGrants() {
 
   return useMutation({
     mutationFn: createSubscriptionGrantsFromCsv,
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
       queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });

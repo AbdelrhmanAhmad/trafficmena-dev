@@ -141,7 +141,6 @@ const AdminUsersPage = () => {
   const createSubscriptionGrantMutation = useCreateSubscriptionGrant();
   const revokeSubscriptionGrantMutation = useRevokeSubscriptionGrant();
   const bulkSubscriptionGrantMutation = useBulkSubscriptionGrants();
-
   const usersQuery = useQuery({
     queryKey: ['admin-users', page, pageSize, debouncedSearch, roleFilter, subscriptionFilter],
     queryFn: () =>
@@ -307,7 +306,9 @@ const AdminUsersPage = () => {
   };
 
   const isSubscriptionMutationPending =
-    createSubscriptionGrantMutation.isPending || revokeSubscriptionGrantMutation.isPending;
+    createSubscriptionGrantMutation.isPending ||
+    revokeSubscriptionGrantMutation.isPending ||
+    bulkSubscriptionGrantMutation.isPending;
 
   const pendingSubscriptionUserIds = useMemo(() => {
     const pending = new Set<string>();
@@ -414,7 +415,7 @@ const AdminUsersPage = () => {
                   type="file"
                   accept=".csv,text/csv"
                   onChange={handleBulkSubscriptionUpload}
-                  disabled={bulkSubscriptionGrantMutation.isPending}
+                  disabled={isSubscriptionMutationPending}
                 />
                 {bulkSubscriptionGrantMutation.isPending ? (
                   <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">

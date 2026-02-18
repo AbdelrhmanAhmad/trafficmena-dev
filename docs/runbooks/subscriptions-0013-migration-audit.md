@@ -63,7 +63,15 @@ Run these queries before deployment and save outputs with timestamp.
      and ends_at < now();
    ```
 
-5. Inconsistent paid signals (manual review required):
+5. Legacy source heuristic verification (rows that will be tagged `source = 'legacy'`):
+   ```sql
+   SELECT id, user_id, payment_id, price_paid_cents
+   FROM subscriptions
+   WHERE payment_id IS NULL AND COALESCE(price_paid_cents, 0) <= 0;
+   ```
+   Review these rows: they should all be legitimate legacy/gift subscriptions, not data errors.
+
+6. Inconsistent paid signals (manual review required):
    ```sql
    select
      sum(case when payment_id is not null and coalesce(price_paid_cents, 0) = 0 then 1 else 0 end) as payment_id_with_zero_price,
@@ -164,7 +172,43 @@ If any check fails, **stop all deployment activity** and follow Section 7.
 5. Run Section 3 baseline counts to confirm data matches pre-migration state.
 6. Resume traffic after confirmation.
 
-### Option B: Targeted Recovery (If Full Restore Unavailable)
+### Option B: Targeted SQL Rollback (If Full Restore Unavailable)
+
+Run in this order inside a transaction:
+
+```sql
+BEGIN;
+
+-- 1. Drop the unique-active-per-user index
+DROP INDEX IF EXISTS "subscriptions_one_active_per_user";
+
+-- 2. Restore backed-up rows to active status
+UPDATE subscriptions AS s
+SET subscription_status = 'active',
+    revoked_at = NULL,
+    revoke_reason = NULL
+FROM subscriptions_0013_backup AS b
+WHERE s.id = b.id;
+
+-- 3. Verify restored row count matches backup
+-- SELECT count(*) FROM subscriptions_0013_backup;
+-- Should match the number of rows updated above.
+
+COMMIT;
+```
+
+If a full schema rollback is also needed (removes new columns entirely):
+
+```sql
+ALTER TABLE subscriptions DROP COLUMN IF EXISTS source;
+ALTER TABLE subscriptions DROP COLUMN IF EXISTS granted_by;
+ALTER TABLE subscriptions DROP COLUMN IF EXISTS grant_reason;
+ALTER TABLE subscriptions DROP COLUMN IF EXISTS revoked_at;
+ALTER TABLE subscriptions DROP COLUMN IF EXISTS revoked_by;
+ALTER TABLE subscriptions DROP COLUMN IF EXISTS revoke_reason;
+```
+
+### Option C: Manual Recovery
 
 1. Query `subscriptions_0013_backup` to identify affected rows:
    ```sql
@@ -174,8 +218,6 @@ If any check fails, **stop all deployment activity** and follow Section 7.
 3. For `expired_active_subscription` rows: verify with product whether these should remain expired.
 4. Log all manual interventions with user IDs, actions taken, and timestamps.
 5. Keep an incident log accessible to engineering and operations.
-
-Do not attempt ad-hoc schema rollback (e.g. dropping columns) during incident response.
 
 ## 8. Backup Table Retention
 
