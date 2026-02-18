@@ -61,4 +61,19 @@ describe('extractJsonPayload', () => {
     if (!result.ok) return;
     assert.deepEqual(result.data, { userId: 'abc' });
   });
+
+  it('returns PAYLOAD_TOO_LARGE for oversized payloads', async () => {
+    const { app, results } = createTestApp();
+
+    await app.request('/test', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ data: 'x'.repeat(1_100_000) }),
+    });
+
+    const result = results[0];
+    assert.equal(result.ok, false);
+    if (result.ok) return;
+    assert.equal(result.code, 'PAYLOAD_TOO_LARGE');
+  });
 });

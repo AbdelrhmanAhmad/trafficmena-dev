@@ -5,7 +5,7 @@ import { db } from '../../db/client.js';
 import { platformSettings, subscriptions } from '../../db/schema/index.js';
 import { paymentRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { extractJsonPayload } from './jsonPayload.js';
+import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
 import { getRequestIp, requireAdmin, requireManager } from './utils.js';
 
 // Rate limit for public subscription info endpoint: 60 requests per minute per IP
@@ -93,7 +93,10 @@ export function registerSubscriptionRoutes(app: Hono) {
 
     const bodyResult = await extractJsonPayload(c);
     if (!bodyResult.ok) {
-      return c.json({ error: { code: bodyResult.code, message: bodyResult.message } }, 400);
+      return c.json(
+        { error: { code: bodyResult.code, message: bodyResult.message } },
+        jsonPayloadErrorStatusCode(bodyResult.code),
+      );
     }
 
     const result = updateSettingsSchema.safeParse(bodyResult.data);

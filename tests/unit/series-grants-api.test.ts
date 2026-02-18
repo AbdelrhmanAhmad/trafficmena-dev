@@ -124,6 +124,35 @@ describe('fetchAllSeriesGrantUserIds', () => {
     assert.equal(callCount, 3);
   });
 
+  it('forwards trimmed search to paginated grant-id requests', async () => {
+    const requestedSearch: Array<string | null> = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const requestUrl = new URL(String(input), 'http://localhost');
+      requestedSearch.push(requestUrl.searchParams.get('search'));
+
+      return new Response(
+        JSON.stringify({
+          items: [],
+          pagination: { page: 1, pageSize: 200, total: 0 },
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    }) as typeof fetch;
+
+    const userIds = await fetchAllSeriesGrantUserIds(
+      'series-1',
+      200,
+      undefined,
+      '  member@test.com  ',
+    );
+
+    assert.deepEqual(userIds, []);
+    assert.deepEqual(requestedSearch, ['member@test.com']);
+  });
+
   it('throws when pagination guard is exhausted before loading all rows', async () => {
     let callCount = 0;
     globalThis.fetch = (async (input: RequestInfo | URL) => {

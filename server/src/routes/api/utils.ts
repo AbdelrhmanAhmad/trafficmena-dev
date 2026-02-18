@@ -293,8 +293,10 @@ export type RateLimitRule = { limit: number; windowMs: number };
 
 // Returns a 429 Response if rate-limited, or null if the request is allowed.
 export function consumeRateLimit(c: Context, key: string, rule: RateLimitRule): Response | null {
-  const clientIp = getRequestIp(c);
-  const { allowed, resetAt } = paymentRateLimiter.consume(`${key}:${clientIp}`, rule);
+  // Use the caller-provided key as the sole limiter identity.
+  // Keys should include stable identity (for example actor user ID) so
+  // rotating forwarded IP headers cannot bypass server-side throttling.
+  const { allowed, resetAt } = paymentRateLimiter.consume(key, rule);
   if (!allowed) {
     c.header('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
     return c.json(

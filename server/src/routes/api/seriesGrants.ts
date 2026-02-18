@@ -3,7 +3,7 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { series, seriesAccessGrants, users } from '../../db/schema/index.js';
-import { extractJsonPayload } from './jsonPayload.js';
+import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
 import { handleSeriesBulkGrant } from './seriesGrantsBulk.js';
 import {
   consumeRateLimit,
@@ -145,7 +145,10 @@ export function registerSeriesGrantsRoutes(app: Hono) {
 
     const bodyResult = await extractJsonPayload(c);
     if (!bodyResult.ok) {
-      return c.json({ error: { code: bodyResult.code, message: bodyResult.message } }, 400);
+      return c.json(
+        { error: { code: bodyResult.code, message: bodyResult.message } },
+        jsonPayloadErrorStatusCode(bodyResult.code),
+      );
     }
 
     const parsed = grantUsersSchema.safeParse(bodyResult.data);
@@ -279,7 +282,10 @@ export function registerSeriesGrantsRoutes(app: Hono) {
 
     const bodyResult = await extractJsonPayload(c);
     if (!bodyResult.ok) {
-      return c.json({ error: { code: bodyResult.code, message: bodyResult.message } }, 400);
+      return c.json(
+        { error: { code: bodyResult.code, message: bodyResult.message } },
+        jsonPayloadErrorStatusCode(bodyResult.code),
+      );
     }
 
     const parsed = revokeGrantSchema.safeParse(bodyResult.data);

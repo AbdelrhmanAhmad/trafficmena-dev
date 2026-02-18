@@ -1,0 +1,1 @@
+export const MAX_JSON_PAYLOAD_BYTES = 1_000_000;
