@@ -5,7 +5,7 @@ import { db } from '../../db/client.js';
 import { events, promoCodes, trackEvents, tracks } from '../../db/schema/index.js';
 import { PROMO_CODE_REGEX } from '../../services/promoCodes.js';
 import { ApiError, respondError } from '../../utils/errors.js';
-import { requireAdmin, requireManager } from './utils.js';
+import { isKnownDatabaseConflict, requireAdmin, requireManager } from './utils.js';
 
 const createSchema = z
   .object({
@@ -214,7 +214,7 @@ export function registerPromoCodeRoutes(app: Hono) {
       if (error instanceof ApiError) {
         return respondError(c, error);
       }
-      if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+      if (isKnownDatabaseConflict(error) === 'unique') {
         return c.json(
           { error: { code: 'PROMO_EXISTS', message: 'Promo code already exists.' } },
           409,

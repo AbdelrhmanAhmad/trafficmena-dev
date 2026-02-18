@@ -1,15 +1,14 @@
-export type ActiveSubscriptionRow = {
-  userId: string;
-  pricePaidCents: number | null;
-};
+export const toNumber = (value: number | string | null | undefined) => Number(value ?? 0);
 
-export const getActiveSubscriptionMetrics = (rows: ActiveSubscriptionRow[]) => {
-  const uniqueUsers = new Set(rows.map((row) => row.userId)).size;
-  const revenueCents = rows.reduce((total, row) => total + (row.pricePaidCents ?? 0), 0);
+export const getActiveSubscriptionMetricsFromAggregate = (
+  row: { premiumUsers: number | string | null; revenueCents: number | string | null } | null,
+) => {
+  const premiumUsers = toNumber(row?.premiumUsers);
+  const revenueCents = toNumber(row?.revenueCents);
 
   return {
-    premiumUsers: uniqueUsers,
-    activeSubscriptions: uniqueUsers,
+    premiumUsers,
+    activeSubscriptions: premiumUsers,
     revenueCents,
   };
 };

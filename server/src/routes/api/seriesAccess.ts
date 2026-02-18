@@ -2,6 +2,7 @@ type SeriesAccessContext = {
   isStaff: boolean;
   isSubscriber: boolean;
   hasTrackBooking: boolean;
+  hasSeriesGrant: boolean;
   seriesIsPremium: boolean;
 };
 
@@ -14,12 +15,16 @@ type SeriesAssetAccessInput = SeriesAccessContext & {
 
 export function resolveSeriesAccess(context: SeriesAccessContext): boolean {
   return (
-    context.isStaff || context.isSubscriber || context.hasTrackBooking || !context.seriesIsPremium
+    context.isStaff ||
+    context.isSubscriber ||
+    context.hasTrackBooking ||
+    context.hasSeriesGrant ||
+    !context.seriesIsPremium
   );
 }
 
 export function resolveSeriesAssetAccess(input: SeriesAssetAccessInput): boolean {
-  if (input.isStaff || input.isSubscriber || input.hasTrackBooking) {
+  if (input.isStaff || input.isSubscriber || input.hasTrackBooking || input.hasSeriesGrant) {
     return true;
   }
 

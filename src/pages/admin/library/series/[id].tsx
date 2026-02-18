@@ -12,6 +12,7 @@ import {
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { SeriesAssetSelector, SeriesForm } from '@/features/series';
+import SeriesAccessManager from '@/features/series/components/SeriesAccessManager';
 import {
   useAddAssetsToSeries,
   useDeleteSeries,
@@ -89,16 +90,20 @@ function SeriesDetailPage() {
     isPublished: boolean;
     isPremium: boolean;
   }) => {
-    await updateMutation.mutateAsync({
-      id: series.id,
-      data: {
-        title: values.title,
-        description: values.description || null,
-        imageUrl: values.imageUrl || null,
-        isPublished: values.isPublished,
-        isPremium: values.isPremium,
-      },
-    });
+    try {
+      await updateMutation.mutateAsync({
+        id: series.id,
+        data: {
+          title: values.title,
+          description: values.description || null,
+          imageUrl: values.imageUrl || null,
+          isPublished: values.isPublished,
+          isPremium: values.isPremium,
+        },
+      });
+    } catch {
+      // Mutation onError already reports a toast.
+    }
   };
 
   const handleDeleteSeries = () => {
@@ -276,6 +281,10 @@ function SeriesDetailPage() {
               </CardContent>
             </Card>
           </div>
+
+          {series.is_premium ? (
+            <SeriesAccessManager seriesId={series.id} seriesTitle={series.title} />
+          ) : null}
         </div>
 
         {/* Asset Selector Modal */}

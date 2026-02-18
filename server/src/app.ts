@@ -4,6 +4,7 @@ import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import { timing } from 'hono/timing';
 import { env, isProduction } from './config/env.js';
+import { MAX_JSON_PAYLOAD_BYTES } from './config/requestLimits.js';
 import { registerApiRoutes } from './routes/api/index.js';
 import { registerHealthRoutes } from './routes/health.js';
 
@@ -81,7 +82,7 @@ export function createApp() {
         ],
         frameAncestors: ["'self'"],
         connectSrc: Array.from(connectSources),
-        formAction: ["'self'", 'https://supabase.com'],
+        formAction: ["'self'"],
       },
       xFrameOptions: 'DENY',
       referrerPolicy: 'strict-origin-when-cross-origin',
@@ -114,6 +115,31 @@ export function createApp() {
       maxAge: 60,
     }),
   );
+
+  app.use('*', async (c, next) => {
+    const method = c.req.method.toUpperCase();
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+      const contentType = c.req.header('content-type')?.toLowerCase() ?? '';
+      if (contentType.includes('application/json') || contentType.includes('+json')) {
+        const contentLengthHeader = c.req.header('content-length');
+        if (contentLengthHeader) {
+          const contentLength = Number(contentLengthHeader);
+          if (Number.isFinite(contentLength) && contentLength > MAX_JSON_PAYLOAD_BYTES) {
+            return c.json(
+              {
+                error: {
+                  code: 'PAYLOAD_TOO_LARGE',
+                  message: `JSON payload exceeds ${(MAX_JSON_PAYLOAD_BYTES / 1_000_000).toFixed(1)} MB.`,
+                },
+              },
+              413,
+            );
+          }
+        }
+      }
+    }
+    await next();
+  });
 
   app.use('*', logger());
   app.use('*', timing());

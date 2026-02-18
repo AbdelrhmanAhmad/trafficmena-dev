@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, gte, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, gte, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -113,7 +113,11 @@ const normalizeDescription = (description: string) =>
 
 const priceInCentsSchema = z
   .union([
-    z.coerce.number().int().min(0, 'Price cannot be negative.').max(10000000, 'Price too large.'), // Max 100,000 EGP
+    z.coerce
+      .number()
+      .int()
+      .min(0, 'Price cannot be negative.')
+      .max(10000000, 'Price too large.'), // Max 100,000 EGP
     z.null(),
   ])
   .optional()
@@ -743,6 +747,7 @@ export function registerEventRoutes(app: Hono) {
               and(
                 eq(subscriptions.userId, userId),
                 eq(subscriptions.status, 'active'),
+                isNull(subscriptions.revokedAt),
                 gte(subscriptions.endsAt, new Date()),
               ),
             );

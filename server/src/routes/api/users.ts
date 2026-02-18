@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNull, or, type SQL, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -6,7 +6,7 @@ import { profiles, users } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { parseUsersListQuery } from './users-list.js';
 import { normalizePhoneNumber, validatePhoneNumberUpdate } from './users-phone.js';
-import { escapeLikePattern, notImplemented, requireRole } from './utils.js';
+import { escapeLikePattern, normalizeRole, notImplemented, requireRole } from './utils.js';
 
 const updateMeSchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -24,7 +24,38 @@ const updateUserRoleSchema = z.object({
   role: z.enum(roleValues),
 });
 
+const uuidPathParamSchema = z.string().uuid();
+
 const isEmptyValue = (value: string | null | undefined) => !value || value.trim().length === 0;
+
+const getActiveSubscriptionSelectors = (now: Date) => ({
+  exists: sql<boolean>`EXISTS (
+    SELECT 1
+    FROM subscriptions s
+    WHERE s.user_id = ${users.id}
+      AND s.subscription_status = 'active'
+      AND s.revoked_at IS NULL
+      AND s.ends_at >= ${now}
+  )`,
+  notExists: sql<boolean>`NOT EXISTS (
+    SELECT 1
+    FROM subscriptions s
+    WHERE s.user_id = ${users.id}
+      AND s.subscription_status = 'active'
+      AND s.revoked_at IS NULL
+      AND s.ends_at >= ${now}
+  )`,
+  source: sql<'paid' | 'legacy' | 'gift' | null>`(
+    SELECT s.source
+    FROM subscriptions s
+    WHERE s.user_id = ${users.id}
+      AND s.subscription_status = 'active'
+      AND s.revoked_at IS NULL
+      AND s.ends_at >= ${now}
+    ORDER BY s.ends_at DESC
+    LIMIT 1
+  )`,
+});
 
 export function registerUserRoutes(app: Hono) {
   app.get('/users', async (c) => {
@@ -67,6 +98,7 @@ export function registerUserRoutes(app: Hono) {
       search: c.req.query('search'),
       role: c.req.query('role'),
       subscription: c.req.query('subscription'),
+      fields: c.req.query('fields'),
     });
 
     if (!parsed.success) {
@@ -81,71 +113,100 @@ export function registerUserRoutes(app: Hono) {
       );
     }
 
-    const { page, pageSize, role, search, subscription } = parsed.data;
+    const { page, pageSize, role, search, subscription, fields } = parsed.data;
     const offset = (page - 1) * pageSize;
+    const isBasicFields = fields === 'basic';
 
     const now = new Date();
-    const subscriptionExistsCondition = sql<boolean>`EXISTS (
-      SELECT 1
-      FROM subscriptions s
-      WHERE s.user_id = ${users.id}
-        AND s.subscription_status = 'active'
-        AND s.ends_at >= ${now}
-    )`;
-    const subscriptionMissingCondition = sql<boolean>`NOT EXISTS (
-      SELECT 1
-      FROM subscriptions s
-      WHERE s.user_id = ${users.id}
-        AND s.subscription_status = 'active'
-        AND s.ends_at >= ${now}
-    )`;
+    const subscriptionSelectors = getActiveSubscriptionSelectors(now);
 
-    const filters: any[] = [];
+    const filters: SQL<unknown>[] = [];
 
     if (search) {
       const pattern = `%${escapeLikePattern(search)}%`;
-      filters.push(or(ilike(users.email, pattern), ilike(users.name, pattern)));
+      const searchFilter = or(ilike(users.email, pattern), ilike(users.name, pattern));
+      if (searchFilter) {
+        filters.push(searchFilter);
+      }
     }
 
     if (role) {
       if (role === 'user') {
-        filters.push(or(eq(profiles.role, role), isNull(profiles.role)));
+        const userRoleFilter = or(eq(profiles.role, role), isNull(profiles.role));
+        if (userRoleFilter) {
+          filters.push(userRoleFilter);
+        }
       } else {
         filters.push(eq(profiles.role, role));
       }
     }
 
-    if (subscription === 'subscribed') {
-      filters.push(subscriptionExistsCondition);
-    } else if (subscription === 'not_subscribed') {
-      filters.push(subscriptionMissingCondition);
+    if (!isBasicFields && subscription === 'subscribed') {
+      filters.push(subscriptionSelectors.exists);
+    } else if (!isBasicFields && subscription === 'not_subscribed') {
+      filters.push(subscriptionSelectors.notExists);
     }
 
     const whereClause = filters.length > 0 ? and(...filters) : undefined;
 
-    const items = await db
-      .select({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-        createdAt: users.createdAt,
-        role: profiles.role,
-        userType: profiles.userType,
-        phoneNumber: profiles.phoneNumber,
-        isSubscriber: subscriptionExistsCondition,
-      })
-      .from(users)
-      .leftJoin(profiles, eq(users.id, profiles.id))
-      .where(whereClause)
-      .orderBy(desc(users.createdAt), desc(users.id))
-      .limit(pageSize)
-      .offset(offset);
-
-    const totalResult = await db
+    const countQuery = db
       .select({ count: sql<number>`COUNT(*)` })
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.id))
       .where(whereClause);
+
+    if (isBasicFields) {
+      const [items, totalResult] = await Promise.all([
+        db
+          .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            createdAt: users.createdAt,
+            role: profiles.role,
+            userType: profiles.userType,
+            phoneNumber: profiles.phoneNumber,
+          })
+          .from(users)
+          .leftJoin(profiles, eq(users.id, profiles.id))
+          .where(whereClause)
+          .orderBy(desc(users.createdAt), desc(users.id))
+          .limit(pageSize)
+          .offset(offset),
+        countQuery,
+      ]);
+
+      return c.json({
+        items,
+        pagination: {
+          page,
+          pageSize,
+          total: Number(totalResult[0]?.count ?? 0),
+        },
+      });
+    }
+
+    const [items, totalResult] = await Promise.all([
+      db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          createdAt: users.createdAt,
+          role: profiles.role,
+          userType: profiles.userType,
+          phoneNumber: profiles.phoneNumber,
+          isSubscriber: subscriptionSelectors.exists,
+          activeSubscriptionSource: subscriptionSelectors.source,
+        })
+        .from(users)
+        .leftJoin(profiles, eq(users.id, profiles.id))
+        .where(whereClause)
+        .orderBy(desc(users.createdAt), desc(users.id))
+        .limit(pageSize)
+        .offset(offset),
+      countQuery,
+    ]);
 
     return c.json({
       items,
@@ -376,18 +437,19 @@ export function registerUserRoutes(app: Hono) {
     });
     if ('response' in actor) return actor.response;
 
-    const targetId = c.req.param('id');
-    if (!targetId) {
+    const targetIdParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
+    if (!targetIdParsed.success) {
       return c.json(
         {
           error: {
-            code: 'INVALID_REQUEST',
-            message: 'User id parameter is required.',
+            code: 'INVALID_PARAM',
+            message: 'User ID must be a valid UUID.',
           },
         },
         400,
       );
     }
+    const targetId = targetIdParsed.data;
 
     const body = updateUserRoleSchema.safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) {
@@ -422,7 +484,7 @@ export function registerUserRoutes(app: Hono) {
       .where(eq(profiles.id, targetId))
       .limit(1);
 
-    const currentRole = (target?.role ?? 'user') as (typeof roleValues)[number];
+    const currentRole = normalizeRole(target?.role);
 
     if (actor.userId === targetId && desiredRole !== 'owner') {
       return c.json(
@@ -461,6 +523,7 @@ export function registerUserRoutes(app: Hono) {
       .where(eq(profiles.id, targetId));
 
     const now = new Date();
+    const subscriptionSelectors = getActiveSubscriptionSelectors(now);
 
     const [updated] = await db
       .select({
@@ -468,15 +531,11 @@ export function registerUserRoutes(app: Hono) {
         email: users.email,
         name: users.name,
         createdAt: users.createdAt,
+        phoneNumber: profiles.phoneNumber,
         role: profiles.role,
         userType: profiles.userType,
-        isSubscriber: sql<boolean>`EXISTS (
-          SELECT 1
-          FROM subscriptions s
-          WHERE s.user_id = ${users.id}
-            AND s.subscription_status = 'active'
-            AND s.ends_at >= ${now}
-        )`,
+        isSubscriber: subscriptionSelectors.exists,
+        activeSubscriptionSource: subscriptionSelectors.source,
       })
       .from(users)
       .leftJoin(profiles, eq(users.id, profiles.id))
@@ -504,18 +563,19 @@ export function registerUserRoutes(app: Hono) {
     });
     if ('response' in actor) return actor.response;
 
-    const targetId = c.req.param('id');
-    if (!targetId) {
+    const targetIdParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
+    if (!targetIdParsed.success) {
       return c.json(
         {
           error: {
-            code: 'INVALID_REQUEST',
-            message: 'User id parameter is required.',
+            code: 'INVALID_PARAM',
+            message: 'User ID must be a valid UUID.',
           },
         },
         400,
       );
     }
+    const targetId = targetIdParsed.data;
 
     if (actor.userId === targetId) {
       return c.json(
@@ -535,7 +595,7 @@ export function registerUserRoutes(app: Hono) {
       .where(eq(profiles.id, targetId))
       .limit(1);
 
-    const targetRole = (target?.role ?? 'user').toLowerCase() as (typeof roleValues)[number];
+    const targetRole = normalizeRole(target?.role);
 
     if (actor.role === 'admin' && targetRole === 'owner') {
       return c.json(

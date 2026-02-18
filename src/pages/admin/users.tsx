@@ -1,9 +1,25 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Search, Shield } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Gift,
+  Loader2,
+  RotateCcw,
+  Search,
+  Shield,
+  Upload,
+} from 'lucide-react';
+import type { ChangeEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { ApiError } from '@/app/api/client';
 import type { AdminUserRecord, AdminUsersSubscriptionFilter, UserRoleValue } from '@/app/api/users';
 import { deleteUser, fetchUsersAdmin, updateUserRole } from '@/app/api/users';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
+import {
+  useBulkSubscriptionGrants,
+  useCreateSubscriptionGrant,
+  useRevokeSubscriptionGrant,
+} from '@/app/hooks/useSubscriptions';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
@@ -18,6 +34,7 @@ import {
   DialogTitle,
 } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -71,10 +88,26 @@ const AdminUsersPage = () => {
   >('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState<AdminUsersSubscriptionFilter>('all');
   const [deleteDialog, setDeleteDialog] = useState<{ user: AdminUserRecord } | null>(null);
+  const [subscriptionDialog, setSubscriptionDialog] = useState<{
+    user: AdminUserRecord;
+    mode: 'grant' | 'revoke';
+  } | null>(null);
+  const [subscriptionSource, setSubscriptionSource] = useState<'legacy' | 'gift'>('legacy');
+  const [subscriptionReason, setSubscriptionReason] = useState('Legacy yearly subscription grant');
+  const [bulkSubscriptionErrors, setBulkSubscriptionErrors] = useState<
+    Array<{ line: number; email: string; source: string; reason: string }>
+  >([]);
+  const [pendingRoleUserIds, setPendingRoleUserIds] = useState<Set<string>>(new Set());
+  const bulkSubscriptionInputRef = useRef<HTMLInputElement | null>(null);
+  const lastUsersErrorAtRef = useRef(0);
+  const subscriptionSourceId = useId();
+  const subscriptionReasonId = useId();
+  const revokeReasonId = useId();
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setDebouncedSearch(searchInput.trim());
+      setPage(1); // Reset when debounce settles, not on every keystroke
     }, 300);
 
     return () => window.clearTimeout(timeout);
@@ -105,7 +138,10 @@ const AdminUsersPage = () => {
     },
   });
 
-  const { data, isLoading, isError } = useQuery({
+  const createSubscriptionGrantMutation = useCreateSubscriptionGrant();
+  const revokeSubscriptionGrantMutation = useRevokeSubscriptionGrant();
+  const bulkSubscriptionGrantMutation = useBulkSubscriptionGrants();
+  const usersQuery = useQuery({
     queryKey: ['admin-users', page, pageSize, debouncedSearch, roleFilter, subscriptionFilter],
     queryFn: () =>
       fetchUsersAdmin({
@@ -115,15 +151,23 @@ const AdminUsersPage = () => {
         role: roleFilter === 'all' ? undefined : roleFilter,
         subscription: subscriptionFilter,
       }),
-    onError: () =>
-      toast({
-        title: 'Unable to load users',
-        description: 'Please refresh the page or try again later.',
-        variant: 'destructive',
-      }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
+    enabled: searchInput.trim() === debouncedSearch,
   });
 
+  useEffect(() => {
+    if (!usersQuery.isError) return;
+    if (usersQuery.errorUpdatedAt <= lastUsersErrorAtRef.current) return;
+    lastUsersErrorAtRef.current = usersQuery.errorUpdatedAt;
+    toast({
+      title: 'Unable to load users',
+      description: 'Please refresh the page or try again later.',
+      variant: 'destructive',
+    });
+  }, [toast, usersQuery.errorUpdatedAt, usersQuery.isError]);
+
+  const isDebouncing = searchInput.trim() !== debouncedSearch;
+  const { data, isLoading, isError } = usersQuery;
   const users = data?.items ?? [];
 
   const hasOwner = useMemo(
@@ -137,6 +181,11 @@ const AdminUsersPage = () => {
     ? Math.max(1, Math.ceil(data.pagination.total / pageSize))
     : 1;
 
+  // Clamp page when total shrinks below current page (e.g., user deletion)
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
   const handlePrev = () => {
     setPage((prev) => Math.max(1, prev - 1));
   };
@@ -144,6 +193,144 @@ const AdminUsersPage = () => {
   const handleNext = () => {
     setPage((prev) => Math.min(totalPages, prev + 1));
   };
+
+  const handleSubmitSubscriptionAction = async () => {
+    if (!subscriptionDialog) return;
+
+    const targetUserId = subscriptionDialog.user.id;
+    const targetUserEmail = subscriptionDialog.user.email;
+    const mode = subscriptionDialog.mode;
+    const reason = subscriptionReason.trim();
+    if (reason.length < 3) {
+      toast({
+        title: 'Reason required',
+        description: 'Please provide at least 3 characters.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      if (mode === 'grant') {
+        await createSubscriptionGrantMutation.mutateAsync({
+          userId: targetUserId,
+          source: subscriptionSource,
+          reason,
+        });
+        toast({
+          title: 'Subscription granted',
+          description: `${targetUserEmail} received a yearly ${subscriptionSource} subscription.`,
+        });
+      } else {
+        await revokeSubscriptionGrantMutation.mutateAsync({
+          userId: targetUserId,
+          reason,
+        });
+        toast({
+          title: 'Subscription revoked',
+          description: `Active legacy/gift subscription revoked for ${targetUserEmail}.`,
+        });
+      }
+
+      setSubscriptionDialog((current) =>
+        current?.user.id === targetUserId && current.mode === mode ? null : current,
+      );
+      setSubscriptionReason('Legacy yearly subscription grant');
+      setSubscriptionSource('legacy');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to update subscription.';
+      toast({
+        title: 'Subscription update failed',
+        description: message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleBulkSubscriptionUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    setBulkSubscriptionErrors([]);
+
+    try {
+      const result = await bulkSubscriptionGrantMutation.mutateAsync(file);
+      toast({
+        title: 'Bulk subscriptions complete',
+        description: `${result.grantedCount} yearly subscriptions granted.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Bulk subscription upload failed.';
+      const extra =
+        error instanceof ApiError
+          ? (error.extra?.errors as
+              | Array<{ line: number; email: string; source: string; reason: string }>
+              | undefined)
+          : undefined;
+      setBulkSubscriptionErrors(extra ?? []);
+      toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });
+    } finally {
+      if (bulkSubscriptionInputRef.current) {
+        bulkSubscriptionInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteDialog) return;
+
+    const targetUserId = deleteDialog.user.id;
+    try {
+      await deleteMutation.mutateAsync(targetUserId);
+      setDeleteDialog((current) => (current?.user.id === targetUserId ? null : current));
+    } catch {
+      // Mutation onError already reports a toast.
+    }
+  };
+
+  const handleChangeRole = async (userId: string, role: UserRoleValue) => {
+    setPendingRoleUserIds((current) => {
+      const next = new Set(current);
+      next.add(userId);
+      return next;
+    });
+
+    try {
+      await roleMutation.mutateAsync({ userId, role });
+    } catch {
+      // Role mutation error toast is handled in onError.
+    } finally {
+      setPendingRoleUserIds((current) => {
+        const next = new Set(current);
+        next.delete(userId);
+        return next;
+      });
+    }
+  };
+
+  const isSubscriptionMutationPending =
+    createSubscriptionGrantMutation.isPending ||
+    revokeSubscriptionGrantMutation.isPending ||
+    bulkSubscriptionGrantMutation.isPending;
+
+  const pendingSubscriptionUserIds = useMemo(() => {
+    const pending = new Set<string>();
+    const createUserId = createSubscriptionGrantMutation.variables?.userId;
+    const revokeUserId = revokeSubscriptionGrantMutation.variables?.userId;
+
+    if (createSubscriptionGrantMutation.isPending && createUserId) {
+      pending.add(createUserId);
+    }
+    if (revokeSubscriptionGrantMutation.isPending && revokeUserId) {
+      pending.add(revokeUserId);
+    }
+
+    return pending;
+  }, [
+    createSubscriptionGrantMutation.isPending,
+    createSubscriptionGrantMutation.variables?.userId,
+    revokeSubscriptionGrantMutation.isPending,
+    revokeSubscriptionGrantMutation.variables?.userId,
+  ]);
 
   return (
     <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
@@ -169,7 +356,6 @@ const AdminUsersPage = () => {
                   value={searchInput}
                   onChange={(event) => {
                     setSearchInput(event.target.value);
-                    setPage(1);
                   }}
                   placeholder="Search by name or email"
                   className="pl-9 rounded-xl border-neutral-200 bg-white/70 backdrop-blur"
@@ -214,6 +400,48 @@ const AdminUsersPage = () => {
           </CardHeader>
 
           <CardContent>
+            {!isManagerRole ? (
+              <div className="mb-6 rounded-xl border border-neutral-200 bg-white/70 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
+                  <Upload className="h-4 w-4 text-[#05ef62]" />
+                  Bulk legacy/gift yearly subscriptions
+                </div>
+                <p className="mt-1 text-xs text-neutral-600">
+                  CSV columns: <code>email</code>, <code>source</code> (<code>legacy</code> or
+                  <code>gift</code>), <code>reason</code>. Header row optional. Upload is
+                  all-or-nothing.
+                </p>
+                <Input
+                  ref={bulkSubscriptionInputRef}
+                  className="mt-3"
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={handleBulkSubscriptionUpload}
+                  disabled={isSubscriptionMutationPending}
+                />
+                {bulkSubscriptionGrantMutation.isPending ? (
+                  <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Processing CSV…
+                  </p>
+                ) : null}
+                {bulkSubscriptionErrors.length > 0 ? (
+                  <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                    <p className="font-medium">Validation errors (no rows were applied)</p>
+                    <ul className="mt-1 space-y-1">
+                      {bulkSubscriptionErrors.slice(0, 6).map((error, index) => (
+                        <li key={`${error.line}-${index}`}>
+                          Line {error.line} ({error.email || 'missing email'}): {error.reason}
+                        </li>
+                      ))}
+                    </ul>
+                    {bulkSubscriptionErrors.length > 6 ? (
+                      <p className="mt-1">+ {bulkSubscriptionErrors.length - 6} more</p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             {isLoading ? (
               <div className="flex min-h-[200px] items-center justify-center text-neutral-500">
                 Loading users…
@@ -248,14 +476,22 @@ const AdminUsersPage = () => {
                       isOwner={isOwner}
                       isManagerRole={isManagerRole}
                       bootstrapPromote={bootstrapPromote}
-                      onChangeRole={(userId, role) => roleMutation.mutate({ userId, role })}
-                      pendingUserId={
-                        roleMutation.isPending ? (roleMutation.variables?.userId ?? null) : null
-                      }
+                      onChangeRole={handleChangeRole}
+                      pendingRoleUserIds={pendingRoleUserIds}
                       onRequestDelete={(payload) => setDeleteDialog(payload)}
                       pendingDeleteUserId={
                         deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
                       }
+                      onManageSubscription={(payload) => {
+                        if (subscriptionDialog) return;
+                        setSubscriptionDialog(payload);
+                        setSubscriptionReason(
+                          payload.mode === 'grant'
+                            ? 'Legacy yearly subscription grant'
+                            : 'Legacy or gift subscription revoked',
+                        );
+                      }}
+                      pendingSubscriptionUserIds={pendingSubscriptionUserIds}
                     />
                   ))}
                 </TableBody>
@@ -289,7 +525,7 @@ const AdminUsersPage = () => {
                   variant="outline"
                   size="icon"
                   onClick={handlePrev}
-                  disabled={page === 1}
+                  disabled={page === 1 || isDebouncing}
                   className="rounded-lg"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -301,7 +537,7 @@ const AdminUsersPage = () => {
                   variant="outline"
                   size="icon"
                   onClick={handleNext}
-                  disabled={page >= totalPages}
+                  disabled={page >= totalPages || isDebouncing}
                   className="rounded-lg"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -313,7 +549,11 @@ const AdminUsersPage = () => {
 
         <Dialog
           open={Boolean(deleteDialog)}
-          onOpenChange={(open) => !open && setDeleteDialog(null)}
+          onOpenChange={(open) => {
+            if (!open && !deleteMutation.isPending) {
+              setDeleteDialog(null);
+            }
+          }}
         >
           <DialogContent>
             <DialogHeader>
@@ -324,20 +564,103 @@ const AdminUsersPage = () => {
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialog(null)}>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialog(null)}
+                disabled={deleteMutation.isPending}
+              >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => {
-                  if (deleteDialog) {
-                    deleteMutation.mutate(deleteDialog.user.id);
-                  }
-                  setDeleteDialog(null);
-                }}
+                onClick={handleConfirmDelete}
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? 'Removing…' : 'Delete member'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(subscriptionDialog)}
+          onOpenChange={(open) => {
+            if (!open && !isSubscriptionMutationPending) {
+              setSubscriptionDialog(null);
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {subscriptionDialog?.mode === 'grant'
+                  ? 'Grant yearly subscription'
+                  : 'Revoke legacy/gift subscription'}
+              </DialogTitle>
+              <DialogDescription>
+                {subscriptionDialog?.mode === 'grant'
+                  ? `Grant a non-sales yearly subscription to ${subscriptionDialog?.user.email}.`
+                  : `Revoke active legacy/gift access for ${subscriptionDialog?.user.email}. Paid subscriptions cannot be revoked from this action.`}
+              </DialogDescription>
+            </DialogHeader>
+
+            {subscriptionDialog?.mode === 'grant' ? (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor={subscriptionSourceId}>Source</Label>
+                  <Select
+                    value={subscriptionSource}
+                    onValueChange={(value: 'legacy' | 'gift') => setSubscriptionSource(value)}
+                  >
+                    <SelectTrigger id={subscriptionSourceId}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="legacy">Legacy</SelectItem>
+                      <SelectItem value="gift">Gift</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={subscriptionReasonId}>Reason</Label>
+                  <Input
+                    id={subscriptionReasonId}
+                    value={subscriptionReason}
+                    onChange={(event) => setSubscriptionReason(event.target.value)}
+                    placeholder="Required audit reason"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor={revokeReasonId}>Revoke reason</Label>
+                <Input
+                  id={revokeReasonId}
+                  value={subscriptionReason}
+                  onChange={(event) => setSubscriptionReason(event.target.value)}
+                  placeholder="Required audit reason"
+                />
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setSubscriptionDialog(null)}
+                disabled={isSubscriptionMutationPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={subscriptionDialog?.mode === 'grant' ? 'default' : 'destructive'}
+                onClick={handleSubmitSubscriptionAction}
+                disabled={isSubscriptionMutationPending}
+              >
+                {isSubscriptionMutationPending
+                  ? 'Saving…'
+                  : subscriptionDialog?.mode === 'grant'
+                    ? 'Grant yearly subscription'
+                    : 'Revoke subscription'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -355,9 +678,11 @@ const AdminUserRow = ({
   actorRole,
   currentUserId,
   onChangeRole,
-  pendingUserId,
+  pendingRoleUserIds,
   pendingDeleteUserId,
   onRequestDelete,
+  onManageSubscription,
+  pendingSubscriptionUserIds,
 }: {
   user: AdminUserRecord;
   isOwner: boolean;
@@ -365,10 +690,12 @@ const AdminUserRow = ({
   bootstrapPromote: boolean;
   actorRole: UserRoleValue | null;
   currentUserId: string | null;
-  onChangeRole: (userId: string, role: UserRoleValue) => void;
-  pendingUserId: string | null;
+  onChangeRole: (userId: string, role: UserRoleValue) => Promise<void>;
+  pendingRoleUserIds: Set<string>;
   pendingDeleteUserId: string | null;
   onRequestDelete: (payload: { user: AdminUserRecord }) => void;
+  onManageSubscription: (payload: { user: AdminUserRecord; mode: 'grant' | 'revoke' }) => void;
+  pendingSubscriptionUserIds: Set<string>;
 }) => {
   const roleKey = (user.role ?? 'user').toLowerCase();
   const isSelf = currentUserId === user.id;
@@ -381,8 +708,14 @@ const AdminUserRow = ({
     if (actorRole === 'admin' && roleKey !== 'owner') return true;
     return false;
   })();
-  const isUpdating = pendingUserId === user.id;
+  const isUpdating = pendingRoleUserIds.has(user.id);
   const isDeleting = pendingDeleteUserId === user.id;
+  const isSubscriptionUpdating = pendingSubscriptionUserIds.has(user.id);
+  const isMutatingIdentity = isUpdating || isDeleting;
+  const canRevokeGrantedSubscription =
+    user.active_subscription_source === 'legacy' || user.active_subscription_source === 'gift';
+  const canGrantSubscription = !(user.is_subscriber ?? false);
+  const canManageSubscription = canGrantSubscription || canRevokeGrantedSubscription;
 
   const canDelete = (() => {
     if (isManagerRole) return false;
@@ -411,7 +744,7 @@ const AdminUserRow = ({
       <TableCell>
         <div className="flex items-center gap-2">
           <p className="font-semibold text-gray-900">{user.name || 'Member'}</p>
-          {user.is_subscriber ? (
+          {(user.is_subscriber ?? false) ? (
             <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">Subscriber</Badge>
           ) : null}
         </div>
@@ -422,8 +755,10 @@ const AdminUserRow = ({
         {canEdit ? (
           <Select
             value={roleKey}
-            onValueChange={(value) => onChangeRole(user.id, value as UserRoleValue)}
-            disabled={isUpdating}
+            onValueChange={(value) => {
+              void onChangeRole(user.id, value as UserRoleValue);
+            }}
+            disabled={isMutatingIdentity}
           >
             <SelectTrigger className="w-36 justify-start">
               <SelectValue>{roleLabels[roleKey] ?? 'User'}</SelectValue>
@@ -446,16 +781,48 @@ const AdminUserRow = ({
         {new Date(user.created_at).toLocaleDateString()}
       </TableCell>
       <TableCell className="text-right">
-        {canDelete ? (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => onRequestDelete({ user })}
-            disabled={isDeleting}
-          >
-            {isDeleting ? 'Removing…' : 'Delete'}
-          </Button>
-        ) : null}
+        <div className="flex items-center justify-end gap-2">
+          {!isManagerRole && canManageSubscription ? (
+            <Button
+              variant={canRevokeGrantedSubscription ? 'outline' : 'secondary'}
+              size="sm"
+              onClick={() =>
+                onManageSubscription({
+                  user,
+                  mode: canRevokeGrantedSubscription ? 'revoke' : 'grant',
+                })
+              }
+              disabled={isSubscriptionUpdating || isMutatingIdentity}
+            >
+              {isSubscriptionUpdating ? (
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  Updating…
+                </>
+              ) : canRevokeGrantedSubscription ? (
+                <>
+                  <RotateCcw className="mr-1 h-3 w-3" />
+                  Revoke Sub
+                </>
+              ) : (
+                <>
+                  <Gift className="mr-1 h-3 w-3" />
+                  Grant Sub
+                </>
+              )}
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onRequestDelete({ user })}
+              disabled={isMutatingIdentity}
+            >
+              {isDeleting ? 'Removing…' : 'Delete'}
+            </Button>
+          ) : null}
+        </div>
       </TableCell>
     </TableRow>
   );

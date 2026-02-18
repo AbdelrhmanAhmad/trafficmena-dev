@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SubscriptionInfo, UserSubscription } from '@/app/api/subscriptions';
 import {
+  createSubscriptionGrant,
+  createSubscriptionGrantsFromCsv,
   fetchCurrentSubscription,
   fetchSubscriptionInfo,
   fetchSubscriptionSettings,
+  revokeSubscriptionGrant,
   updateSubscriptionSettings,
 } from '@/app/api/subscriptions';
 
@@ -45,5 +48,44 @@ export function useSubscriptionInfo() {
     queryKey: SUBSCRIPTION_INFO_KEY,
     queryFn: fetchSubscriptionInfo,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateSubscriptionGrant() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createSubscriptionGrant,
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });
+    },
+  });
+}
+
+export function useRevokeSubscriptionGrant() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: revokeSubscriptionGrant,
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });
+    },
+  });
+}
+
+export function useBulkSubscriptionGrants() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createSubscriptionGrantsFromCsv,
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
+      queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });
+    },
   });
 }

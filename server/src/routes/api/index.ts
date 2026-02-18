@@ -8,9 +8,11 @@ import { registerLibraryRoutes } from './library.js';
 import { registerPaymentRoutes } from './payments.js';
 import { registerPromoCodeRoutes } from './promoCodes.js';
 import { registerSeriesRoutes } from './series.js';
+import { registerSeriesGrantsRoutes } from './seriesGrants.js';
 import { registerSettingsRoutes } from './settings.js';
 import { registerSkillRoutes } from './skills.js';
 import { registerSubscriptionRoutes } from './subscriptions.js';
+import { registerSubscriptionGrantRoutes } from './subscriptionsGrants.js';
 import { registerTrackRoutes } from './tracks.js';
 import { registerUploadRoutes } from './uploads.js';
 import { registerUserRoutes } from './users.js';
@@ -27,12 +29,14 @@ export function registerApiRoutes(app: Hono) {
   registerLibraryRoutes(api);
   registerTrackRoutes(api);
   registerSeriesRoutes(api);
+  registerSeriesGrantsRoutes(api);
   registerSkillRoutes(api);
   registerInvitationRoutes(api);
   registerSettingsRoutes(api);
   registerUploadRoutes(api);
   registerPaymentRoutes(api);
   registerPromoCodeRoutes(api);
+  registerSubscriptionGrantRoutes(api);
   registerSubscriptionRoutes(api);
 
   app.route('/api', api);

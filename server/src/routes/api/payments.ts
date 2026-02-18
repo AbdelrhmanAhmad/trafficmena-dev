@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -29,6 +29,8 @@ import { paymentRateLimiter } from '../../services/rateLimiter.js';
 import { ApiError } from '../../utils/errors.js';
 import { isInvoicePaid } from '../../utils/invoiceStatus.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { ONE_YEAR_MS } from './subscriptionShared.js';
+import { isKnownDatabaseConflict } from './utils.js';
 
 // --- Rate Limit Rules ---
 const CHECKOUT_RATE_LIMIT = { limit: 5, windowMs: 60_000 }; // 5 checkouts per minute
@@ -321,21 +323,8 @@ function createCheckoutInFlightReservation(): CheckoutInFlightReservation {
   };
 }
 
-function extractDatabaseErrorCode(error: unknown, depth = 0): string | null {
-  if (!error || typeof error !== 'object' || depth > 3) {
-    return null;
-  }
-
-  const code = (error as { code?: unknown }).code;
-  if (typeof code === 'string') {
-    return code;
-  }
-
-  return extractDatabaseErrorCode((error as { cause?: unknown }).cause, depth + 1);
-}
-
 function isPostgresUniqueViolation(error: unknown): boolean {
-  return extractDatabaseErrorCode(error) === '23505';
+  return isKnownDatabaseConflict(error) === 'unique';
 }
 
 async function calculatePrice(
@@ -357,6 +346,7 @@ async function calculatePrice(
         and(
           eq(subscriptions.userId, userId),
           eq(subscriptions.status, 'active'),
+          isNull(subscriptions.revokedAt),
           gte(subscriptions.endsAt, new Date()),
         ),
       ),
@@ -892,21 +882,38 @@ async function processSuccessfulPayment(
           throw new ApiError('USER_NOT_FOUND', 'User not found.', 404);
         }
 
+        await tx
+          .update(subscriptions)
+          .set({ status: 'expired' })
+          .where(
+            and(
+              eq(subscriptions.userId, payment.userId),
+              eq(subscriptions.status, 'active'),
+              isNull(subscriptions.revokedAt),
+              lt(subscriptions.endsAt, paidAt),
+            ),
+          );
+
         const [activeSubscription] = await tx
           .select({
             id: subscriptions.id,
             paymentId: subscriptions.paymentId,
+            source: subscriptions.source,
+            endsAt: subscriptions.endsAt,
           })
           .from(subscriptions)
           .where(
             and(
               eq(subscriptions.userId, payment.userId),
               eq(subscriptions.status, 'active'),
+              isNull(subscriptions.revokedAt),
               gte(subscriptions.endsAt, paidAt),
             ),
           )
           .for('update')
           .limit(1);
+
+        const paidRenewalEndsAt = new Date(paidAt.getTime() + ONE_YEAR_MS);
 
         // A second paid subscription invoice should not create duplicate active rows.
         if (!activeSubscription) {
@@ -914,12 +921,33 @@ async function processSuccessfulPayment(
             userId: payment.userId,
             status: 'active',
             startsAt: paidAt,
-            endsAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365 days
+            endsAt: paidRenewalEndsAt,
+            source: 'paid',
             pricePaidCents: payment.amountCents,
             paymentId: payment.id,
           });
-        } else {
+        } else if (activeSubscription.source === 'paid') {
           alreadyProcessed = true;
+        } else {
+          // Convert legacy/gift entitlement into paid ownership so a paid invoice never ends
+          // up without a paid active subscription due to grant/revoke timing races.
+          await tx
+            .update(subscriptions)
+            .set({
+              startsAt: paidAt,
+              endsAt:
+                activeSubscription.endsAt > paidRenewalEndsAt
+                  ? activeSubscription.endsAt
+                  : paidRenewalEndsAt,
+              source: 'paid',
+              pricePaidCents: payment.amountCents,
+              paymentId: payment.id,
+              revokedAt: null,
+              revokedBy: null,
+              revokeReason: null,
+              status: 'active',
+            })
+            .where(eq(subscriptions.id, activeSubscription.id));
         }
       }
 
