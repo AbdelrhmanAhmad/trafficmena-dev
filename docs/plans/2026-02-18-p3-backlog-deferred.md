@@ -9,7 +9,7 @@ priority: low
 
 # P3 Backlog — Deferred from Legacy Members Branch
 
-These 10 findings were identified during the code review of `codex/legacy-members-fixes` and rated P3 (nice-to-have). None are bugs, none affect users, and none block the merge. Handle in a follow-up `chore/code-cleanup` branch when convenient.
+These 12 findings were identified during the code review of `codex/legacy-members-fixes` and rated P3 (nice-to-have). None are bugs, none affect users, and none block the merge. Handle in a follow-up `chore/code-cleanup` branch when convenient.
 
 ---
 
@@ -121,10 +121,31 @@ Contains a single constant (`JSON_BODY_LIMIT_BYTES`). Could be folded into `json
 
 ---
 
+## #21 — `extractCsvPayload` has YAGNI options param and redundant File/Blob branches
+
+**File**: `server/src/routes/api/utils.ts` (lines 223-290)
+
+The `options: { maxBytes?: number }` parameter is never called with a non-default value. Both callers use `extractCsvPayload(c)` with no options. The separate `File` and `Blob` handling (lines 250-270) is redundant since `File extends Blob` in all modern runtimes.
+
+**Fix when ready**: Remove the `options` parameter. Collapse File/Blob branches into a single Blob branch.
+
+---
+
+## #22 — Simplify `subscriptionsGrantsBulk.ts` catch block re-query (66 LOC)
+
+**File**: `server/src/routes/api/subscriptionsGrantsBulk.ts` (lines 223-289)
+
+On unique constraint violation, the catch block re-queries the subscriptions table to produce per-user error messages for a near-impossible race condition (two admins uploading overlapping CSVs simultaneously). The companion `seriesGrantsBulk.ts` handles the equivalent scenario in 12 lines with a generic message.
+
+**Fix when ready**: Collapse the catch block to match `seriesGrantsBulk.ts` pattern. Return a generic "subscriptions changed, retry" message. ~50 LOC reduction.
+
+---
+
 ## Priority Order (if/when addressed)
 
 1. **#13** (DI removal) — reduces confusion, 5 min
 2. **#19** (shared CSV helper) — reduces duplication, 15 min
-3. **#14** (users.tsx split) — improves maintainability, 30 min
-4. **#12** (unsafe casts) — type safety, 10 min
-5. Rest — as time permits
+3. **#22** (catch block simplification) — reduces complexity, 10 min
+4. **#14** (users.tsx split) — improves maintainability, 30 min
+5. **#12** (unsafe casts) — type safety, 10 min
+6. Rest — as time permits

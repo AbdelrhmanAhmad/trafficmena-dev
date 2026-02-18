@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
-import type { ChangeEvent } from 'react';
+import { ChevronLeft, ChevronRight, Loader2, Search, Upload } from 'lucide-react';
+import type { ChangeEvent, KeyboardEvent } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ApiError } from '@/app/api/client';
 import { fetchUsersAdmin } from '@/app/api/users';
@@ -50,7 +50,7 @@ type SeriesAccessManagerProps = {
 export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAccessManagerProps) {
   const { toast } = useToast();
   const [searchInput, setSearchInput] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [committedSearch, setCommittedSearch] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [grantReason, setGrantReason] = useState('Legacy premium series access grant');
   const [csvErrors, setCsvErrors] = useState<
@@ -67,20 +67,27 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   const searchId = useId();
   const reasonId = useId();
   const revokeReasonId = useId();
-  const hasSearch = debouncedSearch.length > 0;
+  const hasSearch = committedSearch.length > 0;
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedSearch(searchInput.trim());
-      setGrantsPage(1);
-    }, 300);
-    return () => window.clearTimeout(timeout);
-  }, [searchInput]);
+  const handleSearch = () => {
+    const trimmed = searchInput.trim();
+    if (trimmed === committedSearch) return;
+    setCommittedSearch(trimmed);
+    setSelectedUserIds([]);
+    setGrantsPage(1);
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (!isAnyMutationPending) handleSearch();
+    }
+  };
 
   const grantsQuery = useSeriesGrants(seriesId, {
     page: grantsPage,
     pageSize: GRANTS_PAGE_SIZE,
-    search: debouncedSearch,
+    search: committedSearch,
   });
   const grantMutation = useGrantSeriesAccess(seriesId);
   const revokeMutation = useRevokeSeriesAccess(seriesId);
@@ -90,7 +97,6 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
 
   const grantsTotal = grantsQuery.data?.pagination.total ?? 0;
   const grantsTotalPages = Math.max(1, Math.ceil(grantsTotal / GRANTS_PAGE_SIZE));
-  const isDebouncing = searchInput.trim() !== debouncedSearch;
 
   // Clamp page when total shrinks below current page (e.g., last-item revoke)
   useEffect(() => {
@@ -98,10 +104,16 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   }, [grantsPage, grantsTotalPages]);
 
   const usersQuery = useQuery({
-    queryKey: ['series-grant-users-search', debouncedSearch],
-    queryFn: () => fetchUsersAdmin({ page: 1, pageSize: 20, search: debouncedSearch || undefined }),
+    queryKey: ['series-grant-users-search', committedSearch],
+    queryFn: () =>
+      fetchUsersAdmin({
+        page: 1,
+        pageSize: 20,
+        search: committedSearch || undefined,
+        fields: 'basic',
+      }),
     staleTime: 30 * 1000,
-    enabled: hasSearch && searchInput.trim() === debouncedSearch,
+    enabled: hasSearch,
   });
 
   const isRevokeDialogPending = Boolean(revokeDialog && revokingUserId === revokeDialog.userId);
@@ -237,12 +249,29 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-3 rounded-xl border border-neutral-200 p-4">
             <Label htmlFor={searchId}>Search members</Label>
-            <Input
-              id={searchId}
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Search by email"
-            />
+            <div className="flex gap-2">
+              <Input
+                id={searchId}
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Type email and press Enter"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleSearch}
+                disabled={isAnyMutationPending || searchInput.trim().length === 0}
+                className="shrink-0"
+              >
+                {usersQuery.isFetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
 
             <Label htmlFor={reasonId}>Grant reason</Label>
             <Input
@@ -253,11 +282,11 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
             />
 
             <div className="max-h-56 space-y-2 overflow-auto rounded-lg border border-neutral-200 p-2">
-              {usersQuery.isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading members…</p>
+              {usersQuery.isFetching ? (
+                <p className="text-sm text-muted-foreground">Searching members…</p>
               ) : !hasSearch ? (
                 <p className="text-sm text-muted-foreground">
-                  Search by email to load grantable members.
+                  Type an email and press Enter or click the search button.
                 </p>
               ) : usersQuery.isError ? (
                 <p className="text-sm text-destructive">{grantUsersErrorMessage}</p>
@@ -395,7 +424,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
                 variant="outline"
                 size="icon"
                 onClick={() => setGrantsPage((p) => Math.max(1, p - 1))}
-                disabled={grantsPage === 1 || isDebouncing}
+                disabled={grantsPage === 1}
                 className="rounded-lg"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -407,7 +436,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
                 variant="outline"
                 size="icon"
                 onClick={() => setGrantsPage((p) => Math.min(grantsTotalPages, p + 1))}
-                disabled={grantsPage >= grantsTotalPages || isDebouncing}
+                disabled={grantsPage >= grantsTotalPages}
                 className="rounded-lg"
               >
                 <ChevronRight className="h-4 w-4" />

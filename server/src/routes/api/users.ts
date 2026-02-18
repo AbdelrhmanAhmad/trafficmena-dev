@@ -6,7 +6,7 @@ import { profiles, users } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { parseUsersListQuery } from './users-list.js';
 import { normalizePhoneNumber, validatePhoneNumberUpdate } from './users-phone.js';
-import { escapeLikePattern, notImplemented, requireRole } from './utils.js';
+import { escapeLikePattern, normalizeRole, notImplemented, requireRole } from './utils.js';
 
 const updateMeSchema = z.object({
   name: z.string().min(1).max(255).optional(),
@@ -30,6 +30,14 @@ const isEmptyValue = (value: string | null | undefined) => !value || value.trim(
 
 const getActiveSubscriptionSelectors = (now: Date) => ({
   exists: sql<boolean>`EXISTS (
+    SELECT 1
+    FROM subscriptions s
+    WHERE s.user_id = ${users.id}
+      AND s.subscription_status = 'active'
+      AND s.revoked_at IS NULL
+      AND s.ends_at >= ${now}
+  )`,
+  notExists: sql<boolean>`NOT EXISTS (
     SELECT 1
     FROM subscriptions s
     WHERE s.user_id = ${users.id}
@@ -90,6 +98,7 @@ export function registerUserRoutes(app: Hono) {
       search: c.req.query('search'),
       role: c.req.query('role'),
       subscription: c.req.query('subscription'),
+      fields: c.req.query('fields'),
     });
 
     if (!parsed.success) {
@@ -104,20 +113,12 @@ export function registerUserRoutes(app: Hono) {
       );
     }
 
-    const { page, pageSize, role, search, subscription } = parsed.data;
+    const { page, pageSize, role, search, subscription, fields } = parsed.data;
     const offset = (page - 1) * pageSize;
+    const isBasicFields = fields === 'basic';
 
     const now = new Date();
     const subscriptionSelectors = getActiveSubscriptionSelectors(now);
-    const subscriptionExistsCondition = subscriptionSelectors.exists;
-    const subscriptionMissingCondition = sql<boolean>`NOT EXISTS (
-      SELECT 1
-      FROM subscriptions s
-      WHERE s.user_id = ${users.id}
-        AND s.subscription_status = 'active'
-        AND s.revoked_at IS NULL
-        AND s.ends_at >= ${now}
-    )`;
 
     const filters: SQL<unknown>[] = [];
 
@@ -140,13 +141,50 @@ export function registerUserRoutes(app: Hono) {
       }
     }
 
-    if (subscription === 'subscribed') {
-      filters.push(subscriptionExistsCondition);
-    } else if (subscription === 'not_subscribed') {
-      filters.push(subscriptionMissingCondition);
+    if (!isBasicFields && subscription === 'subscribed') {
+      filters.push(subscriptionSelectors.exists);
+    } else if (!isBasicFields && subscription === 'not_subscribed') {
+      filters.push(subscriptionSelectors.notExists);
     }
 
     const whereClause = filters.length > 0 ? and(...filters) : undefined;
+
+    const countQuery = db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(users)
+      .leftJoin(profiles, eq(users.id, profiles.id))
+      .where(whereClause);
+
+    if (isBasicFields) {
+      const [items, totalResult] = await Promise.all([
+        db
+          .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            createdAt: users.createdAt,
+            role: profiles.role,
+            userType: profiles.userType,
+            phoneNumber: profiles.phoneNumber,
+          })
+          .from(users)
+          .leftJoin(profiles, eq(users.id, profiles.id))
+          .where(whereClause)
+          .orderBy(desc(users.createdAt), desc(users.id))
+          .limit(pageSize)
+          .offset(offset),
+        countQuery,
+      ]);
+
+      return c.json({
+        items,
+        pagination: {
+          page,
+          pageSize,
+          total: Number(totalResult[0]?.count ?? 0),
+        },
+      });
+    }
 
     const [items, totalResult] = await Promise.all([
       db
@@ -158,7 +196,7 @@ export function registerUserRoutes(app: Hono) {
           role: profiles.role,
           userType: profiles.userType,
           phoneNumber: profiles.phoneNumber,
-          isSubscriber: subscriptionExistsCondition,
+          isSubscriber: subscriptionSelectors.exists,
           activeSubscriptionSource: subscriptionSelectors.source,
         })
         .from(users)
@@ -167,11 +205,7 @@ export function registerUserRoutes(app: Hono) {
         .orderBy(desc(users.createdAt), desc(users.id))
         .limit(pageSize)
         .offset(offset),
-      db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(users)
-        .leftJoin(profiles, eq(users.id, profiles.id))
-        .where(whereClause),
+      countQuery,
     ]);
 
     return c.json({
@@ -450,7 +484,7 @@ export function registerUserRoutes(app: Hono) {
       .where(eq(profiles.id, targetId))
       .limit(1);
 
-    const currentRole = (target?.role ?? 'user') as (typeof roleValues)[number];
+    const currentRole = normalizeRole(target?.role);
 
     if (actor.userId === targetId && desiredRole !== 'owner') {
       return c.json(
@@ -561,7 +595,7 @@ export function registerUserRoutes(app: Hono) {
       .where(eq(profiles.id, targetId))
       .limit(1);
 
-    const targetRole = (target?.role ?? 'user').toLowerCase() as (typeof roleValues)[number];
+    const targetRole = normalizeRole(target?.role);
 
     if (actor.role === 'admin' && targetRole === 'owner') {
       return c.json(

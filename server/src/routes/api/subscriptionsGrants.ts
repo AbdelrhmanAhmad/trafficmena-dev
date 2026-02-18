@@ -1,5 +1,6 @@
 import { and, eq, gte, inArray, isNull, lt } from 'drizzle-orm';
 import type { Hono } from 'hono';
+import type { z } from 'zod';
 import { db } from '../../db/client.js';
 import { subscriptions, users } from '../../db/schema/index.js';
 import { extractJsonPayload } from './jsonPayload.js';
@@ -13,16 +14,8 @@ import { consumeRateLimit, requireAdmin } from './utils.js';
 
 const GRANT_MUTATION_RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 
-type CreateSubscriptionGrantPayload = {
-  userId: string;
-  source: 'legacy' | 'gift';
-  reason: string;
-};
-
-type RevokeSubscriptionGrantPayload = {
-  userId: string;
-  reason: string;
-};
+type CreateSubscriptionGrantPayload = z.infer<typeof createSubscriptionGrantSchema>;
+type RevokeSubscriptionGrantPayload = z.infer<typeof revokeSubscriptionGrantSchema>;
 
 type CreateGrantResult =
   | { type: 'user_not_found' }
@@ -123,31 +116,33 @@ async function revokeSubscriptionGrantRecord(params: {
   payload: RevokeSubscriptionGrantPayload;
   now: Date;
 }): Promise<RevokeGrantResult> {
-  const [revoked] = await db
-    .update(subscriptions)
-    .set({
-      status: 'expired',
-      endsAt: params.now,
-      revokedAt: params.now,
-      revokedBy: params.actorUserId,
-      revokeReason: params.payload.reason,
-    })
-    .where(
-      and(
-        eq(subscriptions.userId, params.payload.userId),
-        eq(subscriptions.status, 'active'),
-        isNull(subscriptions.revokedAt),
-        gte(subscriptions.endsAt, params.now),
-        inArray(subscriptions.source, ['legacy', 'gift']),
-      ),
-    )
-    .returning({ id: subscriptions.id });
+  return db.transaction(async (tx) => {
+    const [revoked] = await tx
+      .update(subscriptions)
+      .set({
+        status: 'expired',
+        endsAt: params.now,
+        revokedAt: params.now,
+        revokedBy: params.actorUserId,
+        revokeReason: params.payload.reason,
+      })
+      .where(
+        and(
+          eq(subscriptions.userId, params.payload.userId),
+          eq(subscriptions.status, 'active'),
+          isNull(subscriptions.revokedAt),
+          gte(subscriptions.endsAt, params.now),
+          inArray(subscriptions.source, ['legacy', 'gift']),
+        ),
+      )
+      .returning({ id: subscriptions.id });
 
-  if (!revoked) {
-    return { type: 'not_found' };
-  }
+    if (!revoked) {
+      return { type: 'not_found' };
+    }
 
-  return { type: 'revoked', id: revoked.id };
+    return { type: 'revoked', id: revoked.id };
+  });
 }
 
 type RegisterSubscriptionGrantRoutesDeps = {

@@ -1,5 +1,13 @@
 import { API_BASE, ApiError, fetchJson, getCsrfHeaders } from './client';
 
+type ApiErrorPayload = {
+  error?: {
+    message?: string;
+    code?: string;
+    errors?: Array<{ line: number; email: string; reason: string }>;
+  };
+};
+
 export type SeriesGrantRecord = {
   id: string;
   userId: string;
@@ -88,7 +96,7 @@ export async function createSeriesGrantsFromCsv(file: File): Promise<BulkSeriesG
   const isJson = response.headers.get('content-type')?.includes('application/json');
   if (!response.ok) {
     if (isJson) {
-      const payload = await response.json();
+      const payload: ApiErrorPayload = await response.json();
       throw new ApiError(
         payload?.error?.message ?? response.statusText,
         response.status,

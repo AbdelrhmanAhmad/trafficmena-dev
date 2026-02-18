@@ -483,6 +483,7 @@ const AdminUsersPage = () => {
                         deleteMutation.isPending ? (deleteMutation.variables ?? null) : null
                       }
                       onManageSubscription={(payload) => {
+                        if (subscriptionDialog) return;
                         setSubscriptionDialog(payload);
                         setSubscriptionReason(
                           payload.mode === 'grant'
@@ -713,7 +714,7 @@ const AdminUserRow = ({
   const isMutatingIdentity = isUpdating || isDeleting;
   const canRevokeGrantedSubscription =
     user.active_subscription_source === 'legacy' || user.active_subscription_source === 'gift';
-  const canGrantSubscription = !user.is_subscriber;
+  const canGrantSubscription = !(user.is_subscriber ?? false);
   const canManageSubscription = canGrantSubscription || canRevokeGrantedSubscription;
 
   const canDelete = (() => {
@@ -743,7 +744,7 @@ const AdminUserRow = ({
       <TableCell>
         <div className="flex items-center gap-2">
           <p className="font-semibold text-gray-900">{user.name || 'Member'}</p>
-          {user.is_subscriber ? (
+          {(user.is_subscriber ?? false) ? (
             <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">Subscriber</Badge>
           ) : null}
         </div>

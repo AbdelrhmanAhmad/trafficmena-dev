@@ -67,8 +67,8 @@ export type AdminUserRecord = {
   phone_number: string | null;
   role: string | null;
   user_type: string | null;
-  is_subscriber: boolean;
-  active_subscription_source: 'paid' | 'legacy' | 'gift' | null;
+  is_subscriber?: boolean;
+  active_subscription_source?: 'paid' | 'legacy' | 'gift' | null;
 };
 
 type ApiAdminUser = {
@@ -100,6 +100,7 @@ export type FetchUsersAdminParams = {
   search?: string;
   role?: UserRoleValue;
   subscription?: AdminUsersSubscriptionFilter;
+  fields?: 'full' | 'basic';
 };
 
 export async function fetchCurrentUser(): Promise<CurrentUserResponse> {
@@ -123,6 +124,7 @@ export async function fetchUsersAdmin(
   if (params.subscription && params.subscription !== 'all') {
     query.set('subscription', params.subscription);
   }
+  if (params.fields === 'basic') query.set('fields', 'basic');
 
   const data = await fetchJson<{
     items: ApiAdminUser[];

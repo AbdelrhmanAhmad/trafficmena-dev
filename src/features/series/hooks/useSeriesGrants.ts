@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createSeriesGrantsFromCsv,
   type FetchSeriesGrantsParams,
@@ -16,6 +16,7 @@ export function useSeriesGrants(seriesId: string, params: FetchSeriesGrantsParam
     queryFn: ({ signal }) => fetchSeriesGrants(seriesId, params, signal),
     enabled: Boolean(seriesId),
     staleTime: 30 * 1000,
+    placeholderData: keepPreviousData,
   });
 }
 
