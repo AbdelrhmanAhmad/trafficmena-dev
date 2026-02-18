@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
 import type { ChangeEvent } from 'react';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ApiError } from '@/app/api/client';
-import { fetchAllSeriesGrantUserIds } from '@/app/api/seriesGrants';
 import { fetchUsersAdmin } from '@/app/api/users';
 import {
   useBulkSeriesGrants,
@@ -73,14 +72,10 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setDebouncedSearch(searchInput.trim());
+      setGrantsPage(1);
     }, 300);
     return () => window.clearTimeout(timeout);
   }, [searchInput]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset page when search changes
-  useEffect(() => {
-    setGrantsPage(1);
-  }, [debouncedSearch]);
 
   const grantsQuery = useSeriesGrants(seriesId, {
     page: grantsPage,
@@ -95,6 +90,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
 
   const grantsTotal = grantsQuery.data?.pagination.total ?? 0;
   const grantsTotalPages = Math.max(1, Math.ceil(grantsTotal / GRANTS_PAGE_SIZE));
+  const isDebouncing = searchInput.trim() !== debouncedSearch;
 
   // Clamp page when total shrinks below current page (e.g., last-item revoke)
   useEffect(() => {
@@ -108,33 +104,13 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     enabled: hasSearch && searchInput.trim() === debouncedSearch,
   });
 
-  const allGrantedUserIdsQuery = useQuery({
-    queryKey: ['series-granted-user-ids', seriesId, debouncedSearch],
-    queryFn: ({ signal }) => fetchAllSeriesGrantUserIds(seriesId, 200, signal, debouncedSearch),
-    enabled: Boolean(seriesId) && hasSearch && searchInput.trim() === debouncedSearch,
-    staleTime: 30 * 1000,
-  });
-
-  const grantedUserIds = useMemo(
-    () => new Set(allGrantedUserIdsQuery.data ?? []),
-    [allGrantedUserIdsQuery.data],
-  );
-
-  useEffect(() => {
-    setSelectedUserIds((current) => current.filter((userId) => !grantedUserIds.has(userId)));
-  }, [grantedUserIds]);
-
   const isRevokeDialogPending = Boolean(revokeDialog && revokingUserId === revokeDialog.userId);
 
-  const selectableUsers = (usersQuery.data?.items ?? []).filter(
-    (user) => !grantedUserIds.has(user.id),
-  );
-  let grantUsersErrorMessage = 'Unable to load member list right now. Please refresh.';
-  if (allGrantedUserIdsQuery.error instanceof Error) {
-    grantUsersErrorMessage = allGrantedUserIdsQuery.error.message;
-  } else if (usersQuery.error instanceof Error) {
-    grantUsersErrorMessage = usersQuery.error.message;
-  }
+  const searchResults = usersQuery.data?.items ?? [];
+  const grantUsersErrorMessage =
+    usersQuery.error instanceof Error
+      ? usersQuery.error.message
+      : 'Unable to load member list right now. Please refresh.';
 
   const toggleUser = (userId: string) => {
     setSelectedUserIds((current) =>
@@ -275,22 +251,20 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
             />
 
             <div className="max-h-56 space-y-2 overflow-auto rounded-lg border border-neutral-200 p-2">
-              {usersQuery.isLoading || allGrantedUserIdsQuery.isLoading ? (
+              {usersQuery.isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading members…</p>
               ) : !hasSearch ? (
                 <p className="text-sm text-muted-foreground">
                   Search by email to load grantable members.
                 </p>
-              ) : usersQuery.isError || allGrantedUserIdsQuery.isError ? (
+              ) : usersQuery.isError ? (
                 <p className="text-sm text-destructive">{grantUsersErrorMessage}</p>
-              ) : selectableUsers.length === 0 ? (
+              ) : searchResults.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {usersQuery.data?.items.length
-                    ? 'All matching users already have access to this series.'
-                    : 'No users found matching this search.'}
+                  No users found matching this search.
                 </p>
               ) : (
-                selectableUsers.map((user) => (
+                searchResults.map((user) => (
                   <div
                     key={user.id}
                     className="flex items-center gap-2 rounded-md p-2 hover:bg-neutral-50"
@@ -419,7 +393,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
                 variant="outline"
                 size="icon"
                 onClick={() => setGrantsPage((p) => Math.max(1, p - 1))}
-                disabled={grantsPage === 1}
+                disabled={grantsPage === 1 || isDebouncing}
                 className="rounded-lg"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -431,7 +405,7 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
                 variant="outline"
                 size="icon"
                 onClick={() => setGrantsPage((p) => Math.min(grantsTotalPages, p + 1))}
-                disabled={grantsPage >= grantsTotalPages}
+                disabled={grantsPage >= grantsTotalPages || isDebouncing}
                 className="rounded-lg"
               >
                 <ChevronRight className="h-4 w-4" />

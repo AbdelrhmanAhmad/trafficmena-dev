@@ -42,66 +42,6 @@ export async function fetchSeriesGrants(
   );
 }
 
-export async function fetchAllSeriesGrantUserIds(
-  seriesId: string,
-  pageSize = 200,
-  signal?: AbortSignal,
-  search?: string,
-): Promise<string[]> {
-  const safePageSize = Math.max(1, Math.min(pageSize, 200));
-  const collected = new Set<string>();
-  const normalizedSearch = search?.trim();
-
-  if (signal?.aborted) {
-    throw new DOMException('The operation was aborted.', 'AbortError');
-  }
-
-  const MAX_PAGES = 50;
-  let page = 1;
-  let total: number | null = null;
-  while (page <= MAX_PAGES) {
-    if (signal?.aborted) {
-      throw new DOMException('The operation was aborted.', 'AbortError');
-    }
-
-    const response = await fetchSeriesGrants(
-      seriesId,
-      { page, pageSize: safePageSize, search: normalizedSearch },
-      signal,
-    );
-    for (const item of response.items) {
-      collected.add(item.userId);
-    }
-
-    const reportedTotal = response.pagination.total;
-    if (Number.isFinite(reportedTotal)) {
-      total = reportedTotal;
-    }
-
-    if (response.items.length < safePageSize) {
-      break;
-    }
-
-    if (total !== null && collected.size >= total) {
-      break;
-    }
-
-    if (total === null && response.items.length === 0) {
-      break;
-    }
-
-    page += 1;
-  }
-
-  if (page > MAX_PAGES && (total === null || collected.size < total)) {
-    throw new Error(
-      'Series has too many grants to load safely in one request. Add or refine the search and retry.',
-    );
-  }
-
-  return Array.from(collected);
-}
-
 export async function grantSeriesAccess(
   seriesId: string,
   payload: { userIds: string[]; reason: string },
