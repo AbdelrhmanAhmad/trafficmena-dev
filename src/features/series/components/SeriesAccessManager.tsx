@@ -211,7 +211,9 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
       const message = error instanceof Error ? error.message : 'Bulk upload failed.';
       const extra =
         error instanceof ApiError
-          ? (error.extra?.errors as Array<{ line: number; email: string; reason: string }> | undefined)
+          ? (error.extra?.errors as
+              | Array<{ line: number; email: string; reason: string }>
+              | undefined)
           : undefined;
       setCsvErrors(extra ?? []);
       toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });

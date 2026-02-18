@@ -262,7 +262,9 @@ const AdminUsersPage = () => {
       const message = error instanceof Error ? error.message : 'Bulk subscription upload failed.';
       const extra =
         error instanceof ApiError
-          ? (error.extra?.errors as Array<{ line: number; email: string; source: string; reason: string }> | undefined)
+          ? (error.extra?.errors as
+              | Array<{ line: number; email: string; source: string; reason: string }>
+              | undefined)
           : undefined;
       setBulkSubscriptionErrors(extra ?? []);
       toast({ title: 'Bulk upload failed', description: message, variant: 'destructive' });
