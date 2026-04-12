@@ -18,12 +18,14 @@ import { getAdminDashboardPath } from '@/shared/utils/adminAccess';
 const UserProfileDropdown: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { canAccessAdmin, isOwner, isAdmin, isManager, role } = useRolePermissions();
+  const { canAccessAdmin, canAccessSubscriptionPages, isOwner, isAdmin, isManager, role } =
+    useRolePermissions();
   const { data: currentUser } = useCurrentUser();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
   const profile = currentUser?.profile;
 
   const hasActiveSubscription = subscription?.status === 'active';
+  const showSubscriptionEntry = canAccessSubscriptionPages && !hasActiveSubscription;
 
   const handleSignOut = async () => {
     try {
@@ -120,7 +122,7 @@ const UserProfileDropdown: React.FC = () => {
           </Link>
         </DropdownMenuItem>
 
-        {!hasActiveSubscription && (
+        {showSubscriptionEntry && (
           <DropdownMenuItem asChild>
             <Link
               to="/dashboard/subscribe"

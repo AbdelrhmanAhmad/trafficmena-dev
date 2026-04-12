@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Calendar, Crown, Loader2 } from 'lucide-react';
+import { Calendar, Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -11,7 +11,6 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getPendingEventContext } from '@/shared/utils/eventRedirectUtils';
-import { getPendingSubscriptionContext } from '@/shared/utils/subscriptionRedirectUtils';
 
 const ACCEPTANCE_CACHE_KEY = 'trafficmena:invitation-acceptance';
 const AUTO_ACCEPT_META_KEY = 'trafficmena:invitation-autoaccept-meta';
@@ -43,7 +42,6 @@ const Step0: React.FC = () => {
   }, [resetForm]);
 
   const [eventContext] = useState(getPendingEventContext());
-  const [subscriptionContext] = useState(getPendingSubscriptionContext());
   const [acceptanceDetails, setAcceptanceDetails] = useState<AcceptanceDetails | null>(() => {
     if (typeof window === 'undefined') return null;
     const raw = sessionStorage.getItem(ACCEPTANCE_CACHE_KEY);
@@ -322,24 +320,7 @@ const Step0: React.FC = () => {
               </Card>
             )}
 
-            {subscriptionContext && (
-              <Card className="mb-6 rounded-2xl border-amber-200 bg-amber-50/80">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-                    <Crown className="h-5 w-5 text-amber-600" />
-                    Subscribing to TrafficMENA Premium
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-amber-700">
-                    Complete your signup to continue with your subscription and unlock premium
-                    benefits.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {eventContext && !subscriptionContext && (
+            {eventContext && (
               <Card className="mb-6 rounded-2xl border-green-200 bg-green-50/80">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold text-green-900">

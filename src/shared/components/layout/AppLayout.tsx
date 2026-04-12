@@ -127,7 +127,8 @@ interface AppLayoutProps {
 function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
   const location = useLocation();
   const { user } = useAuth();
-  const { loading, rank, isOwner, isAdmin, isManager } = useRolePermissions();
+  const { loading, rank, isOwner, isAdmin, isManager, canAccessSubscriptionPages } =
+    useRolePermissions();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
   const hasActiveSubscription = subscription?.status === 'active';
 
@@ -238,7 +239,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                   </SidebarMenuItem>
                 );
               })}
-              {variant === 'member' && !hasActiveSubscription && (
+              {variant === 'member' && canAccessSubscriptionPages && !hasActiveSubscription && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild

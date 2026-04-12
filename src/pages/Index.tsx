@@ -20,6 +20,7 @@ import { EventCard } from '@/features/events/components/EventCard';
 import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
 
 const benefitItems = [
@@ -117,12 +118,18 @@ const FREE_FEATURES = [
   { icon: Sparkles, title: 'AI for Marketers Track', desc: '5 practical sessions' },
   { icon: MessageCircle, title: 'Monthly Q&A Session', desc: 'Direct expert access' },
   { icon: Calculator, title: '23 Marketing Calculators', desc: 'ROAS, MER, CAC & more' },
-  { icon: Library, title: 'Premium Content Access', desc: 'After 6+ months' },
+  {
+    icon: Library,
+    title: 'Premium Content Access',
+    desc: 'After 6+ months',
+    isSubscriptionFeature: true,
+  },
   { icon: Users2, title: 'Community Access', desc: '1,200+ marketers' },
 ];
 
 const Index: React.FC = () => {
   const { handleError } = useErrorHandler();
+  const { canAccessSubscriptionPages } = useRolePermissions();
   const [visibleEvents, setVisibleEvents] = useState(6);
   const [isLoaded, setIsLoaded] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -197,6 +204,12 @@ const Index: React.FC = () => {
   }, []);
 
   const displayEvents = events.slice(0, visibleEvents);
+  const visibleBenefitItems = canAccessSubscriptionPages
+    ? benefitItems
+    : benefitItems.filter((item) => !item.isPremium);
+  const visibleFreeFeatures = canAccessSubscriptionPages
+    ? FREE_FEATURES
+    : FREE_FEATURES.filter((item) => !item.isSubscriptionFeature);
 
   return (
     <Layout>
@@ -253,16 +266,17 @@ const Index: React.FC = () => {
                       </Link>
                     </Button>
 
-                    {/* Secondary CTA - Go Premium */}
-                    <Button
-                      className="group flex gap-2 transform rounded-xl border-2 border-amber-300 bg-amber-50 px-6 py-3.5 text-sm font-medium text-amber-700 transition-all duration-300 hover:bg-amber-100 hover:shadow-lg hover:scale-105 hover:-translate-y-1 active:scale-95"
-                      asChild
-                    >
-                      <Link to="/subscribe">
-                        <Crown className="h-4 w-4" />
-                        <span>Go Premium / 50% Off</span>
-                      </Link>
-                    </Button>
+                    {canAccessSubscriptionPages && (
+                      <Button
+                        className="group flex gap-2 transform rounded-xl border-2 border-amber-300 bg-amber-50 px-6 py-3.5 text-sm font-medium text-amber-700 transition-all duration-300 hover:bg-amber-100 hover:shadow-lg hover:scale-105 hover:-translate-y-1 active:scale-95"
+                        asChild
+                      >
+                        <Link to="/subscribe">
+                          <Crown className="h-4 w-4" />
+                          <span>Go Premium / 50% Off</span>
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -409,7 +423,7 @@ const Index: React.FC = () => {
             </div>
 
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {FREE_FEATURES.map((item) => (
+              {visibleFreeFeatures.map((item) => (
                 <div
                   key={item.title}
                   className="flex items-start gap-4 rounded-2xl border border-neutral-200 bg-neutral-50/50 p-4"
@@ -445,10 +459,14 @@ const Index: React.FC = () => {
               <div className="mx-auto max-w-3xl text-center">
                 <span className="text-sm font-normal text-neutral-500">Your Growth Journey</span>
                 <h2 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
-                  What You Get at Every Level
+                  {canAccessSubscriptionPages
+                    ? 'What You Get at Every Level'
+                    : 'What You Get With Membership'}
                 </h2>
                 <p className="mt-3 text-sm text-neutral-600">
-                  Whether you start free or go premium, here's what's waiting for you.
+                  {canAccessSubscriptionPages
+                    ? "Whether you start free or go premium, here's what's waiting for you."
+                    : "Here's what members can access right now."}
                 </p>
               </div>
             </div>
@@ -465,14 +483,14 @@ const Index: React.FC = () => {
 
                 {/* Benefits List */}
                 <div className="space-y-12 sm:space-y-16">
-                  {benefitItems.map((benefit, index) => {
+                  {visibleBenefitItems.map((benefit, index) => {
                     const Icon = benefit.icon;
                     const isPremium = benefit.isPremium;
 
                     return (
                       <div key={benefit.id}>
                         {/* Timeline Transition Point - Insert after index 2 (item 03) */}
-                        {index === 3 && (
+                        {canAccessSubscriptionPages && index === 3 && (
                           <div className="relative py-6 sm:py-8 mb-12 sm:mb-16">
                             {/* Transition card */}
                             <div className="ml-16 lg:ml-0 relative overflow-hidden rounded-3xl border border-neutral-200/60 bg-gradient-to-r from-[#05ef62]/8 via-white/95 to-amber-50/70 p-5 sm:p-7 shadow-xl shadow-neutral-900/[0.04]">
@@ -609,8 +627,9 @@ const Index: React.FC = () => {
                 Start Your Marketing Journey Today
               </h3>
               <p className="mt-2 text-sm text-white/70 max-w-2xl mx-auto">
-                Whether you choose free or premium, you're joining 1,200+ marketers who are leveling
-                up together.
+                {canAccessSubscriptionPages
+                  ? "Whether you choose free or premium, you're joining 1,200+ marketers who are leveling up together."
+                  : 'Join 1,200+ marketers who are leveling up together.'}
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Button
@@ -619,19 +638,23 @@ const Index: React.FC = () => {
                 >
                   <Link to="/signup">Join Free</Link>
                 </Button>
-                <Button
-                  className="group inline-flex items-center gap-2 transform rounded-xl border-2 border-amber-400/50 bg-amber-50/10 px-5 py-3 text-sm font-medium text-white transition-all duration-300 hover:bg-amber-50/20 hover:scale-105 hover:shadow-lg"
-                  asChild
-                >
-                  <Link to="/subscribe">
-                    <Crown className="h-4 w-4" />
-                    Go Premium: Launch Pricing
-                  </Link>
-                </Button>
+                {canAccessSubscriptionPages && (
+                  <Button
+                    className="group inline-flex items-center gap-2 transform rounded-xl border-2 border-amber-400/50 bg-amber-50/10 px-5 py-3 text-sm font-medium text-white transition-all duration-300 hover:bg-amber-50/20 hover:scale-105 hover:shadow-lg"
+                    asChild
+                  >
+                    <Link to="/subscribe">
+                      <Crown className="h-4 w-4" />
+                      Go Premium: Launch Pricing
+                    </Link>
+                  </Button>
+                )}
               </div>
-              <p className="mt-4 text-xs text-white/50">
-                Free membership is genuinely valuable. Premium is for those ready to specialize.
-              </p>
+              {canAccessSubscriptionPages && (
+                <p className="mt-4 text-xs text-white/50">
+                  Free membership is genuinely valuable. Premium is for those ready to specialize.
+                </p>
+              )}
             </div>
           </section>
         </div>
