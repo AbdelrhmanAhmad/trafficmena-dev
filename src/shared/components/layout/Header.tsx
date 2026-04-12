@@ -38,7 +38,8 @@ const NAVIGATION_ITEMS: NavItem[] = [
 const Header: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const { canAccessAdmin, isOwner, isAdmin, isManager } = useRolePermissions();
+  const { canAccessAdmin, canAccessSubscriptionPages, isOwner, isAdmin, isManager } =
+    useRolePermissions();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,6 +47,7 @@ const Header: React.FC = () => {
 
   // Check if user has an active subscription
   const hasActiveSubscription = subscription?.status === 'active';
+  const showSubscriptionEntry = canAccessSubscriptionPages && !hasActiveSubscription;
 
   const isRouteActive = (href: string) => {
     if (href === '/') {
@@ -105,8 +107,7 @@ const Header: React.FC = () => {
           {/* Desktop Auth - Only show on large screens */}
           <div className="flex items-center gap-2">
             <div className="hidden md:inline-flex items-center gap-2">
-              {/* Subscribe button - visible for ALL non-subscribed users (guests + authenticated) */}
-              {!hasActiveSubscription && (
+              {showSubscriptionEntry && (
                 <Link to={user ? '/dashboard/subscribe' : '/subscribe'}>
                   <Button
                     variant="outline"
@@ -198,8 +199,7 @@ const Header: React.FC = () => {
 
                 {/* Mobile/Tablet Auth */}
                 <div className="flex flex-col space-y-3 border-t border-neutral-200 pt-4">
-                  {/* Subscribe button - visible for ALL non-subscribed users (guests + authenticated) */}
-                  {!hasActiveSubscription && (
+                  {showSubscriptionEntry && (
                     <Link to={user ? '/dashboard/subscribe' : '/subscribe'} onClick={closeDrawer}>
                       <Button className="w-full justify-start rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm font-medium text-amber-700 hover:bg-amber-100">
                         <Crown className="mr-2 h-4 w-4" />

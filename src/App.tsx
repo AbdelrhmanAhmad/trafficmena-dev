@@ -266,11 +266,11 @@ const App = () => {
                   <Route
                     path="/dashboard/subscribe"
                     element={
-                      <ProtectedRoute>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin']}>
                         <ErrorBoundary>
                           <DashboardSubscribePage />
                         </ErrorBoundary>
-                      </ProtectedRoute>
+                      </AdminProtectedRoute>
                     }
                   />
                   <Route
@@ -324,9 +324,11 @@ const App = () => {
                   <Route
                     path="/subscribe"
                     element={
-                      <ErrorBoundary>
-                        <SubscribeLanding />
-                      </ErrorBoundary>
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin']} redirectPath="/">
+                        <ErrorBoundary>
+                          <SubscribeLanding />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
                     }
                   />
                   <Route

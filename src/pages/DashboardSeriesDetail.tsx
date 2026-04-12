@@ -16,6 +16,7 @@ import { useSeriesDetail } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
+import PremiumContentGate from '@/shared/components/PremiumContentGate';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
 
@@ -67,10 +68,6 @@ const SeriesResourceCard: React.FC<{
     <button
       type="button"
       onClick={() => {
-        if (showPremiumOverlay) {
-          navigate('/dashboard/subscribe');
-          return;
-        }
         navigate(`/dashboard/library/${asset.id}`);
       }}
       className="group cursor-pointer rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl overflow-hidden"
@@ -167,6 +164,16 @@ const DashboardSeriesDetail: React.FC = () => {
               Back to Library
             </Button>
           </div>
+        </AppLayout>
+      </ProtectedRoute>
+    );
+  }
+
+  if (series.has_access === false) {
+    return (
+      <ProtectedRoute>
+        <AppLayout variant="member">
+          <PremiumContentGate contentName={series.title} />
         </AppLayout>
       </ProtectedRoute>
     );

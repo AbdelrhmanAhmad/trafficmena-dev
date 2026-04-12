@@ -120,10 +120,6 @@ const LibraryItemCard: React.FC<LibraryItemCardProps> = ({
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    if (showPremiumOverlay) {
-      navigate('/dashboard/subscribe');
-      return;
-    }
     // Navigate based on context - admin stays in admin, users stay in dashboard
     const basePath = canManage ? '/admin/library' : '/dashboard/library';
     navigate(`${basePath}/${item.id}`);

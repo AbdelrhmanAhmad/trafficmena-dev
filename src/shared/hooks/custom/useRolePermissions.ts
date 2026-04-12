@@ -43,6 +43,7 @@ export const useRolePermissions = () => {
       canManageInvites: rank >= ROLE_PRIORITY.manager,
       canManageUsers: rank >= ROLE_PRIORITY.admin,
       canAccessAdmin: rank >= ROLE_PRIORITY.manager,
+      canAccessSubscriptionPages: rank >= ROLE_PRIORITY.admin,
       hasRole: (required: UserRole | UserRole[]) => {
         const roles = Array.isArray(required) ? required : [required];
         return roles.includes(role);

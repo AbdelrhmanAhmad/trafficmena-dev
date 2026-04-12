@@ -16,6 +16,7 @@ import { useLibraryAsset } from '@/features/library/hooks/useLibrary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
+import PremiumContentGate from '@/shared/components/PremiumContentGate';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/components/ui/card';
 import VideoEmbed from '@/shared/components/VideoEmbed';
@@ -165,8 +166,18 @@ const LibraryItemDetail: React.FC = () => {
     );
   }
 
-  // Restricted access - show metadata with registration CTA
+  // Restricted access - premium content uses a neutral gate page
   if (!access.canView) {
+    if (isPremium) {
+      return (
+        <ProtectedRoute>
+          <AppLayout variant="member">
+            <PremiumContentGate contentName={item.title} />
+          </AppLayout>
+        </ProtectedRoute>
+      );
+    }
+
     return (
       <ProtectedRoute>
         <AppLayout variant="member">
@@ -189,9 +200,8 @@ const LibraryItemDetail: React.FC = () => {
               </CardHeader>
               <CardContent className="text-center space-y-6 pt-4">
                 <p className="text-neutral-600">
-                  {isPremium
-                    ? 'This content is premium. Subscribe to unlock access.'
-                    : 'This content is exclusive to registered attendees. Register for the associated event to unlock access.'}
+                  This content is exclusive to registered attendees. Register for the associated
+                  event to unlock access.
                 </p>
 
                 {item.description && (
@@ -207,28 +217,17 @@ const LibraryItemDetail: React.FC = () => {
                 )}
 
                 <div className="flex flex-col gap-3 pt-4">
-                  {isPremium ? (
+                  {item.event_id && (
                     <Button
                       asChild
                       className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:shadow-xl"
                     >
-                      <Link to="/dashboard/subscribe">View subscription options</Link>
+                      <Link to={`/dashboard/events/${item.event_id}`}>Register for Event</Link>
                     </Button>
-                  ) : (
-                    <>
-                      {item.event_id && (
-                        <Button
-                          asChild
-                          className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:shadow-xl"
-                        >
-                          <Link to={`/dashboard/events/${item.event_id}`}>Register for Event</Link>
-                        </Button>
-                      )}
-                      <Button variant="outline" onClick={() => navigate('/dashboard/events')}>
-                        Browse All Events
-                      </Button>
-                    </>
                   )}
+                  <Button variant="outline" onClick={() => navigate('/dashboard/events')}>
+                    Browse All Events
+                  </Button>
                 </div>
               </CardContent>
             </Card>

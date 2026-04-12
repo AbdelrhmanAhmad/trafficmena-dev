@@ -24,12 +24,14 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { isValidLocationUrl } from '@/shared/hooks/custom/useLocationVisibility';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 import { formatDateWithDay, formatShortDate, formatTime } from '@/shared/utils/dateUtils';
 import { clearPendingEventContext } from '@/shared/utils/eventRedirectUtils';
 
 const ThankYouEvent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const { canAccessSubscriptionPages } = useRolePermissions();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isPaidFlow = searchParams.get('paid') === '1';
@@ -40,6 +42,7 @@ const ThankYouEvent: React.FC = () => {
 
   const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
   const hasActiveSubscription = subscription?.status === 'active';
+  const showMembershipCard = hasActiveSubscription || canAccessSubscriptionPages;
   const requiresPayment =
     (event?.price_in_cents ?? 0) > 0 && !(hasActiveSubscription && isOnlineEvent);
 
@@ -283,64 +286,76 @@ const ThankYouEvent: React.FC = () => {
               </Card>
 
               {/* Payment + Membership Summary */}
-              <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
-                {isPaidFlow && (
-                  <Card className="border-emerald-200 bg-emerald-50/60">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg text-emerald-900">
-                        <BadgeCheck className="h-5 w-5" />
-                        Payment Confirmed
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-sm text-emerald-900/80">
-                      <p>Your payment was processed successfully.</p>
-                      <p>Your seat is reserved and your registration is active.</p>
-                      <p>We will email you a receipt and event updates.</p>
-                    </CardContent>
-                  </Card>
-                )}
+              {(isPaidFlow || showMembershipCard) && (
+                <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {isPaidFlow && (
+                    <Card
+                      className={
+                        !showMembershipCard
+                          ? 'border-emerald-200 bg-emerald-50/60 md:col-span-2'
+                          : 'border-emerald-200 bg-emerald-50/60'
+                      }
+                    >
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg text-emerald-900">
+                          <BadgeCheck className="h-5 w-5" />
+                          Payment Confirmed
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3 text-sm text-emerald-900/80">
+                        <p>Your payment was processed successfully.</p>
+                        <p>Your seat is reserved and your registration is active.</p>
+                        <p>We will email you a receipt and event updates.</p>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                <Card className={isPaidFlow ? '' : 'md:col-span-2'}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg text-neutral-900">
-                      <Crown className="h-5 w-5 text-[#05ef62]" />
-                      Membership Status
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-neutral-700">
-                    {hasActiveSubscription ? (
-                      <>
-                        <div className="inline-flex items-center gap-2 rounded-full bg-[#05ef62]/10 px-3 py-1 text-sm font-semibold text-[#059640]">
-                          Active Subscription
-                        </div>
-                        <p>
-                          Your subscription is active
-                          {subscription?.endsAt
-                            ? ` until ${formatShortDate(subscription.endsAt)}.`
-                            : '.'}
-                        </p>
-                        <p>You have full library access, member discounts, and priority support.</p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 text-sm font-semibold text-neutral-700">
-                          No Active Subscription
-                        </div>
-                        <p>
-                          Upgrade to unlock full library access, discounted events, and member-only
-                          resources.
-                        </p>
-                        <Button
-                          onClick={() => navigate('/subscribe')}
-                          className="w-full bg-neutral-900 text-white hover:bg-neutral-800"
-                        >
-                          Explore Subscription
-                        </Button>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                  {showMembershipCard && (
+                    <Card className={isPaidFlow ? '' : 'md:col-span-2'}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg text-neutral-900">
+                          <Crown className="h-5 w-5 text-[#05ef62]" />
+                          Membership Status
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3 text-sm text-neutral-700">
+                        {hasActiveSubscription ? (
+                          <>
+                            <div className="inline-flex items-center gap-2 rounded-full bg-[#05ef62]/10 px-3 py-1 text-sm font-semibold text-[#059640]">
+                              Active Subscription
+                            </div>
+                            <p>
+                              Your subscription is active
+                              {subscription?.endsAt
+                                ? ` until ${formatShortDate(subscription.endsAt)}.`
+                                : '.'}
+                            </p>
+                            <p>
+                              You have full library access, member discounts, and priority support.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 text-sm font-semibold text-neutral-700">
+                              No Active Subscription
+                            </div>
+                            <p>
+                              Upgrade to unlock full library access, discounted events, and
+                              member-only resources.
+                            </p>
+                            <Button
+                              onClick={() => navigate('/subscribe')}
+                              className="w-full bg-neutral-900 text-white hover:bg-neutral-800"
+                            >
+                              Explore Subscription
+                            </Button>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
 
               {/* Calendar Action Buttons */}
               <div className="mb-8 space-y-4">
