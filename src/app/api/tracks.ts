@@ -247,6 +247,8 @@ export async function bookTrack(trackId: string): Promise<TrackBookingSuccess> {
 }
 
 // Track attendees types
+export type TrackEnrollmentSource = 'paid' | 'free' | 'manual';
+
 export interface TrackAttendee {
   userId: string;
   email: string;
@@ -257,6 +259,8 @@ export interface TrackAttendee {
   bookedAt: string;
   invoiceId: number | null;
   invoiceNumber: string | null;
+  source: TrackEnrollmentSource;
+  reference: string | null;
 }
 
 // Fetch track attendees (manager+ only)
@@ -273,6 +277,52 @@ export async function fetchTrackAttendees(
     `${API_BASE}/tracks/${trackId}/attendees${query.toString() ? `?${query.toString()}` : ''}`,
     { method: 'GET' },
   );
+}
+
+export async function createManualTrackEnrollment(
+  trackId: string,
+  payload: {
+    userId: string;
+    reason: string;
+    reference: string;
+    amountPaidCents?: number | null;
+  },
+): Promise<{
+  success: boolean;
+  bookingId: string;
+  trackTitle: string;
+  eventsRegistered: number;
+  alreadyRegisteredEvents: number;
+}> {
+  return fetchJson<{
+    success: boolean;
+    bookingId: string;
+    trackTitle: string;
+    eventsRegistered: number;
+    alreadyRegisteredEvents: number;
+  }>(`${API_BASE}/tracks/${trackId}/manual-enrollments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function revokeTrackEnrollment(
+  trackId: string,
+  userId: string,
+  reason: string,
+): Promise<{
+  success: boolean;
+  revokedBookingId: string;
+  revokedEventCount: number;
+}> {
+  return fetchJson<{
+    success: boolean;
+    revokedBookingId: string;
+    revokedEventCount: number;
+  }>(`${API_BASE}/tracks/${trackId}/enrollments/${userId}/revoke`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
 }
 
 // Public track types (for non-authenticated users)

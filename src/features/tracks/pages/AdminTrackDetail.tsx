@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { formatMeetupDate } from '@/shared/utils/dateUtils';
 import { TrackAttendeesList } from '../components/TrackAttendeesList';
+import { TrackManualEnrollmentManager } from '../components/TrackManualEnrollmentManager';
 import { useTrack } from '../hooks/useTracks';
 
 const AdminTrackDetail = () => {
@@ -92,7 +93,13 @@ const AdminTrackDetail = () => {
               </CardContent>
             </Card>
 
-            <TrackAttendeesList trackId={track.id} />
+            <TrackManualEnrollmentManager
+              key={`${track.id}-manual-enrollment`}
+              trackId={track.id}
+              trackTitle={track.title}
+              defaultAmountPaidCents={track.price_in_cents}
+            />
+            <TrackAttendeesList key={`${track.id}-attendees`} trackId={track.id} />
           </div>
         ) : (
           <div className="rounded-md border border-dashed p-12 text-center text-sm text-muted-foreground">

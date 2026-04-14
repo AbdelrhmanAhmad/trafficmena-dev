@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import type { TrackAttendee } from '@/app/api/tracks';
 import { fetchTrackAttendees } from '@/app/api/tracks';
@@ -35,7 +35,6 @@ export const useTrackAttendees = (
       };
     },
     enabled: Boolean(trackId),
-    placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000,
   });
 

@@ -10,6 +10,7 @@ import {
   seriesAssets,
   trackBookings,
 } from '../../db/schema/index.js';
+import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { resolveSeriesAccess, resolveSeriesAssetAccess } from './seriesAccess.js';
 import { hasActiveSubscription } from './subscriptionShared.js';
@@ -196,7 +197,7 @@ export function registerSeriesRoutes(app: Hono) {
               .select({ id: trackBookings.id })
               .from(trackBookings)
               .where(
-                and(
+                activeTrackBookingWhere(
                   eq(trackBookings.trackId, seriesRecord.trackId),
                   eq(trackBookings.userId, session.user.id),
                 ),

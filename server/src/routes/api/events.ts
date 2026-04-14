@@ -15,6 +15,7 @@ import {
   tracks,
   users,
 } from '../../db/schema/index.js';
+import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
@@ -322,7 +323,12 @@ export function registerEventRoutes(app: Hono) {
           const [booking] = await db
             .select({ id: trackBookings.id })
             .from(trackBookings)
-            .where(and(eq(trackBookings.trackId, trackInfo.id), eq(trackBookings.userId, viewerId)))
+            .where(
+              activeTrackBookingWhere(
+                eq(trackBookings.trackId, trackInfo.id),
+                eq(trackBookings.userId, viewerId),
+              ),
+            )
             .limit(1);
           trackBooked = Boolean(booking);
         }
@@ -819,6 +825,7 @@ export function registerEventRoutes(app: Hono) {
                 refundRequestedAt: null,
                 adminNote: null,
                 registeredAt: new Date(),
+                sourceTrackBookingId: null,
               })
               .where(eq(eventAttendees.id, existing.id));
             return { success: true, message: 'You are now registered for the event.' };
@@ -854,6 +861,7 @@ export function registerEventRoutes(app: Hono) {
           await tx.insert(eventAttendees).values({
             eventId,
             userId,
+            sourceTrackBookingId: null,
           });
 
           return { success: true, message: 'registered' };

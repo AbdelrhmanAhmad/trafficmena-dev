@@ -32,6 +32,7 @@ export const registrationStatusEnum = pgEnum('registration_status', [
   'cancelled',
   'refund_requested',
 ]);
+export const trackBookingSourceEnum = pgEnum('track_booking_source', ['paid', 'free', 'manual']);
 
 // --- Core Tables ------------------------------------------------------------
 
@@ -102,6 +103,9 @@ export const eventAttendees = pgTable(
     paidAt: timestamp('paid_at', { withTimezone: true }),
     pricePaidCents: integer('price_paid_cents'),
     paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+    sourceTrackBookingId: uuid('source_track_booking_id').references(() => trackBookings.id, {
+      onDelete: 'set null',
+    }),
     status: registrationStatusEnum('status').default('active').notNull(),
     cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
     refundRequestedAt: timestamp('refund_requested_at', { withTimezone: true }),
@@ -116,6 +120,9 @@ export const eventAttendees = pgTable(
     ),
     statusIdx: index('event_attendees_status_idx').on(table.status),
     eventStatusIdx: index('event_attendees_event_status_idx').on(table.eventId, table.status),
+    sourceTrackBookingIdx: index('event_attendees_source_track_booking_idx').on(
+      table.sourceTrackBookingId,
+    ),
   }),
 );
 
@@ -238,6 +245,13 @@ export const trackBookings = pgTable(
     paidAt: timestamp('paid_at', { withTimezone: true }),
     pricePaidCents: integer('price_paid_cents'),
     paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+    bookingSource: trackBookingSourceEnum('booking_source').notNull(),
+    manualReference: text('manual_reference'),
+    grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
+    grantReason: text('grant_reason'),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedBy: uuid('revoked_by').references(() => users.id, { onDelete: 'set null' }),
+    revokeReason: text('revoke_reason'),
   },
   (table) => ({
     trackIdx: index('track_bookings_track_idx').on(table.trackId),
@@ -247,6 +261,8 @@ export const trackBookings = pgTable(
       table.userId,
     ),
     paymentIdx: index('track_bookings_payment_id_idx').on(table.paymentId),
+    activeTrackIdx: index('track_bookings_active_track_idx').on(table.trackId, table.revokedAt),
+    activeUserIdx: index('track_bookings_active_user_idx').on(table.userId, table.revokedAt),
   }),
 );
 

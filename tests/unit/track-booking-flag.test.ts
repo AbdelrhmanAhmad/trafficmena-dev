@@ -10,4 +10,11 @@ describe('track booking flag', () => {
   it('treats presence of a booking row as booked', () => {
     assert.equal(hasTrackBookingRow([{ id: 'booking-1' }]), true);
   });
+
+  it('ignores revoked booking rows', () => {
+    assert.equal(
+      hasTrackBookingRow([{ id: 'booking-1', revokedAt: new Date('2026-04-13T10:00:00.000Z') }]),
+      false,
+    );
+  });
 });

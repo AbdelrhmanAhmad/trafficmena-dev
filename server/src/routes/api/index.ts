@@ -13,6 +13,7 @@ import { registerSettingsRoutes } from './settings.js';
 import { registerSkillRoutes } from './skills.js';
 import { registerSubscriptionRoutes } from './subscriptions.js';
 import { registerSubscriptionGrantRoutes } from './subscriptionsGrants.js';
+import { registerTrackEnrollmentRoutes } from './trackEnrollments.js';
 import { registerTrackRoutes } from './tracks.js';
 import { registerUploadRoutes } from './uploads.js';
 import { registerUserRoutes } from './users.js';
@@ -28,6 +29,7 @@ export function registerApiRoutes(app: Hono) {
   registerEventRoutes(api);
   registerLibraryRoutes(api);
   registerTrackRoutes(api);
+  registerTrackEnrollmentRoutes(api);
   registerSeriesRoutes(api);
   registerSeriesGrantsRoutes(api);
   registerSkillRoutes(api);

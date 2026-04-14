@@ -11,6 +11,7 @@ import {
   seriesAssets,
   trackBookings,
 } from '../../db/schema/index.js';
+import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { hasActiveSubscription } from './subscriptionShared.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
@@ -237,7 +238,7 @@ export function registerLibraryRoutes(app: Hono) {
             .innerJoin(series, eq(series.id, seriesAssets.seriesId))
             .innerJoin(trackBookings, eq(trackBookings.trackId, series.trackId))
             .where(
-              and(
+              activeTrackBookingWhere(
                 eq(trackBookings.userId, session.user.id),
                 inArray(seriesAssets.assetId, premiumAssetIds),
               ),
@@ -389,7 +390,10 @@ export function registerLibraryRoutes(app: Hono) {
             .innerJoin(series, eq(series.id, seriesAssets.seriesId))
             .innerJoin(trackBookings, eq(trackBookings.trackId, series.trackId))
             .where(
-              and(eq(trackBookings.userId, session.user.id), eq(seriesAssets.assetId, asset[0].id)),
+              activeTrackBookingWhere(
+                eq(trackBookings.userId, session.user.id),
+                eq(seriesAssets.assetId, asset[0].id),
+              ),
             )
             .limit(1),
           db

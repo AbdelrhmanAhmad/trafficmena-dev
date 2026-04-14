@@ -26,10 +26,12 @@ import {
 } from '../../services/fawaterk.js';
 import { validatePromoCode } from '../../services/promoCodes.js';
 import { paymentRateLimiter } from '../../services/rateLimiter.js';
+import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError } from '../../utils/errors.js';
 import { isInvoicePaid } from '../../utils/invoiceStatus.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { ONE_YEAR_MS } from './subscriptionShared.js';
+import { executeTrackBookingWrite } from './trackBookingShared.js';
 import { isKnownDatabaseConflict } from './utils.js';
 
 // --- Rate Limit Rules ---
@@ -63,24 +65,6 @@ const webhookSchema = z.object({
 });
 
 // --- Types ---
-
-type TrackBookingResult = {
-  totalEvents: number;
-  existingCount: number;
-  insertedCount: number;
-  nullCapacityCount: number;
-  currentBookings: number;
-  bookingInserted: number;
-};
-
-type TrackBookingParams = {
-  trackId: string;
-  userId: string;
-  paymentId: string;
-  pricePaidCents: number;
-  maxTrackBookings: number | null;
-  paidAt: Date;
-};
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -133,127 +117,6 @@ const checkoutIdempotencyCache = new Map<
 const checkoutIdempotencyInFlight = new Map<string, CheckoutInFlightReservation>();
 
 // --- Helpers ---
-
-/**
- * Atomically books a track for a user with capacity validation.
- * Uses a single CTE query to:
- * 1. Lock all track events for atomic capacity checking
- * 2. Validate each event has capacity available
- * 3. Insert attendee records for events with space
- * 4. Create track booking if all events can accept the user
- *
- * Used by both paid and free track booking flows.
- */
-async function executeAtomicTrackBooking(
-  tx: DbTransaction,
-  params: TrackBookingParams,
-): Promise<TrackBookingResult> {
-  const { trackId, userId, paymentId, pricePaidCents, maxTrackBookings, paidAt } = params;
-
-  const atomicResult = await tx.execute(sql`
-    WITH track_booking_check AS (
-      SELECT COUNT(*) AS current_count FROM track_bookings WHERE track_id = ${trackId}
-    ),
-    locked_events AS (
-      SELECT e.id, e.max_attendees
-      FROM track_events te
-      JOIN events e ON e.id = te.event_id
-      WHERE te.track_id = ${trackId}
-      FOR UPDATE
-    ),
-    existing AS (
-      SELECT event_id
-      FROM event_attendees
-      WHERE user_id = ${userId}
-        AND event_id IN (SELECT id FROM locked_events)
-    ),
-    attendee_counts AS (
-      SELECT event_id, COUNT(*) AS attendee_count
-      FROM event_attendees
-      WHERE event_id IN (SELECT id FROM locked_events)
-      GROUP BY event_id
-    ),
-    eligible AS (
-      SELECT le.id AS event_id
-      FROM locked_events le
-      LEFT JOIN attendee_counts ac ON ac.event_id = le.id
-      WHERE COALESCE(ac.attendee_count, 0) < le.max_attendees
-    ),
-    to_insert AS (
-      SELECT event_id
-      FROM eligible
-      WHERE event_id NOT IN (SELECT event_id FROM existing)
-    ),
-    inserted_attendees AS (
-      INSERT INTO event_attendees (event_id, user_id, paid_at, price_paid_cents, payment_id)
-      SELECT event_id, ${userId}, ${paidAt}, ${pricePaidCents}, ${paymentId}
-      FROM to_insert
-      RETURNING event_id
-    ),
-    inserted_booking AS (
-      INSERT INTO track_bookings (track_id, user_id, paid_at, price_paid_cents, payment_id)
-      SELECT ${trackId}, ${userId}, ${paidAt}, ${pricePaidCents}, ${paymentId}
-      WHERE (SELECT current_count FROM track_booking_check) < ${maxTrackBookings ?? 2147483647}
-        AND (SELECT COUNT(*) FROM locked_events) > 0
-        AND (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) = 0
-        AND (SELECT COUNT(*) FROM existing) + (SELECT COUNT(*) FROM inserted_attendees) >= (SELECT COUNT(*) FROM locked_events)
-      ON CONFLICT (track_id, user_id) DO UPDATE
-        SET paid_at = EXCLUDED.paid_at,
-            price_paid_cents = EXCLUDED.price_paid_cents,
-            payment_id = EXCLUDED.payment_id
-      RETURNING id
-    )
-    SELECT
-      (SELECT COUNT(*) FROM locked_events) AS total_events,
-      (SELECT COUNT(*) FROM existing) AS existing_count,
-      (SELECT COUNT(*) FROM inserted_attendees) AS inserted_count,
-      (SELECT COUNT(*) FROM locked_events WHERE max_attendees IS NULL) AS null_capacity_count,
-      (SELECT current_count FROM track_booking_check) AS current_bookings,
-      (SELECT COUNT(*) FROM inserted_booking) AS booking_inserted
-  `);
-
-  const row = atomicResult.rows[0] as {
-    total_events: string;
-    existing_count: string;
-    inserted_count: string;
-    null_capacity_count: string;
-    current_bookings: string;
-    booking_inserted: string;
-  };
-
-  return {
-    totalEvents: Number(row.total_events),
-    existingCount: Number(row.existing_count),
-    insertedCount: Number(row.inserted_count),
-    nullCapacityCount: Number(row.null_capacity_count),
-    currentBookings: Number(row.current_bookings),
-    bookingInserted: Number(row.booking_inserted),
-  };
-}
-
-/**
- * Validates track booking result and throws appropriate errors.
- * Shared validation logic for both paid and free track booking flows.
- */
-function validateTrackBookingResult(
-  result: TrackBookingResult,
-  maxTrackBookings: number | null,
-): void {
-  if (result.totalEvents === 0) {
-    throw new ApiError('TRACK_EMPTY', 'Track has no events.', 400);
-  }
-  if (result.nullCapacityCount > 0) {
-    throw new ApiError('CAPACITY_NOT_SET', 'Some events have no capacity set.', 400);
-  }
-  if (result.existingCount + result.insertedCount < result.totalEvents) {
-    throw new ApiError('EVENT_FULL', 'One or more events in this track are at capacity.', 409);
-  }
-  if (result.bookingInserted === 0) {
-    if (maxTrackBookings !== null && result.currentBookings >= maxTrackBookings) {
-      throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
-    }
-  }
-}
 
 function buildCheckoutIdempotencyCacheKey(params: {
   userId: string;
@@ -527,7 +390,12 @@ async function calculatePrice(
       dbClient
         .select()
         .from(trackBookings)
-        .where(and(eq(trackBookings.trackId, itemId), eq(trackBookings.userId, userId))),
+        .where(
+          activeTrackBookingWhere(
+            eq(trackBookings.trackId, itemId),
+            eq(trackBookings.userId, userId),
+          ),
+        ),
     ]);
 
     const [track] = trackResult;
@@ -549,7 +417,7 @@ async function calculatePrice(
       throw new ApiError('BOOKING_PERIOD_CLOSED', 'Track booking period closed.', 400);
     }
 
-    if (existingBooking?.paidAt) {
+    if (existingBooking) {
       throw new ApiError('ALREADY_BOOKED', 'Already booked this track', 400);
     }
 
@@ -744,6 +612,7 @@ async function processSuccessfulPayment(
             paidAt,
             pricePaidCents: payment.amountCents,
             paymentId: payment.id,
+            sourceTrackBookingId: null,
           })
           .onConflictDoUpdate({
             target: [eventAttendees.eventId, eventAttendees.userId],
@@ -755,6 +624,7 @@ async function processSuccessfulPayment(
               paidAt,
               pricePaidCents: payment.amountCents,
               paymentId: payment.id,
+              sourceTrackBookingId: null,
             },
           });
 
@@ -855,16 +725,18 @@ async function processSuccessfulPayment(
           throw new ApiError('BOOKING_PERIOD_CLOSED', 'Track booking period closed.', 400);
         }
 
-        const bookingResult = await executeAtomicTrackBooking(tx, {
+        await executeTrackBookingWrite(tx, {
           trackId: payment.itemId,
           userId: payment.userId,
+          bookingSource: payment.amountCents > 0 ? 'paid' : 'free',
           paymentId: payment.id,
           pricePaidCents: payment.amountCents,
           maxTrackBookings: track.maxTrackBookings,
+          bookedAt: paidAt,
+          referenceTime: paidAt,
           paidAt,
+          excludeReservationPaymentId: payment.id,
         });
-
-        validateTrackBookingResult(bookingResult, track.maxTrackBookings);
 
         await tx.delete(eventReservations).where(eq(eventReservations.paymentId, payment.id));
         await tx.delete(trackReservations).where(eq(trackReservations.paymentId, payment.id));
@@ -1336,6 +1208,7 @@ export function registerPaymentRoutes(app: Hono) {
               paidAt: new Date(),
               pricePaidCents: 0,
               paymentId: payment.id,
+              sourceTrackBookingId: null,
             });
           }
 
@@ -1347,17 +1220,16 @@ export function registerPaymentRoutes(app: Hono) {
               .where(eq(tracks.id, itemId));
 
             const paidAt = new Date();
-            const bookingResult = await executeAtomicTrackBooking(tx, {
+            await executeTrackBookingWrite(tx, {
               trackId: itemId,
               userId,
+              bookingSource: 'free',
               paymentId: payment.id,
               pricePaidCents: 0,
               maxTrackBookings: track?.maxTrackBookings ?? null,
+              bookedAt: paidAt,
               paidAt,
             });
-
-            // Validate result - errors will rollback the transaction
-            validateTrackBookingResult(bookingResult, track?.maxTrackBookings ?? null);
           }
 
           // Note: Free subscriptions are not expected in normal flow
@@ -1575,7 +1447,12 @@ export function registerPaymentRoutes(app: Hono) {
           const [existingBooking] = await tx
             .select({ id: trackBookings.id })
             .from(trackBookings)
-            .where(and(eq(trackBookings.trackId, itemId), eq(trackBookings.userId, userId)))
+            .where(
+              activeTrackBookingWhere(
+                eq(trackBookings.trackId, itemId),
+                eq(trackBookings.userId, userId),
+              ),
+            )
             .limit(1);
 
           if (existingBooking) {
@@ -1663,7 +1540,7 @@ export function registerPaymentRoutes(app: Hono) {
           const [bookingCount] = await tx
             .select({ count: sql<number>`count(*)::int` })
             .from(trackBookings)
-            .where(eq(trackBookings.trackId, itemId));
+            .where(activeTrackBookingWhere(eq(trackBookings.trackId, itemId)));
           const [trackReservationCount] = await tx
             .select({ count: sql<number>`count(*)::int` })
             .from(trackReservations)

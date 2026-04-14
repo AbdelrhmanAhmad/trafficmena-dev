@@ -18,7 +18,8 @@ Managing the database
 
 Applying migrations
 - From the repo root: ensure `server/.env` is configured, then run `npm --prefix server run db:migrate`.
-- The latest migration (`0002_invitation_activation.sql`) backfills invitation ownership fields—run it before redeploying the Hono API.
+- Run pending migrations before starting a newer API build that depends on schema changes.
+- For the manual track enrollment rollout, see `docs/runbooks/track-enrollment-0015-migration.md`.
 
 Connection details (local dev)
 - Host: `127.0.0.1`
