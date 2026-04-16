@@ -12,9 +12,11 @@ import {
   Video,
 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { usePricePreview } from '@/app/hooks/usePayments';
+import { trackClickMeetingLink, trackViewItem } from '@/lib/analytics/events';
+import { centsToUnits } from '@/lib/analytics/helpers';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import {
@@ -99,6 +101,7 @@ const EventDetail: React.FC = () => {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [promoAttemptKey, setPromoAttemptKey] = useState(0);
 
   // Get price preview for logged-in users
   // Skip for track events where individual booking is not allowed (avoids 400 errors)
@@ -108,6 +111,7 @@ const EventDetail: React.FC = () => {
     canFetchPricePreview ? 'event' : undefined,
     id,
     appliedPromoCode ?? undefined,
+    { requestKey: promoAttemptKey },
   );
 
   const isPaidEvent = !!(event?.price_in_cents && event.price_in_cents > 0);
@@ -155,6 +159,34 @@ const EventDetail: React.FC = () => {
       setAppliedPromoCode(null);
     }
   }, [appliedPromoCode, promoDisabled, pricePreview]);
+
+  // Track view_item when event detail loads
+  const trackedEventIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!event || !id) return;
+    if (trackedEventIdRef.current === id) return;
+    trackedEventIdRef.current = id;
+
+    const spotsRemaining = event.max_attendees
+      ? event.max_attendees - (event.attendee_count ?? 0)
+      : null;
+
+    trackViewItem({
+      currency: 'EGP',
+      value: centsToUnits(event.price_in_cents),
+      item: {
+        item_id: event.id,
+        item_name: event.title,
+        item_category: event.event_type,
+        price: centsToUnits(event.price_in_cents),
+        currency: 'EGP',
+        item_location: event.location ?? undefined,
+        item_date: event.date,
+        is_online: Boolean(event.meeting_link) && !event.location,
+        spots_remaining: spotsRemaining,
+      },
+    });
+  }, [event, id]);
 
   const attendeeCountLabel = useMemo(() => {
     if (!event) return 'Limited Spots';
@@ -416,7 +448,10 @@ const EventDetail: React.FC = () => {
                             />
                             {isStandaloneEvent && (
                               <PromoCodeInput
-                                onApply={(code) => setAppliedPromoCode(code)}
+                                onApply={(code) => {
+                                  setAppliedPromoCode(code);
+                                  setPromoAttemptKey((currentKey) => currentKey + 1);
+                                }}
                                 onRemove={() => setAppliedPromoCode(null)}
                                 appliedCode={appliedPromoCode ?? undefined}
                                 isApplied={isPromoApplied}
@@ -424,6 +459,18 @@ const EventDetail: React.FC = () => {
                                 isLoading={pricePreviewLoading}
                                 disabled={promoDisabled}
                                 disabledMessage={promoDisabledReason ?? undefined}
+                                attemptKey={promoAttemptKey}
+                                itemType="event"
+                                itemId={id}
+                                discountPercent={
+                                  isPromoApplied && pricePreview?.originalAmountCents
+                                    ? Math.round(
+                                        (pricePreview.discountAppliedCents /
+                                          pricePreview.originalAmountCents) *
+                                          100,
+                                      )
+                                    : undefined
+                                }
                               />
                             )}
                           </div>
@@ -550,6 +597,14 @@ const EventDetail: React.FC = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-neutral-800"
+                                    onClick={() =>
+                                      trackClickMeetingLink({
+                                        itemId: event.id,
+                                        itemName: event.title,
+                                        itemCategory: event.event_type,
+                                        meetingUrl: event.meeting_link ?? '',
+                                      })
+                                    }
                                   >
                                     Join Live Session
                                   </a>
@@ -599,6 +654,8 @@ const EventDetail: React.FC = () => {
           itemType="event"
           itemId={id}
           itemName={event.title}
+          itemCategory={event.event_type}
+          basePriceCents={event.price_in_cents}
           appliedPromoCode={isPromoApplied ? (appliedPromoCode ?? undefined) : undefined}
           onSuccess={() => {
             // Refresh the event data after successful payment

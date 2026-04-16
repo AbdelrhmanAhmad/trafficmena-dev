@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 
@@ -20,6 +21,7 @@ const Step4: React.FC = () => {
 
   const handleNext = () => {
     updateFormData({ primaryGoal });
+    trackSignUpStep(5, 'goal_selected');
     navigate('/signup/step-5');
   };
 

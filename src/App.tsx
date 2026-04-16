@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import MeetupDetail from '@/features/events/pages/EventDetail';
 import Meetups from '@/features/events/pages/Meetups';
 import PublicTrackDetail from '@/features/tracks/pages/TrackDetail';
+import { usePageTracking } from '@/lib/analytics/usePageTracking';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
@@ -16,6 +17,11 @@ import { TooltipProvider } from '@/shared/components/ui/tooltip';
 import { AuthProvider } from '@/shared/context/AuthContext';
 import Index from './pages/Index';
 import SignIn from './pages/SignIn';
+
+function PageTracker() {
+  usePageTracking();
+  return null;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -113,6 +119,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <AuthProvider>
+              <PageTracker />
               <Suspense fallback={routeFallback}>
                 <Routes>
                   <Route

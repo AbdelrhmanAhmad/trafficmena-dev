@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
+  type CancelEventRegistrationResponse,
   cancelEventRegistration,
+  type EventDetailRecord,
   type EventRecord,
   fetchEvents,
   registerForEvent,
 } from '@/app/api/events';
+import { currentUserQueryKey } from '@/app/queryKeys';
+import { trackCancelRegistration, trackEventRegistration } from '@/lib/analytics/events';
 import type { BookingRequest, BookingResponse, PagedResult } from '../types';
 
 const EVENT_LIST_KEY = ['events'];
@@ -21,10 +25,22 @@ export const useEventBooking = () => {
       if (response.success) {
         toast.success(response.message ?? 'You are now registered for the event.');
 
+        const cachedEvent = queryClient.getQueryData<EventDetailRecord>([
+          'event',
+          variables.event_id,
+        ]);
+        trackEventRegistration({
+          itemId: variables.event_id,
+          itemName: cachedEvent?.title ?? '',
+          itemCategory: cachedEvent?.event_type ?? '',
+          isOnline: Boolean(cachedEvent?.meeting_link) && !cachedEvent?.location,
+        });
+
         queryClient.invalidateQueries({ queryKey: ['event', variables.event_id] });
         queryClient.invalidateQueries({ queryKey: EVENT_LIST_KEY });
         queryClient.invalidateQueries({ queryKey: ['tracks'] });
         queryClient.invalidateQueries({ queryKey: ['track'] });
+        queryClient.invalidateQueries({ queryKey: currentUserQueryKey });
       } else {
         toast.error(response.message ?? 'Unable to register for this event right now.');
       }
@@ -36,7 +52,7 @@ export const useEventBooking = () => {
   });
 
   const cancelBookingMutation = useMutation<
-    BookingResponse & { status?: 'cancelled' | 'refund_requested' },
+    CancelEventRegistrationResponse,
     Error,
     { eventId: string }
   >({
@@ -53,10 +69,24 @@ export const useEventBooking = () => {
           toast.success(response.message ?? 'Your registration has been cancelled.');
         }
 
+        // Track cancellation analytics using cached event data
+        const cachedEvent = queryClient.getQueryData<EventDetailRecord>([
+          'event',
+          variables.eventId,
+        ]);
+        trackCancelRegistration({
+          itemId: variables.eventId,
+          itemName: cachedEvent?.title ?? '',
+          itemCategory: cachedEvent?.event_type ?? '',
+          cancellationType: response.status === 'refund_requested' ? 'refund_request' : 'instant',
+          wasPaid: response.wasPaid ?? false,
+        });
+
         queryClient.invalidateQueries({ queryKey: ['event', variables.eventId] });
         queryClient.invalidateQueries({ queryKey: EVENT_LIST_KEY });
         queryClient.invalidateQueries({ queryKey: ['tracks'] });
         queryClient.invalidateQueries({ queryKey: ['track'] });
+        queryClient.invalidateQueries({ queryKey: currentUserQueryKey });
       } else {
         toast.error(response.message ?? 'We could not cancel your registration.');
       }

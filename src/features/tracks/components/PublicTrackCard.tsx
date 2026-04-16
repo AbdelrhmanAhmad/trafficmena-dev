@@ -10,10 +10,17 @@ interface PublicTrackCardProps {
   track: PublicTrackRecord;
   to?: string;
   className?: string;
+  onCardClick?: (track: PublicTrackRecord) => void;
   onClick?: () => void;
 }
 
-export function PublicTrackCard({ track, to, className, onClick }: PublicTrackCardProps) {
+export function PublicTrackCard({
+  track,
+  to,
+  className,
+  onCardClick,
+  onClick,
+}: PublicTrackCardProps) {
   const destination = to ?? `/tracks/${track.id}`;
 
   const formattedDate = track.first_event_date
@@ -35,6 +42,8 @@ export function PublicTrackCard({ track, to, className, onClick }: PublicTrackCa
     now <= track.track_booking_end;
 
   const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    onCardClick?.(track);
+
     if (onClick) {
       e.preventDefault();
       onClick();

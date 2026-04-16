@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -89,6 +90,7 @@ const Step2: React.FC = () => {
         invitationToken: invitationToken ?? undefined,
         invitationUserId,
       });
+      trackSignUpStep(2, 'email_entered');
       navigate('/signup/step-3');
       return;
     }
@@ -105,6 +107,7 @@ const Step2: React.FC = () => {
     const normalized = email.trim().toLowerCase();
 
     updateFormData({ email: normalized });
+    trackSignUpStep(2, 'email_entered');
     navigate('/signup/step-3');
     setIsLoading(false);
     return;

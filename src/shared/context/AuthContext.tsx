@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { AuthUser, OtpIntent } from '@/app/auth/AuthContext';
 import {
@@ -16,8 +17,12 @@ export interface LegacyAuthContextType {
   error: string | null;
   signOut: () => Promise<{ error: string | null }>;
   requestOtp: (email: string, intent?: OtpIntent, options?: RequestOtpOptions) => Promise<void>;
-  verifyOtp: (params: { email: string; otp: string; intent?: OtpIntent }) => Promise<void>;
-  refreshSession: () => Promise<void>;
+  verifyOtp: (params: {
+    email: string;
+    otp: string;
+    intent?: OtpIntent;
+  }) => Promise<AuthUser | null>;
+  refreshSession: () => Promise<AuthUser | null>;
 }
 
 interface AuthProviderProps {
@@ -30,10 +35,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
 export const useAuth = (): LegacyAuthContextType => {
   const auth = useBetterAuth();
+  const queryClient = useQueryClient();
 
   const signOut = async () => {
     try {
       await auth.signOut();
+      queryClient.removeQueries({ queryKey: ['current-user'] });
+      queryClient.removeQueries({ queryKey: ['current-subscription'] });
       return { error: null };
     } catch (error) {
       return {

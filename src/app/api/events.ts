@@ -203,10 +203,17 @@ export async function registerForEvent(
   });
 }
 
+export type CancelEventRegistrationResponse = {
+  success: boolean;
+  message?: string;
+  status?: 'cancelled' | 'refund_requested';
+  wasPaid?: boolean;
+};
+
 export async function cancelEventRegistration(
   id: string,
-): Promise<{ success: boolean; message?: string }> {
-  return fetchJson<{ success: boolean; message?: string }>(`${API_BASE}/events/${id}/register`, {
+): Promise<CancelEventRegistrationResponse> {
+  return fetchJson<CancelEventRegistrationResponse>(`${API_BASE}/events/${id}/register`, {
     method: 'DELETE',
   });
 }

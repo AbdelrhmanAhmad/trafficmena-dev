@@ -1,18 +1,28 @@
 import { Share2, Trash2 } from 'lucide-react';
 import { memo } from 'react';
 import { Button } from '@/shared/components/ui/button';
+import { useReportCalculatorResultReady } from '../../analytics';
+import { resolveCalculatorResultReady } from '../../analytics-shared';
 
 interface CalculatorActionButtonsProps {
   onShare: () => void;
   onClear: () => void;
   shareDisabled?: boolean;
+  resultReady?: boolean;
 }
 
-export const CalculatorActionButtons = memo(function CalculatorActionButtons({
-  onShare,
-  onClear,
-  shareDisabled = false,
-}: CalculatorActionButtonsProps) {
+export const CalculatorActionButtons = memo(function CalculatorActionButtons(
+  props: CalculatorActionButtonsProps,
+) {
+  const { onShare, onClear, shareDisabled = false, resultReady } = props;
+  useReportCalculatorResultReady(
+    resolveCalculatorResultReady({
+      resultReady,
+      shareDisabled,
+      hasExplicitShareDisabled: Object.hasOwn(props, 'shareDisabled'),
+    }),
+  );
+
   return (
     <div className="flex gap-3">
       <Button

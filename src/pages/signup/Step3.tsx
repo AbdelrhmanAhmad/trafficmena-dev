@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -73,6 +74,7 @@ const Step3: React.FC = () => {
       return;
     }
     updateFormData({ phoneNumber: buildFullPhone() });
+    trackSignUpStep(4, 'phone_entered');
     navigate('/signup/step-4');
   };
 

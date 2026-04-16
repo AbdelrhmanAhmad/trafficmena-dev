@@ -17,6 +17,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useEventBooking } from '@/features/events/hooks/useEventBooking';
 import { useEvent } from '@/features/events/hooks/useEvents';
+import { trackAddToCalendar } from '@/lib/analytics/events';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
@@ -82,6 +83,7 @@ const ThankYouEvent: React.FC = () => {
   // Generate ICS file for Apple Calendar / Outlook
   const downloadIcsFile = () => {
     if (!event) return;
+    trackAddToCalendar({ itemId: event.id, itemName: event.title, calendarType: 'ics_download' });
 
     const startDate = new Date(event.date);
     const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
@@ -368,7 +370,19 @@ const ThankYouEvent: React.FC = () => {
                     variant="outline"
                     className="flex h-12 items-center gap-2 border-neutral-300 hover:bg-neutral-50"
                   >
-                    <a href={googleCalendarUrl ?? '#'} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={googleCalendarUrl ?? '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() =>
+                        event &&
+                        trackAddToCalendar({
+                          itemId: event.id,
+                          itemName: event.title,
+                          calendarType: 'google_calendar',
+                        })
+                      }
+                    >
                       <ExternalLink className="h-5 w-5" />
                       Add to Google Calendar
                     </a>

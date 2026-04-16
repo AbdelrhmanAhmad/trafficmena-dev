@@ -4,6 +4,8 @@ import { Link, useParams } from 'react-router-dom';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
+import { CalculatorAnalyticsProvider } from '../analytics';
+import { ANALYTICS_CATEGORY_MAP } from '../analytics-shared';
 import { getCalculatorBySlug } from '../types';
 
 // SYNC REQUIRED: When adding new calculators, update BOTH:
@@ -90,7 +92,13 @@ const CalculatorDetail = () => {
             </div>
           }
         >
-          <CalculatorComponent />
+          <CalculatorAnalyticsProvider
+            calculatorId={slug}
+            calculatorName={calculator.title}
+            calculatorCategory={ANALYTICS_CATEGORY_MAP[calculator.category]}
+          >
+            <CalculatorComponent />
+          </CalculatorAnalyticsProvider>
         </Suspense>
       </div>
     </AppLayout>

@@ -1,5 +1,6 @@
 import { Loader2, Tag } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { trackApplyPromoCode } from '@/lib/analytics/events';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -15,6 +16,10 @@ interface PromoCodeInputProps {
   disabled?: boolean;
   disabledMessage?: string;
   className?: string;
+  attemptKey?: number;
+  itemType?: string;
+  itemId?: string;
+  discountPercent?: number;
 }
 
 export function PromoCodeInput({
@@ -27,6 +32,10 @@ export function PromoCodeInput({
   disabled,
   disabledMessage,
   className,
+  attemptKey,
+  itemType,
+  itemId,
+  discountPercent,
 }: PromoCodeInputProps) {
   const inputId = useId();
   const [expanded, setExpanded] = useState(Boolean(appliedCode) || Boolean(error));
@@ -44,6 +53,50 @@ export function PromoCodeInput({
       setExpanded(true);
     }
   }, [error]);
+
+  // Track promo code application result (success or error).
+  // Uses `value` (what the user typed) for errors, `appliedCode` for success.
+  const lastTrackedAttemptRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (isLoading || !Number.isInteger(attemptKey)) return;
+    if (!isApplied && !error) return;
+    if (lastTrackedAttemptRef.current === attemptKey) return;
+
+    lastTrackedAttemptRef.current = attemptKey;
+
+    if (isApplied && appliedCode) {
+      trackApplyPromoCode({
+        promoCode: appliedCode,
+        status: 'success',
+        discountPercent: discountPercent ?? 0,
+        itemType: itemType ?? '',
+        itemId: itemId ?? '',
+      });
+    } else if (error && value.trim()) {
+      const status = error.toLowerCase().includes('expired')
+        ? 'expired'
+        : error.toLowerCase().includes('limit')
+          ? 'limit_reached'
+          : 'invalid';
+      trackApplyPromoCode({
+        promoCode: value.trim().toUpperCase(),
+        status,
+        discountPercent: 0,
+        itemType: itemType ?? '',
+        itemId: itemId ?? '',
+      });
+    }
+  }, [
+    attemptKey,
+    appliedCode,
+    isApplied,
+    error,
+    isLoading,
+    discountPercent,
+    itemType,
+    itemId,
+    value,
+  ]);
 
   const handleApply = (event: React.FormEvent) => {
     event.preventDefault();

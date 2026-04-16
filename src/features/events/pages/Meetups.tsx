@@ -1,9 +1,18 @@
 import { BookOpen, Calendar } from 'lucide-react';
 import type React from 'react';
-import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
 import { usePublicTracks } from '@/features/tracks/hooks/useTracks';
+import {
+  buildEventDiscoveryItem,
+  buildTrackDiscoveryItem,
+  EVENTS_LIST_CONTEXT,
+  isCanonicalDiscoveryListPath,
+  TRACKS_LIST_CONTEXT,
+  useTrackedItemListView,
+} from '@/lib/analytics/contentDiscovery';
+import { trackSelectItem } from '@/lib/analytics/events';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
@@ -13,6 +22,7 @@ import { useEvents } from '../hooks/useEvents';
 import type { Event, EventFilters } from '../types';
 
 const EventsPage: React.FC = () => {
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState<EventFilters>({
@@ -46,6 +56,23 @@ const EventsPage: React.FC = () => {
   };
 
   const totalPages = Math.ceil((data?.total || 0) / itemsPerPage);
+
+  const eventListItems = useMemo(
+    () => (data?.items ?? []).map((event, index) => buildEventDiscoveryItem(event, index)),
+    [data?.items],
+  );
+  const trackListItems = useMemo(
+    () => (tracksData?.items ?? []).map((track, index) => buildTrackDiscoveryItem(track, index)),
+    [tracksData?.items],
+  );
+  const shouldTrackDiscoveryLists = isCanonicalDiscoveryListPath(pathname);
+
+  useTrackedItemListView(EVENTS_LIST_CONTEXT, eventListItems, {
+    enabled: shouldTrackDiscoveryLists,
+  });
+  useTrackedItemListView(TRACKS_LIST_CONTEXT, trackListItems, {
+    enabled: shouldTrackDiscoveryLists,
+  });
 
   return (
     <Layout>
@@ -99,10 +126,20 @@ const EventsPage: React.FC = () => {
               </div>
 
               <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {tracksData.items.map((track) => (
+                {tracksData.items.map((track, index) => (
                   <PublicTrackCard
                     key={track.id}
                     track={track}
+                    onCardClick={() => {
+                      const trackedItem = trackListItems[index];
+                      if (shouldTrackDiscoveryLists && trackedItem) {
+                        trackSelectItem(
+                          TRACKS_LIST_CONTEXT.listId,
+                          TRACKS_LIST_CONTEXT.listName,
+                          trackedItem,
+                        );
+                      }
+                    }}
                     onClick={() => handleTrackClick(track.id)}
                   />
                 ))}
@@ -146,10 +183,20 @@ const EventsPage: React.FC = () => {
                     (data.items.length > 0 ? (
                       <>
                         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                          {data.items.map((event) => (
+                          {data.items.map((event, index) => (
                             <EventCard
                               key={event.id}
                               event={event}
+                              onCardClick={() => {
+                                const trackedItem = eventListItems[index];
+                                if (shouldTrackDiscoveryLists && trackedItem) {
+                                  trackSelectItem(
+                                    EVENTS_LIST_CONTEXT.listId,
+                                    EVENTS_LIST_CONTEXT.listName,
+                                    trackedItem,
+                                  );
+                                }
+                              }}
                               onViewDetails={handleEventClick}
                             />
                           ))}

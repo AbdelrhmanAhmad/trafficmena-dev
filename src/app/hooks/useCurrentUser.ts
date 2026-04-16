@@ -5,16 +5,19 @@ import {
   type UpdateCurrentUserPayload,
   updateCurrentUser,
 } from '@/app/api/users';
-
-export const currentUserQueryKey = ['current-user'];
+import { currentUserQueryKey, getCurrentUserQueryKey } from '@/app/queryKeys';
+import { useAuth } from '@/shared/context/AuthContext';
 
 export function useCurrentUser(options?: { enabled?: boolean }) {
+  const { user, loading } = useAuth();
+  const userId = user?.id ?? null;
+
   return useQuery({
-    queryKey: currentUserQueryKey,
+    queryKey: getCurrentUserQueryKey(userId),
     queryFn: (): Promise<CurrentUserResponse> => fetchCurrentUser(),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    enabled: options?.enabled ?? true,
+    enabled: (options?.enabled ?? Boolean(userId)) && Boolean(userId) && !loading,
   });
 }
 

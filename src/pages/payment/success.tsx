@@ -1,7 +1,13 @@
 import { CheckCircle2, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useVerifyPayment } from '@/app/hooks/usePayments';
+import { trackPurchase, trackSubscribe } from '@/lib/analytics/events';
+import { centsToUnits } from '@/lib/analytics/helpers';
+import {
+  getPurchaseItemCategory,
+  isVerifiedPaymentAnalyticsReady,
+} from '@/lib/analytics/paymentFlow';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -19,6 +25,7 @@ export default function PaymentSuccessPage() {
   const { user } = useAuth();
   const verifyPayment = useVerifyPayment();
   const [verificationAttempted, setVerificationAttempted] = useState(false);
+  const analyticsRetryCountRef = useRef(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,12 +36,88 @@ export default function PaymentSuccessPage() {
   }, [invoiceId, user, verificationAttempted, verifyPayment]);
 
   useEffect(() => {
-    if (verifyPayment.data?.status === 'paid' && verifyPayment.data.itemId) {
-      if (verifyPayment.data.itemType === 'event') {
-        navigate(`/thank-you-event/${verifyPayment.data.itemId}?paid=1`, { replace: true });
-      } else if (verifyPayment.data.itemType === 'track') {
-        navigate(`/thank-you-track/${verifyPayment.data.itemId}?paid=1`, { replace: true });
+    if (!invoiceId) {
+      return;
+    }
+
+    const verifyData = verifyPayment.data;
+    if (
+      !verifyData ||
+      verifyData.status !== 'paid' ||
+      isVerifiedPaymentAnalyticsReady(verifyData)
+    ) {
+      return;
+    }
+
+    if (analyticsRetryCountRef.current >= 2) {
+      return;
+    }
+
+    analyticsRetryCountRef.current += 1;
+    const retryTimer = window.setTimeout(() => {
+      verifyPayment.mutate({ invoiceId: Number(invoiceId) });
+    }, 500);
+
+    return () => window.clearTimeout(retryTimer);
+  }, [invoiceId, verifyPayment, verifyPayment.data]);
+
+  // Fire purchase analytics THEN navigate — single effect to avoid race conditions.
+  useEffect(() => {
+    const verifyData = verifyPayment.data;
+    if (!isVerifiedPaymentAnalyticsReady(verifyData)) return;
+
+    const storageKey = `tracked_purchase_${verifyData.paymentId}`;
+    if (!sessionStorage.getItem(storageKey)) {
+      sessionStorage.setItem(storageKey, '1');
+
+      const value = centsToUnits(verifyData.amountCents);
+      const originalValue = centsToUnits(verifyData.originalAmountCents ?? verifyData.amountCents);
+      const discount = centsToUnits(verifyData.discountAppliedCents);
+      const itemType = verifyData.itemType ?? 'event';
+
+      if (itemType === 'subscription') {
+        trackSubscribe({
+          transactionId: verifyData.paymentId,
+          currency: 'EGP',
+          value,
+          paymentType: verifyData.paymentType ?? '',
+          priorPaidPurchases: verifyData.priorPaidPurchases ?? 0,
+          coupon: verifyData.promoCode ?? '',
+          discount,
+          originalValue,
+        });
+      } else {
+        trackPurchase({
+          transactionId: verifyData.paymentId,
+          currency: 'EGP',
+          value,
+          itemType,
+          paymentType: verifyData.paymentType ?? '',
+          priorNonSubscriptionPurchases: verifyData.priorNonSubscriptionPurchases ?? 0,
+          coupon: verifyData.promoCode ?? '',
+          discount,
+          originalValue,
+          item: {
+            item_id: verifyData.itemId ?? '',
+            item_name: verifyData.itemName ?? '',
+            item_category: getPurchaseItemCategory(itemType, verifyData.itemCategory),
+            price: value,
+            currency: 'EGP',
+            quantity: 1,
+          },
+        });
       }
+    }
+
+    // Navigate AFTER tracking has fired
+    if (verifyData.itemId) {
+      if (verifyData.itemType === 'event') {
+        navigate(`/thank-you-event/${verifyData.itemId}?paid=1`, { replace: true });
+      } else if (verifyData.itemType === 'track') {
+        navigate(`/thank-you-track/${verifyData.itemId}?paid=1`, { replace: true });
+      }
+    } else if (verifyData.itemType === 'subscription') {
+      navigate('/dashboard?subscribed=1', { replace: true });
     }
   }, [verifyPayment.data, navigate]);
 

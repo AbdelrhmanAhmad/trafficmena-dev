@@ -47,9 +47,17 @@ export type VerifyPaymentResponse = {
   recoveredFromExpired?: boolean;
   confirmationSource?: 'verify' | 'webhook' | 'reconcile';
   success?: boolean;
+  amountCents?: number;
   itemName?: string;
+  itemCategory?: string;
   itemType?: PaymentItemType;
   itemId?: string | null;
+  paymentType?: string;
+  promoCode?: string;
+  originalAmountCents?: number;
+  discountAppliedCents?: number;
+  priorPaidPurchases?: number;
+  priorNonSubscriptionPurchases?: number;
 };
 
 export type Payment = {

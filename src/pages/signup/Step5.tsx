@@ -3,6 +3,8 @@ import { useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import { activateInvitation } from '@/app/api/invitations';
+import { trackSignUp, trackSignUpStep } from '@/lib/analytics/events';
+import { buildCompletedSignUpTrackingParams } from '@/lib/analytics/signup';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
@@ -57,6 +59,7 @@ const Step5: React.FC = () => {
 
     try {
       updateFormData({ primaryChallenge });
+      trackSignUpStep(6, 'challenge_selected');
 
       if (formData.invitationToken) {
         try {
@@ -73,6 +76,19 @@ const Step5: React.FC = () => {
               sessionStorage.removeItem(acceptanceCacheKey);
             } catch {
               // ignore storage errors
+            }
+            const trackingParams = buildCompletedSignUpTrackingParams({
+              authUserId: activationResult.userId,
+              invitationUserId: formData.invitationUserId,
+              email: formData.email,
+              phone: formData.phoneNumber,
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+            });
+            if (trackingParams) {
+              trackSignUp(trackingParams);
+            } else {
+              console.warn('[analytics] skipped sign_up because no invited user id was available');
             }
             toast({
               title: 'Welcome to TrafficMENA',

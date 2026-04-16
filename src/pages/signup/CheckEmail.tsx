@@ -3,9 +3,12 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
+import { trackSignUp, trackSignUpStep } from '@/lib/analytics/events';
+import { buildCompletedSignUpTrackingParams } from '@/lib/analytics/signup';
 import SignUpLayout, {
   SIGNUP_OTP_STEP,
   SIGNUP_TOTAL_STEPS,
+  useSignUpContext,
 } from '@/shared/components/layout/SignUpLayout';
 import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
@@ -26,6 +29,7 @@ const CheckEmail: React.FC = () => {
   const navigate = useNavigate();
   const email = location.state?.email || '';
   const { verifyOtp, requestOtp, user } = useAuth();
+  const { formData } = useSignUpContext();
   const { toast } = useToast();
   const { handleError } = useErrorHandler();
   const turnstile = useTurnstile();
@@ -63,8 +67,21 @@ const CheckEmail: React.FC = () => {
 
     setIsVerifying(true);
     try {
-      await verifyOtp({ email, otp: code.trim(), intent: 'signup' });
+      const signedUpUser = await verifyOtp({ email, otp: code.trim(), intent: 'signup' });
+      trackSignUpStep(3, 'otp_verified');
       await persistSignupProfile();
+      const trackingParams = buildCompletedSignUpTrackingParams({
+        authUserId: signedUpUser?.id,
+        email,
+        phone: formData.phoneNumber,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+      });
+      if (trackingParams) {
+        trackSignUp(trackingParams);
+      } else {
+        console.warn('[analytics] skipped sign_up because no user id was available');
+      }
       toast({
         title: 'Welcome to TrafficMENA',
         description: 'You are now signed in.',

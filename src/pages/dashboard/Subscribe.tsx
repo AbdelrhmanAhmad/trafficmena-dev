@@ -16,6 +16,16 @@ import {
   VideoReviewsSection,
 } from '@/features/subscribe/components';
 import { FINAL_CTA_COPY, HERO_BENEFITS, PRICING } from '@/features/subscribe/content';
+import { trackBeginCheckout, trackSelectPaymentMethod } from '@/lib/analytics/events';
+import {
+  buildCheckoutAnalyticsItem,
+  getAmountCentsFromUnits,
+  getAnalyticsItemId,
+  getBeginCheckoutValueFromAvailablePricing,
+  getNormalizedPaymentType,
+  getSelectPaymentMethodValueFromAvailablePricing,
+  shouldTrackStandaloneCheckoutEntry,
+} from '@/lib/analytics/paymentFlow';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { PaymentMethodSelector } from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
@@ -282,6 +292,7 @@ function SubscribePaymentView() {
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const checkoutRequestLockRef = useRef(false);
+  const beginCheckoutFiredRef = useRef(false);
 
   const { data: subscriptionInfo } = useSubscriptionInfo();
   const { data: pricePreview } = usePricePreview('subscription', undefined, undefined);
@@ -289,10 +300,42 @@ function SubscribePaymentView() {
   const { data: methods } = usePaymentMethods();
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
   const shouldRedirect = shouldRedirectToGateway(selectedMethod);
+  const analyticsItemId = getAnalyticsItemId('subscription');
+  const subscriptionBasePriceCents = getAmountCentsFromUnits(subscriptionInfo?.priceEgp);
 
   useEffect(() => {
     setIsLoaded(true);
   }, []);
+
+  useEffect(() => {
+    if (
+      !shouldTrackStandaloneCheckoutEntry({
+        selectedMethodId,
+        alreadyTracked: beginCheckoutFiredRef.current,
+      })
+    ) {
+      return;
+    }
+
+    const value = getBeginCheckoutValueFromAvailablePricing(
+      pricePreview,
+      subscriptionBasePriceCents,
+    );
+    if (value <= 0) {
+      return;
+    }
+
+    beginCheckoutFiredRef.current = true;
+    trackBeginCheckout({
+      currency: 'EGP',
+      value,
+      itemType: 'subscription',
+      item: buildCheckoutAnalyticsItem({
+        itemType: 'subscription',
+        value,
+      }),
+    });
+  }, [pricePreview, selectedMethodId, subscriptionBasePriceCents]);
 
   const goToPending = (payload: {
     invoiceId?: number;
@@ -330,10 +373,30 @@ function SubscribePaymentView() {
     checkoutRequestLockRef.current = true;
 
     try {
+      const checkoutValue = getSelectPaymentMethodValueFromAvailablePricing(
+        pricePreview,
+        subscriptionBasePriceCents,
+      );
+      if (checkoutValue > 0) {
+        trackSelectPaymentMethod({
+          currency: 'EGP',
+          value: checkoutValue,
+          paymentType: getNormalizedPaymentType(selectedMethod?.name_en),
+          itemType: 'subscription',
+          coupon: '',
+          item: buildCheckoutAnalyticsItem({
+            itemType: 'subscription',
+            value: checkoutValue,
+          }),
+        });
+      }
+
       const result = await createCheckout.mutateAsync({
         itemType: 'subscription',
         paymentMethodId: selectedMethodId,
-        idempotencyKey: createCheckoutIdempotencyKey(`subscription:${selectedMethodId}`),
+        idempotencyKey: createCheckoutIdempotencyKey(
+          `subscription:${analyticsItemId}:${selectedMethodId}`,
+        ),
       });
 
       if (result.free) {

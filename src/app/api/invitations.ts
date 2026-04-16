@@ -120,6 +120,7 @@ export type ActivateInvitationResponse = {
   invitation: InvitationRecord;
   alreadyActivated: boolean;
   sessionCreated: boolean;
+  userId?: string;
 };
 
 export async function activateInvitation(

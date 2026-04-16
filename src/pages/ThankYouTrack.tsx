@@ -15,6 +15,8 @@ import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useBookTrack, usePublicTrack } from '@/features/tracks/hooks/useTracks';
+import { resolveTrackCalendarAnalyticsEvent } from '@/lib/analytics/calendar';
+import { trackAddToCalendar } from '@/lib/analytics/events';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
@@ -40,6 +42,10 @@ const ThankYouTrack: React.FC = () => {
 
   const track = data?.track;
   const events = data?.events ?? [];
+  const calendarAnalyticsEvent = useMemo(
+    () => resolveTrackCalendarAnalyticsEvent(events),
+    [events],
+  );
 
   // Auto-book track for users arriving from post-signup flow
   useEffect(() => {
@@ -53,6 +59,13 @@ const ThankYouTrack: React.FC = () => {
   // Generate ICS file for all track events
   const downloadIcsFile = () => {
     if (!track || events.length === 0) return;
+    if (calendarAnalyticsEvent) {
+      trackAddToCalendar({
+        itemId: calendarAnalyticsEvent.itemId,
+        itemName: calendarAnalyticsEvent.itemName,
+        calendarType: 'ics_download',
+      });
+    }
 
     const calendarEvents = events.map((event) => {
       const startDate = new Date(event.date);
@@ -372,7 +385,19 @@ const ThankYouTrack: React.FC = () => {
                       variant="outline"
                       className="flex h-12 items-center gap-2 border-neutral-300 hover:bg-neutral-50"
                     >
-                      <a href={googleCalendarUrl} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={googleCalendarUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() =>
+                          calendarAnalyticsEvent &&
+                          trackAddToCalendar({
+                            itemId: calendarAnalyticsEvent.itemId,
+                            itemName: calendarAnalyticsEvent.itemName,
+                            calendarType: 'google_calendar',
+                          })
+                        }
+                      >
                         <ExternalLink className="h-5 w-5" />
                         Add First Session to Google Calendar
                       </a>

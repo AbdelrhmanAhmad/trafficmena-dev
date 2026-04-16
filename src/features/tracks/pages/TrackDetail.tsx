@@ -12,10 +12,12 @@ import {
   Users,
 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { PublicTrackEventRecord } from '@/app/api/tracks';
 import { usePricePreview } from '@/app/hooks/usePayments';
+import { trackViewItem } from '@/lib/analytics/events';
+import { centsToUnits } from '@/lib/analytics/helpers';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import {
@@ -126,6 +128,7 @@ const TrackDetail: React.FC = () => {
   const bookMutation = useBookTrack();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [promoAttemptKey, setPromoAttemptKey] = useState(0);
 
   const track = data?.track;
   const events = data?.events ?? [];
@@ -135,6 +138,7 @@ const TrackDetail: React.FC = () => {
     user && id ? 'track' : undefined,
     id,
     appliedPromoCode ?? undefined,
+    { requestKey: promoAttemptKey },
   );
 
   const isPaidTrack = !!(track?.price_in_cents && track.price_in_cents > 0);
@@ -239,6 +243,28 @@ const TrackDetail: React.FC = () => {
       setAppliedPromoCode(null);
     }
   }, [appliedPromoCode, promoDisabled, pricePreview]);
+
+  // Track view_item when track detail loads
+  const trackedTrackIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!track || !id) return;
+    if (trackedTrackIdRef.current === id) return;
+    trackedTrackIdRef.current = id;
+
+    trackViewItem({
+      currency: 'EGP',
+      value: centsToUnits(track.price_in_cents),
+      item: {
+        item_id: track.id,
+        item_name: track.title,
+        item_category: 'Track',
+        price: centsToUnits(track.price_in_cents),
+        currency: 'EGP',
+        item_location: track.location ?? undefined,
+        spots_remaining: track.spots_remaining,
+      },
+    });
+  }, [track, id]);
 
   const handleBook = () => {
     if (!id) return;
@@ -463,7 +489,10 @@ const TrackDetail: React.FC = () => {
                               pricePreview={pricePreview}
                             />
                             <PromoCodeInput
-                              onApply={(code) => setAppliedPromoCode(code)}
+                              onApply={(code) => {
+                                setAppliedPromoCode(code);
+                                setPromoAttemptKey((currentKey) => currentKey + 1);
+                              }}
                               onRemove={() => setAppliedPromoCode(null)}
                               appliedCode={appliedPromoCode ?? undefined}
                               isApplied={isPromoApplied}
@@ -471,6 +500,18 @@ const TrackDetail: React.FC = () => {
                               isLoading={pricePreviewLoading}
                               disabled={promoDisabled}
                               disabledMessage={promoDisabledReason ?? undefined}
+                              attemptKey={promoAttemptKey}
+                              itemType="track"
+                              itemId={id}
+                              discountPercent={
+                                isPromoApplied && pricePreview?.originalAmountCents
+                                  ? Math.round(
+                                      (pricePreview.discountAppliedCents /
+                                        pricePreview.originalAmountCents) *
+                                        100,
+                                    )
+                                  : undefined
+                              }
                             />
                           </div>
                         )}
@@ -560,6 +601,8 @@ const TrackDetail: React.FC = () => {
           itemType="track"
           itemId={id}
           itemName={track.title}
+          itemCategory="Track"
+          basePriceCents={track.price_in_cents}
           appliedPromoCode={isPromoApplied ? (appliedPromoCode ?? undefined) : undefined}
           onSuccess={() => {
             // Refresh the track data after successful payment

@@ -30,6 +30,7 @@ import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError } from '../../utils/errors.js';
 import { isInvoicePaid } from '../../utils/invoiceStatus.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { loadVerifiedPaymentAnalytics } from './paymentAnalytics.js';
 import { ONE_YEAR_MS } from './subscriptionShared.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
 import { isKnownDatabaseConflict } from './utils.js';
@@ -98,6 +99,14 @@ type ConfirmGatewayInvoiceResult = {
   paymentId: string;
   itemType: 'event' | 'track' | 'subscription';
   itemId: string | null;
+  amountCents?: number;
+  itemName?: string;
+  paymentType?: string;
+  promoCode?: string;
+  originalAmountCents?: number;
+  discountAppliedCents?: number;
+  priorPaidPurchases?: number;
+  priorNonSubscriptionPurchases?: number;
   fawaterkPaid: boolean;
   alreadyProcessed?: boolean;
   recoveredFromExpired?: boolean;
@@ -859,11 +868,38 @@ export async function confirmGatewayInvoicePayment(args: {
   }
 
   if (payment.status === 'paid') {
+    let paymentMethod: string | undefined;
+    try {
+      const invoiceData = await getInvoiceData(args.invoiceId);
+      paymentMethod = invoiceData.payment_method;
+    } catch (error) {
+      console.warn('[payments/confirm] Unable to enrich paid payment from gateway invoice', {
+        source: args.source,
+        invoiceId: args.invoiceId,
+        paymentId: payment.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    // Analytics enrichment is best-effort — payment verification must succeed
+    // even if enrichment queries fail (DB hiccup, timeout, etc.)
+    let analytics = {};
+    try {
+      analytics = await loadVerifiedPaymentAnalytics(payment, paymentMethod);
+    } catch (error) {
+      console.warn('[payments/confirm] Analytics enrichment failed for already-paid payment', {
+        paymentId: payment.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     return {
       status: 'paid',
       paymentId: payment.id,
       itemType: payment.itemType,
       itemId: payment.itemId,
+      amountCents: payment.amountCents,
+      ...analytics,
       fawaterkPaid: true,
       alreadyProcessed: true,
       confirmationSource: args.source,
@@ -953,11 +989,24 @@ export async function confirmGatewayInvoicePayment(args: {
     });
   }
 
+  // Analytics enrichment is best-effort — never block payment confirmation
+  let analytics = {};
+  try {
+    analytics = await loadVerifiedPaymentAnalytics(payment, invoiceData.payment_method);
+  } catch (error) {
+    console.warn('[payments/confirm] Analytics enrichment failed after payment processing', {
+      paymentId: payment.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   return {
     status: processStatus,
     paymentId: payment.id,
     itemType: payment.itemType,
     itemId: payment.itemId,
+    amountCents: payment.amountCents,
+    ...analytics,
     fawaterkPaid: true,
     alreadyProcessed,
     recoveredFromExpired,

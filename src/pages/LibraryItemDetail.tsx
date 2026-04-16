@@ -10,9 +10,14 @@ import {
   Video,
 } from 'lucide-react';
 import type React from 'react';
-import { useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useLibraryAsset } from '@/features/library/hooks/useLibrary';
+import { trackDownloadContent, trackViewContent } from '@/lib/analytics/events';
+import {
+  resolveLibrarySeriesContext,
+  shouldTrackInlineLibraryContent,
+} from '@/lib/analytics/libraryContent';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
@@ -36,6 +41,7 @@ const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
 
 const LibraryItemDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { data, isLoading, error } = useLibraryAsset(id ?? '');
   const item = data ?? null;
@@ -48,6 +54,27 @@ const LibraryItemDetail: React.FC = () => {
       navigate('/dashboard/library', { replace: true });
     }
   }, [id, navigate]);
+
+  const seriesContext = resolveLibrarySeriesContext(location.state);
+  const trackedContentViewKeyRef = useRef('');
+  useEffect(() => {
+    if (!item || !id) return;
+    if (!shouldTrackInlineLibraryContent(item)) return;
+
+    const trackingKey = `${id}:${seriesContext.seriesId}`;
+    if (trackedContentViewKeyRef.current === trackingKey) return;
+    trackedContentViewKeyRef.current = trackingKey;
+
+    trackViewContent({
+      contentId: item.id,
+      contentName: item.title,
+      contentType: item.file_type,
+      isPremium: item.is_premium ?? false,
+      seriesId: seriesContext.seriesId,
+      seriesName: seriesContext.seriesName,
+      eventId: item.event_id ?? '',
+    });
+  }, [id, item, seriesContext.seriesId, seriesContext.seriesName]);
 
   const getIcon = (type: string, embedType?: string | null) => {
     if (embedType || type === 'Presentation') {
@@ -336,6 +363,14 @@ const LibraryItemDetail: React.FC = () => {
                           rel="noopener noreferrer"
                           download
                           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] font-medium shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-0.5 active:scale-95"
+                          onClick={() =>
+                            trackDownloadContent({
+                              contentId: item.id,
+                              contentName: item.title,
+                              contentType: item.file_type,
+                              isPremium: item.is_premium ?? false,
+                            })
+                          }
                         >
                           <Download className="h-4 w-4" />
                           Download

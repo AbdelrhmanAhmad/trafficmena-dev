@@ -1,8 +1,8 @@
-import { and, desc, eq, ilike, isNull, or, type SQL, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, inArray, isNull, or, type SQL, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { profiles, users } from '../../db/schema/index.js';
+import { eventAttendees, payments, profiles, users } from '../../db/schema/index.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { parseUsersListQuery } from './users-list.js';
 import { normalizePhoneNumber, validatePhoneNumberUpdate } from './users-phone.js';
@@ -233,25 +233,60 @@ export function registerUserRoutes(app: Hono) {
       );
     }
 
-    const [profile] = await db
-      .select({
-        id: profiles.id,
-        firstName: profiles.firstName,
-        lastName: profiles.lastName,
-        phoneNumber: profiles.phoneNumber,
-        role: profiles.role,
-        userType: profiles.userType,
-        experienceLevel: profiles.experienceLevel,
-        primaryGoal: profiles.primaryGoal,
-        primaryChallenge: profiles.primaryChallenge,
-        subscriptionStatus: profiles.subscriptionStatus,
-      })
-      .from(profiles)
-      .where(eq(profiles.id, session.user.id));
+    const [profileRows, userRows, purchaseStatRows, registrationStatRows] = await Promise.all([
+      db
+        .select({
+          id: profiles.id,
+          firstName: profiles.firstName,
+          lastName: profiles.lastName,
+          phoneNumber: profiles.phoneNumber,
+          role: profiles.role,
+          userType: profiles.userType,
+          experienceLevel: profiles.experienceLevel,
+          primaryGoal: profiles.primaryGoal,
+          primaryChallenge: profiles.primaryChallenge,
+          subscriptionStatus: profiles.subscriptionStatus,
+        })
+        .from(profiles)
+        .where(eq(profiles.id, session.user.id))
+        .limit(1),
+      db
+        .select({ createdAt: users.createdAt })
+        .from(users)
+        .where(eq(users.id, session.user.id))
+        .limit(1),
+      db
+        .select({
+          count: sql<number>`count(*)::int`,
+          revenueCents: sql<number>`COALESCE(sum(${payments.amountCents}), 0)::int`,
+        })
+        .from(payments)
+        .where(and(eq(payments.userId, session.user.id), eq(payments.status, 'paid')))
+        .limit(1),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(eventAttendees)
+        .where(
+          and(
+            eq(eventAttendees.userId, session.user.id),
+            inArray(eventAttendees.status, ['active', 'refund_requested']),
+          ),
+        )
+        .limit(1),
+    ]);
+
+    const profile = profileRows[0] ?? null;
+    const userRecord = userRows[0] ?? null;
+    const purchaseStats = purchaseStatRows[0] ?? null;
+    const registrationStats = registrationStatRows[0] ?? null;
 
     return c.json({
       user: session.user,
-      profile: profile ?? null,
+      profile,
+      totalPaidPurchases: purchaseStats?.count ?? 0,
+      totalRegistrations: registrationStats?.count ?? 0,
+      totalRevenueCents: purchaseStats?.revenueCents ?? 0,
+      accountCreationDate: userRecord?.createdAt ?? null,
     });
   });
 

@@ -939,6 +939,7 @@ export function registerEventRoutes(app: Hono) {
             return {
               success: true,
               status: 'refund_requested' as const,
+              wasPaid: true,
               message:
                 'Your refund request has been submitted. Our team will review and process it shortly.',
             };
@@ -955,6 +956,7 @@ export function registerEventRoutes(app: Hono) {
           return {
             success: true,
             status: 'cancelled' as const,
+            wasPaid: false,
             message: 'Your registration has been cancelled.',
           };
         });

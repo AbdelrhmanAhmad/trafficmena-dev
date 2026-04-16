@@ -13,6 +13,7 @@ interface EventCardProps {
   className?: string;
   showFavoriteButton?: boolean;
   onFavoriteToggle?: (event: Event) => void;
+  onCardClick?: (event: Event) => void;
   onViewDetails?: (event: Event) => void;
 }
 
@@ -22,6 +23,7 @@ export const EventCard = memo(function EventCard({
   className,
   showFavoriteButton = false,
   onFavoriteToggle,
+  onCardClick,
   onViewDetails,
 }: EventCardProps) {
   const destination = to ?? `/meetups/${event.id}`;
@@ -42,6 +44,8 @@ export const EventCard = memo(function EventCard({
   }, [event.description]);
 
   const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    onCardClick?.(event);
+
     if (onViewDetails) {
       e.preventDefault();
       onViewDetails(event);

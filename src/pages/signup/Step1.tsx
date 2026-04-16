@@ -2,6 +2,7 @@ import { Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -49,6 +50,7 @@ const Step1: React.FC = () => {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
       });
+      trackSignUpStep(1, 'name_info');
       navigate('/signup/step-2');
       setIsLoading(false);
     }

@@ -2,6 +2,8 @@ import type React from 'react';
 import { useEffect, useId, useState } from 'react';
 import { Link, type Location, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
+import { completeSignInVerification, requestSignInCode } from '@/app/auth/signIn';
+import { trackLogin, trackLoginStart } from '@/lib/analytics/events';
 import Layout from '@/shared/components/layout/Layout';
 import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
@@ -50,7 +52,10 @@ const SignIn: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      await requestOtp(email.trim().toLowerCase(), 'signin', {
+      await requestSignInCode({
+        email,
+        requestOtp,
+        onLoginStart: trackLoginStart,
         turnstileToken: turnstile.token ?? undefined,
       });
       toast({
@@ -90,11 +95,20 @@ const SignIn: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      await verifyOtp({ email: email.trim().toLowerCase(), otp: otp.trim(), intent: 'signin' });
-      await refreshSession();
+      const { normalizedEmail, userId } = await completeSignInVerification({
+        email,
+        otp,
+        verifyOtp,
+        refreshSession,
+        onRefreshError: (error) => {
+          console.warn('[auth] refreshSession failed after successful OTP verification', error);
+        },
+      });
+      trackLogin({ status: 'success', email: normalizedEmail, userId });
       toast({ title: 'Welcome back!', description: 'You are now signed in.' });
       navigate(redirectTo, { replace: true });
     } catch (error) {
+      trackLogin({ status: 'failure', email: email.trim().toLowerCase() });
       const message = error instanceof Error ? error.message : 'Invalid or expired code.';
       setErrorMessage(message);
     } finally {

@@ -9,9 +9,10 @@ import {
   revokeSubscriptionGrant,
   updateSubscriptionSettings,
 } from '@/app/api/subscriptions';
+import { currentSubscriptionQueryKey, getCurrentSubscriptionQueryKey } from '@/app/queryKeys';
+import { useAuth } from '@/shared/context/AuthContext';
 
 const SUBSCRIPTION_SETTINGS_KEY = ['subscription-settings'];
-const CURRENT_SUBSCRIPTION_KEY = ['current-subscription'];
 const SUBSCRIPTION_INFO_KEY = ['subscription-info'];
 
 export function useSubscriptionSettings() {
@@ -35,11 +36,14 @@ export function useUpdateSubscriptionSettings() {
 }
 
 export function useCurrentSubscription(options?: { enabled?: boolean }) {
+  const { user, loading } = useAuth();
+  const userId = user?.id ?? null;
+
   return useQuery<UserSubscription>({
-    queryKey: CURRENT_SUBSCRIPTION_KEY,
+    queryKey: getCurrentSubscriptionQueryKey(userId),
     queryFn: fetchCurrentSubscription,
     staleTime: 60 * 1000,
-    enabled: options?.enabled ?? true,
+    enabled: (options?.enabled ?? Boolean(userId)) && Boolean(userId) && !loading,
   });
 }
 
@@ -58,7 +62,7 @@ export function useCreateSubscriptionGrant() {
     mutationFn: createSubscriptionGrant,
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
+      queryClient.invalidateQueries({ queryKey: currentSubscriptionQueryKey });
       queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });
     },
   });
@@ -71,7 +75,7 @@ export function useRevokeSubscriptionGrant() {
     mutationFn: revokeSubscriptionGrant,
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
+      queryClient.invalidateQueries({ queryKey: currentSubscriptionQueryKey });
       queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });
     },
   });
@@ -84,7 +88,7 @@ export function useBulkSubscriptionGrants() {
     mutationFn: createSubscriptionGrantsFromCsv,
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: CURRENT_SUBSCRIPTION_KEY });
+      queryClient.invalidateQueries({ queryKey: currentSubscriptionQueryKey });
       queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_INFO_KEY });
     },
   });

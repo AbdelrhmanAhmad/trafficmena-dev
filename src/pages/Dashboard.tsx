@@ -10,6 +10,12 @@ import {
   useSkills,
   useUserSkills,
 } from '@/app/hooks/useSkills';
+import { trackProfileUpdated } from '@/lib/analytics/events';
+import {
+  getProfileCompletion,
+  getUpdatedProfileFields,
+  type ProfileAnalyticsSnapshot,
+} from '@/lib/analytics/profile';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Badge } from '@/shared/components/ui/badge';
@@ -31,6 +37,15 @@ interface ProfileFormState {
   primaryGoal: string;
   primaryChallenge: string;
 }
+
+const EMPTY_PROFILE_ANALYTICS_SNAPSHOT: ProfileAnalyticsSnapshot = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  primaryGoal: '',
+  primaryChallenge: '',
+};
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -59,21 +74,24 @@ const Dashboard: React.FC = () => {
     primaryGoal: '',
     primaryChallenge: '',
   });
+  const [savedProfileSnapshot, setSavedProfileSnapshot] = useState<ProfileAnalyticsSnapshot>(
+    EMPTY_PROFILE_ANALYTICS_SNAPSHOT,
+  );
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState('');
 
   useEffect(() => {
-    if (profileResponse?.profile) {
-      setFormData((prev) => ({
-        ...prev,
-        firstName: profileResponse.profile.first_name ?? '',
-        lastName: profileResponse.profile.last_name ?? '',
-        email: user?.email ?? '',
-        phone: profileResponse.profile.phone_number ?? '',
-        primaryGoal: profileResponse.profile.primary_goal ?? '',
-        primaryChallenge: profileResponse.profile.primary_challenge ?? '',
-      }));
-    }
+    const nextSnapshot: ProfileAnalyticsSnapshot = {
+      firstName: profileResponse?.profile?.first_name ?? '',
+      lastName: profileResponse?.profile?.last_name ?? '',
+      email: user?.email ?? '',
+      phone: profileResponse?.profile?.phone_number ?? '',
+      primaryGoal: profileResponse?.profile?.primary_goal ?? '',
+      primaryChallenge: profileResponse?.profile?.primary_challenge ?? '',
+    };
+
+    setSavedProfileSnapshot(nextSnapshot);
+    setFormData(nextSnapshot);
   }, [profileResponse, user?.email]);
 
   useEffect(() => {
@@ -166,6 +184,25 @@ const Dashboard: React.FC = () => {
         primary_goal: formData.primaryGoal,
         primary_challenge: formData.primaryChallenge,
       });
+
+      const currentProfileSnapshot: ProfileAnalyticsSnapshot = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        primaryGoal: formData.primaryGoal,
+        primaryChallenge: formData.primaryChallenge,
+      };
+      const fieldsUpdated = getUpdatedProfileFields(savedProfileSnapshot, currentProfileSnapshot);
+      const profileCompletion = getProfileCompletion(currentProfileSnapshot);
+
+      if (fieldsUpdated) {
+        trackProfileUpdated({
+          fieldsUpdated,
+          profileCompletion,
+        });
+      }
+      setSavedProfileSnapshot(currentProfileSnapshot);
 
       toast({
         title: 'Profile updated',

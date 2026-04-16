@@ -149,6 +149,7 @@ export function registerInvitationRoutes(app: Hono) {
           invitation: result.invitation,
           alreadyActivated: result.alreadyActivated,
           sessionCreated: result.sessionCreated,
+          userId: result.userId,
         });
       },
       'INVITATION_ACTIVATE_FAILED',
@@ -445,6 +446,7 @@ type ActivationResult = {
   invitation: InvitationRecord;
   alreadyActivated: boolean;
   sessionCreated: boolean;
+  userId?: string;
   setCookie?: string[];
 };
 
@@ -551,6 +553,7 @@ async function activateInvitation(
     invitation: updatedInvitation,
     alreadyActivated: existing.activatedAt !== null,
     sessionCreated,
+    userId: inviteeUserId ?? undefined,
     setCookie: setCookieValues.length > 0 ? setCookieValues : undefined,
   };
 }

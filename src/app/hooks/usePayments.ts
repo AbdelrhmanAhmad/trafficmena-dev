@@ -16,6 +16,7 @@ import {
   fetchPricePreview,
   verifyPayment,
 } from '@/app/api/payments';
+import { currentUserQueryKey } from '@/app/queryKeys';
 
 const PAYMENT_METHODS_KEY = ['payment-methods'];
 const PAYMENT_KEY = ['payment'];
@@ -56,6 +57,8 @@ export function useVerifyPayment() {
         queryClient.invalidateQueries({ queryKey: ['current-subscription'] });
         queryClient.invalidateQueries({ queryKey: ['events'] });
         queryClient.invalidateQueries({ queryKey: ['tracks'] });
+        // Refresh user aggregates so global_variables reflects updated totals
+        queryClient.invalidateQueries({ queryKey: currentUserQueryKey });
       }
     },
   });
@@ -77,10 +80,10 @@ export function usePricePreview(
   itemType: PaymentItemType | undefined,
   itemId?: string,
   promoCode?: string,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; requestKey?: number | string },
 ) {
   return useQuery<PricePreview>({
-    queryKey: [...PRICE_PREVIEW_KEY, itemType, itemId, promoCode],
+    queryKey: [...PRICE_PREVIEW_KEY, itemType, itemId, promoCode, options?.requestKey ?? 'default'],
     queryFn: ({ signal }) => {
       if (!itemType) throw new Error('Item type required');
       return fetchPricePreview(itemType, itemId, promoCode, signal);

@@ -82,6 +82,13 @@ const SEOROICalculator = () => {
     return totalSales * ltv;
   }, [projections, customerLifetimeValue]);
 
+  const hasProjectedResults =
+    totals.totalTraffic > 0 ||
+    totals.totalSales > 0 ||
+    totals.totalRevenue > 0 ||
+    ltvRevenue > 0 ||
+    totals.roi !== null;
+
   const handleShare = () => {
     let results = 'SEO ROI Calculator Results\n\n';
     results += `Monthly Traffic: ${monthlyTraffic}\n`;
@@ -519,7 +526,11 @@ const SEOROICalculator = () => {
         </Card>
 
         {/* Action Buttons */}
-        <CalculatorActionButtons onShare={handleShare} onClear={handleClear} />
+        <CalculatorActionButtons
+          onShare={handleShare}
+          onClear={handleClear}
+          resultReady={hasProjectedResults}
+        />
 
         {/* Feedback Section */}
         <CalculatorFeedback feedbackGiven={feedbackGiven} onFeedback={handleFeedback} />

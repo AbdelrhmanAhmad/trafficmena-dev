@@ -4,6 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import { fetchPayment, type PaymentItemType } from '@/app/api/payments';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
+import { trackBeginCheckout, trackSelectPaymentMethod } from '@/lib/analytics/events';
+import { centsToUnits } from '@/lib/analytics/helpers';
+import {
+  buildCheckoutAnalyticsItem,
+  getAnalyticsItemId,
+  getBeginCheckoutValue,
+  getNormalizedPaymentType,
+  getSelectPaymentMethodValueFromAvailablePricing,
+} from '@/lib/analytics/paymentFlow';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -24,6 +33,8 @@ interface PaymentCheckoutDialogProps {
   itemType: PaymentItemType;
   itemId?: string;
   itemName: string;
+  itemCategory?: string;
+  basePriceCents?: number | null;
   appliedPromoCode?: string;
   onSuccess?: () => void;
 }
@@ -41,6 +52,8 @@ export function PaymentCheckoutDialog({
   itemType,
   itemId,
   itemName,
+  itemCategory,
+  basePriceCents,
   appliedPromoCode,
   onSuccess,
 }: PaymentCheckoutDialogProps) {
@@ -53,9 +66,14 @@ export function PaymentCheckoutDialog({
   const checkoutRequestLockRef = useRef(false);
   const createCheckout = useCreateCheckout();
 
-  // Reset selection when dialog closes
+  const beginCheckoutFiredRef = useRef(false);
+
+  // Reset selection and tracking ref when dialog closes
   useEffect(() => {
-    if (!open) setSelectedMethodId(null);
+    if (!open) {
+      setSelectedMethodId(null);
+      beginCheckoutFiredRef.current = false;
+    }
   }, [open]);
 
   // Allow dismissing dialog if checkout hangs for 20s (slow MENA connections)
@@ -80,6 +98,46 @@ export function PaymentCheckoutDialog({
   const shouldRedirect = shouldRedirectToGateway(selectedMethod);
   const hasPromoApplied =
     Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !pricePreview.isFree;
+  const canSubmitCheckout = Boolean(selectedMethodId) && !createCheckout.isPending;
+  const analyticsItemId = getAnalyticsItemId(itemType, itemId);
+  const fallbackAmountFormatted =
+    basePriceCents && basePriceCents > 0 ? `${centsToUnits(basePriceCents).toFixed(2)} EGP` : '';
+  const checkoutAmountLabel = pricePreview?.amountFormatted ?? fallbackAmountFormatted;
+  let checkoutDescription: string | null = null;
+  if (!priceLoading) {
+    checkoutDescription = pricePreview?.isFree
+      ? `Register for ${itemName} for free.`
+      : `Pay ${checkoutAmountLabel || 'the latest price'} for ${itemName}.`;
+  }
+
+  let checkoutButtonLabel = 'Continue to Payment';
+  if (pricePreview?.isFree) {
+    checkoutButtonLabel = 'Register Now';
+  } else if (checkoutAmountLabel) {
+    checkoutButtonLabel = `Pay ${checkoutAmountLabel}`;
+  }
+
+  // Fire begin_checkout once per dialog open, after pricePreview loads so the
+  // value reflects any subscriber/promo discounts (not the fallback base price).
+  useEffect(() => {
+    if (!open || beginCheckoutFiredRef.current || !pricePreview) return;
+    const value = getBeginCheckoutValue(pricePreview);
+    if (value <= 0) return;
+
+    beginCheckoutFiredRef.current = true;
+    trackBeginCheckout({
+      currency: 'EGP',
+      value,
+      itemType,
+      item: buildCheckoutAnalyticsItem({
+        itemType,
+        itemId,
+        itemName,
+        itemCategory,
+        value,
+      }),
+    });
+  }, [open, pricePreview, itemType, itemId, itemName, itemCategory]);
 
   const goToPending = (payload: {
     invoiceId?: number;
@@ -118,12 +176,33 @@ export function PaymentCheckoutDialog({
     checkoutRequestLockRef.current = true;
 
     try {
+      const checkoutValue = getSelectPaymentMethodValueFromAvailablePricing(
+        pricePreview,
+        basePriceCents,
+      );
+      if (checkoutValue > 0) {
+        trackSelectPaymentMethod({
+          currency: 'EGP',
+          value: checkoutValue,
+          paymentType: getNormalizedPaymentType(selectedMethod?.name_en),
+          itemType,
+          coupon: appliedPromoCode ?? '',
+          item: buildCheckoutAnalyticsItem({
+            itemType,
+            itemId,
+            itemName,
+            itemCategory,
+            value: checkoutValue,
+          }),
+        });
+      }
+
       const result = await createCheckout.mutateAsync({
         itemType,
         itemId,
         paymentMethodId: selectedMethodId,
         idempotencyKey: createCheckoutIdempotencyKey(
-          `${itemType}:${itemId ?? 'subscription'}:${selectedMethodId}`,
+          `${itemType}:${analyticsItemId}:${selectedMethodId}`,
         ),
         promoCode: appliedPromoCode,
       });
@@ -232,10 +311,8 @@ export function PaymentCheckoutDialog({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Calculating price...
               </span>
-            ) : pricePreview?.isFree ? (
-              `Register for ${itemName} for free.`
             ) : (
-              `Pay ${pricePreview?.amountFormatted} for ${itemName}.`
+              checkoutDescription
             )}
           </DialogDescription>
         </DialogHeader>
@@ -276,9 +353,9 @@ export function PaymentCheckoutDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleCheckout} disabled={!selectedMethodId || createCheckout.isPending}>
+          <Button onClick={handleCheckout} disabled={!canSubmitCheckout}>
             {createCheckout.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {pricePreview?.isFree ? 'Register Now' : `Pay ${pricePreview?.amountFormatted || ''}`}
+            {checkoutButtonLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

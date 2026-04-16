@@ -12,12 +12,21 @@ import {
   Sparkles,
   Users2,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { type EventRecord, fetchEvents } from '@/app/api/events';
 import { fetchPublicTracks, type PublicTrackRecord } from '@/app/api/tracks';
 import { EventCard } from '@/features/events/components/EventCard';
 import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
+import {
+  buildEventDiscoveryItem,
+  buildTrackDiscoveryItem,
+  EVENTS_LIST_CONTEXT,
+  isCanonicalDiscoveryListPath,
+  TRACKS_LIST_CONTEXT,
+  useTrackedItemListView,
+} from '@/lib/analytics/contentDiscovery';
+import { trackSelectItem } from '@/lib/analytics/events';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
@@ -128,6 +137,8 @@ const FREE_FEATURES = [
 ];
 
 const Index: React.FC = () => {
+  const { pathname } = useLocation();
+  const shouldTrackDiscoveryLists = isCanonicalDiscoveryListPath(pathname);
   const { handleError } = useErrorHandler();
   const { canAccessSubscriptionPages } = useRolePermissions();
   const [visibleEvents, setVisibleEvents] = useState(6);
@@ -204,12 +215,27 @@ const Index: React.FC = () => {
   }, []);
 
   const displayEvents = events.slice(0, visibleEvents);
+  const eventListItems = useMemo(
+    () => displayEvents.map((event, index) => buildEventDiscoveryItem(event, index)),
+    [displayEvents],
+  );
+  const trackListItems = useMemo(
+    () => tracks.map((track, index) => buildTrackDiscoveryItem(track, index)),
+    [tracks],
+  );
   const visibleBenefitItems = canAccessSubscriptionPages
     ? benefitItems
     : benefitItems.filter((item) => !item.isPremium);
   const visibleFreeFeatures = canAccessSubscriptionPages
     ? FREE_FEATURES
     : FREE_FEATURES.filter((item) => !item.isSubscriptionFeature);
+
+  useTrackedItemListView(EVENTS_LIST_CONTEXT, eventListItems, {
+    enabled: shouldTrackDiscoveryLists,
+  });
+  useTrackedItemListView(TRACKS_LIST_CONTEXT, trackListItems, {
+    enabled: shouldTrackDiscoveryLists,
+  });
 
   return (
     <Layout>
@@ -364,8 +390,22 @@ const Index: React.FC = () => {
                   </p>
                 </div>
               ) : displayEvents.length > 0 ? (
-                displayEvents.map((event) => (
-                  <EventCard key={event.id} event={event} showFavoriteButton />
+                displayEvents.map((event, index) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    showFavoriteButton
+                    onCardClick={() => {
+                      const trackedItem = eventListItems[index];
+                      if (shouldTrackDiscoveryLists && trackedItem) {
+                        trackSelectItem(
+                          EVENTS_LIST_CONTEXT.listId,
+                          EVENTS_LIST_CONTEXT.listName,
+                          trackedItem,
+                        );
+                      }
+                    }}
+                  />
                 ))
               ) : (
                 <div className="col-span-full py-12 text-center">
@@ -403,8 +443,21 @@ const Index: React.FC = () => {
 
               {/* Tracks Grid */}
               <div className="relative z-10 mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {tracks.map((track) => (
-                  <PublicTrackCard key={track.id} track={track} />
+                {tracks.map((track, index) => (
+                  <PublicTrackCard
+                    key={track.id}
+                    track={track}
+                    onCardClick={() => {
+                      const trackedItem = trackListItems[index];
+                      if (shouldTrackDiscoveryLists && trackedItem) {
+                        trackSelectItem(
+                          TRACKS_LIST_CONTEXT.listId,
+                          TRACKS_LIST_CONTEXT.listName,
+                          trackedItem,
+                        );
+                      }
+                    }}
+                  />
                 ))}
               </div>
             </section>

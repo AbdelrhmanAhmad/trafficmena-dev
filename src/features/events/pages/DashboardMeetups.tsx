@@ -1,8 +1,18 @@
 import { ArrowRight, BookOpen, Calendar, Sparkles } from 'lucide-react';
 import type React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
 import { usePublicTracks } from '@/features/tracks/hooks/useTracks';
+import {
+  buildEventDiscoveryItem,
+  buildTrackDiscoveryItem,
+  EVENTS_LIST_CONTEXT,
+  isCanonicalDiscoveryListPath,
+  TRACKS_LIST_CONTEXT,
+  useTrackedItemListView,
+} from '@/lib/analytics/contentDiscovery';
+import { trackSelectItem } from '@/lib/analytics/events';
 import DataLoader from '@/shared/components/DataLoader';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
@@ -13,9 +23,27 @@ import { useUpcomingEventsList } from '../hooks/useEventBooking';
 
 const DashboardMeetups: React.FC = () => {
   const { user } = useAuth();
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const { data: upcoming, isLoading, error } = useUpcomingEventsList(9);
   const { data: tracksData } = usePublicTracks(1, 6);
+  const visibleTracks = useMemo(() => tracksData?.items.slice(0, 3) ?? [], [tracksData?.items]);
+  const eventListItems = useMemo(
+    () => (upcoming?.items ?? []).map((event, index) => buildEventDiscoveryItem(event, index)),
+    [upcoming?.items],
+  );
+  const trackListItems = useMemo(
+    () => visibleTracks.map((track, index) => buildTrackDiscoveryItem(track, index)),
+    [visibleTracks],
+  );
+  const shouldTrackDiscoveryLists = isCanonicalDiscoveryListPath(pathname);
+
+  useTrackedItemListView(EVENTS_LIST_CONTEXT, eventListItems, {
+    enabled: shouldTrackDiscoveryLists,
+  });
+  useTrackedItemListView(TRACKS_LIST_CONTEXT, trackListItems, {
+    enabled: shouldTrackDiscoveryLists,
+  });
 
   return (
     <ProtectedRoute>
@@ -88,10 +116,20 @@ const DashboardMeetups: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
-                      {tracksData.items.slice(0, 3).map((track) => (
+                      {visibleTracks.map((track, index) => (
                         <PublicTrackCard
                           key={track.id}
                           track={track}
+                          onCardClick={() => {
+                            const trackedItem = trackListItems[index];
+                            if (shouldTrackDiscoveryLists && trackedItem) {
+                              trackSelectItem(
+                                TRACKS_LIST_CONTEXT.listId,
+                                TRACKS_LIST_CONTEXT.listName,
+                                trackedItem,
+                              );
+                            }
+                          }}
                           onClick={() => navigate(`/tracks/${track.id}`)}
                         />
                       ))}
@@ -148,10 +186,20 @@ const DashboardMeetups: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3">
-                      {upcoming.items.map((event) => (
+                      {upcoming.items.map((event, index) => (
                         <EventCard
                           key={event.id}
                           event={event}
+                          onCardClick={() => {
+                            const trackedItem = eventListItems[index];
+                            if (shouldTrackDiscoveryLists && trackedItem) {
+                              trackSelectItem(
+                                EVENTS_LIST_CONTEXT.listId,
+                                EVENTS_LIST_CONTEXT.listName,
+                                trackedItem,
+                              );
+                            }
+                          }}
                           onViewDetails={(e) => navigate(`/meetups/${e.id}`)}
                         />
                       ))}

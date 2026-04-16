@@ -16,6 +16,7 @@ import {
   updateTrack,
 } from '@/app/api/tracks';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { trackSuccessfulTrackBooking } from '../trackBookingAnalytics';
 
 export const useTracks = (page = 1, pageSize = 12, filters?: { search?: string }) => {
   const safePageSize = Math.min(pageSize, 50);
@@ -224,8 +225,13 @@ export const useBookTrack = () => {
 
   return useMutation({
     mutationFn: (trackId: string) => bookTrack(trackId),
-    onSuccess: (result, _trackId) => {
+    onSuccess: (result, trackId) => {
+      if (result.success && !result.alreadyBooked) {
+        trackSuccessfulTrackBooking(queryClient, trackId, result.eventsRegistered ?? 0);
+      }
+
       queryClient.invalidateQueries({ queryKey: ['tracks'] });
+      queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', trackId] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
       if (result.alreadyBooked) {
         toast({

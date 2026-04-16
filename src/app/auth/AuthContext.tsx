@@ -20,9 +20,13 @@ type AuthContextValue = {
   loading: boolean;
   error: string | null;
   requestOtp: (email: string, intent?: OtpIntent, options?: RequestOtpOptions) => Promise<void>;
-  verifyOtp: (params: { email: string; otp: string; intent?: OtpIntent }) => Promise<void>;
+  verifyOtp: (params: {
+    email: string;
+    otp: string;
+    intent?: OtpIntent;
+  }) => Promise<AuthUser | null>;
   signOut: () => Promise<void>;
-  refreshSession: () => Promise<void>;
+  refreshSession: () => Promise<AuthUser | null>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -32,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadSession = useCallback(async () => {
+  const loadSession = useCallback(async (): Promise<AuthUser | null> => {
     setLoading(true);
     try {
       const data = await fetchJson<{ session: unknown; user: AuthUser | null }>(
@@ -41,13 +45,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           method: 'GET',
         },
       );
-      setUser(data?.user ?? null);
+      const resolvedUser = data?.user ?? null;
+      setUser(resolvedUser);
       setError(null);
+      return resolvedUser;
     } catch (err) {
       setUser(null);
       if (err instanceof Error && 'status' in err) {
         setError(err.message);
       }
+      return null;
     } finally {
       setLoading(false);
     }
@@ -78,7 +85,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         method: 'POST',
         body: JSON.stringify(intent ? { email, otp, intent } : { email, otp }),
       });
-      setUser(result.user ?? null);
+      const resolvedUser = result.user ?? null;
+      setUser(resolvedUser);
+      return resolvedUser;
     },
     [],
   );

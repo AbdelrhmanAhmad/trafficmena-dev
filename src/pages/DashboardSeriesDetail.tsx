@@ -54,7 +54,9 @@ const getAssetTypeStyles = (fileType: string, embedType?: string | null) => {
 const SeriesResourceCard: React.FC<{
   asset: SeriesAsset;
   isSeriesPremium: boolean;
-}> = ({ asset, isSeriesPremium }) => {
+  seriesId: string;
+  seriesTitle: string;
+}> = ({ asset, isSeriesPremium, seriesId, seriesTitle }) => {
   const navigate = useNavigate();
   const isVideo =
     asset.file_type === 'Video' || asset.embed_type?.toLowerCase().includes('youtube');
@@ -68,7 +70,14 @@ const SeriesResourceCard: React.FC<{
     <button
       type="button"
       onClick={() => {
-        navigate(`/dashboard/library/${asset.id}`);
+        navigate(`/dashboard/library/${asset.id}`, {
+          state: {
+            seriesContext: {
+              id: seriesId,
+              title: seriesTitle,
+            },
+          },
+        });
       }}
       className="group cursor-pointer rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl overflow-hidden"
     >
@@ -243,6 +252,8 @@ const DashboardSeriesDetail: React.FC = () => {
                     key={asset.id}
                     asset={asset}
                     isSeriesPremium={series.is_premium}
+                    seriesId={series.id}
+                    seriesTitle={series.title}
                   />
                 ))}
               </div>

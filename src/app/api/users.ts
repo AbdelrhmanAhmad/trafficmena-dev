@@ -52,11 +52,20 @@ const mapProfile = (profile: ApiProfile): ProfileRecord | null =>
 export type CurrentUserResponse = {
   user: AuthSessionUser | null;
   profile: ProfileRecord | null;
+  totalPaidPurchases: number;
+  totalRegistrations: number;
+  /** Revenue in EGP currency units (not cents). Converted from API's totalRevenueCents / 100. */
+  totalRevenue: number;
+  accountCreationDate: string;
 };
 
 type ApiUsersMeResponse = {
   user: AuthSessionUser | null;
   profile: ApiProfile;
+  totalPaidPurchases?: number;
+  totalRegistrations?: number;
+  totalRevenueCents?: number;
+  accountCreationDate?: string | null;
 };
 
 export type AdminUserRecord = {
@@ -109,6 +118,10 @@ export async function fetchCurrentUser(): Promise<CurrentUserResponse> {
   return {
     user: data.user,
     profile: mapProfile(data.profile),
+    totalPaidPurchases: data.totalPaidPurchases ?? 0,
+    totalRegistrations: data.totalRegistrations ?? 0,
+    totalRevenue: (data.totalRevenueCents ?? 0) / 100,
+    accountCreationDate: data.accountCreationDate ?? '',
   };
 }
 

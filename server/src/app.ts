@@ -23,12 +23,19 @@ export function createApp() {
   connectSources.add('https://cdn.jsdelivr.net');
   connectSources.add('https://unpkg.com');
   connectSources.add('https://*.useplunk.com');
+  connectSources.add('https://www.googletagmanager.com');
+  connectSources.add('https://www.google-analytics.com');
+  connectSources.add('https://analytics.google.com');
+  connectSources.add('https://*.google-analytics.com');
+  connectSources.add('https://*.analytics.google.com');
 
   const scriptSrc = [
     "'self'",
     'https://cdn.jsdelivr.net',
     'https://unpkg.com',
     'https://challenges.cloudflare.com',
+    'https://www.googletagmanager.com',
+    'https://tagmanager.google.com',
   ];
 
   if (!isProduction) {
@@ -79,6 +86,7 @@ export function createApp() {
           'https://*.mediadelivery.net',
           'https://video.bunnycdn.com',
           'https://stream.bunnycdn.com',
+          'https://www.googletagmanager.com',
         ],
         frameAncestors: ["'self'"],
         connectSrc: Array.from(connectSources),
