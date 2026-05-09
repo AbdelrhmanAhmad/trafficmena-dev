@@ -13,10 +13,11 @@ This component translates the platform's educational catalog into browser experi
 
 ## Software Features
 
-- Public and member views for event discovery, event detail, and registration-related status.
-- Track browsing, booking, attendee visibility, and linked-event presentation.
-- Library asset grids, asset detail views, and premium access signaling.
-- Series discovery, asset selection, and staff-facing access management widgets.
+- Public and member views for event discovery, event detail, and registration-related status. Card impressions, detail views, add-to-calendar interactions, and registration-start events push `dataLayer` events via the analytics layer.
+- Track browsing, booking, attendee visibility, and linked-event presentation. Booking hooks call into `trackBookingAnalytics` so free auto-bookings and paid bookings both emit consistent events.
+- Library asset grids and asset detail views. Premium library assets and premium series render the shared `PremiumContentGate` from `src/shared/components/PremiumContentGate.tsx` for learners without access.
+- Series discovery, asset selection, and staff-facing access management widgets (series grants, bulk CSV).
+- Calculator usage tracking via `src/features/calculators/analytics.tsx` and `analytics-shared.ts` (category, inputs, result surfacing).
 
 ## Code Elements
 

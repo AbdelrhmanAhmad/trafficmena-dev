@@ -9,14 +9,17 @@
 
 ## Purpose
 
-This component explains the membership offer, collects checkout intent, and guides users through payment-related and invitation-related completion states. It packages the user-facing commerce touchpoints that sit between content discovery and backend payment processing.
+This component explains the membership offer (to admins previewing the offer), collects checkout intent for paid events and tracks, and guides users through payment-related and invitation-related completion states. It packages the user-facing commerce touchpoints that sit between content discovery and backend payment processing.
+
+> The learner-facing subscribe landing (`/subscribe`) and the in-dashboard subscribe page (`/dashboard/subscribe`) are currently gated behind `owner`/`admin` roles via `AdminProtectedRoute` in `src/App.tsx`. The public purchase surface is intentionally hidden while subscriptions are provisioned through the admin grant workflow. The landing components are preserved for when the surface is re-opened.
 
 ## Software Features
 
-- Subscription landing page sections such as pricing, ROI, comparison, reviews, and FAQ.
-- Shared payment widgets for price display, method selection, promo-code entry, and checkout dialogs.
-- Payment result surfaces for success, failure, and pending states.
+- Subscription landing page sections such as pricing, ROI, comparison, reviews, and FAQ (admin-gated preview only).
+- Shared payment widgets for price display, method selection, promo-code entry, and checkout dialogs used by paid event and track journeys.
+- Payment result surfaces for success, failure, and pending states. Paid success screens fetch the verified purchase analytics payload from the paid-payment response and push a single `purchase` event to the dataLayer.
 - Invite acceptance entrypoints that hand the user into the onboarding flow.
+- Shared `PremiumContentGate` component (`src/shared/components/PremiumContentGate.tsx`) rendered by library/series flows when a learner hits premium content without access.
 
 ## Code Elements
 
@@ -45,9 +48,10 @@ This component contains the following code-level elements:
 - **Protocol**: Browser navigation
 - **Description**: Route segments that close the loop for invites and payments.
 - **Operations**:
-  - `/subscribe`
+  - `/subscribe` — admin/owner gated via `AdminProtectedRoute`; redirects learners to `/`
+  - `/dashboard/subscribe` — admin/owner gated via `AdminProtectedRoute`
   - `/invitation/:token`
-  - `/payment/success`, `/payment/failed`, `/payment/pending`
+  - `/payment/success`, `/payment/failed`, `/payment/pending` — success screen triggers the `purchase` dataLayer event with enriched analytics payload
 
 ## Dependencies
 

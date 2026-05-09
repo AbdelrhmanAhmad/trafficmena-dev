@@ -25,6 +25,7 @@
 | **Plunk** | Transactional email service used to deliver OTP login codes and invitation emails. |
 | **BunnyCDN** | Object storage and CDN. The API server uploads files here; the browser loads media assets directly from CDN URLs. |
 | **Cloudflare Turnstile** | Bot-protection CAPTCHA. Tokens are submitted by the browser and validated server-side during OTP requests. |
+| **Google Tag Manager** | Client-side tag orchestration. Loaded by `public/gtm-bootstrap.js`; receives typed events pushed to `window.dataLayer` by `src/lib/analytics/`. No server-side coupling. |
 
 ## Component Relationships
 
@@ -45,6 +46,7 @@ C4Component
     System_Ext(plunk, "Plunk", "Email delivery")
     System_Ext(bunny, "BunnyCDN", "File storage and CDN")
     System_Ext(turnstile, "Cloudflare Turnstile", "Bot-protection CAPTCHA")
+    System_Ext(gtm, "Google Tag Manager", "Client-side tag orchestration")
 
     Rel(spa, server, "Calls all platform API endpoints", "REST/JSON, HTTPS")
     Rel(server, spa, "Returns API responses and session cookies", "REST/JSON, HTTPS")
@@ -54,6 +56,7 @@ C4Component
     Rel(server, bunny, "Uploads files", "HTTPS API")
     Rel(server, turnstile, "Validates CAPTCHA tokens", "HTTPS API")
     Rel(spa, bunny, "Loads static media assets", "HTTPS")
+    Rel(spa, gtm, "Bootstraps GTM and pushes dataLayer events", "HTTPS + in-page dataLayer")
 ```
 
 ## Sub-Component Index
@@ -67,18 +70,18 @@ The two top-level components above are each composed of finer-grained sub-compon
 | API Runtime and Platform Security | Hono bootstrap, middleware stack, health routes, and error envelope | [c4-component-api-runtime-and-platform-security.md](./components/c4-component-api-runtime-and-platform-security.md) |
 | Identity, Invitations, and Member Operations API | Auth, users, OTP, invitations, and onboarding domain routes | [c4-component-identity-invitations-and-member-operations-api.md](./components/c4-component-identity-invitations-and-member-operations-api.md) |
 | Learning Content and Delivery API | Events, tracks, series, library, uploads, settings, and metrics domain routes | [c4-component-learning-content-and-delivery-api.md](./components/c4-component-learning-content-and-delivery-api.md) |
-| Payments, Pricing, and Revenue Operations API | Checkout, pricing, promo codes, subscriptions, and webhook domain routes | [c4-component-payments-pricing-and-revenue-operations-api.md](./components/c4-component-payments-pricing-and-revenue-operations-api.md) |
+| Payments, Pricing, and Revenue Operations API | Checkout, pricing, promo codes, subscriptions, manual track enrollments, subscription/series grants, webhook ingestion, and payment-analytics enrichment for verified purchase events | [c4-component-payments-pricing-and-revenue-operations-api.md](./components/c4-component-payments-pricing-and-revenue-operations-api.md) |
 | Persistence and Background Operations | Drizzle ORM schema, migration history, connection pool, and payment/data maintenance operations | [c4-component-persistence-and-background-operations.md](./components/c4-component-persistence-and-background-operations.md) |
 
 ### Frontend SPA Sub-Components
 
 | Sub-Component | Description | Documentation |
 |---|---|---|
-| Web Experience Platform | SPA shell: routing, providers, shared UI primitives, and TipTap editor tooling | [c4-component-web-experience-platform.md](./components/c4-component-web-experience-platform.md) |
-| Learning Experiences UI | Learner-facing event, track, library, and series feature modules | [c4-component-learning-experiences-ui.md](./components/c4-component-learning-experiences-ui.md) |
-| Membership and Checkout UI | Subscription landing flows, checkout widgets, and payment status surfaces | [c4-component-membership-and-checkout-ui.md](./components/c4-component-membership-and-checkout-ui.md) |
-| Admin Operations Console | Protected staff dashboard for content, user, invitation, and settings management | [c4-component-admin-operations-console.md](./components/c4-component-admin-operations-console.md) |
-| Calculators Experience | 23 interactive marketing and finance calculators | [c4-component-calculators-experience.md](./components/c4-component-calculators-experience.md) |
+| Web Experience Platform | SPA shell: routing, providers, shared UI primitives, TipTap editor tooling, GTM bootstrap, auth-scoped query keys, and the dataLayer analytics layer under `src/lib/analytics/` | [c4-component-web-experience-platform.md](./components/c4-component-web-experience-platform.md) |
+| Learning Experiences UI | Learner-facing event, track, library, and series feature modules with `PremiumContentGate` enforcement for premium library and series content | [c4-component-learning-experiences-ui.md](./components/c4-component-learning-experiences-ui.md) |
+| Membership and Checkout UI | Checkout widgets and payment status surfaces. Subscription landing is role-gated (owner/admin) — the learner-facing subscribe flow is currently hidden and subscriptions are provisioned via admin grants | [c4-component-membership-and-checkout-ui.md](./components/c4-component-membership-and-checkout-ui.md) |
+| Admin Operations Console | Protected staff dashboard for content, user, invitation, manual track enrollment, subscription/series grants (single, revoke, bulk CSV), promo codes, metrics, and settings | [c4-component-admin-operations-console.md](./components/c4-component-admin-operations-console.md) |
+| Calculators Experience | 23 interactive marketing and finance calculators with shared analytics instrumentation for use and conversion events | [c4-component-calculators-experience.md](./components/c4-component-calculators-experience.md) |
 
 ### Supporting Tooling
 

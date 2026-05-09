@@ -38,17 +38,19 @@ The repository does not contain Dockerfiles, Kubernetes manifests, or infrastruc
 
 This container is the only user-facing delivery surface. It renders three distinct experience layers for three actor types:
 
-- **Visitors**: Public marketing pages, event listings, subscription information, and the signin/OTP flow.
-- **Members / Learners**: Protected dashboard, event detail with registration, track detail with booking, library access, series browsing, and payment result pages.
-- **Staff / Admins**: Protected admin console for content CRUD, user management, invitation dispatch, promo code management, metrics, and settings.
+- **Visitors**: Public marketing pages, event listings, and the signin/OTP flow. The subscribe landing page and the in-dashboard subscribe surface are currently hidden behind `owner`/`admin` role checks; subscription access is provisioned via admin grants.
+- **Members / Learners**: Protected dashboard, event detail with registration, track detail with booking, library access (gated by `PremiumContentGate` where applicable), series browsing, and payment result pages.
+- **Staff / Admins**: Protected admin console for content CRUD, user management, invitation dispatch, promo code management, manual track enrollment, subscription/series grants, metrics, and settings.
 
-All platform data is fetched from the Backend API Service via same-origin HTTPS/JSON calls. The typed browser client (`src/app/api/client.ts`) auto-attaches CSRF headers from cookies and forwards session cookies on every request. Static media is loaded directly from BunnyCDN using URLs stored in API responses. The SPA bundle is pure static output with no server-side runtime.
+All platform data is fetched from the Backend API Service via same-origin HTTPS/JSON calls. The typed browser client (`src/app/api/client.ts`) auto-attaches CSRF headers from cookies and forwards session cookies on every request. TanStack Query keys are namespaced by session via `src/app/queryKeys.ts` so cached state is isolated across account switches and logout. Static media is loaded directly from BunnyCDN using URLs stored in API responses. The SPA bundle is pure static output with no server-side runtime.
+
+The SPA also bootstraps Google Tag Manager (`GTM-5DMGVFZS`) from `public/gtm-bootstrap.js` on the initial HTML document. Analytics modules under `src/lib/analytics/` push typed events to `window.dataLayer` (signup funnel, auth outcomes, content discovery, calendar, library, profile, payment flow, page views). Verified purchase events enrich their payload from the paid-payment response before pushing a single `purchase` event. GTM is never called server-side.
 
 ### TrafficMENA API Service
 
 This container is the sole server-side runtime. It is responsible for:
 
-- **Security envelope**: CSP, HSTS (production), CORS, CSRF middleware, request payload size limits, and structured error responses.
+- **Security envelope**: CSP, HSTS (production), CORS, CSRF middleware, request payload size limits, and structured error responses. CSP is hardened for GTM: `script-src` includes `https://www.googletagmanager.com` and `https://tagmanager.google.com`; `frame-src` includes `https://www.googletagmanager.com`; `connect-src` includes `*.google-analytics.com`, `*.analytics.google.com`, and `googletagmanager.com`. The `gtm-bootstrap.js` file is self-hosted to avoid `unsafe-inline` and is covered by regression tests (`tests/unit/gtm-csp-hardening.test.ts`).
 - **Authentication**: OTP-based login via Better Auth with Plunk email delivery. Invite-only enforcement, Cloudflare Turnstile CAPTCHA support, in-memory rate limiting (normal: 3 OTPs/10 min, 10/day; event mode: 15/10 min, 50/day).
 - **Authorization**: Five-level RBAC (user → expert → manager → admin → owner) enforced per-endpoint via `requireAdmin()` / `requireManager()` helpers.
 - **Learning content**: Full CRUD for events, tracks, series, and library assets including registration, cancellation/refund workflows, capacity reservation with 72-hour TTL, and BunnyCDN file upload.
@@ -215,6 +217,8 @@ This container is owned by the following component:
 | `POST` | `/api/tracks/:id/events` | manager | Add event to track |
 | `DELETE` | `/api/tracks/:id/events/:eventId` | manager | Remove event from track |
 | `POST` | `/api/tracks/:id/book` | user | Book entire track |
+| `POST` | `/api/tracks/:id/manual-enrollments` | manager | Manually enroll a user in a published track (reason + reference, optional amount paid) |
+| `POST` | `/api/tracks/:id/enrollments/:userId/revoke` | manager | Revoke an active manual or paid track enrollment |
 
 **Series (content collection) endpoints**:
 
@@ -246,18 +250,37 @@ This container is owned by the following component:
 | `POST` | `/api/payments/checkout` | user | Create payment invoice (rate-limited) |
 | `POST` | `/api/payments/verify` | user | Poll for payment confirmation |
 | `GET` | `/api/payments/price-preview` | user | Preview price with subscriber discount and promo code |
-| `GET` | `/api/payments/:id` | user | Payment status by ID |
+| `GET` | `/api/payments/:id` | user | Payment status by ID (paid responses are enriched with verified purchase analytics: item metadata, customer-type, discount, promo code, payment method) |
 | `POST` | `/api/payments/webhook` | public | Fawaterk form-encoded webhook (HMAC verified) |
 | `POST` | `/api/payments/webhook_json` | public | Fawaterk JSON webhook (HMAC verified) |
 
 **Subscription endpoints**:
+
+> Note: the learner-facing subscribe and dashboard-subscribe routes are currently gated behind `owner`/`admin` roles in the SPA. The API endpoints below remain functional (the checkout flow still issues subscription payments when exercised), but the public UI paths are hidden. Subscriptions are primarily provisioned through the admin grant endpoints in the next table.
 
 | Method | Path | Min Role | Description |
 |--------|------|----------|-------------|
 | `GET` | `/api/subscriptions/current` | user | User's active subscription |
 | `GET` | `/api/subscriptions/settings` | manager | Subscription configuration |
 | `PUT` | `/api/subscriptions/settings` | admin | Update subscription configuration |
-| `GET` | `/api/subscriptions/info` | public | Public subscription info with benefits |
+| `GET` | `/api/subscriptions/info` | public | Public subscription info with benefits (IP-rate-limited to 60/min) |
+
+**Subscription, series, and skill grant endpoints**:
+
+| Method | Path | Min Role | Description |
+|--------|------|----------|-------------|
+| `POST` | `/api/subscriptions/grants` | admin | Grant a subscription to a specific user (with reason/duration) |
+| `POST` | `/api/subscriptions/grants/revoke` | admin | Revoke a previously issued subscription grant |
+| `POST` | `/api/subscriptions/grants/bulk` | admin | Bulk CSV grant ingestion with per-row results |
+| `GET` | `/api/series/:id/grants` | manager | List per-user access grants for a premium series |
+| `POST` | `/api/series/:id/grants` | manager | Grant access to a premium series for a user |
+| `POST` | `/api/series/:id/grants/:userId/revoke` | manager | Revoke a series grant |
+| `POST` | `/api/series/grants/bulk` | admin | Bulk CSV series grant ingestion |
+| `GET` | `/api/skills` | public | List curated skill taxonomy |
+| `POST` | `/api/skills` | admin | Create a skill |
+| `GET` | `/api/user/skills` | user | Current user's selected skills |
+| `POST` | `/api/user/skills` | user | Add a skill to current user |
+| `DELETE` | `/api/user/skills/:skillId` | user | Remove a skill from current user |
 
 **Promo code endpoints**:
 
@@ -341,6 +364,7 @@ The specification serves as the authoritative container interface contract. It i
 #### External Systems
 
 - **BunnyCDN** (`https://trafficmena.b-cdn.net`): Media asset URLs are embedded in API responses and loaded directly by the browser.
+- **Google Tag Manager** (`https://www.googletagmanager.com/gtm.js?id=GTM-5DMGVFZS`): Loaded by `public/gtm-bootstrap.js`; receives `dataLayer` pushes and fans out to downstream tags at runtime. No server-side coupling.
 - **Browser runtime**: Executes the JS bundle, stores session cookies, and manages client-side navigation history.
 
 ### TrafficMENA API Service
@@ -418,11 +442,13 @@ C4Container
     System_Ext(plunk, "Plunk", "Transactional email delivery for OTP and invitations")
     System_Ext(bunny, "BunnyCDN", "Object storage and CDN for uploaded media and assets")
     System_Ext(turnstile, "Cloudflare Turnstile", "Bot-protection CAPTCHA for OTP flows")
+    System_Ext(gtm, "Google Tag Manager", "Client-side tag orchestration (GTM-5DMGVFZS) for analytics and conversion tracking")
 
     Rel(visitor, web, "Uses", "HTTPS")
     Rel(admin, web, "Uses", "HTTPS")
     Rel(web, api, "Calls all platform API endpoints", "JSON/HTTPS, CSRF token, session cookie")
     Rel(web, bunny, "Loads media assets directly", "HTTPS")
+    Rel(web, gtm, "Bootstraps GTM and pushes dataLayer events", "HTTPS script + in-page dataLayer")
     Rel(api, db, "Reads and writes all platform data", "SQL via Drizzle ORM")
     Rel(api, fawaterk, "Creates invoices and receives payment webhooks", "HTTPS API")
     Rel(api, plunk, "Sends OTP codes and invitation emails", "HTTPS API")

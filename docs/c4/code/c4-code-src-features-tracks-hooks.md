@@ -100,3 +100,8 @@
 - react
 - sonner
 
+## Admin-Only Additions
+
+- `useTrackEnrollmentManagement.ts` — Manager-level mutations for manual enrollment: `POST /api/tracks/:id/manual-enrollments` and `POST /api/tracks/:id/enrollments/:userId/revoke`. Invalidates track and attendee queries on success. Consumed only by `TrackManualEnrollmentManager` on the admin track detail page.
+- `useTrackBooking.ts` now feeds `src/features/tracks/trackBookingAnalytics.ts` so every paid and free auto-booking emits a consistent `track_booking` dataLayer event through `src/lib/analytics/events.ts`.
+

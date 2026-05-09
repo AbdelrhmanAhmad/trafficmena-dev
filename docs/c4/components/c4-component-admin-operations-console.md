@@ -17,6 +17,9 @@ This component gives staff a single operational surface for managing the Traffic
 - Event, track, series, and library authoring forms with staff-only route guards.
 - Invitation workflows and operational metrics surfaces for launch and curated onboarding.
 - Administrative detail pages for reviewing content and platform state.
+- Manual track enrollment manager (`TrackManualEnrollmentManager`) on the admin track detail page for enrolling a learner into a published track with a reason, reference, and optional paid amount, and for revoking existing enrollments.
+- Subscription grant managers (single, revoke, bulk CSV) and series grant manager (single, revoke, bulk CSV) for provisioning access outside of a purchase flow.
+- Subscription settings card (annual price, subscriber discount percent) and premium-content gating controls.
 
 ## Code Elements
 
@@ -55,6 +58,9 @@ This component contains the following code-level elements:
   - `SeriesForm`
   - `LibraryAssetForm`
   - `SubscriptionSettingsCard`
+  - `TrackManualEnrollmentManager` (`src/features/tracks/components/TrackManualEnrollmentManager.tsx`) + `useTrackEnrollmentManagement` hook + `manualEnrollmentAmount` utility
+  - `SubscriptionGrantManager` and CSV bulk counterparts
+  - `SeriesAccessManager` / `SeriesGrantManager` (`src/features/series/components/`) for per-series access administration
 
 ## Dependencies
 

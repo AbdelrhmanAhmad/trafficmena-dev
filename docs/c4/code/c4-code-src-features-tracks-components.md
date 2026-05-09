@@ -144,6 +144,15 @@ flowchart LR
     trackeventselector["TrackEventSelector.tsx"]
     trackform["TrackForm.tsx"]
     trackgrid["TrackGrid.tsx"]
+    trackmanualenrollmentmanager["TrackManualEnrollmentManager.tsx"]
     trackgrid --> trackcard
 ```
+
+## Admin-Only Additions
+
+- `TrackManualEnrollmentManager.tsx` — Admin console widget rendered on the track detail page. Drives `POST /api/tracks/:id/manual-enrollments` (create) and `POST /api/tracks/:id/enrollments/:userId/revoke` (revoke). Uses `useTrackEnrollmentManagement` for mutations and `manualEnrollmentAmount` utility (`src/features/tracks/utils/manualEnrollmentAmount.ts`) to keep the paid-amount default aligned with the track's list price.
+
+## Analytics Hooks
+
+- `src/features/tracks/trackBookingAnalytics.ts` — Shared builder used by `useTrackBooking` and the track detail/public card analytics callsites to emit consistent `track_booking` / `view_item` dataLayer events for both free auto-bookings and paid booking completions. Feeds into `src/lib/analytics/events.ts`.
 

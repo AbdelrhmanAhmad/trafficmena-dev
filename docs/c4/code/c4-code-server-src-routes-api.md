@@ -817,3 +817,12 @@ flowchart LR
     utils --> index
 ```
 
+## Recent Additions (Analytics, Manual Track Enrollment)
+
+These route and helper files are registered in `index.ts` but were added after the initial auto-generated inventory above.
+
+- `paymentAnalytics.ts` / `paymentAnalyticsHelpers.ts` — Builds `VerifiedPaymentAnalytics` payloads (`itemName`, `itemCategory`, `paymentMethod`, `promoCode`, `originalAmountCents`, `discountAppliedCents`, customer-type classification) from a paid `payments` row. Consumed by `payments.ts` when a payment is in `paid` state so `GET /api/payments/{id}` and `POST /api/payments/verify` return the enriched fields that the frontend pushes as a `purchase` dataLayer event. Enrichment is best-effort: if the enrichment queries fail, verification still returns the payment record.
+- `trackEnrollments.ts` — Registers `POST /api/tracks/:id/manual-enrollments` and `POST /api/tracks/:id/enrollments/:userId/revoke` (manager+). Uses `extractJsonPayload`, `requireManager`, and a per-actor `consumeRateLimit` of 40 calls/min. Both paths route through `executeTrackBookingWrite` / `revokeTrackBookingAccess` in `trackBookingShared.ts` so capacity counts, constituent-event grants, and downstream series access stay consistent with paid bookings.
+- `trackBookingShared.ts` — Extracted atomic booking write/revoke helpers shared by `tracks.ts` (paid booking + free auto-booking) and `trackEnrollments.ts` (manual enrollment). Keeps the CTE-based booking transaction in a single place.
+- `paymentAnalyticsHelpers.ts` exports: `buildVerifiedPaymentAnalytics`, `getDefaultAnalyticsItemCategory`, `getDefaultAnalyticsItemName`, `type VerifiedPaymentAnalytics`.
+

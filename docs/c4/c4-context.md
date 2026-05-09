@@ -74,6 +74,13 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 - **Goals**: Store and serve uploaded documents, images, and content assets with low latency.
 - **Key Features Used**: File upload API (20 MB limit), direct browser media delivery for library assets, event images, and track thumbnails.
 
+### Google Tag Manager (GTM)
+
+- **Type**: Programmatic User (Analytics Delivery)
+- **Description**: Client-side tag orchestration service loaded by the SPA on first paint. Consumes a well-defined `dataLayer` event stream pushed by the analytics modules in `src/lib/analytics/` and fans events out to downstream marketing and measurement platforms (GA4, Ads, Meta, etc.) at GTM runtime.
+- **Goals**: Deliver the platform's conversion and engagement events to measurement tools without requiring code changes for every new tag.
+- **Key Features Used**: `dataLayer` event stream for auth, signup, content discovery, calendar, library, profile, payment, and purchase events; verified purchase payload enriched from backend via payment analytics endpoints; GTM container ID `GTM-5DMGVFZS` bootstrapped through `public/gtm-bootstrap.js`.
+
 ## System Features
 
 ### Email OTP Authentication with CAPTCHA
@@ -106,11 +113,11 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 - **Users**: Learner (checkout), Fawaterk Payment Gateway (webhook callbacks)
 - **User Journey**: Payment Flow Journey
 
-### Subscription Management
+### Subscription Management and Admin Grants
 
-- **Description**: Annual membership subscriptions with configurable subscriber discounts (default 20% on offline and track events, free access to online events), public benefits presentation, and admin-controlled subscription settings.
-- **Users**: Learner (subscription purchase and benefits), Content Manager (settings read), Administrator (settings management)
-- **User Journey**: Library Access Journey
+- **Description**: Annual membership that unlocks free online events, a configurable discount on offline events and track bundles (default 20%), and full access to the premium knowledge library. The learner-facing subscribe page (`/subscribe`, `/dashboard/subscribe`) is currently gated behind `owner`/`admin` roles — the public purchase surface is hidden and subscriptions are provisioned through the admin grant workflow (single, revoke, bulk CSV) backed by `/api/subscriptions/grants*`. Premium content is enforced at read time by a shared `PremiumContentGate` surface.
+- **Users**: Learner (sees own subscription status, premium gate on library/series content), Administrator (grants/revokes subscriptions, manages settings), Platform Owner (same as Administrator)
+- **User Journey**: Library Access Journey, Admin Content Management Journey
 
 ### Promo Codes and Discounts
 
@@ -141,6 +148,24 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 - **Description**: TipTap-based rich text editor used in content authoring for events, library assets, and series descriptions. Supports headings, code blocks, images, blockquotes, lists, links, and text alignment.
 - **Users**: Content Manager, Administrator, Platform Owner
 - **User Journey**: Admin Content Management Journey
+
+### Manual Track Enrollment
+
+- **Description**: Manager-level operation to enroll a user directly into a published track without running a payment flow, recording an off-platform reference (e.g., manual bank transfer) and an optional paid amount. Revoke is supported. Uses the same atomic track-booking write path as paid bookings so capacity, event grants, and series access stay consistent.
+- **Users**: Content Manager, Administrator, Platform Owner
+- **User Journey**: Admin Content Management Journey
+
+### Series and Library Access Grants
+
+- **Description**: Admin-controlled per-user access grants for premium series and bulk CSV ingestion for grant campaigns. Grants complement subscriptions for cases where individual learners need targeted access. Premium content resolution combines subscriber status, track-booking access, per-series grants, and series/asset premium flags.
+- **Users**: Administrator, Platform Owner, Learner (as grant recipient)
+- **User Journey**: Library Access Journey, Admin Content Management Journey
+
+### Analytics and Conversion Tracking
+
+- **Description**: Client-side dataLayer instrumentation covering page views, signup funnel, login outcomes, content discovery (event/track/library/series impressions and detail views), calendar actions, profile updates, payment flow, and verified purchases. GTM is loaded from a static bootstrap script and CSP is hardened to permit only Google Tag Manager origins. Purchase payloads are enriched server-side via the payment analytics helpers, which classify customer type (new/returning, subscription vs. non-subscription) and resolve item metadata for GA4-compatible e-commerce events.
+- **Users**: All personas (implicit); GTM (as event recipient)
+- **User Journey**: All learner journeys (cross-cutting instrumentation)
 
 ## User Journeys
 
@@ -194,13 +219,19 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 
 **Persona**: Learner
 
-1. The learner navigates to the library section of the dashboard.
-2. The frontend requests the asset catalog from `GET /api/library`, which applies subscription-based access control.
-3. Premium assets are visible in the listing but gated behind a subscription or event-access grant.
-4. If the learner holds an active subscription, premium assets are accessible directly.
-5. If not subscribed, the learner is directed to the subscription landing page (`/subscribe`), where benefits and pricing are presented via `GET /api/subscriptions/info`.
-6. The learner purchases a subscription through the payment flow; the backend grants subscription-level library access.
-7. The learner returns to the library and opens any gated asset; view tracking is recorded by the backend.
+1. The learner navigates to the library or a series detail page from the dashboard.
+2. The frontend requests the asset catalog from `GET /api/library` or series assets from `GET /api/series/:id/assets`. The backend composes access from subscriber status, relevant track bookings, per-series grants, and the series/asset `isPremium` flags.
+3. Premium assets are visible in the listing but rendered behind the shared `PremiumContentGate` surface for learners without access.
+4. A learner with active access (subscription, track booking, or series grant) opens the asset and the backend records a view.
+5. A learner without access sees the gate explaining that the content is premium and pointing them at the path their account has available (e.g., booking a relevant track). The public subscription purchase flow is currently hidden — subscriptions are provisioned via admin grants (`POST /api/subscriptions/grants` and bulk CSV variants).
+6. Administrators issue or revoke grants from the admin console when a learner is entitled to access outside of a purchase.
+
+**Admin-driven provisioning path:**
+
+1. An Administrator opens the subscription or series grant manager in the admin console.
+2. For a single user, the admin submits `POST /api/subscriptions/grants` or `POST /api/series/:id/grants` with a reason and duration/scope.
+3. For campaigns, the admin uploads a CSV through the bulk grant surface; the backend validates rows server-side and records per-row results.
+4. The grant immediately unlocks the gated surface for the learner on their next request.
 
 ### Admin Content Management Journey
 
@@ -212,7 +243,18 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 4. To build a track, the admin creates a track record via `POST /api/tracks`, then assembles events into it via `POST /api/tracks/:id/events`.
 5. Content assets (images, documents) are uploaded via `POST /api/uploads`; the backend stores them in BunnyCDN and returns CDN URLs for embedding.
 6. The admin publishes the track; it becomes visible to learners in the catalog.
-7. An Administrator monitors the admin dashboard for overview metrics, revenue figures, and attendee lists, iterating as needed.
+7. To enroll a user directly in a published track (for example, after an off-platform payment), the admin uses the track's Manual Enrollment Manager and submits `POST /api/tracks/:id/manual-enrollments` with a reason, reference, and optional paid amount; revocation uses `POST /api/tracks/:id/enrollments/:userId/revoke`. Both paths go through the same atomic booking transaction used for paid bookings.
+8. To provision library or series access outside of a purchase, the admin uses the Subscription Grants or Series Grants surfaces (single, revoke, or bulk CSV) that hit `/api/subscriptions/grants*` and `/api/series/:id/grants*`.
+9. An Administrator monitors the admin dashboard for overview metrics, revenue figures, and attendee lists, iterating as needed.
+
+### Analytics Tracking Journey
+
+**Persona**: Google Tag Manager (implicit across all learner journeys)
+
+1. The SPA loads `public/gtm-bootstrap.js` from the `index.html` head, which injects the GTM container `GTM-5DMGVFZS` and the CSP-whitelisted `noscript` fallback iframe.
+2. As the learner interacts with the app, modules under `src/lib/analytics/` push typed events to `window.dataLayer` — signup steps, login outcomes, calendar add-to-calendar clicks, content impressions and detail views for events/tracks/library/series, profile updates, payment start/complete, and page views via `usePageTracking`.
+3. On payment confirmation, the frontend reads the verified purchase payload directly from the paid `GET /api/payments/:id` (or `POST /api/payments/verify`) response, which the backend enriches via `paymentAnalytics.ts` with item metadata, promo code, discount, payment method, and a customer-type classification (new vs. returning, subscription vs. non-subscription). The frontend then pushes a single `purchase` event to the dataLayer with this payload. Enrichment is best-effort — failures are logged but do not block payment verification.
+4. GTM tags fan the events out to downstream marketing and measurement platforms. The platform itself does not post events to GTM or third-party analytics servers — only the learner's browser does.
 
 ### Payment Flow Journey
 
@@ -265,6 +307,13 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 - **Integration Type**: HTTPS API (server-side token validation)
 - **Purpose**: Protects OTP request endpoints from automated abuse during high-traffic periods such as event launches.
 
+### Google Tag Manager
+
+- **Type**: Analytics Tag Orchestration (third-party JavaScript)
+- **Description**: GTM container (`GTM-5DMGVFZS`) is bootstrapped client-side from `public/gtm-bootstrap.js`. The platform never talks to GTM server-side. All events reach GTM by being pushed to `window.dataLayer` from the frontend, and GTM fans them out to downstream destinations per its own tag configuration.
+- **Integration Type**: Browser-loaded JavaScript and dataLayer messaging (no server-side integration)
+- **Purpose**: Decouples marketing and measurement tag configuration from the codebase; fulfills conversion tracking for signup, registration, track booking, library engagement, and verified purchases.
+
 ## System Context Diagram
 
 ```mermaid
@@ -284,17 +333,19 @@ C4Context
     System_Ext(plunk, "Plunk", "Transactional email - OTP codes and invitation delivery")
     System_Ext(bunny, "BunnyCDN", "Object storage and CDN for media assets")
     System_Ext(turnstile, "Cloudflare Turnstile", "Bot-protection CAPTCHA for auth flows")
+    System_Ext(gtm, "Google Tag Manager", "Client-side tag orchestration for analytics and conversion tracking")
 
     Rel(learner, system, "Browses catalog, registers for events, books tracks, accesses library")
     Rel(expert, system, "Hosts events and contributes content")
-    Rel(manager, system, "Creates and manages content catalog and promo codes")
-    Rel(admin, system, "Operates users, invitations, metrics, and platform settings")
+    Rel(manager, system, "Creates and manages content catalog, promo codes, and manual track enrollments")
+    Rel(admin, system, "Operates users, invitations, grants, metrics, and platform settings")
     Rel(owner, system, "Controls all platform operations and owner-level accounts")
     Rel(system, postgres, "Reads and writes all platform data")
     Rel(system, fawaterk, "Creates payment invoices and receives webhook callbacks")
     Rel(system, plunk, "Sends OTP and invitation emails")
     Rel(system, bunny, "Uploads files and serves media assets")
     Rel(system, turnstile, "Validates bot-protection challenge tokens")
+    Rel(system, gtm, "Loads container script in the browser and pushes dataLayer events")
 ```
 
 ## Related Documentation

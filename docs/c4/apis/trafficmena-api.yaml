@@ -660,6 +660,111 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MutationResult'
+  /api/tracks/{id}/manual-enrollments:
+    post:
+      tags: [Tracks]
+      summary: Manually enroll a user in a published track (manager+)
+      description: >
+        Enrolls a user in a track without running a payment flow. Requires
+        manager role and a per-actor rate limit of 40 calls/min. The write
+        path is the same atomic booking transaction used by paid bookings,
+        so capacity, constituent-event grants, and downstream series access
+        stay consistent. Records `reason` and `reference` for audit.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, reason, reference]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                reference:
+                  type: string
+                  minLength: 3
+                  maxLength: 255
+                  description: External reference such as a manual payment ID or note.
+                amountPaidCents:
+                  type: integer
+                  minimum: 0
+                  maximum: 10000000
+                  nullable: true
+                  description: Optional paid amount recorded against the enrollment; defaults to the track's list price.
+      responses:
+        '201':
+          description: Manual enrollment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  bookingId: { type: string, format: uuid }
+                  trackTitle: { type: string }
+                  eventsRegistered: { type: integer }
+                  alreadyRegisteredEvents: { type: integer }
+        '400':
+          description: Invalid payload or unpublished track
+        '404':
+          description: Track or user not found
+        '409':
+          description: User already has an active enrollment for this track
+        '429':
+          description: Rate limit exceeded
+  /api/tracks/{id}/enrollments/{userId}/revoke:
+    post:
+      tags: [Tracks]
+      summary: Revoke an active track enrollment (manager+)
+      description: >
+        Revokes an active paid or manual track enrollment. Same rate limit
+        as manual enrollment creation.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: Enrollment revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  revokedBookingId: { type: string, format: uuid }
+                  revokedEventCount: { type: integer }
+        '404':
+          description: Track or active enrollment not found
+        '429':
+          description: Rate limit exceeded
 
   /api/library:
     get:
@@ -1385,13 +1490,21 @@ paths:
     get:
       tags: [Payments]
       summary: Get a payment by id
+      description: >
+        When the payment is in `paid` state, the response is enriched with
+        verified purchase analytics (item name, item category, promo code,
+        payment method, original/discounted amounts, and a customer-type
+        classification such as new vs. returning and subscription vs.
+        non-subscription). The enrichment is best-effort and is skipped
+        silently on failure so that payment verification itself is never
+        blocked by analytics enrichment.
       security:
         - sessionCookie: []
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
         '200':
-          description: Payment record
+          description: Payment record (enriched with analytics when paid)
           content:
             application/json:
               schema:

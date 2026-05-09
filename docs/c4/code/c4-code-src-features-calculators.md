@@ -29,6 +29,12 @@
   - Location: [src/features/calculators/index.ts](../../../src/features/calculators/index.ts)
   - Contains: module-level configuration or data
   - Dependencies: None
+- `analytics-shared.ts`
+  - Description: Shared analytics types and helpers for calculator-usage events; feeds `src/lib/analytics/events.ts`.
+  - Location: [src/features/calculators/analytics-shared.ts](../../../src/features/calculators/analytics-shared.ts)
+- `analytics.tsx`
+  - Description: React-aware analytics helpers for calculator pages/components — tracks view, interaction, and result events.
+  - Location: [src/features/calculators/analytics.tsx](../../../src/features/calculators/analytics.tsx)
 
 ## Dependencies
 
