@@ -38,6 +38,13 @@ const { Pool } = pg;
 const pool = new Pool({
   connectionString: resolvedDatabaseUrl,
   ssl: env.DB_SSL ? { rejectUnauthorized: false } : undefined,
+  application_name: 'trafficmena-hub',
+});
+
+// Prevent unhandled idle-client errors (e.g. during a Postgres restart) from crashing the process.
+pool.on('error', (err) => {
+  // eslint-disable-next-line no-console
+  console.error('[db] idle client error:', err);
 });
 
 export const db = drizzle(pool);
