@@ -38,10 +38,11 @@
     <meta http-equiv="Cross-Origin-Resource-Policy" content="same-origin" />
     
     <!-- Enhanced Content Security Policy for Secure Iframe Embedding -->
+    <!-- CSP is also defined in server/src/app.ts (secureHeaders) — browsers intersect both, so keep host lists in sync. -->
       <meta
         http-equiv="Content-Security-Policy"
         content="default-src 'self'; 
-                 script-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://challenges.cloudflare.com https://www.googletagmanager.com https://tagmanager.google.com;
+                 script-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://challenges.cloudflare.com https://www.googletagmanager.com https://tagmanager.google.com https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://connect.facebook.net https://capi-automation.s3.us-east-2.amazonaws.com https://analytics.tiktok.com https://analytics-ipv6.tiktokw.us https://ads.tiktok.com;
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; 
                  font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; 
                  img-src 'self' data: blob: https:; 
@@ -69,7 +70,9 @@
                          https://*.mediadelivery.net
                          https://video.bunnycdn.com
                          https://stream.bunnycdn.com
-                         https://www.googletagmanager.com;
+                         https://www.googletagmanager.com
+                         bytedance:
+                         sslocal:;
                  connect-src 'self'
                             https://challenges.cloudflare.com
                             https://api.trafficmena.com
@@ -81,7 +84,17 @@
                             https://www.google-analytics.com
                             https://analytics.google.com
                             https://*.google-analytics.com
-                            https://*.analytics.google.com;
+                            https://*.analytics.google.com
+                            https://www.google.com
+                            https://pagead2.googlesyndication.com
+                            https://www.googleadservices.com
+                            https://googleads.g.doubleclick.net
+                            https://ad.doubleclick.net
+                            https://www.facebook.com
+                            https://connect.facebook.net
+                            https://analytics.tiktok.com
+                            https://analytics-ipv6.tiktokw.us
+                            https://ads.tiktok.com;
                  worker-src 'self' blob:;
                  manifest-src 'self';
                  upgrade-insecure-requests;"

@@ -32,4 +32,23 @@ describe('GTM bootstrap CSP hardening', () => {
     assert.match(bootstrapScript, /window\[dataLayerName\] = window\[dataLayerName\] \|\| \[\];/);
     assert.match(bootstrapScript, /www\.googletagmanager\.com\/gtm\.js/);
   });
+
+  // Browsers intersect the meta CSP and the server-sent CSP — any tracking pixel host
+  // missing from either file is silently blocked. One canonical host per vendor is enough.
+  it('pins key tracking pixel hosts in both CSP locations', async () => {
+    const [html, serverApp] = await Promise.all([
+      readFile(path.join(projectRoot, 'index.html'), 'utf8'),
+      readFile(path.join(projectRoot, 'server/src/app.ts'), 'utf8'),
+    ]);
+
+    // Google Ads /ccm/collect beacon (the original reported block)
+    assert.match(html, /www\.google\.com/);
+    assert.match(serverApp, /www\.google\.com/);
+    // Meta Pixel
+    assert.match(html, /connect\.facebook\.net/);
+    assert.match(serverApp, /connect\.facebook\.net/);
+    // TikTok Pixel
+    assert.match(html, /analytics\.tiktok\.com/);
+    assert.match(serverApp, /analytics\.tiktok\.com/);
+  });
 });

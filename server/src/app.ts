@@ -11,6 +11,7 @@ import { registerHealthRoutes } from './routes/health.js';
 export function createApp() {
   const app = new Hono();
   const allowedOrigins = env.CORS_ALLOWLIST;
+  // CSP is also defined in index.html (meta tag) — browsers intersect both, so keep host lists in sync.
   const connectSources = new Set<string>([
     "'self'",
     'https://next-api.useplunk.com',
@@ -28,6 +29,19 @@ export function createApp() {
   connectSources.add('https://analytics.google.com');
   connectSources.add('https://*.google-analytics.com');
   connectSources.add('https://*.analytics.google.com');
+  // Google Ads / GA4 Advertising Features (incl. /ccm/collect beacon on www.google.com)
+  connectSources.add('https://www.google.com');
+  connectSources.add('https://pagead2.googlesyndication.com');
+  connectSources.add('https://www.googleadservices.com');
+  connectSources.add('https://googleads.g.doubleclick.net');
+  connectSources.add('https://ad.doubleclick.net');
+  // Meta Pixel
+  connectSources.add('https://www.facebook.com');
+  connectSources.add('https://connect.facebook.net');
+  // TikTok Pixel
+  connectSources.add('https://analytics.tiktok.com');
+  connectSources.add('https://analytics-ipv6.tiktokw.us');
+  connectSources.add('https://ads.tiktok.com');
 
   const scriptSrc = [
     "'self'",
@@ -36,6 +50,18 @@ export function createApp() {
     'https://challenges.cloudflare.com',
     'https://www.googletagmanager.com',
     'https://tagmanager.google.com',
+    // Google Ads
+    'https://www.google.com',
+    'https://www.googleadservices.com',
+    'https://pagead2.googlesyndication.com',
+    'https://googleads.g.doubleclick.net',
+    // Meta Pixel (fbevents.js + CAPI param builder hosted on Meta's S3 bucket)
+    'https://connect.facebook.net',
+    'https://capi-automation.s3.us-east-2.amazonaws.com',
+    // TikTok Pixel
+    'https://analytics.tiktok.com',
+    'https://analytics-ipv6.tiktokw.us',
+    'https://ads.tiktok.com',
   ];
 
   if (!isProduction) {
@@ -87,6 +113,9 @@ export function createApp() {
           'https://video.bunnycdn.com',
           'https://stream.bunnycdn.com',
           'https://www.googletagmanager.com',
+          // TikTok Pixel deep-link schemes (per TikTok official docs)
+          'bytedance:',
+          'sslocal:',
         ],
         frameAncestors: ["'self'"],
         connectSrc: Array.from(connectSources),
