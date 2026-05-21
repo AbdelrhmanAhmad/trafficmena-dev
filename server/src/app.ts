@@ -33,7 +33,8 @@ export function createApp() {
   connectSources.add('https://www.google.com');
   connectSources.add('https://pagead2.googlesyndication.com');
   connectSources.add('https://www.googleadservices.com');
-  connectSources.add('https://googleads.g.doubleclick.net');
+  // Wildcard covers googleads.g.doubleclick.net, stats.g.doubleclick.net, and other GA4/Ads beacon subdomains
+  connectSources.add('https://*.g.doubleclick.net');
   connectSources.add('https://ad.doubleclick.net');
   // Meta Pixel
   connectSources.add('https://www.facebook.com');
