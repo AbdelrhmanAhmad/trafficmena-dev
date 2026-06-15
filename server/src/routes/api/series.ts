@@ -12,7 +12,11 @@ import {
 } from '../../db/schema/index.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { getPurchasedSeriesIds, isSeriesSellable } from '../../services/seriesSales.js';
+import {
+  getActiveSeriesGrantIds,
+  getPurchasedSeriesIds,
+  isSeriesSellable,
+} from '../../services/seriesSales.js';
 import { resolveSeriesAccess, resolveSeriesAssetAccess } from './seriesAccess.js';
 import { registerSeriesStoreRoutes } from './seriesStore.js';
 import { hasActiveSubscription } from './subscriptionShared.js';
@@ -161,12 +165,13 @@ export function registerSeriesRoutes(app: Hono) {
       }
     }
 
-    const purchasedIds = !isStaff
-      ? await getPurchasedSeriesIds(
-          session.user.id,
-          seriesList.map((s) => s.id),
-        )
-      : new Set<string>();
+    const seriesIdsForAccess = seriesList.map((s) => s.id);
+    const [purchasedIds, seriesGrantIds] = !isStaff
+      ? await Promise.all([
+          getPurchasedSeriesIds(session.user.id, seriesIdsForAccess),
+          getActiveSeriesGrantIds(session.user.id, seriesIdsForAccess),
+        ])
+      : [new Set<string>(), new Set<string>()];
 
     const items = seriesList.map((s) => {
       const assetCount = countsMap.get(s.id) ?? 0;
@@ -180,6 +185,7 @@ export function registerSeriesRoutes(app: Hono) {
           assetCount,
         }),
         hasPurchased: purchasedIds.has(s.id),
+        hasSeriesGrant: seriesGrantIds.has(s.id),
       };
     });
 
@@ -286,17 +292,6 @@ export function registerSeriesRoutes(app: Hono) {
       !isStaff && session.user.id
         ? await getPurchasedSeriesIds(session.user.id, [seriesRecord.id])
         : new Set<string>();
-    const assetCountForSale = await db
-      .select({ assetCount: count(seriesAssets.assetId) })
-      .from(seriesAssets)
-      .where(eq(seriesAssets.seriesId, id));
-    const recordingCount = Number(assetCountForSale[0]?.assetCount ?? 0);
-    const isSellable = isSeriesSellable({
-      salesEnabled: seriesRecord.salesEnabled,
-      priceInCents: seriesRecord.priceInCents ?? 0,
-      isPublished: seriesRecord.isPublished,
-      assetCount: recordingCount,
-    });
 
     // Get assets in series with permission fields
     const seriesAssetsList = await db
@@ -324,6 +319,14 @@ export function registerSeriesRoutes(app: Hono) {
       .innerJoin(libraryAssets, eq(libraryAssets.id, seriesAssets.assetId))
       .where(eq(seriesAssets.seriesId, id))
       .orderBy(seriesAssets.sortOrder);
+
+    const recordingCount = seriesAssetsList.length;
+    const isSellable = isSeriesSellable({
+      salesEnabled: seriesRecord.salesEnabled,
+      priceInCents: seriesRecord.priceInCents ?? 0,
+      isPublished: seriesRecord.isPublished,
+      assetCount: recordingCount,
+    });
 
     // Get user's registered event IDs for permission checking
     let userEventIds = new Set<string>();
@@ -374,6 +377,7 @@ export function registerSeriesRoutes(app: Hono) {
       assets,
       hasAccess: hasSeriesAccess,
       hasPurchased: purchasedIds.has(seriesRecord.id),
+      hasSeriesGrant,
       isSellable,
     });
   });

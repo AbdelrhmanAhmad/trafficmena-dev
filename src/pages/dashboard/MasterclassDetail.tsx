@@ -27,7 +27,7 @@ function MasterclassDetailContent() {
       <Button variant="ghost" asChild className="px-0">
         <Link to="/dashboard/masterclasses">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          العودة للكورسات
+             back to masterclasses
         </Link>
       </Button>
 

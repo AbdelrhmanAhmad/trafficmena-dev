@@ -15,7 +15,7 @@ import type { SeriesAsset } from '@/features/series';
 import { SeriesBuyActions } from '@/features/series/components/SeriesBuyActions';
 import SeriesPriceBadge from '@/features/series/components/SeriesPriceBadge';
 import SeriesPurchasedBadge from '@/features/series/components/SeriesPurchasedBadge';
-import { isSeriesPurchasable } from '@/features/series/utils/seriesPricing';
+import { canShowSeriesPurchaseActions } from '@/features/series/utils/seriesPricing';
 import { useSeriesDetail } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -182,7 +182,7 @@ const DashboardSeriesDetail: React.FC = () => {
     );
   }
 
-  const canPurchase = isSeriesPurchasable(series) && !series.has_purchased;
+  const canPurchase = canShowSeriesPurchaseActions(series);
   const showSellablePreview = series.has_access === false && canPurchase;
 
   if (series.has_access === false && !showSellablePreview) {
@@ -253,7 +253,7 @@ const DashboardSeriesDetail: React.FC = () => {
 
           {showSellablePreview && (
             <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              Preview mode — purchase for permanent access to all recordings. This does not include
+              Preview mode , purchase for permanent access to all recordings. This does not include
               live track booking.
             </div>
           )}

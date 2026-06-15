@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createSeriesOrder } from '@/app/api/orders';
 import { ApiError } from '@/app/api/client';
-import { seriesToCartItem, useSeriesCart } from '@/features/series/context/SeriesCartContext';
+import { seriesToCartItem, useCommerceCart } from '@/features/series/context/SeriesCartContext';
 import type { Series } from '@/features/series';
-import { isSeriesPurchasable } from '@/features/series/utils/seriesPricing';
+import { canShowSeriesPurchaseActions } from '@/features/series/utils/seriesPricing';
 import { PaymentCheckoutDialog } from '@/shared/components/payment/PaymentCheckoutDialog';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -14,7 +14,7 @@ import { useToast } from '@/shared/hooks/custom/use-toast';
 type SeriesBuyActionsProps = {
   series: Pick<
     Series,
-    'id' | 'title' | 'price_in_cents' | 'image_url' | 'sales_enabled' | 'asset_count' | 'has_purchased'
+    'id' | 'title' | 'price_in_cents' | 'image_url' | 'sales_enabled' | 'asset_count' | 'has_purchased' | 'has_series_grant'
   >;
   layout?: 'inline' | 'stack';
 };
@@ -23,16 +23,16 @@ export function SeriesBuyActions({ series, layout = 'inline' }: SeriesBuyActions
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const cart = useSeriesCart();
+  const cart = useCommerceCart();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
-  if (series.has_purchased || !isSeriesPurchasable(series)) {
+  if (!canShowSeriesPurchaseActions(series)) {
     return null;
   }
 
-  const inCart = cart.hasItem(series.id);
+  const inCart = cart.hasItem('series', series.id);
   const stackClass = layout === 'stack' ? 'flex-col w-full' : 'flex-wrap';
 
   const startCheckout = async () => {
@@ -88,7 +88,7 @@ export function SeriesBuyActions({ series, layout = 'inline' }: SeriesBuyActions
           itemCategory="Series"
           basePriceCents={series.price_in_cents}
           onSuccess={() => {
-            cart.removeItem(series.id);
+            cart.removeItem('series', series.id);
             navigate('/dashboard/library?purchased=1');
           }}
         />

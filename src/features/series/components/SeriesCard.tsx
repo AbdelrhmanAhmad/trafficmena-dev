@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { SeriesBuyActions } from '@/features/series/components/SeriesBuyActions';
 import SeriesPriceBadge from '@/features/series/components/SeriesPriceBadge';
 import SeriesPurchasedBadge from '@/features/series/components/SeriesPurchasedBadge';
-import { isSeriesPurchasable } from '@/features/series/utils/seriesPricing';
+import { canShowSeriesPurchaseActions } from '@/features/series/utils/seriesPricing';
 import { Button } from '@/shared/components/ui/button';
 import { Switch } from '@/shared/components/ui/switch';
 import {
@@ -40,8 +40,7 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const isPremium = series.is_premium ?? false;
-  const showBuyActions =
-    !canManage && isSeriesPurchasable(series) && !series.has_purchased;
+  const showBuyActions = !canManage && canShowSeriesPurchaseActions(series);
 
   const sanitizeConfig = {
     ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u'],

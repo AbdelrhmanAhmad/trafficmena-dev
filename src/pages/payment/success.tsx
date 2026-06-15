@@ -19,6 +19,7 @@ import {
 } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { usePaymentVerification } from './usePaymentVerification';
+import { clearCommerceCartStorage } from '@/features/series/context/SeriesCartContext';
 
 export default function PaymentSuccessPage() {
   const { user, loading: authLoading } = useAuth();
@@ -68,6 +69,10 @@ export default function PaymentSuccessPage() {
     }
 
     navigationHandledRef.current = true;
+
+    if (verifyData.itemType === 'order') {
+      clearCommerceCartStorage();
+    }
 
     if (verifyData.itemType === 'event' && verifyData.itemId) {
       navigate(`/thank-you-event/${verifyData.itemId}?paid=1`, { replace: true });

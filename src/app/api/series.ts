@@ -17,6 +17,7 @@ export interface ApiSeries {
   assetCount: number;
   isSellable?: boolean;
   hasPurchased?: boolean;
+  hasSeriesGrant?: boolean;
 }
 
 type ApiSeriesAsset = {
@@ -42,6 +43,7 @@ type ApiSeriesDetail = ApiSeries & {
   assets: ApiSeriesAsset[];
   hasAccess?: boolean;
   hasPurchased?: boolean;
+  hasSeriesGrant?: boolean;
   isSellable?: boolean;
 };
 
@@ -63,6 +65,7 @@ export interface SeriesRecord {
   asset_count: number;
   is_sellable?: boolean;
   has_purchased?: boolean;
+  has_series_grant?: boolean;
   created_at: Date;
 }
 
@@ -90,6 +93,7 @@ export type SeriesDetailRecord = SeriesRecord & {
   assets: SeriesAssetRecord[];
   has_access: boolean;
   has_purchased?: boolean;
+  has_series_grant?: boolean;
   is_sellable?: boolean;
 };
 
@@ -111,6 +115,7 @@ const mapSeries = (api: ApiSeries): SeriesRecord => ({
   asset_count: api.assetCount ?? 0,
   is_sellable: api.isSellable,
   has_purchased: api.hasPurchased,
+  has_series_grant: api.hasSeriesGrant,
   created_at: new Date(api.createdAt),
 });
 
@@ -139,6 +144,7 @@ const mapSeriesDetail = (series: ApiSeriesDetail): SeriesDetailRecord => ({
   assets: (series.assets ?? []).map(mapSeriesAsset),
   has_access: series.hasAccess ?? true,
   has_purchased: series.hasPurchased,
+  has_series_grant: series.hasSeriesGrant,
   is_sellable: series.isSellable,
 });
 

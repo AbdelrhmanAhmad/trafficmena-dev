@@ -11,6 +11,7 @@ import {
   trackBookings,
 } from '../../db/schema/index.js';
 import {
+  getActiveSeriesGrantIds,
   getPurchasedSeriesIds,
   isSeriesSellable,
   loadSellableSeriesByIds,
@@ -90,13 +91,15 @@ export function registerSeriesStoreRoutes(app: Hono) {
       });
 
     if (userId) {
-      const purchased = await getPurchasedSeriesIds(
-        userId,
-        items.map((item) => item.id),
-      );
+      const itemIds = items.map((item) => item.id);
+      const [purchased, seriesGrants] = await Promise.all([
+        getPurchasedSeriesIds(userId, itemIds),
+        getActiveSeriesGrantIds(userId, itemIds),
+      ]);
       items = items.map((item) => ({
         ...item,
         hasPurchased: purchased.has(item.id),
+        hasSeriesGrant: seriesGrants.has(item.id),
       }));
     }
 
@@ -274,6 +277,7 @@ export function registerSeriesStoreRoutes(app: Hono) {
       assets,
       hasAccess,
       hasPurchased,
+      hasSeriesGrant,
       isAuthenticated: Boolean(userId),
     });
   });

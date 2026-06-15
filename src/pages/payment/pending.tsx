@@ -23,6 +23,7 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { rememberCheckoutReturn } from '@/shared/utils/paymentReturnContext';
 import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
+import { clearCommerceCartStorage } from '@/features/series/context/SeriesCartContext';
 
 function createCheckoutIdempotencyKey(scope: string): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -143,12 +144,15 @@ export default function PaymentPendingPage() {
 
   useEffect(() => {
     if (verifyPayment.data?.status === 'paid' && isInvoiceIdValid && invoiceId !== null) {
+      if (itemType === 'order') {
+        clearCommerceCartStorage();
+      }
       const params = new URLSearchParams();
       params.set('invoice_id', invoiceId);
       if (paymentId) params.set('payment_id', paymentId);
       navigate(`/payment/success?${params.toString()}`);
     }
-  }, [verifyPayment.data?.status, isInvoiceIdValid, invoiceId, paymentId, navigate]);
+  }, [verifyPayment.data?.status, isInvoiceIdValid, invoiceId, paymentId, itemType, navigate]);
 
   const autoVerifyAttemptedRef = useRef(false);
   useEffect(() => {

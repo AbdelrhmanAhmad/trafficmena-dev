@@ -49,7 +49,7 @@ function MasterclassesBrowse() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Masterclasses</h1>
         <p className="mt-1 text-neutral-600">
-          Buy each course directly — permanent access after payment (not in cart).
+          Buy each course directly , permanent access after payment (not in cart).
         </p>
       </div>
 

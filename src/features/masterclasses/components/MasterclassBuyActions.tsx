@@ -39,7 +39,7 @@ export function MasterclassBuyActions({ masterclass, layout = 'inline' }: Master
           className={layout === 'stack' ? 'w-full' : undefined}
           onClick={startCheckout}
         >
-          اشترِ الآن — {formatSeriesPriceLabel(masterclass.price_in_cents ?? 0)}
+           Buy now , {formatSeriesPriceLabel(masterclass.price_in_cents ?? 0)}
         </Button>
       </div>
 

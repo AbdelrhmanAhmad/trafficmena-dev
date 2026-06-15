@@ -56,3 +56,22 @@ export function isSeriesPurchasable(
     (series.asset_count ?? 0) > 0
   );
 }
+
+/** Show buy/cart actions: sellable, not already purchased, and no direct series grant (track access is OK). */
+export function canShowSeriesPurchaseActions(
+  series: Pick<
+    Series,
+    | 'sales_enabled'
+    | 'price_in_cents'
+    | 'asset_count'
+    | 'is_sellable'
+    | 'has_purchased'
+    | 'has_series_grant'
+  >,
+): boolean {
+  if (series.has_purchased || series.has_series_grant) {
+    return false;
+  }
+
+  return isSeriesPurchasable(series);
+}

@@ -249,10 +249,10 @@ const LibraryItemDetail: React.FC = () => {
                       asChild
                       className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:shadow-xl"
                     >
-                      <Link to={`/dashboard/events/${item.event_id}`}>Register for Event</Link>
+                      <Link to={`/meetups/${item.event_id}`}>Register for Event</Link>
                     </Button>
                   )}
-                  <Button variant="outline" onClick={() => navigate('/dashboard/events')}>
+                  <Button variant="outline" onClick={() => navigate('/dashboard/meetups')}>
                     Browse All Events
                   </Button>
                 </div>
