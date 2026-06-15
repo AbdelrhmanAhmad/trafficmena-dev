@@ -13,10 +13,11 @@
 | [digital-products-commerce.md](./digital-products-commerce.md) | Digital Products: ملفات، فيديو اختياري، سلة موحّدة مع Series |
 | [masterclasses-system.md](./masterclasses-system.md) | Masterclasses (Tasks 12–18): كورسات، enrollment، دفع مباشر، progress |
 | [masterclass-certificates.md](./masterclass-certificates.md) | Certificates (Tasks 19–23): تصميم عالمي، إصدار تلقائي/يدوي، PDF، **رابط مشاركة عام** |
+| [permissions-priority-7.md](./permissions-priority-7.md) | الصلاحيات (Tasks 24–27): User / Manager / Admin + إلغاء الشهادة |
 
 ## آخر تحديث
 
-- **2026-06-10** — Certificate public share page: `/certificates/:code` للتحقق والتنزيل بدون تسجيل دخول
+- **2026-06-10** — Permissions Priority 7: delete restricted to Admin/Owner; certificate revoke; manager completion progress
 - **2026-06-14** — Masterclasses: نظام كامل (admin + member + payments + manual enroll + progress)
 - **2026-06-11** — Series sales commerce: orders/cart/checkout + public store page
 - **2026-06-11** — Fawaterk payment: invoice_id كنص (UUID) + إصلاح verify وتفعيل الاشتراك

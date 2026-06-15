@@ -55,3 +55,23 @@ export async function fetchRemoteFileBytes(url: string): Promise<Uint8Array> {
   const arrayBuffer = await response.arrayBuffer();
   return new Uint8Array(arrayBuffer);
 }
+
+/** Best-effort delete of a file stored on Bunny by its public URL. */
+export async function deleteRemoteFileByUrl(url: string): Promise<void> {
+  if (!storageZone || !storageAccessKey || !url) return;
+
+  try {
+    const pathname = new URL(url).pathname.replace(/^\//, '');
+    if (!pathname) return;
+
+    await fetch(`https://storage.bunnycdn.com/${storageZone}/${pathname}`, {
+      method: 'DELETE',
+      headers: { AccessKey: storageAccessKey },
+    });
+  } catch (error) {
+    console.warn('[certificateStorage] Failed to delete remote file', {
+      url,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}

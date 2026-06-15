@@ -1,8 +1,9 @@
-import { Download, ExternalLink, Link2, Loader2, UserPlus } from 'lucide-react';
+import { Download, ExternalLink, Link2, Loader2, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { certificateDownloadUrl, certificatePublicShareUrl } from '@/app/api/certificates';
 import { CertificateShareButton } from '@/features/certificates/components/CertificateShareButton';
 import {
+  useDeleteCertificate,
   useManualIssueCertificate,
   useMasterclassCertificateSettings,
   useMasterclassCertificatesAdmin,
@@ -32,6 +33,7 @@ export function MasterclassCertificatesAdmin({
     useMasterclassCertificatesAdmin(masterclassId);
   const updateSettings = useUpdateMasterclassCertificateSettings(masterclassId);
   const issueMutation = useManualIssueCertificate(masterclassId);
+  const deleteMutation = useDeleteCertificate(masterclassId);
 
   const [enabled, setEnabled] = useState(false);
   const [title, setTitle] = useState('');
@@ -65,6 +67,14 @@ export function MasterclassCertificatesAdmin({
     });
     setIssueUserId(null);
     setExternalUrl('');
+  };
+
+  const handleRevokeCertificate = async (certificateId: string, studentLabel: string) => {
+    const confirmed = window.confirm(
+      `Remove certificate for ${studentLabel}? They can complete again or receive a new manual issue.`,
+    );
+    if (!confirmed) return;
+    await deleteMutation.mutateAsync(certificateId);
   };
 
   if (settingsLoading || listLoading) return <LoadingSpinner />;
@@ -177,6 +187,18 @@ export function MasterclassCertificatesAdmin({
                               certificateCode={row.certificate.certificateCode}
                               variant="ghost"
                             />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              disabled={deleteMutation.isPending}
+                              title="Remove certificate"
+                              onClick={() =>
+                                void handleRevokeCertificate(row.certificate!.id, displayName)
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                             {row.certificate.externalCertificateUrl && (
                               <Button type="button" size="sm" variant="ghost" asChild>
                                 <a

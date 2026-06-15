@@ -3,6 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import {
   DEFAULT_CERTIFICATE_DESIGN,
+  deleteCertificateRecord,
   getCertificateByCode,
   getCertificateById,
   getGlobalCertificateSettings,
@@ -400,6 +401,30 @@ export function registerCertificateRoutes(app: Hono) {
       return c.json({ error: { code: 'NOT_FOUND', message: 'Certificate not found.' } }, 404);
     }
     return c.json({ data: updated });
+  });
+
+  app.delete('/certificates/:id', async (c) => {
+    const staff = await requireAdmin(c);
+    if ('response' in staff) return staff.response;
+
+    const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
+    if (!idParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Invalid certificate id.' } }, 400);
+    }
+
+    const deleted = await deleteCertificateRecord(idParsed.data);
+    if (!deleted) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Certificate not found.' } }, 404);
+    }
+
+    return c.json({
+      data: {
+        id: deleted.id,
+        certificateCode: deleted.certificateCode,
+        userId: deleted.userId,
+        masterclassId: deleted.masterclassId,
+      },
+    });
   });
 }
 

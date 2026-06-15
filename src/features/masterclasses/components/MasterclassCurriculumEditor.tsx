@@ -25,6 +25,7 @@ import {
 type MasterclassCurriculumEditorProps = {
   masterclassId: string;
   modules: MasterclassModule[];
+  canDelete?: boolean;
 };
 
 type SelectedLesson = {
@@ -46,10 +47,12 @@ function LessonMediaEditor({
   masterclassId,
   moduleId,
   lesson,
+  canDelete = false,
 }: {
   masterclassId: string;
   moduleId: string;
   lesson: MasterclassLesson;
+  canDelete?: boolean;
 }) {
   const mutations = useMasterclassCurriculumMutations(masterclassId);
   const { data: libraryData } = useLibraryList(1, 50, { type: 'Video' });
@@ -95,7 +98,7 @@ function LessonMediaEditor({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  disabled={busy}
+                  disabled={busy || !canDelete}
                   onClick={() =>
                     void mutations.removeVideo.mutateAsync({
                       moduleId,
@@ -141,6 +144,7 @@ function LessonMediaEditor({
         moduleId={moduleId}
         lessonId={lesson.id}
         files={files}
+        canDelete={canDelete}
       />
     </div>
   );
@@ -149,6 +153,7 @@ function LessonMediaEditor({
 export function MasterclassCurriculumEditor({
   masterclassId,
   modules,
+  canDelete = false,
 }: MasterclassCurriculumEditorProps) {
   const mutations = useMasterclassCurriculumMutations(masterclassId);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
@@ -250,6 +255,7 @@ export function MasterclassCurriculumEditor({
                       type="button"
                       variant="ghost"
                       size="sm"
+                      disabled={!canDelete}
                       onClick={() => {
                         if (!window.confirm('Delete this module and all its lessons?')) return;
                         void mutations.deleteModule.mutateAsync(module.id);
@@ -315,6 +321,7 @@ export function MasterclassCurriculumEditor({
                               type="button"
                               variant="ghost"
                               size="sm"
+                              disabled={!canDelete}
                               onClick={() => {
                                 if (!window.confirm('Delete this lesson?')) return;
                                 void mutations.deleteLesson.mutateAsync({
@@ -332,6 +339,7 @@ export function MasterclassCurriculumEditor({
                               masterclassId={masterclassId}
                               moduleId={module.id}
                               lesson={lesson}
+                              canDelete={canDelete}
                             />
                           )}
                         </div>

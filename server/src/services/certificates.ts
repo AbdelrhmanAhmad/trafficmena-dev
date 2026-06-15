@@ -18,7 +18,7 @@ import {
 } from '../db/schema/index.js';
 import { ApiError } from '../utils/errors.js';
 import { countCompletedLessons, countMasterclassLessons } from './masterclassSales.js';
-import { fetchRemoteFileBytes, uploadCertificatePdfBuffer } from './certificateStorage.js';
+import { fetchRemoteFileBytes, uploadCertificatePdfBuffer, deleteRemoteFileByUrl } from './certificateStorage.js';
 import { isKnownDatabaseConflict } from '../routes/api/utils.js';
 
 export const DEFAULT_CERTIFICATE_DESIGN: CertificateDesignSettings = {
@@ -696,6 +696,24 @@ export async function getPublicCertificateByCode(rawCode: string) {
     externalCertificateUrl: row.certificate.externalCertificateUrl,
     preview,
   };
+}
+
+export async function deleteCertificateRecord(certificateId: string) {
+  const certificate = await getCertificateById(certificateId);
+  if (!certificate) {
+    return null;
+  }
+
+  if (certificate.generatedCertificateUrl) {
+    await deleteRemoteFileByUrl(certificate.generatedCertificateUrl);
+  }
+
+  const [deleted] = await db
+    .delete(certificates)
+    .where(eq(certificates.id, certificateId))
+    .returning();
+
+  return deleted ?? null;
 }
 
 export async function updateCertificateExternalUrl(

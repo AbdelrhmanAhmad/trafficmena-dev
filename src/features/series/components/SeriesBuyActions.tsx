@@ -66,7 +66,7 @@ export function SeriesBuyActions({ series, layout = 'inline' }: SeriesBuyActions
           className={layout === 'stack' ? 'w-full' : undefined}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
-          {inCart ? 'في السلة' : 'أضف للسلة'}
+          {inCart ? 'In cart' : 'Add to cart'}
         </Button>
         <Button
           type="button"
@@ -74,7 +74,7 @@ export function SeriesBuyActions({ series, layout = 'inline' }: SeriesBuyActions
           onClick={() => void startCheckout()}
           className={layout === 'stack' ? 'w-full' : undefined}
         >
-          {isCreatingOrder ? 'جاري التحضير...' : 'اشترِ الآن'}
+          {isCreatingOrder ? 'Preparing...' : 'Buy now'}
         </Button>
       </div>
 

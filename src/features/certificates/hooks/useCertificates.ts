@@ -8,6 +8,7 @@ import {
   manualIssueCertificate,
   updateGlobalCertificateSettings,
   updateMasterclassCertificateSettings,
+  deleteCertificate,
 } from '@/app/api/certificates';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 
@@ -78,6 +79,23 @@ export function useManualIssueCertificate(masterclassId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['certificates', 'admin', masterclassId] });
       toast({ title: 'Certificate issued' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useDeleteCertificate(masterclassId: string) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: deleteCertificate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['certificates', 'admin', masterclassId] });
+      queryClient.invalidateQueries({ queryKey: ['certificates', 'learner'] });
+      toast({ title: 'Certificate removed', description: 'The learner can receive a new certificate.' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

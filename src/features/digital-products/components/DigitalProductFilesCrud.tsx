@@ -43,6 +43,7 @@ type FileItemFormValues = z.infer<typeof fileItemSchema>;
 type DigitalProductFilesCrudProps = {
   productId: string;
   files: DigitalProductFile[];
+  canDelete?: boolean;
 };
 
 type PanelMode = 'list' | 'create' | 'edit';
@@ -60,7 +61,11 @@ function fileNameFromUrl(url: string): string {
   }
 }
 
-export function DigitalProductFilesCrud({ productId, files }: DigitalProductFilesCrudProps) {
+export function DigitalProductFilesCrud({
+  productId,
+  files,
+  canDelete = false,
+}: DigitalProductFilesCrudProps) {
   const [mode, setMode] = useState<PanelMode>('list');
   const [editingFile, setEditingFile] = useState<DigitalProductFile | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -215,7 +220,7 @@ export function DigitalProductFilesCrud({ productId, files }: DigitalProductFile
                       type="button"
                       variant="ghost"
                       size="icon"
-                      disabled={removeMutation.isPending}
+                      disabled={!canDelete || removeMutation.isPending}
                       onClick={() => void handleDelete(file.id)}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />

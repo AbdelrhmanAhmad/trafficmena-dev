@@ -26,7 +26,7 @@ import {
 import { getLearnerCertificateStatus, tryIssueCertificateOnCompletion } from '../../services/certificates.js';
 import { ApiError } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { requireManager } from './utils.js';
+import { requireManager, requireContentDelete } from './utils.js';
 
 const fileTypeSchema = z.enum(['excel', 'markdown', 'html', 'text', 'powerpoint']);
 const uuidParamSchema = z.string().uuid();
@@ -807,7 +807,20 @@ export function registerMasterclassRoutes(app: Hono) {
       .where(eq(masterclassEnrollments.masterclassId, idParsed.data))
       .orderBy(desc(masterclassEnrollments.enrolledAt));
 
-    return c.json({ data: { items: rows } });
+    const totalLessons = await countMasterclassLessons(idParsed.data);
+    const items = await Promise.all(
+      rows.map(async (row) => {
+        const completedLessons = await countCompletedLessons(row.userId, idParsed.data);
+        return {
+          ...row,
+          totalLessons,
+          completedLessons,
+          isComplete: totalLessons > 0 && completedLessons >= totalLessons,
+        };
+      }),
+    );
+
+    return c.json({ data: { items } });
   });
 
   app.post('/masterclasses/:id/enrollments/manual', async (c) => {
@@ -994,7 +1007,7 @@ export function registerMasterclassRoutes(app: Hono) {
   });
 
   app.delete('/masterclasses/:id/modules/:moduleId', async (c) => {
-    const staff = await requireManager(c);
+    const staff = await requireContentDelete(c);
     if ('response' in staff) return staff.response;
 
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
@@ -1168,7 +1181,7 @@ export function registerMasterclassRoutes(app: Hono) {
   });
 
   app.delete('/masterclasses/:id/modules/:moduleId/lessons/:lessonId', async (c) => {
-    const staff = await requireManager(c);
+    const staff = await requireContentDelete(c);
     if ('response' in staff) return staff.response;
 
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
@@ -1308,7 +1321,7 @@ export function registerMasterclassRoutes(app: Hono) {
   });
 
   app.delete('/masterclasses/:id/modules/:moduleId/lessons/:lessonId/videos/:videoId', async (c) => {
-    const staff = await requireManager(c);
+    const staff = await requireContentDelete(c);
     if ('response' in staff) return staff.response;
 
     const lessonIdParsed = uuidParamSchema.safeParse(c.req.param('lessonId'));
@@ -1418,7 +1431,7 @@ export function registerMasterclassRoutes(app: Hono) {
   });
 
   app.delete('/masterclasses/:id/modules/:moduleId/lessons/:lessonId/files/:fileId', async (c) => {
-    const staff = await requireManager(c);
+    const staff = await requireContentDelete(c);
     if ('response' in staff) return staff.response;
 
     const lessonIdParsed = uuidParamSchema.safeParse(c.req.param('lessonId'));
@@ -1496,7 +1509,7 @@ export function registerMasterclassRoutes(app: Hono) {
   });
 
   app.delete('/masterclasses/:id', async (c) => {
-    const staff = await requireManager(c);
+    const staff = await requireContentDelete(c);
     if ('response' in staff) return staff.response;
 
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));

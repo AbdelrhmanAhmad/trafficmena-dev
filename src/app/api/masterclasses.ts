@@ -94,6 +94,9 @@ export type MasterclassEnrollment = {
   enrollmentNote: string | null;
   enrolledBy: string | null;
   paymentId: string | null;
+  totalLessons: number;
+  completedLessons: number;
+  isComplete: boolean;
 };
 
 export type MasterclassStoreItem = {

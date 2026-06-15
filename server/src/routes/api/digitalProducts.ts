@@ -12,7 +12,7 @@ import {
   isDigitalProductSellable,
 } from '../../services/digitalProductSales.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { requireManager } from './utils.js';
+import { requireManager, requireContentDelete } from './utils.js';
 
 const fileTypeSchema = z.enum(['excel', 'markdown', 'html', 'text', 'powerpoint']);
 
@@ -359,7 +359,7 @@ export function registerDigitalProductRoutes(app: Hono) {
   });
 
   app.delete('/digital-products/:id', async (c) => {
-    const staff = await requireManager(c);
+    const staff = await requireContentDelete(c);
     if ('response' in staff) return staff.response;
 
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
@@ -488,7 +488,7 @@ export function registerDigitalProductRoutes(app: Hono) {
   });
 
   app.delete('/digital-products/:id/files/:fileId', async (c) => {
-    const staff = await requireManager(c);
+    const staff = await requireContentDelete(c);
     if ('response' in staff) return staff.response;
 
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));

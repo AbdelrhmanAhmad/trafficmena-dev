@@ -186,6 +186,10 @@ export async function manualIssueCertificate(
   return data.data;
 }
 
+export async function deleteCertificate(certificateId: string): Promise<void> {
+  await fetchJson(`${API_BASE}/certificates/${certificateId}`, { method: 'DELETE' });
+}
+
 export async function fetchLearnerCertificateStatus(
   masterclassId: string,
 ): Promise<LearnerCertificateStatus> {

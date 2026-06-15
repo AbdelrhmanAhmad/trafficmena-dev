@@ -42,6 +42,7 @@ type MasterclassLessonFilesCrudProps = {
   moduleId: string;
   lessonId: string;
   files: MasterclassLessonFile[];
+  canDelete?: boolean;
 };
 
 function acceptForType(fileType: MasterclassFileType): string {
@@ -62,6 +63,7 @@ export function MasterclassLessonFilesCrud({
   moduleId,
   lessonId,
   files,
+  canDelete = false,
 }: MasterclassLessonFilesCrudProps) {
   const mutations = useMasterclassCurriculumMutations(masterclassId);
   const [mode, setMode] = useState<PanelMode>('list');
@@ -215,7 +217,7 @@ export function MasterclassLessonFilesCrud({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      disabled={mutations.removeFile.isPending}
+                      disabled={!canDelete || mutations.removeFile.isPending}
                       onClick={() => void handleDelete(file.id)}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />

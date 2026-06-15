@@ -23,14 +23,14 @@ function MasterclassesBrowse() {
     }
 
     if (isError) {
-      return <p className="text-red-600">تعذر تحميل الكورسات.</p>;
+      return <p className="text-red-600">Could not load masterclasses.</p>;
     }
 
     if (items.length === 0) {
       return (
         <div className="rounded-2xl border bg-white py-16 text-center text-neutral-500">
           <GraduationCap className="mx-auto mb-3 h-10 w-10 text-neutral-300" />
-          {filter === 'mine' ? 'لا توجد كورسات مسجّلة بعد.' : 'لا توجد كورسات متاحة حاليًا.'}
+          {filter === 'mine' ? 'You are not enrolled in any masterclasses yet.' : 'No masterclasses available right now.'}
         </div>
       );
     }
@@ -49,7 +49,7 @@ function MasterclassesBrowse() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Masterclasses</h1>
         <p className="mt-1 text-neutral-600">
-          شراء الكورس كعنصر واحد — وصول دائم بعد الدفع (خارج السلة).
+          Buy each course directly — permanent access after payment (not in cart).
         </p>
       </div>
 
@@ -59,8 +59,8 @@ function MasterclassesBrowse() {
         className="w-full"
       >
         <TabsList>
-          <TabsTrigger value="all">الكل</TabsTrigger>
-          <TabsTrigger value="mine">كورساتي</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="mine">My courses</TabsTrigger>
         </TabsList>
       </Tabs>
 

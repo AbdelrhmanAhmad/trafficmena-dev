@@ -54,6 +54,7 @@ type DigitalProductFormProps = {
   onSubmit: (values: DigitalProductFormValues) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
+  canDeleteFiles?: boolean;
 };
 
 export function DigitalProductForm({
@@ -62,6 +63,7 @@ export function DigitalProductForm({
   onSubmit,
   onCancel,
   isLoading = false,
+  canDeleteFiles = false,
 }: DigitalProductFormProps) {
   const form = useForm<DigitalProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -277,7 +279,13 @@ export function DigitalProductForm({
 
         </form>
 
-        {product?.id && <DigitalProductFilesCrud productId={product.id} files={files} />}
+        {product?.id && (
+          <DigitalProductFilesCrud
+            productId={product.id}
+            files={files}
+            canDelete={canDeleteFiles}
+          />
+        )}
 
         <div className="flex gap-3">
           <Button type="submit" form="digital-product-details-form" disabled={isLoading}>

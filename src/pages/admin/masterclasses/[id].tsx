@@ -20,6 +20,7 @@ import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 
 function EditMasterclassPage() {
   const { id = '' } = useParams();
@@ -29,6 +30,7 @@ function EditMasterclassPage() {
   const updateMutation = useUpdateMasterclass(id);
   const deleteMutation = useDeleteMasterclass();
   const { isAdmin } = useIsAdmin();
+  const { canDeleteContent } = useRolePermissions();
 
   const handleSubmit = async (values: MasterclassFormValues) => {
     await updateMutation.mutateAsync(masterclassFormValuesToPayload(values));
@@ -60,7 +62,7 @@ function EditMasterclassPage() {
           <Button
             variant="destructive"
             size="sm"
-            disabled={deleteMutation.isPending}
+            disabled={deleteMutation.isPending || !canDeleteContent}
             onClick={() => void handleDelete()}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -93,6 +95,7 @@ function EditMasterclassPage() {
             <MasterclassCurriculumEditor
               masterclassId={id}
               modules={preview?.modules ?? []}
+              canDelete={canDeleteContent}
             />
           )}
         </TabsContent>

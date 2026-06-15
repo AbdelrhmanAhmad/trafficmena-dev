@@ -24,14 +24,14 @@ function DigitalProductsBrowse() {
     }
 
     if (isError) {
-      return <p className="text-red-600">تعذر تحميل المنتجات.</p>;
+      return <p className="text-red-600">Could not load products.</p>;
     }
 
     if (products.length === 0) {
       return (
         <div className="rounded-2xl border bg-white py-16 text-center text-neutral-500">
           <FileStack className="mx-auto mb-3 h-10 w-10 text-neutral-300" />
-          {filter === 'mine' ? 'لا توجد مشتريات بعد.' : 'لا توجد منتجات متاحة حاليًا.'}
+          {filter === 'mine' ? 'No purchases yet.' : 'No products available right now.'}
         </div>
       );
     }
@@ -50,7 +50,7 @@ function DigitalProductsBrowse() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Digital Products</h1>
         <p className="mt-1 text-neutral-600">
-          شراء مرة واحدة — الملفات والفيديو تظهر لك دائمًا بعد الشراء.
+          One-time purchase — files and video stay available after you buy.
         </p>
       </div>
 
@@ -60,8 +60,8 @@ function DigitalProductsBrowse() {
         className="w-full"
       >
         <TabsList>
-          <TabsTrigger value="all">الكل</TabsTrigger>
-          <TabsTrigger value="mine">مشترياتي</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="mine">My purchases</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -109,7 +109,7 @@ export function DigitalProductFileList({
             className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-neutral-50"
           >
             <Download className="h-4 w-4" />
-            تحميل
+            Download
           </a>
         </li>
       ))}

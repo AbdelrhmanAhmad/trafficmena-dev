@@ -203,6 +203,10 @@ export function MasterclassManualEnrollment({
                       <Badge variant={row.source === 'paid' ? 'default' : 'secondary'}>
                         {row.source}
                       </Badge>
+                      <span className="text-xs text-neutral-500">
+                        {row.completedLessons}/{row.totalLessons} lessons
+                        {row.isComplete ? ' · Complete' : ''}
+                      </span>
                       <span className="text-xs text-neutral-400">
                         {new Date(row.enrolledAt).toLocaleDateString()}
                       </span>

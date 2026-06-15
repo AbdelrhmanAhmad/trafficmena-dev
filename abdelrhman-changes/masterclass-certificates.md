@@ -77,7 +77,7 @@ Positions are **percentages** (0–100). Frontend preview uses `top/left %`; PDF
 | GET | `/certificates/public/:code` | **Public** — verification panel JSON |
 | GET | `/certificates/public/:code/view` | **Public** — inline PDF in browser |
 | GET | `/certificates/public/:code/download` | **Public** — PDF download by certificate code |
-| PUT | `/certificates/:id/external-url` | Admin/Owner |
+| DELETE | `/certificates/:id` | Admin/Owner — remove certificate (allows re-issue) |
 
 Certificate routes register **before** masterclass routes in `index.ts` so paths like `/masterclasses/:id/certificate-settings` are not swallowed by generic handlers.
 
