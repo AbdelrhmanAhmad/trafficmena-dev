@@ -12,6 +12,7 @@ import {
   certificatePublicDownloadUrl,
   certificatePublicViewUrl,
 } from '@/app/api/certificates';
+import { CertificatePublicPreview } from '@/features/certificates/components/CertificatePublicPreview';
 import { usePublicCertificate } from '@/features/certificates/hooks/useCertificates';
 import Layout from '@/shared/components/layout/Layout';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
@@ -105,6 +106,19 @@ export default function PublicCertificatePage() {
             TrafficMENA Hub , verified completion record
           </p>
         </div>
+
+        {!isRevoked && data.preview && (
+          <div className="mb-8">
+            <CertificatePublicPreview
+              backgroundImageUrl={data.preview.backgroundImageUrl}
+              settings={data.preview.settings}
+              studentName={data.studentName}
+              courseTitle={data.masterclassTitle}
+              issueDate={formatIssueDate(data.issueDate)}
+              certificateCode={data.certificateCode}
+            />
+          </div>
+        )}
 
         <Card className="overflow-hidden rounded-2xl border-amber-200/60 shadow-lg">
           <div className="h-1.5 bg-gradient-to-r from-amber-400 via-[#29cf9f] to-amber-400" />

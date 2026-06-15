@@ -1,5 +1,5 @@
-import type { CSSProperties } from 'react';
 import type { CertificateDesignSettings, CertificateFieldSettings } from '@/app/api/certificates';
+import { buildCertificateFieldStyle } from '@/features/certificates/utils/certificatePreviewUtils';
 
 type CertificateDesignPreviewProps = {
   backgroundImageUrl: string | null;
@@ -12,27 +12,8 @@ type CertificateDesignPreviewProps = {
   };
 };
 
-function fieldStyle(field: CertificateFieldSettings): CSSProperties {
-  const transform =
-    field.align === 'center'
-      ? 'translate(-50%, -50%)'
-      : field.align === 'right'
-        ? 'translate(-100%, -50%)'
-        : 'translate(0, -50%)';
-
-  return {
-    position: 'absolute',
-    left: `${field.x}%`,
-    top: `${field.y}%`,
-    transform,
-    fontSize: `${field.fontSize}px`,
-    color: field.color,
-    fontWeight: field.fontWeight === 'bold' ? 700 : 400,
-    whiteSpace: 'nowrap',
-    maxWidth: '90%',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-  };
+function fieldStyle(field: CertificateFieldSettings) {
+  return buildCertificateFieldStyle(field, { scale: 1, allowWrap: false });
 }
 
 export function CertificateDesignPreview({

@@ -53,6 +53,10 @@ export type PublicCertificateView = {
   status: 'issued' | 'revoked';
   hasGeneratedPdf: boolean;
   externalCertificateUrl: string | null;
+  preview: {
+    backgroundImageUrl: string;
+    settings: CertificateDesignSettings;
+  } | null;
 };
 
 export type LearnerCertificateStatus = {

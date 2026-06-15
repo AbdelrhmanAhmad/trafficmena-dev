@@ -113,6 +113,16 @@ async function resolveStudentName(userId: string): Promise<string> {
   return fromProfile || row.name || 'Student';
 }
 
+function sanitizeTextForPdf(text: string, fallback: string): string {
+  const sanitized = text
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return sanitized || fallback;
+}
+
 function drawAlignedText(
   page: PDFPage,
   text: string,
@@ -170,7 +180,7 @@ export async function generateCertificatePdf(params: {
 
   drawAlignedText(
     page,
-    params.studentName,
+    sanitizeTextForPdf(params.studentName, 'Certificate Recipient'),
     params.design.studentName,
     pickFont(params.design.studentName),
     width,
@@ -178,7 +188,7 @@ export async function generateCertificatePdf(params: {
   );
   drawAlignedText(
     page,
-    params.courseTitle,
+    sanitizeTextForPdf(params.courseTitle, 'Masterclass Certificate'),
     params.design.courseTitle,
     pickFont(params.design.courseTitle),
     width,
@@ -659,6 +669,21 @@ export async function getPublicCertificateByCode(rawCode: string) {
   const studentName = await resolveStudentName(row.certificate.userId);
   const displayTitle = row.certificateTitle?.trim() || row.masterclassTitle;
 
+  let preview: {
+    backgroundImageUrl: string;
+    settings: CertificateDesignSettings;
+  } | null = null;
+
+  if (row.certificate.status === 'issued') {
+    const globalSettings = await getGlobalCertificateSettings();
+    if (globalSettings.backgroundImageUrl) {
+      preview = {
+        backgroundImageUrl: globalSettings.backgroundImageUrl,
+        settings: globalSettings.settings,
+      };
+    }
+  }
+
   return {
     certificateCode: row.certificate.certificateCode,
     studentName,
@@ -669,6 +694,7 @@ export async function getPublicCertificateByCode(rawCode: string) {
     status: row.certificate.status,
     hasGeneratedPdf: Boolean(row.certificate.generatedCertificateUrl),
     externalCertificateUrl: row.certificate.externalCertificateUrl,
+    preview,
   };
 }
 

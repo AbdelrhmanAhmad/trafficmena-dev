@@ -132,6 +132,7 @@ Shows a panel with:
 - Masterclass / certificate title
 - Issue date
 - Certificate code + verified/revoked badge
+- **Visual certificate preview** (`CertificatePublicPreview`) — responsive HTML overlay on global background
 - **View certificate** (inline PDF)
 - **Download PDF**
 - External certificate URL (if set)
@@ -143,6 +144,8 @@ The certificate code acts as the public lookup key (similar to verification port
 Components:
 
 - `CertificateShareButton` — copy public link to clipboard
+- `CertificatePublicPreview` — responsive public verification preview (separate from admin `CertificateDesignPreview`)
+- `certificatePreviewUtils.ts` — shared field positioning; public preview scales fonts via `ResizeObserver`
 - `pages/certificates/[code].tsx` — public verification UI
 
 ---
