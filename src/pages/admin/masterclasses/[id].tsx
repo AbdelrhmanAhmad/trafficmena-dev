@@ -7,6 +7,7 @@ import {
   type MasterclassFormValues,
 } from '@/features/masterclasses/components/MasterclassForm';
 import { MasterclassManualEnrollment } from '@/features/masterclasses/components/MasterclassManualEnrollment';
+import { MasterclassCertificatesAdmin } from '@/features/certificates/components/MasterclassCertificatesAdmin';
 import {
   useAdminMasterclassDetail,
   useDeleteMasterclass,
@@ -18,6 +19,7 @@ import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute'
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
+import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
 
 function EditMasterclassPage() {
   const { id = '' } = useParams();
@@ -26,6 +28,7 @@ function EditMasterclassPage() {
   const { data: preview, isLoading: previewLoading } = useMasterclassPreview(id);
   const updateMutation = useUpdateMasterclass(id);
   const deleteMutation = useDeleteMasterclass();
+  const { isAdmin } = useIsAdmin();
 
   const handleSubmit = async (values: MasterclassFormValues) => {
     await updateMutation.mutateAsync(masterclassFormValuesToPayload(values));
@@ -71,6 +74,7 @@ function EditMasterclassPage() {
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
           <TabsTrigger value="enrollments">Enrollments</TabsTrigger>
+          {isAdmin && <TabsTrigger value="certificates">Certificates</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="details" className="mt-6">
@@ -96,6 +100,12 @@ function EditMasterclassPage() {
         <TabsContent value="enrollments" className="mt-6">
           <MasterclassManualEnrollment masterclassId={id} masterclassTitle={masterclass.title} />
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="certificates" className="mt-6">
+            <MasterclassCertificatesAdmin masterclassId={id} masterclassTitle={masterclass.title} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

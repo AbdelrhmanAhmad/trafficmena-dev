@@ -1,4 +1,5 @@
 import {
+  Award,
   BarChart3,
   BookOpen,
   Calculator,
@@ -95,6 +96,12 @@ const adminMenuItems = [
     title: 'General Settings',
     url: '/admin/settings',
     icon: Settings,
+    roles: ['owner', 'admin'] as UserRole[],
+  },
+  {
+    title: 'Certificate Design',
+    url: '/admin/certificate-settings',
+    icon: Award,
     roles: ['owner', 'admin'] as UserRole[],
   },
   {

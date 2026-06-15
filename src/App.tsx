@@ -46,6 +46,7 @@ const PrivacyPolicy = lazy(() => import('./pages/Privacy'));
 const TermsOfService = lazy(() => import('./pages/Terms'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const InvitationAcceptancePage = lazy(() => import('./pages/invitation/[token]'));
+const PublicCertificatePage = lazy(() => import('./pages/certificates/[code]'));
 
 const PaymentSuccessPage = lazy(() => import('./pages/payment/success'));
 const PaymentFailedPage = lazy(() => import('./pages/payment/failed'));
@@ -90,6 +91,7 @@ const AdminDigitalProductDetailPage = lazy(() => import('./pages/admin/digital-p
 const AdminMasterclassesPage = lazy(() => import('./pages/admin/masterclasses/index'));
 const AdminNewMasterclassPage = lazy(() => import('./pages/admin/masterclasses/new'));
 const AdminMasterclassDetailPage = lazy(() => import('./pages/admin/masterclasses/[id]'));
+const AdminCertificateSettingsPage = lazy(() => import('./pages/admin/certificate-settings'));
 
 const AdminMeetups = lazy(() => import('@/features/events/pages/AdminMeetups'));
 const AdminMeetupsNew = lazy(() => import('@/features/events/pages/admin/new'));
@@ -467,6 +469,16 @@ const App = () => {
                     }
                   />
                   <Route
+                    path="/admin/certificate-settings"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin']}>
+                        <ErrorBoundary>
+                          <AdminCertificateSettingsPage />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/admin/users"
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
@@ -691,6 +703,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <InvitationAcceptancePage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/certificates/:code"
+                    element={
+                      <ErrorBoundary>
+                        <PublicCertificatePage />
                       </ErrorBoundary>
                     }
                   />

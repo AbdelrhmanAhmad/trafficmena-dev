@@ -569,6 +569,8 @@ export const masterclassEnrollmentSourceEnum = pgEnum('masterclass_enrollment_so
 
 export const lessonCompletionMethodEnum = pgEnum('lesson_completion_method', ['manual', 'video']);
 
+export const certificateStatusEnum = pgEnum('certificate_status', ['issued', 'revoked']);
+
 export const orderStatusEnum = pgEnum('order_status', ['pending', 'paid', 'failed', 'expired']);
 
 export const orderItemFulfillmentStatusEnum = pgEnum('order_item_fulfillment_status', [
@@ -780,6 +782,85 @@ export const masterclassLessonProgress = pgTable(
       table.lessonId,
     ),
     userIdx: index('masterclass_lesson_progress_user_idx').on(table.userId),
+  }),
+);
+
+export type CertificateFieldSettings = {
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  fontWeight: 'normal' | 'bold';
+};
+
+export type CertificateDesignSettings = {
+  studentName: CertificateFieldSettings;
+  courseTitle: CertificateFieldSettings;
+  issueDate: CertificateFieldSettings;
+  certificateCode: CertificateFieldSettings;
+};
+
+export const certificateSettings = pgTable('certificate_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  backgroundImageUrl: text('background_image_url'),
+  settings: jsonb('settings').$type<CertificateDesignSettings>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const masterclassCertificateSettings = pgTable(
+  'masterclass_certificate_settings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    masterclassId: uuid('masterclass_id')
+      .references(() => masterclasses.id, { onDelete: 'cascade' })
+      .notNull(),
+    certificateEnabled: boolean('certificate_enabled').default(false).notNull(),
+    certificateTitle: text('certificate_title'),
+    certificateDescription: text('certificate_description'),
+    certificateTemplateUrl: text('certificate_template_url'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    masterclassUnique: uniqueIndex('masterclass_certificate_settings_class_unique').on(
+      table.masterclassId,
+    ),
+  }),
+);
+
+export const certificates = pgTable(
+  'certificates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    masterclassId: uuid('masterclass_id')
+      .references(() => masterclasses.id, { onDelete: 'cascade' })
+      .notNull(),
+    certificateCode: text('certificate_code').notNull(),
+    issueDate: timestamp('issue_date', { withTimezone: true }).defaultNow().notNull(),
+    status: certificateStatusEnum('status').default('issued').notNull(),
+    generatedCertificateUrl: text('generated_certificate_url'),
+    externalCertificateUrl: text('external_certificate_url'),
+    certificateTemplateUrl: text('certificate_template_url'),
+    issuedByAdminId: uuid('issued_by_admin_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    issuedManually: boolean('issued_manually').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userMasterclassUnique: uniqueIndex('certificates_user_masterclass_unique').on(
+      table.userId,
+      table.masterclassId,
+    ),
+    codeUnique: uniqueIndex('certificates_code_unique').on(table.certificateCode),
+    userIdx: index('certificates_user_idx').on(table.userId),
+    masterclassIdx: index('certificates_masterclass_idx').on(table.masterclassId),
   }),
 );
 

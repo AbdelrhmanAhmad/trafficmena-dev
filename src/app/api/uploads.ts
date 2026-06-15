@@ -6,7 +6,8 @@ export type UploadScope =
   | 'editor'
   | 'general'
   | 'digital-products'
-  | 'masterclasses';
+  | 'masterclasses'
+  | 'certificates';
 
 export type UploadFileOptions = {
   file: File;

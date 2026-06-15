@@ -331,6 +331,7 @@ export function useMasterclassLessonProgress(masterclassId: string) {
     queryClient.invalidateQueries({ queryKey: ['masterclasses', 'learn', masterclassId] });
     queryClient.invalidateQueries({ queryKey: ['masterclasses', 'lesson'] });
     queryClient.invalidateQueries({ queryKey: ['masterclasses', 'store'] });
+    queryClient.invalidateQueries({ queryKey: ['certificates', 'learner', masterclassId] });
   };
 
   return {

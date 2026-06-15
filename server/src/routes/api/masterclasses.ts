@@ -23,6 +23,7 @@ import {
   grantMasterclassEnrollment,
   isMasterclassSellable,
 } from '../../services/masterclassSales.js';
+import { getLearnerCertificateStatus, tryIssueCertificateOnCompletion } from '../../services/certificates.js';
 import { ApiError } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { requireManager } from './utils.js';
@@ -519,6 +520,8 @@ export function registerMasterclassRoutes(app: Hono) {
       })
       .onConflictDoNothing();
 
+    await tryIssueCertificateOnCompletion(session.user.id, context.masterclassId);
+
     return c.json({ data: { lesson_id: lessonIdParsed.data, completed: true } });
   });
 
@@ -560,6 +563,33 @@ export function registerMasterclassRoutes(app: Hono) {
       );
 
     return c.json({ data: { lesson_id: lessonIdParsed.data, completed: false } });
+  });
+
+  app.get('/masterclasses/learn/:id/certificate', async (c) => {
+    const session = await getSessionFromRequest(c);
+    if (!session?.user?.id) {
+      return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
+    }
+
+    const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
+    if (!idParsed.success) {
+      return c.json({ error: { code: 'INVALID_PARAM', message: 'Invalid masterclass id.' } }, 400);
+    }
+
+    try {
+      await assertUserEnrolled(session.user.id, idParsed.data);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return c.json(
+          { error: { code: error.code, message: error.message } },
+          error.status as ContentfulStatusCode,
+        );
+      }
+      throw error;
+    }
+
+    const status = await getLearnerCertificateStatus(session.user.id, idParsed.data);
+    return c.json({ data: status });
   });
 
   app.get('/masterclasses/learn/:id', async (c) => {

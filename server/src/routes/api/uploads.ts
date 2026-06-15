@@ -7,7 +7,7 @@ import { requireManager } from './utils.js';
 
 const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB cap for MVP
 
-type UploadScope = 'events' | 'library' | 'editor' | 'general' | 'digital-products' | 'masterclasses';
+type UploadScope = 'events' | 'library' | 'editor' | 'general' | 'digital-products' | 'masterclasses' | 'certificates';
 
 type ScopeConfig = {
   directory: string;
@@ -79,6 +79,11 @@ const scopeConfig: Record<UploadScope, ScopeConfig> = {
       'text/csv',
     ],
     allowedExtensions: ['xls', 'xlsx', 'ppt', 'pptx', 'md', 'markdown', 'html', 'htm', 'txt', 'csv'],
+  },
+  certificates: {
+    directory: 'certificates',
+    allowedMimeTypes: ['image/jpeg', 'image/png'],
+    allowedExtensions: ['jpg', 'jpeg', 'png'],
   },
 };
 

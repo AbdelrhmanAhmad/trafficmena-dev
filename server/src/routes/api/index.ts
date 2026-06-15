@@ -5,6 +5,7 @@ import { registerAuthRoutes } from './auth.js';
 import { registerEventRoutes } from './events.js';
 import { registerInvitationRoutes } from './invitations.js';
 import { registerLibraryRoutes } from './library.js';
+import { registerCertificateRoutes } from './certificates.js';
 import { registerDigitalProductRoutes } from './digitalProducts.js';
 import { registerMasterclassRoutes } from './masterclasses.js';
 import { registerOrderRoutes } from './orders.js';
@@ -39,6 +40,7 @@ export function registerApiRoutes(app: Hono) {
   registerInvitationRoutes(api);
   registerSettingsRoutes(api);
   registerUploadRoutes(api);
+  registerCertificateRoutes(api);
   registerDigitalProductRoutes(api);
   registerMasterclassRoutes(api);
   registerOrderRoutes(api);

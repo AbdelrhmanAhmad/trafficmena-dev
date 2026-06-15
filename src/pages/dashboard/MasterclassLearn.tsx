@@ -1,6 +1,7 @@
 import { ArrowLeft, CheckCircle2, Circle } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { useMasterclassLearn } from '@/features/masterclasses/hooks/useMasterclasses';
+import { MasterclassCertificateCard } from '@/features/certificates/components/MasterclassCertificateCard';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
@@ -40,6 +41,8 @@ function MasterclassLearnContent() {
           <p className="mt-2 text-sm font-medium text-[#29cf9f]">Masterclass completed!</p>
         )}
       </div>
+
+      <MasterclassCertificateCard masterclassId={id} />
 
       <div className="space-y-4">
         {modules.map((module, moduleIndex) => (
