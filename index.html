@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TrafficMENA - Marketing Excellence in MENA</title>
+
+    <!-- Google Tag Manager -->
+    <script src="/gtm-bootstrap.js"></script>
+    <!-- End Google Tag Manager -->
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="TrafficMENA" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta
+      name="description"
+      content="TrafficMENA - Connect with marketing professionals and discover the latest trends in the MENA region"
+    />
+    <meta name="author" content="TrafficMENA" />
+
+    <!-- Enhanced Security Headers for XSS Protection and Iframe Security -->
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Strict-Transport-Security"
+      content="max-age=31536000; includeSubDomains; preload"
+    />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+    />
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
+    <meta http-equiv="Cross-Origin-Resource-Policy" content="same-origin" />
+    
+    <!-- Enhanced Content Security Policy for Secure Iframe Embedding -->
+    <!-- CSP is also defined in server/src/app.ts (secureHeaders) — browsers intersect both, so keep host lists in sync. -->
+      <meta
+        http-equiv="Content-Security-Policy"
+        content="default-src 'self'; 
+                 script-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://challenges.cloudflare.com https://www.googletagmanager.com https://tagmanager.google.com https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://connect.facebook.net https://capi-automation.s3.us-east-2.amazonaws.com https://analytics.tiktok.com https://analytics-ipv6.tiktokw.us https://ads.tiktok.com;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; 
+                 font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; 
+                 img-src 'self' data: blob: https:; 
+                 media-src 'self' blob: https:;
+                 object-src 'none';
+               base-uri 'self';
+               form-action 'self';
+               frame-ancestors 'self';
+                 frame-src 'self' 
+                         https://challenges.cloudflare.com
+                         https://www.youtube.com 
+                         https://www.youtube-nocookie.com 
+                         https://player.vimeo.com 
+                         https://vimeo.com
+                         https://docs.google.com 
+                         https://drive.google.com
+                         https://canva.com 
+                         https://*.canva.com
+                         https://gamma.app 
+                         https://*.gamma.app
+                         https://bunnycdn.com 
+                         https://*.bunnycdn.com
+                         https://iframe.videodelivery.net
+                         https://iframe.mediadelivery.net
+                         https://*.mediadelivery.net
+                         https://video.bunnycdn.com
+                         https://stream.bunnycdn.com
+                         https://www.googletagmanager.com
+                         bytedance:
+                         sslocal:;
+                 connect-src 'self'
+                            https://challenges.cloudflare.com
+                            https://api.trafficmena.com
+                            http://localhost:3001
+                            https://api.github.com
+                            https://cdn.jsdelivr.net
+                            https://*.useplunk.com
+                            https://www.googletagmanager.com
+                            https://www.google-analytics.com
+                            https://analytics.google.com
+                            https://*.google-analytics.com
+                            https://*.analytics.google.com
+                            https://www.google.com
+                            https://pagead2.googlesyndication.com
+                            https://www.googleadservices.com
+                            https://*.g.doubleclick.net
+                            https://ad.doubleclick.net
+                            https://www.facebook.com
+                            https://connect.facebook.net
+                            https://analytics.tiktok.com
+                            https://analytics-ipv6.tiktokw.us
+                            https://ads.tiktok.com;
+                 worker-src 'self' blob:;
+                 manifest-src 'self';
+                 upgrade-insecure-requests;"
+      />
+
+    <meta
+      property="og:title"
+      content="TrafficMENA - Marketing Excellence in MENA"
+    />
+    <meta
+      property="og:description"
+      content="Connect with marketing professionals and discover the latest trends in the MENA region"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.trafficmena.com/" />
+    <meta
+      property="og:image"
+      content="https://www.trafficmena.com/uploads/trafficmena-og-english-version.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="603" />
+    <meta property="og:image:type" content="image/png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@trafficmena" />
+    <meta
+      name="twitter:image"
+      content="https://www.trafficmena.com/uploads/trafficmena-og-english-version.png"
+    />
+  </head>
+
+  <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5DMGVFZS"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <div id="root"></div>
+    <script src="/error-handler.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

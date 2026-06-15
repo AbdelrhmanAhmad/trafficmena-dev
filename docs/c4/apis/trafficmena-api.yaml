@@ -1,0 +1,2174 @@
+openapi: 3.1.0
+info:
+  title: TrafficMENA API
+  version: 0.2.0
+  description: >
+    Architecture-level OpenAPI specification for the current TrafficMENA backend.
+    It is derived from the Hono route surface in `server/src/routes` and is intended
+    to document the container interface, auth model, and high-level request/response
+    shapes rather than serve as a generated source-of-truth contract.
+servers:
+  - url: /
+    description: Same-origin deployment behind the web application
+  - url: http://localhost:3001
+    description: Local development server
+tags:
+  - name: Health
+  - name: Auth
+  - name: Users
+  - name: Skills
+  - name: Invitations
+  - name: Events
+  - name: Tracks
+  - name: Library
+  - name: Series
+  - name: Series Grants
+  - name: Subscriptions
+  - name: Subscription Grants
+  - name: Settings
+  - name: Promo Codes
+  - name: Payments
+  - name: Uploads
+  - name: Metrics
+paths:
+  /:
+    get:
+      tags: [Health]
+      summary: Root liveness probe
+      security: []
+      responses:
+        '200':
+          description: Service is reachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericStatus'
+  /health:
+    get:
+      tags: [Health]
+      summary: Application health probe
+      security: []
+      responses:
+        '200':
+          description: Service health response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericStatus'
+  /api/health:
+    get:
+      tags: [Health]
+      summary: API health probe
+      security: []
+      responses:
+        '200':
+          description: API health response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericStatus'
+  /db/health:
+    get:
+      tags: [Health]
+      summary: Database health probe
+      security: []
+      responses:
+        '200':
+          description: Database is reachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericStatus'
+        '500':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/auth/otp/request:
+    post:
+      tags: [Auth]
+      summary: Request an OTP code
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthOtpRequest'
+      responses:
+        '200':
+          description: OTP request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: Verify OTP and create a session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthOtpVerifyRequest'
+      responses:
+        '200':
+          description: Session established
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionEnvelope'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out the current session
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      responses:
+        '200':
+          description: Session cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/auth/session:
+    get:
+      tags: [Auth]
+      summary: Get the current authenticated session
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Session payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionEnvelope'
+
+  /api/admin/metrics/overview:
+    get:
+      tags: [Metrics]
+      summary: Get admin overview metrics
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Aggregated dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/invitations:
+    get:
+      tags: [Invitations]
+      summary: List invitations
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Paginated invitation list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+  /api/invitations/stats:
+    get:
+      tags: [Invitations]
+      summary: Get invitation statistics
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Invitation metrics summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+  /api/invitations/single:
+    post:
+      tags: [Invitations]
+      summary: Send a single invitation
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationRequest'
+      responses:
+        '200':
+          description: Invitation created and queued/sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+  /api/invitations/bulk:
+    post:
+      tags: [Invitations]
+      summary: Send invitations from CSV input
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          text/csv:
+            schema:
+              type: string
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsvPayload'
+      responses:
+        '200':
+          description: Bulk invitation import result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+  /api/invitations/accept:
+    post:
+      tags: [Invitations]
+      summary: Accept an invitation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationAcceptRequest'
+      responses:
+        '200':
+          description: Invitation accepted and user linked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+  /api/invitations/activate:
+    post:
+      tags: [Invitations]
+      summary: Activate an accepted invitation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: Invitation activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+
+  /api/events:
+    get:
+      tags: [Events]
+      summary: List events
+      security: []
+      responses:
+        '200':
+          description: Paginated event list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      tags: [Events]
+      summary: Create an event
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventWriteRequest'
+      responses:
+        '200':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/events/{id}:
+    get:
+      tags: [Events]
+      summary: Get event detail
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Event detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      tags: [Events]
+      summary: Update an event
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventWriteRequest'
+      responses:
+        '200':
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    delete:
+      tags: [Events]
+      summary: Delete an event
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Event deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/events/{id}/attendees:
+    get:
+      tags: [Events]
+      summary: List event attendees
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Paginated attendee list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+  /api/events/{id}/register:
+    post:
+      tags: [Events]
+      summary: Register for an event
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Registration created or checkout initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+    delete:
+      tags: [Events]
+      summary: Cancel an event registration
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Registration cancellation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/events/{id}/cancellation-requests:
+    get:
+      tags: [Events]
+      summary: List cancellation and refund requests for an event
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Paginated cancellation request list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+  /api/events/{id}/cancellation-requests/{regId}/approve:
+    post:
+      tags: [Events]
+      summary: Approve a cancellation request
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/RegId'
+      responses:
+        '200':
+          description: Cancellation approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/events/{id}/cancellation-requests/{regId}/reject:
+    post:
+      tags: [Events]
+      summary: Reject a cancellation request
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/RegId'
+      responses:
+        '200':
+          description: Cancellation rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+
+  /api/tracks/public:
+    get:
+      tags: [Tracks]
+      summary: List public published tracks
+      security: []
+      responses:
+        '200':
+          description: Track list visible to public visitors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+  /api/tracks/{id}/public:
+    get:
+      tags: [Tracks]
+      summary: Get public track detail
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Published track detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/tracks:
+    get:
+      tags: [Tracks]
+      summary: List tracks for the current actor
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Track list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      tags: [Tracks]
+      summary: Create a track
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackWriteRequest'
+      responses:
+        '200':
+          description: Track created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/tracks/{id}:
+    get:
+      tags: [Tracks]
+      summary: Get track detail
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Track detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    put:
+      tags: [Tracks]
+      summary: Update a track
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackWriteRequest'
+      responses:
+        '200':
+          description: Track updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    delete:
+      tags: [Tracks]
+      summary: Delete a track
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Track deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/tracks/{id}/attendees:
+    get:
+      tags: [Tracks]
+      summary: List track attendees
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Attendee list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+  /api/tracks/{id}/events:
+    post:
+      tags: [Tracks]
+      summary: Add events to a track
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: Track events updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/tracks/{id}/events/{eventId}:
+    delete:
+      tags: [Tracks]
+      summary: Remove an event from a track
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event removed from track
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/tracks/{id}/events/reorder:
+    put:
+      tags: [Tracks]
+      summary: Reorder track events
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderRequest'
+      responses:
+        '200':
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/tracks/{id}/book:
+    post:
+      tags: [Tracks]
+      summary: Book a full track
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Track booking or checkout result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/tracks/{id}/manual-enrollments:
+    post:
+      tags: [Tracks]
+      summary: Manually enroll a user in a published track (manager+)
+      description: >
+        Enrolls a user in a track without running a payment flow. Requires
+        manager role and a per-actor rate limit of 40 calls/min. The write
+        path is the same atomic booking transaction used by paid bookings,
+        so capacity, constituent-event grants, and downstream series access
+        stay consistent. Records `reason` and `reference` for audit.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, reason, reference]
+              properties:
+                userId:
+                  type: string
+                  format: uuid
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                reference:
+                  type: string
+                  minLength: 3
+                  maxLength: 255
+                  description: External reference such as a manual payment ID or note.
+                amountPaidCents:
+                  type: integer
+                  minimum: 0
+                  maximum: 10000000
+                  nullable: true
+                  description: Optional paid amount recorded against the enrollment; defaults to the track's list price.
+      responses:
+        '201':
+          description: Manual enrollment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  bookingId: { type: string, format: uuid }
+                  trackTitle: { type: string }
+                  eventsRegistered: { type: integer }
+                  alreadyRegisteredEvents: { type: integer }
+        '400':
+          description: Invalid payload or unpublished track
+        '404':
+          description: Track or user not found
+        '409':
+          description: User already has an active enrollment for this track
+        '429':
+          description: Rate limit exceeded
+  /api/tracks/{id}/enrollments/{userId}/revoke:
+    post:
+      tags: [Tracks]
+      summary: Revoke an active track enrollment (manager+)
+      description: >
+        Revokes an active paid or manual track enrollment. Same rate limit
+        as manual enrollment creation.
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: Enrollment revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  revokedBookingId: { type: string, format: uuid }
+                  revokedEventCount: { type: integer }
+        '404':
+          description: Track or active enrollment not found
+        '429':
+          description: Rate limit exceeded
+
+  /api/library:
+    get:
+      tags: [Library]
+      summary: List library assets
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Paginated asset list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      tags: [Library]
+      summary: Create a library asset
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LibraryAssetWriteRequest'
+      responses:
+        '200':
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/library/{id}:
+    get:
+      tags: [Library]
+      summary: Get a library asset
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Asset detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    put:
+      tags: [Library]
+      summary: Update a library asset
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LibraryAssetWriteRequest'
+      responses:
+        '200':
+          description: Asset updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    delete:
+      tags: [Library]
+      summary: Delete a library asset
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Asset deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+
+  /api/series:
+    get:
+      tags: [Series]
+      summary: List series
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Series list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      tags: [Series]
+      summary: Create a series
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeriesWriteRequest'
+      responses:
+        '200':
+          description: Series created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/series/{id}:
+    get:
+      tags: [Series]
+      summary: Get series detail
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Series detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    put:
+      tags: [Series]
+      summary: Update a series
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeriesWriteRequest'
+      responses:
+        '200':
+          description: Series updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    delete:
+      tags: [Series]
+      summary: Delete a series
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Series deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/series/{id}/assets:
+    post:
+      tags: [Series]
+      summary: Add assets to a series
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: Asset membership updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/series/{id}/assets/{assetId}:
+    delete:
+      tags: [Series]
+      summary: Remove an asset from a series
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Asset removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/series/{id}/assets/reorder:
+    put:
+      tags: [Series]
+      summary: Reorder series assets
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderRequest'
+      responses:
+        '200':
+          description: Asset order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+
+  /api/series/{id}/grants:
+    get:
+      tags: [Series Grants]
+      summary: List series grants
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Paginated series grant list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      tags: [Series Grants]
+      summary: Create a series grant
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantRequest'
+      responses:
+        '200':
+          description: Series grant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/series/{id}/grants/{userId}/revoke:
+    post:
+      tags: [Series Grants]
+      summary: Revoke a user's series grant
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Grant revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/series/grants/bulk:
+    post:
+      tags: [Series Grants]
+      summary: Bulk import series grants
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantBulkRequest'
+          text/csv:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Bulk grant result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+
+  /api/subscriptions/current:
+    get:
+      tags: [Subscriptions]
+      summary: Get the current user's active subscription
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Current subscription state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/subscriptions/settings:
+    get:
+      tags: [Subscriptions]
+      summary: Get subscription settings
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Subscription settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+    put:
+      tags: [Subscriptions]
+      summary: Update subscription settings
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: Subscription settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/subscriptions/info:
+    get:
+      tags: [Subscriptions]
+      summary: Get public subscription marketing info
+      security: []
+      responses:
+        '200':
+          description: Public subscription information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+
+  /api/subscriptions/grants:
+    post:
+      tags: [Subscription Grants]
+      summary: Create a subscription grant
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantRequest'
+      responses:
+        '200':
+          description: Grant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/subscriptions/grants/revoke:
+    post:
+      tags: [Subscription Grants]
+      summary: Revoke a subscription grant
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantRequest'
+      responses:
+        '200':
+          description: Grant revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/subscriptions/grants/bulk:
+    post:
+      tags: [Subscription Grants]
+      summary: Bulk import subscription grants
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantBulkRequest'
+          text/csv:
+            schema:
+              type: string
+      responses:
+        '200':
+          description: Bulk grant result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+
+  /api/settings/public:
+    get:
+      tags: [Settings]
+      summary: Get public settings
+      security: []
+      responses:
+        '200':
+          description: Public settings document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+  /api/admin/settings/general:
+    get:
+      tags: [Settings]
+      summary: Get admin general settings
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Admin settings payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericObject'
+    patch:
+      tags: [Settings]
+      summary: Update admin general settings
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsPatchRequest'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: List users
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Get the current user's profile
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    put:
+      tags: [Users]
+      summary: Update the current user's profile
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/users/{id}:
+    get:
+      tags: [Users]
+      summary: Get a user by id
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: User detail or placeholder response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    put:
+      tags: [Users]
+      summary: Update a user's role or profile fields
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+
+  /api/skills:
+    get:
+      tags: [Skills]
+      summary: List platform skills
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Skill catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityListResponse'
+    post:
+      tags: [Skills]
+      summary: Create a skill
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: Skill created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/user/skills:
+    get:
+      tags: [Skills]
+      summary: List the current user's selected skills
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: User skill list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityListResponse'
+    post:
+      tags: [Skills]
+      summary: Add a skill to the current user
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillSelectionRequest'
+      responses:
+        '200':
+          description: User skill added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/user/skills/{skillId}:
+    delete:
+      tags: [Skills]
+      summary: Remove a skill from the current user
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/SkillId'
+      responses:
+        '200':
+          description: User skill removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+
+  /api/payments/methods:
+    get:
+      tags: [Payments]
+      summary: List available payment methods
+      security: []
+      responses:
+        '200':
+          description: Payment methods supported by Fawaterk
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PaymentMethod'
+  /api/payments/checkout:
+    post:
+      tags: [Payments]
+      summary: Create a payment checkout session
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Hosted checkout information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/payments/verify:
+    post:
+      tags: [Payments]
+      summary: Verify payment state for an invoice
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyPaymentRequest'
+      responses:
+        '200':
+          description: Current payment status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentStatus'
+  /api/payments/price-preview:
+    get:
+      tags: [Payments]
+      summary: Preview pricing for a purchasable item
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Price breakdown with discounts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PricePreview'
+  /api/payments/{id}:
+    get:
+      tags: [Payments]
+      summary: Get a payment by id
+      description: >
+        When the payment is in `paid` state, the response is enriched with
+        verified purchase analytics (item name, item category, promo code,
+        payment method, original/discounted amounts, and a customer-type
+        classification such as new vs. returning and subscription vs.
+        non-subscription). The enrichment is best-effort and is skipped
+        silently on failure so that payment verification itself is never
+        blocked by analytics enrichment.
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Payment record (enriched with analytics when paid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentStatus'
+  /api/payments/webhook:
+    post:
+      tags: [Payments]
+      summary: Receive a payment gateway webhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+  /api/payments/webhook_json:
+    post:
+      tags: [Payments]
+      summary: Receive an alternate JSON webhook payload
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericObject'
+      responses:
+        '200':
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+
+  /api/promo-codes:
+    get:
+      tags: [Promo Codes]
+      summary: List promo codes
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Promo-code list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityListResponse'
+    post:
+      tags: [Promo Codes]
+      summary: Create a promo code
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoCodeWriteRequest'
+      responses:
+        '200':
+          description: Promo code created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+  /api/promo-codes/{id}:
+    get:
+      tags: [Promo Codes]
+      summary: Get a promo code by id
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Promo-code detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    put:
+      tags: [Promo Codes]
+      summary: Update a promo code
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoCodeWriteRequest'
+      responses:
+        '200':
+          description: Promo code updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityResponse'
+    delete:
+      tags: [Promo Codes]
+      summary: Delete a promo code
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Promo code deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationResult'
+
+  /api/uploads:
+    post:
+      tags: [Uploads]
+      summary: Upload a file
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+  /api/uploads/image:
+    post:
+      tags: [Uploads]
+      summary: Upload an image file
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Image uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Representative session cookie used by the authenticated web experience.
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: CSRF token header required for mutating API requests.
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RegId:
+      name: regId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SkillId:
+      name: skillId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated but insufficient privileges
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ErrorResponse:
+      description: Error response envelope
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    GenericStatus:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+      additionalProperties: true
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+          required: [code, message]
+        data:
+          type: object
+          additionalProperties: true
+      required: [error]
+    MutationResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+    GenericObject:
+      type: object
+      additionalProperties: true
+    EntityResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+    EntityListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+    PaginatedResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+      additionalProperties: true
+    SessionEnvelope:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            name:
+              type: string
+            role:
+              type: string
+          additionalProperties: true
+        session:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+    AuthOtpRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        turnstileToken:
+          type: string
+      required: [email]
+      additionalProperties: true
+    AuthOtpVerifyRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+      required: [email, otp]
+      additionalProperties: true
+    InvitationRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        customMessage:
+          type: string
+      required: [email]
+      additionalProperties: false
+    InvitationAcceptRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+      additionalProperties: true
+    CsvPayload:
+      type: object
+      properties:
+        csv:
+          type: string
+      required: [csv]
+      additionalProperties: false
+    EventWriteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        eventDescription:
+          type: string
+        date:
+          type: string
+          format: date-time
+        location:
+          type: string
+        locationUrl:
+          type: string
+          format: uri
+        meetingLink:
+          type: string
+          format: uri
+        maxAttendees:
+          type: integer
+        imageUrl:
+          type: string
+          format: uri
+        tags:
+          type: array
+          items:
+            type: string
+        eventType:
+          type: string
+        priceInCents:
+          type: integer
+      additionalProperties: true
+    TrackWriteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        isPublished:
+          type: boolean
+        priceInCents:
+          type: integer
+        location:
+          type: string
+        locationUrl:
+          type: string
+          format: uri
+      additionalProperties: true
+    LibraryAssetWriteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        fileType:
+          type: string
+        fileUrl:
+          type: string
+          format: uri
+        videoUrl:
+          type: string
+          format: uri
+        documentUrl:
+          type: string
+          format: uri
+        embedUrl:
+          type: string
+          format: uri
+        thumbnailUrl:
+          type: string
+          format: uri
+        isPublic:
+          type: boolean
+        isPremium:
+          type: boolean
+      additionalProperties: true
+    SeriesWriteRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+          format: uri
+        isPublished:
+          type: boolean
+      additionalProperties: true
+    ReorderRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+        assetIds:
+          type: array
+          items:
+            type: string
+        eventIds:
+          type: array
+          items:
+            type: string
+      additionalProperties: true
+    GrantRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+      additionalProperties: true
+    GrantBulkRequest:
+      type: object
+      properties:
+        csv:
+          type: string
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      additionalProperties: true
+    SkillSelectionRequest:
+      type: object
+      properties:
+        skillId:
+          type: string
+          format: uuid
+      required: [skillId]
+      additionalProperties: false
+    SettingsPatchRequest:
+      type: object
+      properties:
+        inviteOnly:
+          type: boolean
+        subscriptionEnabled:
+          type: boolean
+        subscriptionDiscountPercent:
+          type: number
+      additionalProperties: true
+    CheckoutRequest:
+      type: object
+      properties:
+        itemType:
+          type: string
+          enum: [event, track, subscription]
+        itemId:
+          type: string
+          format: uuid
+        paymentMethodId:
+          type: integer
+        promoCode:
+          type: string
+      required: [itemType, paymentMethodId]
+      additionalProperties: true
+    CheckoutResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        invoiceId:
+          type: integer
+        invoiceKey:
+          type: string
+        redirectTo:
+          type: string
+          format: uri
+        status:
+          type: string
+      additionalProperties: true
+    VerifyPaymentRequest:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        invoiceId:
+          type: integer
+      additionalProperties: true
+    PaymentStatus:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        paymentStatus:
+          type: string
+        invoiceId:
+          type: integer
+        invoiceKey:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+      additionalProperties: true
+    PricePreview:
+      type: object
+      properties:
+        originalPriceInCents:
+          type: integer
+        finalPriceInCents:
+          type: integer
+        discountInCents:
+          type: integer
+        appliedPromoCode:
+          type: string
+      additionalProperties: true
+    PromoCodeWriteRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+        discountPercent:
+          type: number
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        targetType:
+          type: string
+        targetId:
+          type: string
+      additionalProperties: true
+    UploadResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        path:
+          type: string
+        contentType:
+          type: string
+      additionalProperties: true
+    PaymentMethod:
+      type: object
+      properties:
+        paymentId:
+          type: integer
+        name_en:
+          type: string
+        name_ar:
+          type: string
+        redirect:
+          type: string
+        logo:
+          type: string
+      additionalProperties: true

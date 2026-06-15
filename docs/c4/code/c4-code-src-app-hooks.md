@@ -1,0 +1,230 @@
+# C4 Code Level: App hooks
+
+## Overview
+
+- **Name**: App hooks
+- **Description**: App hooks React hooks and stateful helper logic.
+- **Location**: [src/app/hooks](../../../src/app/hooks)
+- **Language**: TypeScript
+- **Purpose**: Share reusable app hooks interaction and data-fetching behavior across components.
+
+## Code Elements
+
+### Functions/Methods
+
+- `useAdminMetricsOverview(options?: UseAdminMetricsOptions): unknown`
+  - Description: React hook that manages admin metrics overview behavior.
+  - Location: [src/app/hooks/useAdminMetrics.ts](../../../src/app/hooks/useAdminMetrics.ts) (line 8)
+  - Dependencies: @/app/api/adminMetrics, @tanstack/react-query
+- `useCurrentUser(options?: { enabled?: boolean }): unknown`
+  - Description: React hook that manages current user behavior.
+  - Location: [src/app/hooks/useCurrentUser.ts](../../../src/app/hooks/useCurrentUser.ts) (line 11)
+  - Dependencies: @/app/api/users, @tanstack/react-query
+- `useUpdateCurrentUser(): unknown`
+  - Description: React hook that manages update current user behavior.
+  - Location: [src/app/hooks/useCurrentUser.ts](../../../src/app/hooks/useCurrentUser.ts) (line 21)
+  - Dependencies: @/app/api/users, @tanstack/react-query
+- `invitationQueryKey(params: FetchInvitationsParams): unknown`
+  - Description: Implements invitation query key behavior for this module.
+  - Location: [src/app/hooks/useInvitations.ts](../../../src/app/hooks/useInvitations.ts) (line 17)
+  - Dependencies: @/app/api/invitations, @tanstack/react-query
+- `useInvitations(params: FetchInvitationsParams, options?: UseInvitationsOptions): unknown`
+  - Description: React hook that manages invitations behavior.
+  - Location: [src/app/hooks/useInvitations.ts](../../../src/app/hooks/useInvitations.ts) (line 24)
+  - Dependencies: @/app/api/invitations, @tanstack/react-query
+- `useInvitationStats(): unknown`
+  - Description: React hook that manages invitation stats behavior.
+  - Location: [src/app/hooks/useInvitations.ts](../../../src/app/hooks/useInvitations.ts) (line 33)
+  - Dependencies: @/app/api/invitations, @tanstack/react-query
+- `useCreateInvitation(): unknown`
+  - Description: React hook that manages create invitation behavior.
+  - Location: [src/app/hooks/useInvitations.ts](../../../src/app/hooks/useInvitations.ts) (line 41)
+  - Dependencies: @/app/api/invitations, @tanstack/react-query
+- `useBulkInvitations(): unknown`
+  - Description: React hook that manages bulk invitations behavior.
+  - Location: [src/app/hooks/useInvitations.ts](../../../src/app/hooks/useInvitations.ts) (line 52)
+  - Dependencies: @/app/api/invitations, @tanstack/react-query
+- `useAcceptInvitation(): unknown`
+  - Description: React hook that manages accept invitation behavior.
+  - Location: [src/app/hooks/useInvitations.ts](../../../src/app/hooks/useInvitations.ts) (line 63)
+  - Dependencies: @/app/api/invitations, @tanstack/react-query
+- `mapInvitationName(invite: InvitationRecord): string`
+  - Description: Implements map invitation name behavior for this module.
+  - Location: [src/app/hooks/useInvitations.ts](../../../src/app/hooks/useInvitations.ts) (line 69)
+  - Dependencies: @/app/api/invitations, @tanstack/react-query
+- `libraryListKey(params: FetchLibraryParams & { page: number; pageSize: number }): unknown`
+  - Description: Implements library list key behavior for this module.
+  - Location: [src/app/hooks/useLibraryAssets.ts](../../../src/app/hooks/useLibraryAssets.ts) (line 10)
+  - Dependencies: @/app/api/library, @/app/api/types, @tanstack/react-query
+- `useLibraryList(page: number, pageSize: number, params: Omit<FetchLibraryParams, 'page' | 'pageSize'> = {}): unknown`
+  - Description: React hook that manages library list behavior.
+  - Location: [src/app/hooks/useLibraryAssets.ts](../../../src/app/hooks/useLibraryAssets.ts) (line 19)
+  - Dependencies: @/app/api/library, @/app/api/types, @tanstack/react-query
+- `useLibraryItem(id: string | null): unknown`
+  - Description: React hook that manages library item behavior.
+  - Location: [src/app/hooks/useLibraryAssets.ts](../../../src/app/hooks/useLibraryAssets.ts) (line 36)
+  - Dependencies: @/app/api/library, @/app/api/types, @tanstack/react-query
+- `usePaymentMethods(options?: { enabled?: boolean }): unknown`
+  - Description: React hook that manages payment methods behavior.
+  - Location: [src/app/hooks/usePayments.ts](../../../src/app/hooks/usePayments.ts) (line 24)
+  - Dependencies: @/app/api/payments, @tanstack/react-query
+- `useCreateCheckout(): unknown`
+  - Description: React hook that manages create checkout behavior.
+  - Location: [src/app/hooks/usePayments.ts](../../../src/app/hooks/usePayments.ts) (line 34)
+  - Dependencies: @/app/api/payments, @tanstack/react-query
+- `useVerifyPayment(): unknown`
+  - Description: React hook that manages verify payment behavior.
+  - Location: [src/app/hooks/usePayments.ts](../../../src/app/hooks/usePayments.ts) (line 47)
+  - Dependencies: @/app/api/payments, @tanstack/react-query
+- `usePayment(paymentId: string | undefined): unknown`
+  - Description: React hook that manages payment behavior.
+  - Location: [src/app/hooks/usePayments.ts](../../../src/app/hooks/usePayments.ts) (line 64)
+  - Dependencies: @/app/api/payments, @tanstack/react-query
+- `usePricePreview(itemType: PaymentItemType | undefined, itemId?: string, promoCode?: string, options?: { enabled?: boolean }): unknown`
+  - Description: React hook that manages price preview behavior.
+  - Location: [src/app/hooks/usePayments.ts](../../../src/app/hooks/usePayments.ts) (line 76)
+  - Dependencies: @/app/api/payments, @tanstack/react-query
+- `usePromoCodes(): unknown`
+  - Description: React hook that manages promo codes behavior.
+  - Location: [src/app/hooks/usePromoCodes.ts](../../../src/app/hooks/usePromoCodes.ts) (line 15)
+  - Dependencies: @/app/api/promoCodes, @tanstack/react-query
+- `usePromoCode(id: string | undefined): unknown`
+  - Description: React hook that manages promo code behavior.
+  - Location: [src/app/hooks/usePromoCodes.ts](../../../src/app/hooks/usePromoCodes.ts) (line 23)
+  - Dependencies: @/app/api/promoCodes, @tanstack/react-query
+- `useCreatePromoCode(): unknown`
+  - Description: React hook that manages create promo code behavior.
+  - Location: [src/app/hooks/usePromoCodes.ts](../../../src/app/hooks/usePromoCodes.ts) (line 34)
+  - Dependencies: @/app/api/promoCodes, @tanstack/react-query
+- `useUpdatePromoCode(): unknown`
+  - Description: React hook that manages update promo code behavior.
+  - Location: [src/app/hooks/usePromoCodes.ts](../../../src/app/hooks/usePromoCodes.ts) (line 44)
+  - Dependencies: @/app/api/promoCodes, @tanstack/react-query
+- `useDeletePromoCode(): unknown`
+  - Description: React hook that manages delete promo code behavior.
+  - Location: [src/app/hooks/usePromoCodes.ts](../../../src/app/hooks/usePromoCodes.ts) (line 55)
+  - Dependencies: @/app/api/promoCodes, @tanstack/react-query
+- `useAdminSettings(): unknown`
+  - Description: React hook that manages admin settings behavior.
+  - Location: [src/app/hooks/useSettings.ts](../../../src/app/hooks/useSettings.ts) (line 7)
+  - Dependencies: @/app/api/settings, @tanstack/react-query
+- `useUpdateAdminSettings(): unknown`
+  - Description: React hook that manages update admin settings behavior.
+  - Location: [src/app/hooks/useSettings.ts](../../../src/app/hooks/useSettings.ts) (line 15)
+  - Dependencies: @/app/api/settings, @tanstack/react-query
+- `useSkills(): unknown`
+  - Description: React hook that manages skills behavior.
+  - Location: [src/app/hooks/useSkills.ts](../../../src/app/hooks/useSkills.ts) (line 14)
+  - Dependencies: @/app/api/skills, @tanstack/react-query
+- `useUserSkills(): unknown`
+  - Description: React hook that manages user skills behavior.
+  - Location: [src/app/hooks/useSkills.ts](../../../src/app/hooks/useSkills.ts) (line 23)
+  - Dependencies: @/app/api/skills, @tanstack/react-query
+- `useCreateSkill(): unknown`
+  - Description: React hook that manages create skill behavior.
+  - Location: [src/app/hooks/useSkills.ts](../../../src/app/hooks/useSkills.ts) (line 32)
+  - Dependencies: @/app/api/skills, @tanstack/react-query
+- `useAddUserSkill(): unknown`
+  - Description: React hook that manages add user skill behavior.
+  - Location: [src/app/hooks/useSkills.ts](../../../src/app/hooks/useSkills.ts) (line 43)
+  - Dependencies: @/app/api/skills, @tanstack/react-query
+- `useRemoveUserSkill(): unknown`
+  - Description: React hook that manages remove user skill behavior.
+  - Location: [src/app/hooks/useSkills.ts](../../../src/app/hooks/useSkills.ts) (line 54)
+  - Dependencies: @/app/api/skills, @tanstack/react-query
+- `useSubscriptionSettings(): unknown`
+  - Description: React hook that manages subscription settings behavior.
+  - Location: [src/app/hooks/useSubscriptions.ts](../../../src/app/hooks/useSubscriptions.ts) (line 17)
+  - Dependencies: @/app/api/subscriptions, @tanstack/react-query
+- `useUpdateSubscriptionSettings(): unknown`
+  - Description: React hook that manages update subscription settings behavior.
+  - Location: [src/app/hooks/useSubscriptions.ts](../../../src/app/hooks/useSubscriptions.ts) (line 25)
+  - Dependencies: @/app/api/subscriptions, @tanstack/react-query
+- `useCurrentSubscription(options?: { enabled?: boolean }): unknown`
+  - Description: React hook that manages current subscription behavior.
+  - Location: [src/app/hooks/useSubscriptions.ts](../../../src/app/hooks/useSubscriptions.ts) (line 37)
+  - Dependencies: @/app/api/subscriptions, @tanstack/react-query
+- `useSubscriptionInfo(): unknown`
+  - Description: React hook that manages subscription info behavior.
+  - Location: [src/app/hooks/useSubscriptions.ts](../../../src/app/hooks/useSubscriptions.ts) (line 46)
+  - Dependencies: @/app/api/subscriptions, @tanstack/react-query
+- `useCreateSubscriptionGrant(): unknown`
+  - Description: React hook that manages create subscription grant behavior.
+  - Location: [src/app/hooks/useSubscriptions.ts](../../../src/app/hooks/useSubscriptions.ts) (line 54)
+  - Dependencies: @/app/api/subscriptions, @tanstack/react-query
+- `useRevokeSubscriptionGrant(): unknown`
+  - Description: React hook that manages revoke subscription grant behavior.
+  - Location: [src/app/hooks/useSubscriptions.ts](../../../src/app/hooks/useSubscriptions.ts) (line 67)
+  - Dependencies: @/app/api/subscriptions, @tanstack/react-query
+- `useBulkSubscriptionGrants(): unknown`
+  - Description: React hook that manages bulk subscription grants behavior.
+  - Location: [src/app/hooks/useSubscriptions.ts](../../../src/app/hooks/useSubscriptions.ts) (line 80)
+  - Dependencies: @/app/api/subscriptions, @tanstack/react-query
+
+### Classes/Modules
+
+- `useAdminMetrics.ts`
+  - Description: Module that implements use admin metrics responsibilities for this directory.
+  - Location: [src/app/hooks/useAdminMetrics.ts](../../../src/app/hooks/useAdminMetrics.ts)
+  - Contains: 1 function(s)
+  - Dependencies: @/app/api/adminMetrics, @tanstack/react-query
+- `useCurrentUser.ts`
+  - Description: Module that implements use current user responsibilities for this directory.
+  - Location: [src/app/hooks/useCurrentUser.ts](../../../src/app/hooks/useCurrentUser.ts)
+  - Contains: 2 function(s)
+  - Dependencies: @/app/api/users, @tanstack/react-query
+- `useInvitations.ts`
+  - Description: Module that implements use invitations responsibilities for this directory.
+  - Location: [src/app/hooks/useInvitations.ts](../../../src/app/hooks/useInvitations.ts)
+  - Contains: 7 function(s)
+  - Dependencies: @/app/api/invitations, @tanstack/react-query
+- `useLibraryAssets.ts`
+  - Description: Module that implements use library assets responsibilities for this directory.
+  - Location: [src/app/hooks/useLibraryAssets.ts](../../../src/app/hooks/useLibraryAssets.ts)
+  - Contains: 3 function(s)
+  - Dependencies: @/app/api/library, @/app/api/types, @tanstack/react-query
+- `usePayments.ts`
+  - Description: Module that implements use payments responsibilities for this directory.
+  - Location: [src/app/hooks/usePayments.ts](../../../src/app/hooks/usePayments.ts)
+  - Contains: 5 function(s)
+  - Dependencies: @/app/api/payments, @tanstack/react-query
+- `usePromoCodes.ts`
+  - Description: Module that implements use promo codes responsibilities for this directory.
+  - Location: [src/app/hooks/usePromoCodes.ts](../../../src/app/hooks/usePromoCodes.ts)
+  - Contains: 5 function(s)
+  - Dependencies: @/app/api/promoCodes, @tanstack/react-query
+- `useSettings.ts`
+  - Description: Module that implements use settings responsibilities for this directory.
+  - Location: [src/app/hooks/useSettings.ts](../../../src/app/hooks/useSettings.ts)
+  - Contains: 2 function(s)
+  - Dependencies: @/app/api/settings, @tanstack/react-query
+- `useSkills.ts`
+  - Description: Module that implements use skills responsibilities for this directory.
+  - Location: [src/app/hooks/useSkills.ts](../../../src/app/hooks/useSkills.ts)
+  - Contains: 5 function(s)
+  - Dependencies: @/app/api/skills, @tanstack/react-query
+- `useSubscriptions.ts`
+  - Description: Module that implements use subscriptions responsibilities for this directory.
+  - Location: [src/app/hooks/useSubscriptions.ts](../../../src/app/hooks/useSubscriptions.ts)
+  - Contains: 7 function(s)
+  - Dependencies: @/app/api/subscriptions, @tanstack/react-query
+
+## Dependencies
+
+### Internal Dependencies
+
+- @/app/api/adminMetrics
+- @/app/api/invitations
+- @/app/api/library
+- @/app/api/payments
+- @/app/api/promoCodes
+- @/app/api/settings
+- @/app/api/skills
+- @/app/api/subscriptions
+- @/app/api/types
+- @/app/api/users
+
+### External Dependencies
+
+- @tanstack/react-query
+

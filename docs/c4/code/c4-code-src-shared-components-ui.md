@@ -1,0 +1,479 @@
+# C4 Code Level: Shared UI Primitives
+
+## Overview
+
+- **Name**: Shared UI Primitives
+- **Description**: Reusable UI primitives and shadcn-based building blocks shared across the frontend.
+- **Location**: [src/shared/components/ui](../../../src/shared/components/ui)
+- **Language**: TypeScript
+- **Purpose**: Provide a consistent visual and interaction foundation for feature and page components.
+
+## Code Elements
+
+### Functions/Methods
+
+- `Badge({ className, variant, ...props }: BadgeProps): unknown`
+  - Description: Implements badge behavior for this module.
+  - Location: [src/shared/components/ui/badge.tsx](../../../src/shared/components/ui/badge.tsx) (line 29)
+  - Dependencies: @/shared/lib/utils, class-variance-authority, react
+- `BreadcrumbSeparator({ children, className, ...props }: React.ComponentProps<'li'>): unknown`
+  - Description: Implements breadcrumb separator behavior for this module.
+  - Location: [src/shared/components/ui/breadcrumb.tsx](../../../src/shared/components/ui/breadcrumb.tsx) (line 66)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-slot, lucide-react, react
+- `BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<'span'>): unknown`
+  - Description: Implements breadcrumb ellipsis behavior for this module.
+  - Location: [src/shared/components/ui/breadcrumb.tsx](../../../src/shared/components/ui/breadcrumb.tsx) (line 78)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-slot, lucide-react, react
+- `CalendarIconLeft(): unknown`
+  - Description: Implements calendar icon left behavior for this module.
+  - Location: [src/shared/components/ui/calendar.tsx](../../../src/shared/components/ui/calendar.tsx) (line 9)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react, react-day-picker
+- `CalendarIconRight(): unknown`
+  - Description: Implements calendar icon right behavior for this module.
+  - Location: [src/shared/components/ui/calendar.tsx](../../../src/shared/components/ui/calendar.tsx) (line 10)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react, react-day-picker
+- `Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps): unknown`
+  - Description: Implements calendar behavior for this module.
+  - Location: [src/shared/components/ui/calendar.tsx](../../../src/shared/components/ui/calendar.tsx) (line 12)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react, react-day-picker
+- `useCarousel(): unknown`
+  - Description: React hook that manages carousel behavior.
+  - Location: [src/shared/components/ui/carousel.tsx](../../../src/shared/components/ui/carousel.tsx) (line 30)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, embla-carousel-react, lucide-react, react
+- `useChart(): unknown`
+  - Description: React hook that manages chart behavior.
+  - Location: [src/shared/components/ui/chart.tsx](../../../src/shared/components/ui/chart.tsx) (line 25)
+  - Dependencies: @/shared/lib/utils, react, recharts
+- `ChartStyle({ id, config }: { id: string; config: ChartConfig }): unknown`
+  - Description: Implements chart style behavior for this module.
+  - Location: [src/shared/components/ui/chart.tsx](../../../src/shared/components/ui/chart.tsx) (line 64)
+  - Dependencies: @/shared/lib/utils, react, recharts
+- `getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string): unknown`
+  - Description: Returns payload config from payload derived from current inputs or state.
+  - Location: [src/shared/components/ui/chart.tsx](../../../src/shared/components/ui/chart.tsx) (line 291)
+  - Dependencies: @/shared/lib/utils, react, recharts
+- `CommandDialog({ children, ...props }: CommandDialogProps): unknown`
+  - Description: Implements command dialog behavior for this module.
+  - Location: [src/shared/components/ui/command.tsx](../../../src/shared/components/ui/command.tsx) (line 25)
+  - Dependencies: @/shared/components/ui/dialog, @/shared/lib/utils, @radix-ui/react-dialog, cmdk, lucide-react, react
+- `CommandShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>): unknown`
+  - Description: Implements command shortcut behavior for this module.
+  - Location: [src/shared/components/ui/command.tsx](../../../src/shared/components/ui/command.tsx) (line 122)
+  - Dependencies: @/shared/components/ui/dialog, @/shared/lib/utils, @radix-ui/react-dialog, cmdk, lucide-react, react
+- `ContextMenuShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>): unknown`
+  - Description: Implements context menu shortcut behavior for this module.
+  - Location: [src/shared/components/ui/context-menu.tsx](../../../src/shared/components/ui/context-menu.tsx) (line 161)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-context-menu, lucide-react, react
+- `DialogHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): unknown`
+  - Description: Implements dialog header behavior for this module.
+  - Location: [src/shared/components/ui/dialog.tsx](../../../src/shared/components/ui/dialog.tsx) (line 54)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-dialog, lucide-react, react
+- `DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): unknown`
+  - Description: Implements dialog footer behavior for this module.
+  - Location: [src/shared/components/ui/dialog.tsx](../../../src/shared/components/ui/dialog.tsx) (line 59)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-dialog, lucide-react, react
+- `Drawer({
+  shouldScaleBackground = true,
+  ...props
+}: React.ComponentProps<typeof DrawerPrimitive.Root>): unknown`
+  - Description: Implements drawer behavior for this module.
+  - Location: [src/shared/components/ui/drawer.tsx](../../../src/shared/components/ui/drawer.tsx) (line 6)
+  - Dependencies: @/shared/lib/utils, react, vaul
+- `DrawerHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): unknown`
+  - Description: Implements drawer header behavior for this module.
+  - Location: [src/shared/components/ui/drawer.tsx](../../../src/shared/components/ui/drawer.tsx) (line 53)
+  - Dependencies: @/shared/lib/utils, react, vaul
+- `DrawerFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): unknown`
+  - Description: Implements drawer footer behavior for this module.
+  - Location: [src/shared/components/ui/drawer.tsx](../../../src/shared/components/ui/drawer.tsx) (line 58)
+  - Dependencies: @/shared/lib/utils, react, vaul
+- `DropdownMenuShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>): unknown`
+  - Description: Implements dropdown menu shortcut behavior for this module.
+  - Location: [src/shared/components/ui/dropdown-menu.tsx](../../../src/shared/components/ui/dropdown-menu.tsx) (line 162)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-dropdown-menu, lucide-react, react
+- `FormField({
+  ...props
+}: ControllerProps<TFieldValues, TName>): unknown`
+  - Description: Implements form field behavior for this module.
+  - Location: [src/shared/components/ui/form.tsx](../../../src/shared/components/ui/form.tsx) (line 26)
+  - Dependencies: @/shared/components/ui/label, @/shared/lib/utils, @radix-ui/react-label, @radix-ui/react-slot, react, react-hook-form
+- `useFormField(): unknown`
+  - Description: React hook that manages form field behavior.
+  - Location: [src/shared/components/ui/form.tsx](../../../src/shared/components/ui/form.tsx) (line 39)
+  - Dependencies: @/shared/components/ui/label, @/shared/lib/utils, @radix-ui/react-label, @radix-ui/react-slot, react, react-hook-form
+- `MenubarShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>): unknown`
+  - Description: Implements menubar shortcut behavior for this module.
+  - Location: [src/shared/components/ui/menubar.tsx](../../../src/shared/components/ui/menubar.tsx) (line 192)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-menubar, lucide-react, react
+- `Pagination({ className, ...props }: React.ComponentProps<'nav'>): unknown`
+  - Description: Implements pagination behavior for this module.
+  - Location: [src/shared/components/ui/pagination.tsx](../../../src/shared/components/ui/pagination.tsx) (line 6)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react
+- `PaginationLink({ className, isActive, size = 'icon', ...props }: PaginationLinkProps): unknown`
+  - Description: Implements pagination link behavior for this module.
+  - Location: [src/shared/components/ui/pagination.tsx](../../../src/shared/components/ui/pagination.tsx) (line 32)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react
+- `PaginationPrevious({
+  className,
+  ...props
+}: React.ComponentProps<typeof PaginationLink>): unknown`
+  - Description: Implements pagination previous behavior for this module.
+  - Location: [src/shared/components/ui/pagination.tsx](../../../src/shared/components/ui/pagination.tsx) (line 47)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react
+- `PaginationNext({ className, ...props }: React.ComponentProps<typeof PaginationLink>): unknown`
+  - Description: Implements pagination next behavior for this module.
+  - Location: [src/shared/components/ui/pagination.tsx](../../../src/shared/components/ui/pagination.tsx) (line 63)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react
+- `PaginationEllipsis({ className, ...props }: React.ComponentProps<'span'>): unknown`
+  - Description: Implements pagination ellipsis behavior for this module.
+  - Location: [src/shared/components/ui/pagination.tsx](../../../src/shared/components/ui/pagination.tsx) (line 76)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react
+- `ResizablePanelGroup({
+  className,
+  ...props
+}: React.ComponentProps<typeof ResizablePrimitive.PanelGroup>): unknown`
+  - Description: Implements resizable panel group behavior for this module.
+  - Location: [src/shared/components/ui/resizable.tsx](../../../src/shared/components/ui/resizable.tsx) (line 6)
+  - Dependencies: @/shared/lib/utils, lucide-react, react-resizable-panels
+- `ResizableHandle({
+  withHandle,
+  className,
+  ...props
+}: React.ComponentProps<typeof ResizablePrimitive.PanelResizeHandle> & {
+  withHandle?: boolean;
+}): unknown`
+  - Description: Implements resizable handle behavior for this module.
+  - Location: [src/shared/components/ui/resizable.tsx](../../../src/shared/components/ui/resizable.tsx) (line 18)
+  - Dependencies: @/shared/lib/utils, lucide-react, react-resizable-panels
+- `SheetHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): unknown`
+  - Description: Implements sheet header behavior for this module.
+  - Location: [src/shared/components/ui/sheet.tsx](../../../src/shared/components/ui/sheet.tsx) (line 71)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-dialog, class-variance-authority, lucide-react, react
+- `SheetFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): unknown`
+  - Description: Implements sheet footer behavior for this module.
+  - Location: [src/shared/components/ui/sheet.tsx](../../../src/shared/components/ui/sheet.tsx) (line 76)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-dialog, class-variance-authority, lucide-react, react
+- `persistSidebarPreference(openState: boolean): unknown`
+  - Description: Implements persist sidebar preference behavior for this module.
+  - Location: [src/shared/components/ui/sidebar.tsx](../../../src/shared/components/ui/sidebar.tsx) (line 26)
+  - Dependencies: @/shared/components/ui/button, @/shared/components/ui/input, @/shared/components/ui/separator, @/shared/components/ui/sheet, @/shared/components/ui/skeleton, @/shared/components/ui/tooltip, @/shared/hooks/custom/use-mobile, @/shared/lib/utils, @radix-ui/react-slot, class-variance-authority, lucide-react, react
+- `useSidebar(): unknown`
+  - Description: React hook that manages sidebar behavior.
+  - Location: [src/shared/components/ui/sidebar.tsx](../../../src/shared/components/ui/sidebar.tsx) (line 44)
+  - Dependencies: @/shared/components/ui/button, @/shared/components/ui/input, @/shared/components/ui/separator, @/shared/components/ui/sheet, @/shared/components/ui/skeleton, @/shared/components/ui/tooltip, @/shared/hooks/custom/use-mobile, @/shared/lib/utils, @radix-ui/react-slot, class-variance-authority, lucide-react, react
+- `Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): unknown`
+  - Description: Implements skeleton behavior for this module.
+  - Location: [src/shared/components/ui/skeleton.tsx](../../../src/shared/components/ui/skeleton.tsx) (line 3)
+  - Dependencies: @/shared/lib/utils
+- `Toaster({ ...props }: ToasterProps): unknown`
+  - Description: Implements toaster behavior for this module.
+  - Location: [src/shared/components/ui/sonner.tsx](../../../src/shared/components/ui/sonner.tsx) (line 6)
+  - Dependencies: next-themes, sonner
+- `Toaster(): unknown`
+  - Description: Implements toaster behavior for this module.
+  - Location: [src/shared/components/ui/toaster.tsx](../../../src/shared/components/ui/toaster.tsx) (line 11)
+  - Dependencies: @/shared/components/ui/toast, @/shared/hooks/custom/use-toast
+
+### Classes/Modules
+
+- `accordion.tsx`
+  - Description: Module that implements accordion responsibilities for this directory.
+  - Location: [src/shared/components/ui/accordion.tsx](../../../src/shared/components/ui/accordion.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-accordion, lucide-react, react
+- `alert.tsx`
+  - Description: Module that implements alert responsibilities for this directory.
+  - Location: [src/shared/components/ui/alert.tsx](../../../src/shared/components/ui/alert.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, class-variance-authority, react
+- `aspect-ratio.tsx`
+  - Description: Module that implements aspect ratio responsibilities for this directory.
+  - Location: [src/shared/components/ui/aspect-ratio.tsx](../../../src/shared/components/ui/aspect-ratio.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @radix-ui/react-aspect-ratio
+- `avatar.tsx`
+  - Description: Module that implements avatar responsibilities for this directory.
+  - Location: [src/shared/components/ui/avatar.tsx](../../../src/shared/components/ui/avatar.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-avatar, react
+- `badge.tsx`
+  - Description: Module that implements badge responsibilities for this directory.
+  - Location: [src/shared/components/ui/badge.tsx](../../../src/shared/components/ui/badge.tsx)
+  - Contains: 1 function(s)
+  - Dependencies: @/shared/lib/utils, class-variance-authority, react
+- `breadcrumb.tsx`
+  - Description: Module that implements breadcrumb responsibilities for this directory.
+  - Location: [src/shared/components/ui/breadcrumb.tsx](../../../src/shared/components/ui/breadcrumb.tsx)
+  - Contains: 2 function(s)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-slot, lucide-react, react
+- `button.tsx`
+  - Description: Module that implements button responsibilities for this directory.
+  - Location: [src/shared/components/ui/button.tsx](../../../src/shared/components/ui/button.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-slot, class-variance-authority, react
+- `calendar.tsx`
+  - Description: Module that implements calendar responsibilities for this directory.
+  - Location: [src/shared/components/ui/calendar.tsx](../../../src/shared/components/ui/calendar.tsx)
+  - Contains: 3 function(s)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react, react-day-picker
+- `card.tsx`
+  - Description: Module that implements card responsibilities for this directory.
+  - Location: [src/shared/components/ui/card.tsx](../../../src/shared/components/ui/card.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, react
+- `carousel.tsx`
+  - Description: Module that implements carousel responsibilities for this directory.
+  - Location: [src/shared/components/ui/carousel.tsx](../../../src/shared/components/ui/carousel.tsx)
+  - Contains: 1 function(s)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, embla-carousel-react, lucide-react, react
+- `chart.tsx`
+  - Description: Module that implements chart responsibilities for this directory.
+  - Location: [src/shared/components/ui/chart.tsx](../../../src/shared/components/ui/chart.tsx)
+  - Contains: 3 function(s)
+  - Dependencies: @/shared/lib/utils, react, recharts
+- `checkbox.tsx`
+  - Description: Module that implements checkbox responsibilities for this directory.
+  - Location: [src/shared/components/ui/checkbox.tsx](../../../src/shared/components/ui/checkbox.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-checkbox, lucide-react, react
+- `collapsible.tsx`
+  - Description: Module that implements collapsible responsibilities for this directory.
+  - Location: [src/shared/components/ui/collapsible.tsx](../../../src/shared/components/ui/collapsible.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @radix-ui/react-collapsible
+- `command.tsx`
+  - Description: Module that implements command responsibilities for this directory.
+  - Location: [src/shared/components/ui/command.tsx](../../../src/shared/components/ui/command.tsx)
+  - Contains: 2 function(s)
+  - Dependencies: @/shared/components/ui/dialog, @/shared/lib/utils, @radix-ui/react-dialog, cmdk, lucide-react, react
+- `context-menu.tsx`
+  - Description: Module that implements context menu responsibilities for this directory.
+  - Location: [src/shared/components/ui/context-menu.tsx](../../../src/shared/components/ui/context-menu.tsx)
+  - Contains: 1 function(s)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-context-menu, lucide-react, react
+- `dialog.tsx`
+  - Description: Module that implements dialog responsibilities for this directory.
+  - Location: [src/shared/components/ui/dialog.tsx](../../../src/shared/components/ui/dialog.tsx)
+  - Contains: 2 function(s)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-dialog, lucide-react, react
+- `drawer.tsx`
+  - Description: Module that implements drawer responsibilities for this directory.
+  - Location: [src/shared/components/ui/drawer.tsx](../../../src/shared/components/ui/drawer.tsx)
+  - Contains: 3 function(s)
+  - Dependencies: @/shared/lib/utils, react, vaul
+- `dropdown-menu.tsx`
+  - Description: Module that implements dropdown menu responsibilities for this directory.
+  - Location: [src/shared/components/ui/dropdown-menu.tsx](../../../src/shared/components/ui/dropdown-menu.tsx)
+  - Contains: 1 function(s)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-dropdown-menu, lucide-react, react
+- `form.tsx`
+  - Description: Module that implements form responsibilities for this directory.
+  - Location: [src/shared/components/ui/form.tsx](../../../src/shared/components/ui/form.tsx)
+  - Contains: 2 function(s)
+  - Dependencies: @/shared/components/ui/label, @/shared/lib/utils, @radix-ui/react-label, @radix-ui/react-slot, react, react-hook-form
+- `hover-card.tsx`
+  - Description: Module that implements hover card responsibilities for this directory.
+  - Location: [src/shared/components/ui/hover-card.tsx](../../../src/shared/components/ui/hover-card.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-hover-card, react
+- `input-otp.tsx`
+  - Description: Module that implements input otp responsibilities for this directory.
+  - Location: [src/shared/components/ui/input-otp.tsx](../../../src/shared/components/ui/input-otp.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, input-otp, lucide-react, react
+- `input.tsx`
+  - Description: Module that implements input responsibilities for this directory.
+  - Location: [src/shared/components/ui/input.tsx](../../../src/shared/components/ui/input.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, react
+- `label.tsx`
+  - Description: Module that implements label responsibilities for this directory.
+  - Location: [src/shared/components/ui/label.tsx](../../../src/shared/components/ui/label.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-label, class-variance-authority, react
+- `menubar.tsx`
+  - Description: Module that implements menubar responsibilities for this directory.
+  - Location: [src/shared/components/ui/menubar.tsx](../../../src/shared/components/ui/menubar.tsx)
+  - Contains: 1 function(s)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-menubar, lucide-react, react
+- `navigation-menu.tsx`
+  - Description: Module that implements navigation menu responsibilities for this directory.
+  - Location: [src/shared/components/ui/navigation-menu.tsx](../../../src/shared/components/ui/navigation-menu.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-navigation-menu, class-variance-authority, lucide-react, react
+- `pagination.tsx`
+  - Description: Module that implements pagination responsibilities for this directory.
+  - Location: [src/shared/components/ui/pagination.tsx](../../../src/shared/components/ui/pagination.tsx)
+  - Contains: 5 function(s)
+  - Dependencies: @/shared/components/ui/button, @/shared/lib/utils, lucide-react, react
+- `popover.tsx`
+  - Description: Module that implements popover responsibilities for this directory.
+  - Location: [src/shared/components/ui/popover.tsx](../../../src/shared/components/ui/popover.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-popover, react
+- `progress.tsx`
+  - Description: Module that implements progress responsibilities for this directory.
+  - Location: [src/shared/components/ui/progress.tsx](../../../src/shared/components/ui/progress.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-progress, react
+- `radio-group.tsx`
+  - Description: Module that implements radio group responsibilities for this directory.
+  - Location: [src/shared/components/ui/radio-group.tsx](../../../src/shared/components/ui/radio-group.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-radio-group, lucide-react, react
+- `resizable.tsx`
+  - Description: Module that implements resizable responsibilities for this directory.
+  - Location: [src/shared/components/ui/resizable.tsx](../../../src/shared/components/ui/resizable.tsx)
+  - Contains: 2 function(s)
+  - Dependencies: @/shared/lib/utils, lucide-react, react-resizable-panels
+- `scroll-area.tsx`
+  - Description: Module that implements scroll area responsibilities for this directory.
+  - Location: [src/shared/components/ui/scroll-area.tsx](../../../src/shared/components/ui/scroll-area.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-scroll-area, react
+- `select.tsx`
+  - Description: Module that implements select responsibilities for this directory.
+  - Location: [src/shared/components/ui/select.tsx](../../../src/shared/components/ui/select.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-select, lucide-react, react
+- `separator.tsx`
+  - Description: Module that implements separator responsibilities for this directory.
+  - Location: [src/shared/components/ui/separator.tsx](../../../src/shared/components/ui/separator.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-separator, react
+- `sheet.tsx`
+  - Description: Module that implements sheet responsibilities for this directory.
+  - Location: [src/shared/components/ui/sheet.tsx](../../../src/shared/components/ui/sheet.tsx)
+  - Contains: 2 function(s)
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-dialog, class-variance-authority, lucide-react, react
+- `sidebar.tsx`
+  - Description: Module that implements sidebar responsibilities for this directory.
+  - Location: [src/shared/components/ui/sidebar.tsx](../../../src/shared/components/ui/sidebar.tsx)
+  - Contains: 2 function(s)
+  - Dependencies: @/shared/components/ui/button, @/shared/components/ui/input, @/shared/components/ui/separator, @/shared/components/ui/sheet, @/shared/components/ui/skeleton, @/shared/components/ui/tooltip, @/shared/hooks/custom/use-mobile, @/shared/lib/utils, @radix-ui/react-slot, class-variance-authority, lucide-react, react
+- `skeleton.tsx`
+  - Description: Module that implements skeleton responsibilities for this directory.
+  - Location: [src/shared/components/ui/skeleton.tsx](../../../src/shared/components/ui/skeleton.tsx)
+  - Contains: 1 function(s)
+  - Dependencies: @/shared/lib/utils
+- `slider.tsx`
+  - Description: Module that implements slider responsibilities for this directory.
+  - Location: [src/shared/components/ui/slider.tsx](../../../src/shared/components/ui/slider.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-slider, react
+- `sonner.tsx`
+  - Description: Module that implements sonner responsibilities for this directory.
+  - Location: [src/shared/components/ui/sonner.tsx](../../../src/shared/components/ui/sonner.tsx)
+  - Contains: 1 function(s)
+  - Dependencies: next-themes, sonner
+- `switch.tsx`
+  - Description: Module that implements switch responsibilities for this directory.
+  - Location: [src/shared/components/ui/switch.tsx](../../../src/shared/components/ui/switch.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-switch, react
+- `table.tsx`
+  - Description: Module that implements table responsibilities for this directory.
+  - Location: [src/shared/components/ui/table.tsx](../../../src/shared/components/ui/table.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, react
+- `tabs.tsx`
+  - Description: Module that implements tabs responsibilities for this directory.
+  - Location: [src/shared/components/ui/tabs.tsx](../../../src/shared/components/ui/tabs.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-tabs, react
+- `textarea.tsx`
+  - Description: Module that implements textarea responsibilities for this directory.
+  - Location: [src/shared/components/ui/textarea.tsx](../../../src/shared/components/ui/textarea.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, react
+- `toast.tsx`
+  - Description: Module that implements toast responsibilities for this directory.
+  - Location: [src/shared/components/ui/toast.tsx](../../../src/shared/components/ui/toast.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-toast, class-variance-authority, lucide-react, react
+- `toaster.tsx`
+  - Description: Module that implements toaster responsibilities for this directory.
+  - Location: [src/shared/components/ui/toaster.tsx](../../../src/shared/components/ui/toaster.tsx)
+  - Contains: 1 function(s)
+  - Dependencies: @/shared/components/ui/toast, @/shared/hooks/custom/use-toast
+- `toggle-group.tsx`
+  - Description: Module that implements toggle group responsibilities for this directory.
+  - Location: [src/shared/components/ui/toggle-group.tsx](../../../src/shared/components/ui/toggle-group.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/components/ui/toggle, @/shared/lib/utils, @radix-ui/react-toggle-group, class-variance-authority, react
+- `toggle.tsx`
+  - Description: Module that implements toggle responsibilities for this directory.
+  - Location: [src/shared/components/ui/toggle.tsx](../../../src/shared/components/ui/toggle.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-toggle, class-variance-authority, react
+- `tooltip.tsx`
+  - Description: Module that implements tooltip responsibilities for this directory.
+  - Location: [src/shared/components/ui/tooltip.tsx](../../../src/shared/components/ui/tooltip.tsx)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/lib/utils, @radix-ui/react-tooltip, react
+- `use-toast.ts`
+  - Description: Module that implements use toast responsibilities for this directory.
+  - Location: [src/shared/components/ui/use-toast.ts](../../../src/shared/components/ui/use-toast.ts)
+  - Contains: module-level configuration or data
+  - Dependencies: @/shared/hooks/custom/use-toast
+
+## Dependencies
+
+### Internal Dependencies
+
+- @/shared/components/ui/button
+- @/shared/components/ui/dialog
+- @/shared/components/ui/input
+- @/shared/components/ui/label
+- @/shared/components/ui/separator
+- @/shared/components/ui/sheet
+- @/shared/components/ui/skeleton
+- @/shared/components/ui/toast
+- @/shared/components/ui/toggle
+- @/shared/components/ui/tooltip
+- @/shared/hooks/custom/use-mobile
+- @/shared/hooks/custom/use-toast
+- @/shared/lib/utils
+
+### External Dependencies
+
+- @radix-ui/react-accordion
+- @radix-ui/react-aspect-ratio
+- @radix-ui/react-avatar
+- @radix-ui/react-checkbox
+- @radix-ui/react-collapsible
+- @radix-ui/react-context-menu
+- @radix-ui/react-dialog
+- @radix-ui/react-dropdown-menu
+- @radix-ui/react-hover-card
+- @radix-ui/react-label
+- @radix-ui/react-menubar
+- @radix-ui/react-navigation-menu
+- @radix-ui/react-popover
+- @radix-ui/react-progress
+- @radix-ui/react-radio-group
+- @radix-ui/react-scroll-area
+- @radix-ui/react-select
+- @radix-ui/react-separator
+- @radix-ui/react-slider
+- @radix-ui/react-slot
+- @radix-ui/react-switch
+- @radix-ui/react-tabs
+- @radix-ui/react-toast
+- @radix-ui/react-toggle
+- @radix-ui/react-toggle-group
+- @radix-ui/react-tooltip
+- class-variance-authority
+- cmdk
+- embla-carousel-react
+- input-otp
+- lucide-react
+- next-themes
+- react
+- react-day-picker
+- react-hook-form
+- react-resizable-panels
+- recharts
+- sonner
+- vaul
+

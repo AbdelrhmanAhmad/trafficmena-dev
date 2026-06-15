@@ -1,0 +1,53 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Env files (do not commit real secrets)
+.env
+server/.env
+server/.env.local
+
+# Local Postgres data and secrets
+server/.postgres-data/
+server/.postgres/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local Postgres cluster
+local/postgres/
+
+# Local frontend env (do not commit secrets)
+.env
+.env.local
+
+# Security - never commit env archives
+*.env.zip
+server/*.zip
+Server*.zip
+
+# Local scripts (do not commit)
+deploy.sh
+check-db-config.sh
+check-db-config copy.sh
+
+# Local migration cleanup
+server/drizzle/_archive/
