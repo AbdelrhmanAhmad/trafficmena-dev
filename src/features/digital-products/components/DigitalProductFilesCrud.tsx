@@ -173,7 +173,7 @@ export function DigitalProductFilesCrud({
         <div>
           <h3 className="font-semibold text-neutral-900">Product files ({files.length})</h3>
           <p className="text-sm text-neutral-600">
-            كل عنصر = نوع ملف + عنوان + ملف واحد. أضف عدة عناصر حسب الحاجة.
+            Each item is a file type, title, and one file. Add as many items as needed.
           </p>
         </div>
         {mode === 'list' && (

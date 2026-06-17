@@ -11,6 +11,7 @@ import {
   Home,
   Library,
   Mail,
+  Receipt,
   Settings,
   Shield,
   Sparkles,
@@ -73,6 +74,11 @@ const memberMenuItems = [
     icon: FileStack,
   },
   {
+    title: 'My Orders',
+    url: '/dashboard/orders',
+    icon: Receipt,
+  },
+  {
     title: 'Masterclasses',
     url: '/dashboard/masterclasses',
     icon: GraduationCap,
@@ -120,6 +126,12 @@ const adminMenuItems = [
     title: 'Promo Codes',
     url: '/admin/promo-codes',
     icon: Tag,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'Orders',
+    url: '/admin/orders',
+    icon: Receipt,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {

@@ -33,7 +33,7 @@ function MasterclassLessonContent() {
   const progressMutations = useMasterclassLessonProgress(masterclassId);
 
   if (isLoading) return <LoadingSpinner />;
-  if (isError || !data) return <p className="text-red-600">الدرس غير متاح.</p>;
+  if (isError || !data) return <p className="text-red-600">This lesson is not available.</p>;
 
   const { lesson, videos, files } = data;
   const isCompleted = lesson.is_completed;
@@ -122,7 +122,7 @@ function MasterclassLessonContent() {
                     className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-neutral-50"
                   >
                     <Download className="h-4 w-4" />
-                    تحميل
+                    Download
                   </a>
                 </li>
               ))}

@@ -38,7 +38,7 @@ export function DigitalProductCard({ product }: DigitalProductCardProps) {
           {product.is_purchased && (
             <Badge variant="secondary" className="shrink-0 gap-1">
               <CheckCircle2 className="h-3 w-3" />
-              مشتري
+              Purchased
             </Badge>
           )}
         </div>
@@ -47,9 +47,11 @@ export function DigitalProductCard({ product }: DigitalProductCardProps) {
         {product.description ? (
           <p className="line-clamp-3">{product.description}</p>
         ) : (
-          <p className="text-neutral-400">منتج رقمي</p>
+          <p className="text-neutral-400">Digital product</p>
         )}
-        <p className="mt-2 text-xs text-neutral-500">{product.file_count} ملف/ملفات</p>
+        <p className="mt-2 text-xs text-neutral-500">
+          {product.file_count} {product.file_count === 1 ? 'file' : 'files'}
+        </p>
       </CardContent>
       <CardFooter className="flex flex-col items-stretch gap-3 border-t bg-neutral-50/50 pt-4">
         <DigitalProductPrice priceInCents={product.price_in_cents} />
@@ -58,7 +60,7 @@ export function DigitalProductCard({ product }: DigitalProductCardProps) {
             to={`/dashboard/digital-products/${product.id}`}
             className="inline-flex h-10 items-center justify-center rounded-md bg-[#29cf9f] px-4 text-sm font-medium text-white hover:bg-[#05ef62]"
           >
-            عرض الملفات
+            View files
           </Link>
         ) : (
           <DigitalProductBuyActions product={product} layout="stack" />

@@ -62,6 +62,7 @@ const SeriesStoreDetailPage = lazy(() => import('./pages/SeriesStoreDetail'));
 const SeriesCartPage = lazy(() => import('./pages/SeriesCart'));
 const DigitalProductsPage = lazy(() => import('./pages/dashboard/DigitalProducts'));
 const DigitalProductDetailPage = lazy(() => import('./pages/dashboard/DigitalProductDetail'));
+const MyOrdersPage = lazy(() => import('./pages/dashboard/MyOrders'));
 const MasterclassesPage = lazy(() => import('./pages/dashboard/Masterclasses'));
 const MasterclassDetailPage = lazy(() => import('./pages/dashboard/MasterclassDetail'));
 const MasterclassLearnPage = lazy(() => import('./pages/dashboard/MasterclassLearn'));
@@ -77,6 +78,7 @@ const AdminSettingsPage = lazy(() => import('./pages/admin/settings'));
 const UserManagement = lazy(() => import('./pages/admin/users'));
 const AdminInvitations = lazy(() => import('./pages/admin/invitations'));
 const AdminPromoCodes = lazy(() => import('./pages/admin/promo-codes'));
+const AdminOrdersPage = lazy(() => import('./pages/admin/orders'));
 const LibraryManagement = lazy(() => import('./pages/admin/library'));
 const AdminLibraryItemDetail = lazy(() => import('./pages/admin/library/[id]'));
 const NewLibraryItem = lazy(() => import('./pages/admin/library/new-item'));
@@ -282,6 +284,16 @@ const App = () => {
                       <ErrorBoundary>
                         <DigitalProductDetailPage />
                       </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/orders"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <MyOrdersPage />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
                     }
                   />
                   <Route
@@ -696,6 +708,14 @@ const App = () => {
                           <AdminPromoCodes />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/orders"
+                    element={
+                      <ErrorBoundary>
+                        <AdminOrdersPage />
+                      </ErrorBoundary>
                     }
                   />
                   <Route

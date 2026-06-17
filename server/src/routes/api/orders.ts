@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -9,11 +9,13 @@ import {
   orders,
   series,
   seriesAccessGrants,
+  users,
 } from '../../db/schema/index.js';
 import { assertDigitalProductIdsSellable, getPurchasedDigitalProductIds } from '../../services/digitalProductSales.js';
 import { assertSeriesIdsSellable, getPurchasedSeriesIds } from '../../services/seriesSales.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { ApiError } from '../../utils/errors.js';
+import { requireRole } from './utils.js';
 
 const createOrderSchema = z
   .object({
@@ -27,7 +29,201 @@ const createOrderSchema = z
 
 const uuidParamSchema = z.string().uuid();
 
+const orderListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).default(20),
+  status: z.enum(['pending', 'paid', 'failed', 'expired', 'all']).optional().default('all'),
+});
+
+type RawOrderItem = typeof orderItems.$inferSelect;
+
+async function enrichOrderItems(rawItems: RawOrderItem[]) {
+  if (rawItems.length === 0) return [];
+
+  const seriesIds = [
+    ...new Set(rawItems.filter((i) => i.seriesId).map((i) => i.seriesId as string)),
+  ];
+  const productIds = [
+    ...new Set(
+      rawItems.filter((i) => i.digitalProductId).map((i) => i.digitalProductId as string),
+    ),
+  ];
+
+  const [seriesRows, productRows] = await Promise.all([
+    seriesIds.length > 0
+      ? db
+          .select({ id: series.id, title: series.title })
+          .from(series)
+          .where(inArray(series.id, seriesIds))
+      : Promise.resolve([]),
+    productIds.length > 0
+      ? db
+          .select({ id: digitalProducts.id, title: digitalProducts.title })
+          .from(digitalProducts)
+          .where(inArray(digitalProducts.id, productIds))
+      : Promise.resolve([]),
+  ]);
+
+  const seriesTitleMap = new Map(seriesRows.map((row) => [row.id, row.title]));
+  const productTitleMap = new Map(productRows.map((row) => [row.id, row.title]));
+
+  return rawItems.map((item) => {
+    let title: string | null = null;
+    if (item.itemType === 'series' && item.seriesId) {
+      title = seriesTitleMap.get(item.seriesId) ?? null;
+    } else if (item.itemType === 'digital_product' && item.digitalProductId) {
+      title = productTitleMap.get(item.digitalProductId) ?? null;
+    }
+    return { ...item, title };
+  });
+}
+
+async function loadItemsByOrderId(orderIds: string[]) {
+  if (orderIds.length === 0) return new Map<string, Awaited<ReturnType<typeof enrichOrderItems>>>();
+
+  const rawItems = await db
+    .select()
+    .from(orderItems)
+    .where(inArray(orderItems.orderId, orderIds));
+
+  const enriched = await enrichOrderItems(rawItems);
+  const map = new Map<string, typeof enriched>();
+  for (const item of enriched) {
+    const list = map.get(item.orderId) ?? [];
+    list.push(item);
+    map.set(item.orderId, list);
+  }
+  return map;
+}
+
+function buildStatusFilter(status: z.infer<typeof orderListQuerySchema>['status']) {
+  if (!status || status === 'all') return undefined;
+  return eq(orders.status, status);
+}
+
 export function registerOrderRoutes(app: Hono) {
+  app.get('/admin/orders', async (c) => {
+    const authResult = await requireRole(c, ['owner', 'admin', 'manager'], {
+      forbiddenMessage: 'Manager or admin privileges required.',
+    });
+    if ('response' in authResult) return authResult.response;
+
+    const parsed = orderListQuerySchema.safeParse({
+      page: c.req.query('page'),
+      pageSize: c.req.query('pageSize'),
+      status: c.req.query('status'),
+    });
+    if (!parsed.success) {
+      return c.json({ error: { code: 'INVALID_QUERY', message: parsed.error.message } }, 400);
+    }
+
+    const { page, pageSize, status } = parsed.data;
+    const statusFilter = buildStatusFilter(status);
+    const whereClause = statusFilter ? and(statusFilter) : undefined;
+    const offset = (page - 1) * pageSize;
+
+    const [[statsRow], [totalRow], orderRows] = await Promise.all([
+      db
+        .select({
+          totalOrders: sql<number>`COUNT(*)::int`,
+          paidOrders: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'paid')::int`,
+          pendingOrders: sql<number>`COUNT(*) FILTER (WHERE ${orders.status} = 'pending')::int`,
+          revenueCents: sql<number>`COALESCE(SUM(${orders.totalCents}) FILTER (WHERE ${orders.status} = 'paid'), 0)::int`,
+        })
+        .from(orders),
+      db.select({ value: count() }).from(orders).where(whereClause),
+      db
+        .select({
+          id: orders.id,
+          userId: orders.userId,
+          status: orders.status,
+          totalCents: orders.totalCents,
+          currency: orders.currency,
+          createdAt: orders.createdAt,
+          paidAt: orders.paidAt,
+          userEmail: users.email,
+          userName: users.name,
+        })
+        .from(orders)
+        .innerJoin(users, eq(users.id, orders.userId))
+        .where(whereClause)
+        .orderBy(desc(orders.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
+
+    const itemsByOrder = await loadItemsByOrderId(orderRows.map((row) => row.id));
+
+    return c.json({
+      data: {
+        stats: {
+          totalOrders: Number(statsRow?.totalOrders ?? 0),
+          paidOrders: Number(statsRow?.paidOrders ?? 0),
+          pendingOrders: Number(statsRow?.pendingOrders ?? 0),
+          revenueCents: Number(statsRow?.revenueCents ?? 0),
+        },
+        items: orderRows.map((order) => ({
+          ...order,
+          items: itemsByOrder.get(order.id) ?? [],
+        })),
+        pagination: {
+          page,
+          pageSize,
+          total: Number(totalRow?.value ?? 0),
+        },
+      },
+    });
+  });
+
+  app.get('/orders', async (c) => {
+    const session = await getSessionFromRequest(c);
+    if (!session?.user?.id) {
+      return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
+    }
+
+    const parsed = orderListQuerySchema.safeParse({
+      page: c.req.query('page'),
+      pageSize: c.req.query('pageSize'),
+      status: c.req.query('status'),
+    });
+    if (!parsed.success) {
+      return c.json({ error: { code: 'INVALID_QUERY', message: parsed.error.message } }, 400);
+    }
+
+    const { page, pageSize, status } = parsed.data;
+    const statusFilter = buildStatusFilter(status);
+    const userFilter = eq(orders.userId, session.user.id);
+    const whereClause = statusFilter ? and(userFilter, statusFilter) : userFilter;
+    const offset = (page - 1) * pageSize;
+
+    const [totalRow, orderRows] = await Promise.all([
+      db.select({ value: count() }).from(orders).where(whereClause),
+      db
+        .select()
+        .from(orders)
+        .where(whereClause)
+        .orderBy(desc(orders.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
+
+    const itemsByOrder = await loadItemsByOrderId(orderRows.map((row) => row.id));
+
+    return c.json({
+      data: {
+        items: orderRows.map((order) => ({
+          ...order,
+          items: itemsByOrder.get(order.id) ?? [],
+        })),
+        pagination: {
+          page,
+          pageSize,
+          total: Number(totalRow[0]?.value ?? 0),
+        },
+      },
+    });
+  });
+
   app.post('/orders', async (c) => {
     const session = await getSessionFromRequest(c);
     if (!session?.user?.id) {
@@ -166,28 +362,7 @@ export function registerOrderRoutes(app: Hono) {
     }
 
     const rawItems = await db.select().from(orderItems).where(eq(orderItems.orderId, order.id));
-
-    const items = await Promise.all(
-      rawItems.map(async (item) => {
-        if (item.itemType === 'series' && item.seriesId) {
-          const [seriesRow] = await db
-            .select({ title: series.title })
-            .from(series)
-            .where(eq(series.id, item.seriesId))
-            .limit(1);
-          return { ...item, title: seriesRow?.title ?? null };
-        }
-        if (item.itemType === 'digital_product' && item.digitalProductId) {
-          const [productRow] = await db
-            .select({ title: digitalProducts.title })
-            .from(digitalProducts)
-            .where(eq(digitalProducts.id, item.digitalProductId))
-            .limit(1);
-          return { ...item, title: productRow?.title ?? null };
-        }
-        return { ...item, title: null };
-      }),
-    );
+    const items = await enrichOrderItems(rawItems);
 
     return c.json({ data: { order, items } });
   });

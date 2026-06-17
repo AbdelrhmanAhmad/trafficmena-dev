@@ -13,7 +13,7 @@ function MasterclassLearnContent() {
   const { data, isLoading, isError } = useMasterclassLearn(id);
 
   if (isLoading) return <LoadingSpinner />;
-  if (isError || !data) return <p className="text-red-600">لا يمكن الوصول لهذا الكورس.</p>;
+  if (isError || !data) return <p className="text-red-600">You do not have access to this course.</p>;
 
   const { masterclass, modules } = data;
   const progressPercent =

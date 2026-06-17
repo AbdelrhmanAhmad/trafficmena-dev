@@ -18,7 +18,7 @@ function MasterclassDetailContent() {
   const { data, isLoading, isError } = useMasterclassStoreDetail(id);
 
   if (isLoading) return <LoadingSpinner />;
-  if (isError || !data) return <p className="text-red-600">الكورس غير متاح.</p>;
+  if (isError || !data) return <p className="text-red-600">This course is not available.</p>;
 
   const { masterclass, modules } = data;
 
@@ -27,7 +27,7 @@ function MasterclassDetailContent() {
       <Button variant="ghost" asChild className="px-0">
         <Link to="/dashboard/masterclasses">
           <ArrowLeft className="mr-2 h-4 w-4" />
-             back to masterclasses
+          Back to masterclasses
         </Link>
       </Button>
 
@@ -53,7 +53,7 @@ function MasterclassDetailContent() {
           {masterclass.is_enrolled && (
             <Badge className="gap-1 bg-[#29cf9f]">
               <CheckCircle2 className="h-3 w-3" />
-              مسجّل — وصول دائم
+              Enrolled — lifetime access
             </Badge>
           )}
           <MasterclassPrice priceInCents={masterclass.price_in_cents} />
@@ -63,7 +63,7 @@ function MasterclassDetailContent() {
       {masterclass.is_enrolled ? (
         <Button onClick={() => navigate(`/dashboard/masterclasses/${id}/learn`)}>
           <PlayCircle className="mr-2 h-4 w-4" />
-          ابدأ التعلّم
+          Start learning
         </Button>
       ) : (
         <MasterclassBuyActions masterclass={masterclass} layout="inline" />
@@ -72,7 +72,7 @@ function MasterclassDetailContent() {
       {masterclass.is_enrolled && modules.length > 0 && (
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle>محتوى الكورس</CardTitle>
+            <CardTitle>Course content</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {modules.map((module, moduleIndex) => (

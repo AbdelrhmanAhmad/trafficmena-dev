@@ -32,7 +32,7 @@ function DigitalProductDetailContent() {
   const { data, isLoading, isError } = useDigitalProductStoreDetail(id);
 
   if (isLoading) return <LoadingSpinner />;
-  if (isError || !data) return <p className="text-red-600">المنتج غير متاح.</p>;
+  if (isError || !data) return <p className="text-red-600">Product unavailable.</p>;
 
   const { product, files, video_asset: videoAsset } = data;
 
@@ -41,7 +41,7 @@ function DigitalProductDetailContent() {
       <Button variant="ghost" asChild className="px-0">
         <Link to="/dashboard/digital-products">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          العودة للمنتجات
+          Back to products
         </Link>
       </Button>
 
@@ -66,7 +66,7 @@ function DigitalProductDetailContent() {
           {product.is_purchased && (
             <Badge className="gap-1 bg-[#29cf9f]">
               <CheckCircle2 className="h-3 w-3" />
-              مشتري — وصول دائم
+              Purchased — lifetime access
             </Badge>
           )}
           <DigitalProductPrice priceInCents={product.price_in_cents} />
@@ -81,7 +81,7 @@ function DigitalProductDetailContent() {
         <>
           <Card className="rounded-2xl">
             <CardHeader>
-              <CardTitle>الملفات ({files.length})</CardTitle>
+              <CardTitle>Files ({files.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <DigitalProductFileList files={files} />
@@ -91,7 +91,7 @@ function DigitalProductDetailContent() {
           {videoAsset && (videoAsset.embed_url || videoAsset.video_url) && (
             <Card className="rounded-2xl">
               <CardHeader>
-                <CardTitle>فيديو الشرح</CardTitle>
+                <CardTitle>Tutorial video</CardTitle>
               </CardHeader>
               <CardContent>
                 {videoAsset.video_url ? (
