@@ -4,7 +4,6 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
-  libraryAssets,
   masterclassEnrollments,
   masterclassLessonFiles,
   masterclassLessonProgress,
@@ -12,6 +11,7 @@ import {
   masterclassLessonVideos,
   masterclassModules,
   masterclasses,
+  payments,
   profiles,
   users,
 } from '../../db/schema/index.js';
@@ -56,9 +56,11 @@ const lessonInputSchema = z.object({
 
 const videoInputSchema = z.object({
   title: z.string().min(1).max(200),
-  videoAssetId: z.string().uuid().optional().nullable(),
+  videoUrl: z.string().trim().min(1).max(1000),
   sortOrder: z.number().int().optional(),
 });
+
+const MAX_VIDEOS_PER_LESSON = 20;
 
 const fileInputSchema = z.object({
   fileType: fileTypeSchema,
@@ -76,20 +78,6 @@ const manualEnrollmentSchema = z.object({
   note: z.string().max(500).optional().nullable(),
 });
 
-async function assertVideoAsset(videoAssetId: string | null | undefined) {
-  if (!videoAssetId) return;
-  const [asset] = await db
-    .select({ id: libraryAssets.id, fileType: libraryAssets.fileType })
-    .from(libraryAssets)
-    .where(eq(libraryAssets.id, videoAssetId))
-    .limit(1);
-  if (!asset) {
-    throw new Error('Video asset not found.');
-  }
-  if (asset.fileType !== 'Video') {
-    throw new Error('Selected asset must be a video from the library.');
-  }
-}
 
 async function getMasterclassLessonCountMap(
   masterclassIds: string[],
@@ -185,20 +173,8 @@ async function loadMasterclassPreviewTree(masterclassId: string) {
   const [videos, files] = await Promise.all([
     lessonIds.length > 0
       ? db
-          .select({
-            id: masterclassLessonVideos.id,
-            lessonId: masterclassLessonVideos.lessonId,
-            title: masterclassLessonVideos.title,
-            videoAssetId: masterclassLessonVideos.videoAssetId,
-            sortOrder: masterclassLessonVideos.sortOrder,
-            createdAt: masterclassLessonVideos.createdAt,
-            assetTitle: libraryAssets.title,
-            embedUrl: libraryAssets.embedUrl,
-            videoUrl: libraryAssets.videoUrl,
-            thumbnailUrl: libraryAssets.thumbnailUrl,
-          })
+          .select()
           .from(masterclassLessonVideos)
-          .leftJoin(libraryAssets, eq(libraryAssets.id, masterclassLessonVideos.videoAssetId))
           .where(inArray(masterclassLessonVideos.lessonId, lessonIds))
           .orderBy(asc(masterclassLessonVideos.sortOrder), asc(masterclassLessonVideos.createdAt))
       : Promise.resolve([]),
@@ -430,17 +406,9 @@ export function registerMasterclassRoutes(app: Hono) {
         id: masterclassLessonVideos.id,
         title: masterclassLessonVideos.title,
         sort_order: masterclassLessonVideos.sortOrder,
-        video_asset: {
-          id: libraryAssets.id,
-          title: libraryAssets.title,
-          embed_url: libraryAssets.embedUrl,
-          video_url: libraryAssets.videoUrl,
-          embed_type: libraryAssets.embedType,
-          thumbnail_url: libraryAssets.thumbnailUrl,
-        },
+        video_url: masterclassLessonVideos.videoUrl,
       })
       .from(masterclassLessonVideos)
-      .leftJoin(libraryAssets, eq(libraryAssets.id, masterclassLessonVideos.videoAssetId))
       .where(eq(masterclassLessonVideos.lessonId, lessonIdParsed.data))
       .orderBy(asc(masterclassLessonVideos.sortOrder), asc(masterclassLessonVideos.createdAt));
 
@@ -795,15 +763,18 @@ export function registerMasterclassRoutes(app: Hono) {
         name: users.name,
         firstName: profiles.firstName,
         lastName: profiles.lastName,
+        phoneNumber: profiles.phoneNumber,
         source: masterclassEnrollments.source,
         enrolledAt: masterclassEnrollments.enrolledAt,
         enrollmentNote: masterclassEnrollments.enrollmentNote,
         enrolledBy: masterclassEnrollments.enrolledBy,
         paymentId: masterclassEnrollments.paymentId,
+        purchasedPriceInCents: payments.amountCents,
       })
       .from(masterclassEnrollments)
       .innerJoin(users, eq(users.id, masterclassEnrollments.userId))
       .leftJoin(profiles, eq(profiles.id, users.id))
+      .leftJoin(payments, eq(payments.id, masterclassEnrollments.paymentId))
       .where(eq(masterclassEnrollments.masterclassId, idParsed.data))
       .orderBy(desc(masterclassEnrollments.enrolledAt));
 
@@ -1238,31 +1209,30 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
 
-    try {
-      await assertVideoAsset(parsed.data.videoAssetId);
-    } catch (error) {
+    const [countRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(masterclassLessonVideos)
+      .where(eq(masterclassLessonVideos.lessonId, lessonIdParsed.data));
+
+    if ((countRow?.count ?? 0) >= MAX_VIDEOS_PER_LESSON) {
       return c.json(
         {
           error: {
-            code: 'INVALID_VIDEO',
-            message: error instanceof Error ? error.message : 'Invalid video asset.',
+            code: 'LIMIT_EXCEEDED',
+            message: `A lesson can have at most ${MAX_VIDEOS_PER_LESSON} video URLs.`,
+            maxVideos: MAX_VIDEOS_PER_LESSON,
           },
         },
         400,
       );
     }
 
-    const [countRow] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(masterclassLessonVideos)
-      .where(eq(masterclassLessonVideos.lessonId, lessonIdParsed.data));
-
     const [created] = await db
       .insert(masterclassLessonVideos)
       .values({
         lessonId: lessonIdParsed.data,
         title: parsed.data.title,
-        videoAssetId: parsed.data.videoAssetId ?? null,
+        videoUrl: parsed.data.videoUrl,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
       .returning();
@@ -1284,22 +1254,6 @@ export function registerMasterclassRoutes(app: Hono) {
     const parsed = videoInputSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
-    }
-
-    if (parsed.data.videoAssetId !== undefined) {
-      try {
-        await assertVideoAsset(parsed.data.videoAssetId);
-      } catch (error) {
-        return c.json(
-          {
-            error: {
-              code: 'INVALID_VIDEO',
-              message: error instanceof Error ? error.message : 'Invalid video asset.',
-            },
-          },
-          400,
-        );
-      }
     }
 
     const [updated] = await db

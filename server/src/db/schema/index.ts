@@ -598,7 +598,6 @@ export const digitalProducts = pgTable(
     priceInCents: integer('price_in_cents'),
     salesEnabled: boolean('sales_enabled').default(false).notNull(),
     isPublished: boolean('is_published').default(true).notNull(),
-    videoAssetId: uuid('video_asset_id').references(() => libraryAssets.id, { onDelete: 'set null' }),
     sortOrder: integer('sort_order').default(0).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -624,6 +623,23 @@ export const digitalProductFiles = pgTable(
   },
   (table) => ({
     productIdx: index('digital_product_files_product_idx').on(table.productId),
+  }),
+);
+
+export const digitalProductVideos = pgTable(
+  'digital_product_videos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id')
+      .references(() => digitalProducts.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: text('title').notNull(),
+    videoUrl: text('video_url').notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    productIdx: index('digital_product_videos_product_idx').on(table.productId),
   }),
 );
 
@@ -711,7 +727,7 @@ export const masterclassLessonVideos = pgTable(
       .references(() => masterclassLessons.id, { onDelete: 'cascade' })
       .notNull(),
     title: text('title').notNull(),
-    videoAssetId: uuid('video_asset_id').references(() => libraryAssets.id, { onDelete: 'set null' }),
+    videoUrl: text('video_url').notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },

@@ -11,19 +11,6 @@ import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { getSecureIframeAttributes, validateEmbedUrl } from '@/shared/utils/embedUrlValidation';
-
-function renderEmbed(url: string, title?: string) {
-  if (!validateEmbedUrl(url)) {
-    return <p className="text-sm text-red-600">Invalid embed URL.</p>;
-  }
-  const iframeProps = getSecureIframeAttributes(url);
-  return (
-    <div className="aspect-video overflow-hidden rounded-xl bg-black">
-      <iframe {...iframeProps} title={title ?? 'Video'} className="h-full w-full" />
-    </div>
-  );
-}
 
 function MasterclassLessonContent() {
   const { lessonId = '' } = useParams();
@@ -87,10 +74,8 @@ function MasterclassLessonContent() {
                 <CardTitle className="text-base">{video.title}</CardTitle>
               </CardHeader>
               <CardContent>
-                {video.video_asset?.video_url ? (
-                  <VideoEmbed url={video.video_asset.video_url} />
-                ) : video.video_asset?.embed_url ? (
-                  renderEmbed(video.video_asset.embed_url, video.title)
+                {video.video_url ? (
+                  <VideoEmbed url={video.video_url} />
                 ) : (
                   <p className="text-sm text-neutral-500">No video attached.</p>
                 )}

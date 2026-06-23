@@ -155,6 +155,20 @@
       "when": 1779000000000,
       "tag": "0021_certificates",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1779100000000,
+      "tag": "0022_digital_product_videos",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1779200000000,
+      "tag": "0023_masterclass_lesson_video_urls",
+      "breakpoints": true
     }
   ]
 }

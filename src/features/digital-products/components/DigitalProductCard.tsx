@@ -1,24 +1,46 @@
-import { CheckCircle2, FileStack } from 'lucide-react';
+import DOMPurify from 'dompurify';
+import { CheckCircle2, FileStack, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { DigitalProductStoreItem } from '@/app/api/digitalProducts';
 import { DigitalProductBuyActions, DigitalProductPrice } from './DigitalProductBuyActions';
 import { Badge } from '@/shared/components/ui/badge';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/components/ui/card';
+import { getVideoThumbnailUrl } from '@/shared/utils/videoThumbnail';
 
 type DigitalProductCardProps = {
   product: DigitalProductStoreItem;
 };
 
+function descriptionPreview(html: string | null | undefined): string {
+  if (!html) return '';
+  const sanitized = DOMPurify.sanitize(html, { ALLOWED_TAGS: [] });
+  return sanitized.trim();
+}
+
 export function DigitalProductCard({ product }: DigitalProductCardProps) {
+  const thumbnailUrl =
+    product.image_url ?? getVideoThumbnailUrl(product.first_video_url) ?? null;
+  const previewText = descriptionPreview(product.description);
+
   return (
     <Card className="flex h-full flex-col overflow-hidden rounded-2xl">
-      {product.image_url ? (
-        <div className="aspect-video w-full overflow-hidden bg-neutral-100">
+      {thumbnailUrl ? (
+        <div className="relative aspect-video w-full overflow-hidden bg-neutral-100">
           <img
-            src={product.image_url}
+            src={thumbnailUrl}
             alt={product.title}
             className="h-full w-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
+          {!product.image_url && product.first_video_url && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="rounded-full bg-white/90 p-2">
+                <Play className="h-6 w-6 fill-current text-neutral-900" />
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex aspect-video items-center justify-center bg-neutral-100 text-neutral-400">
@@ -44,8 +66,8 @@ export function DigitalProductCard({ product }: DigitalProductCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex-1 text-sm text-neutral-600">
-        {product.description ? (
-          <p className="line-clamp-3">{product.description}</p>
+        {previewText ? (
+          <p className="line-clamp-3">{previewText}</p>
         ) : (
           <p className="text-neutral-400">Digital product</p>
         )}

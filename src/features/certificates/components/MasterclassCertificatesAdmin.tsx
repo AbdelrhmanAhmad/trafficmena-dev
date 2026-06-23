@@ -2,6 +2,7 @@ import { Download, ExternalLink, Link2, Loader2, Trash2, UserPlus } from 'lucide
 import { useEffect, useState } from 'react';
 import { certificateDownloadUrl, certificatePublicShareUrl } from '@/app/api/certificates';
 import { CertificateShareButton } from '@/features/certificates/components/CertificateShareButton';
+import { MasterclassEnrolledLearnerDetails } from '@/features/masterclasses/components/MasterclassEnrolledLearnerDetails';
 import {
   useDeleteCertificate,
   useManualIssueCertificate,
@@ -113,7 +114,7 @@ export function MasterclassCertificatesAdmin({
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label>Optional template URL (reference)</Label>
             <Input
               type="url"
@@ -121,7 +122,7 @@ export function MasterclassCertificatesAdmin({
               value={templateUrl}
               onChange={(e) => setTemplateUrl(e.target.value)}
             />
-          </div>
+          </div> */}
           <Button
             type="button"
             disabled={updateSettings.isPending}
@@ -152,14 +153,21 @@ export function MasterclassCertificatesAdmin({
                 return (
                   <li key={row.userId} className="px-4 py-3 space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="font-medium">{displayName}</p>
-                        <p className="text-xs text-neutral-500">{row.email}</p>
-                        <p className="text-xs text-neutral-400 mt-1">
-                          {row.completedLessons}/{row.totalLessons} lessons
-                          {row.isComplete ? ' · Complete' : ''}
-                        </p>
-                      </div>
+                      <MasterclassEnrolledLearnerDetails
+                        firstName={row.firstName}
+                        lastName={row.lastName}
+                        name={row.name}
+                        email={row.email}
+                        phoneNumber={row.phoneNumber}
+                        source={row.source}
+                        purchasedPriceInCents={row.purchasedPriceInCents}
+                        subtitle={
+                          <p className="text-xs text-neutral-400">
+                            {row.completedLessons}/{row.totalLessons} lessons
+                            {row.isComplete ? ' · Complete' : ''}
+                          </p>
+                        }
+                      />
                       <div className="flex flex-wrap items-center gap-2">
                         {row.certificate ? (
                           <>

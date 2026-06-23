@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -13,19 +14,19 @@ import VideoEmbed from '@/shared/components/VideoEmbed';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { getSecureIframeAttributes, validateEmbedUrl } from '@/shared/utils/embedUrlValidation';
 
-function renderEmbed(url: string, type?: string | null) {
-  if (!validateEmbedUrl(url)) {
-    return <p className="text-sm text-red-600">Invalid embed URL.</p>;
-  }
-  const iframeProps = getSecureIframeAttributes(url);
-  return (
-    <div className="aspect-video overflow-hidden rounded-xl bg-black">
-      <iframe {...iframeProps} title={type ?? 'Tutorial video'} className="h-full w-full" />
-    </div>
-  );
-}
+type SanitizedHtmlProps = {
+  className?: string;
+  html: string;
+};
+
+const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
+  <div
+    className={className}
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: product descriptions are sanitized with DOMPurify
+    dangerouslySetInnerHTML={{ __html: html }}
+  />
+);
 
 function DigitalProductDetailContent() {
   const { id = '' } = useParams();
@@ -34,7 +35,10 @@ function DigitalProductDetailContent() {
   if (isLoading) return <LoadingSpinner />;
   if (isError || !data) return <p className="text-red-600">Product unavailable.</p>;
 
-  const { product, files, video_asset: videoAsset } = data;
+  const { product, files, videos } = data;
+  const sanitizedDescription = product.description
+    ? DOMPurify.sanitize(product.description)
+    : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -58,15 +62,18 @@ function DigitalProductDetailContent() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-neutral-900">{product.title}</h1>
-          {product.description && (
-            <p className="mt-3 text-neutral-600 whitespace-pre-wrap">{product.description}</p>
+          {sanitizedDescription && (
+            <SanitizedDescription
+              className="prose prose-neutral mt-3 max-w-none text-neutral-600"
+              html={sanitizedDescription}
+            />
           )}
         </div>
         <div className="flex flex-col items-end gap-2">
           {product.is_purchased && (
             <Badge className="gap-1 bg-[#29cf9f]">
               <CheckCircle2 className="h-3 w-3" />
-              Purchased — lifetime access
+              Purchased lifetime access
             </Badge>
           )}
           <DigitalProductPrice priceInCents={product.price_in_cents} />
@@ -88,19 +95,19 @@ function DigitalProductDetailContent() {
             </CardContent>
           </Card>
 
-          {videoAsset && (videoAsset.embed_url || videoAsset.video_url) && (
-            <Card className="rounded-2xl">
-              <CardHeader>
-                <CardTitle>Tutorial video</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {videoAsset.video_url ? (
-                  <VideoEmbed url={videoAsset.video_url} />
-                ) : videoAsset.embed_url ? (
-                  renderEmbed(videoAsset.embed_url, videoAsset.embed_type)
-                ) : null}
-              </CardContent>
-            </Card>
+          {videos.length > 0 && (
+            <div className="space-y-4">
+              {videos.map((video) => (
+                <Card key={video.id} className="rounded-2xl">
+                  <CardHeader>
+                    <CardTitle>{video.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <VideoEmbed url={video.video_url} />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </>
       )}

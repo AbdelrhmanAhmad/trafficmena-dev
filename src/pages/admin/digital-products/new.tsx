@@ -21,7 +21,9 @@ function NewDigitalProductPage() {
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">New digital product</h1>
-        <p className="text-neutral-600">Create the product first, then add files on the next screen.</p>
+        <p className="text-neutral-600">
+          Create the product first, then add video URLs and files on the next screen.
+        </p>
       </div>
       <DigitalProductForm
         onSubmit={handleSubmit}

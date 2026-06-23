@@ -9,6 +9,7 @@ import {
   Video,
   Youtube,
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { SeriesAsset } from '@/features/series';
@@ -23,6 +24,19 @@ import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import PremiumContentGate from '@/shared/components/PremiumContentGate';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
+
+type SanitizedHtmlProps = {
+  className?: string;
+  html: string;
+};
+
+const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
+  <div
+    className={className}
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: series descriptions are sanitized with DOMPurify
+    dangerouslySetInnerHTML={{ __html: html }}
+  />
+);
 
 const getAssetTypeStyles = (fileType: string, embedType?: string | null) => {
   if (embedType?.toLowerCase().includes('youtube')) {
@@ -184,6 +198,9 @@ const DashboardSeriesDetail: React.FC = () => {
 
   const canPurchase = canShowSeriesPurchaseActions(series);
   const showSellablePreview = series.has_access === false && canPurchase;
+  const sanitizedDescription = series.description
+    ? DOMPurify.sanitize(series.description)
+    : null;
 
   if (series.has_access === false && !showSellablePreview) {
     return (
@@ -229,8 +246,11 @@ const DashboardSeriesDetail: React.FC = () => {
                       Series
                     </span>
                     <h1 className="text-3xl font-bold text-neutral-900">{series.title}</h1>
-                    {series.description && (
-                      <p className="mt-2 text-neutral-600 max-w-2xl">{series.description}</p>
+                    {sanitizedDescription && (
+                      <SanitizedDescription
+                        className="prose prose-neutral mt-2 max-w-2xl text-neutral-600"
+                        html={sanitizedDescription}
+                      />
                     )}
                     <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-neutral-500">
                       {series.has_purchased && <SeriesPurchasedBadge />}

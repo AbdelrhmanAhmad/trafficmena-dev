@@ -17,9 +17,18 @@ import { useToast } from '@/shared/hooks/custom/use-toast';
 type DigitalProductBuyActionsProps = {
   product: DigitalProductStoreItem;
   layout?: 'inline' | 'stack';
+  signInReturnPath?: string;
+  onSuccessPath?: string;
+  onRequireAuth?: () => void;
 };
 
-export function DigitalProductBuyActions({ product, layout = 'inline' }: DigitalProductBuyActionsProps) {
+export function DigitalProductBuyActions({
+  product,
+  layout = 'inline',
+  signInReturnPath,
+  onSuccessPath = '/dashboard/digital-products?filter=mine',
+  onRequireAuth,
+}: DigitalProductBuyActionsProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -35,13 +44,24 @@ export function DigitalProductBuyActions({ product, layout = 'inline' }: Digital
   const inCart = cart.hasItem('digital_product', product.id);
   const stackClass = layout === 'stack' ? 'flex-col w-full' : 'flex-wrap';
 
-  const startCheckout = async () => {
-    if (!user) {
-      navigate('/signin', {
-        state: { from: { pathname: `/dashboard/digital-products/${product.id}` } },
-      });
-      return;
+  const guardAuth = () => {
+    if (user) return false;
+    if (onRequireAuth) {
+      onRequireAuth();
+      return true;
     }
+    navigate('/signin', {
+      state: {
+        from: {
+          pathname: signInReturnPath ?? `/dashboard/digital-products/${product.id}`,
+        },
+      },
+    });
+    return true;
+  };
+
+  const startCheckout = async () => {
+    if (guardAuth()) return;
 
     setIsCreatingOrder(true);
     try {
@@ -64,7 +84,10 @@ export function DigitalProductBuyActions({ product, layout = 'inline' }: Digital
           type="button"
           variant="outline"
           disabled={inCart}
-          onClick={() => cart.addItem(digitalProductToCartItem(product))}
+          onClick={() => {
+            if (guardAuth()) return;
+            cart.addItem(digitalProductToCartItem(product));
+          }}
           className={layout === 'stack' ? 'w-full' : undefined}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
@@ -91,7 +114,7 @@ export function DigitalProductBuyActions({ product, layout = 'inline' }: Digital
           basePriceCents={product.price_in_cents ?? 0}
           onSuccess={() => {
             cart.removeItem('digital_product', product.id);
-            navigate('/dashboard/digital-products?filter=mine');
+            navigate(onSuccessPath);
           }}
         />
       )}

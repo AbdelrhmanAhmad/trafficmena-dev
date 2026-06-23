@@ -50,7 +50,7 @@ function DigitalProductsBrowse() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Digital Products</h1>
         <p className="mt-1 text-neutral-600">
-          One-time purchase — files and video stay available after you buy.
+          One-time purchase files and video stay available after you buy.
         </p>
       </div>
 

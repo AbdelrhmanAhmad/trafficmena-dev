@@ -3,6 +3,10 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import MeetupDetail from '@/features/events/pages/EventDetail';
 import Meetups from '@/features/events/pages/Meetups';
+import PublicDigitalProductDetailPage from '@/features/digital-products/pages/PublicDigitalProductDetail';
+import PublicDigitalProductsPage from '@/features/digital-products/pages/PublicDigitalProducts';
+import PublicRecordingDetailPage from '@/features/series/pages/PublicRecordingDetail';
+import PublicRecordingsPage from '@/features/series/pages/PublicRecordings';
 import PublicTrackDetail from '@/features/tracks/pages/TrackDetail';
 import { usePageTracking } from '@/lib/analytics/usePageTracking';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
@@ -42,6 +46,7 @@ const SubscribeLanding = lazy(() => import('./pages/SubscribeLanding'));
 const ThankYou = lazy(() => import('./pages/ThankYou'));
 const ThankYouEvent = lazy(() => import('./pages/ThankYouEvent'));
 const ThankYouTrack = lazy(() => import('./pages/ThankYouTrack'));
+const ThankYouOrder = lazy(() => import('./pages/ThankYouOrder'));
 const PrivacyPolicy = lazy(() => import('./pages/Privacy'));
 const TermsOfService = lazy(() => import('./pages/Terms'));
 const NotFound = lazy(() => import('./pages/NotFound'));
@@ -58,7 +63,6 @@ const DashboardMeetups = lazy(() => import('@/features/events/pages/DashboardMee
 const DashboardLibrary = lazy(() => import('./pages/DashboardLibrary'));
 const DashboardTrackDetail = lazy(() => import('./pages/DashboardTrackDetail'));
 const DashboardSeriesDetail = lazy(() => import('./pages/DashboardSeriesDetail'));
-const SeriesStoreDetailPage = lazy(() => import('./pages/SeriesStoreDetail'));
 const SeriesCartPage = lazy(() => import('./pages/SeriesCart'));
 const DigitalProductsPage = lazy(() => import('./pages/dashboard/DigitalProducts'));
 const DigitalProductDetailPage = lazy(() => import('./pages/dashboard/DigitalProductDetail'));
@@ -375,6 +379,38 @@ const App = () => {
                     }
                   />
                   <Route
+                    path="/recordings"
+                    element={
+                      <ErrorBoundary>
+                        <PublicRecordingsPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/recordings/:id"
+                    element={
+                      <ErrorBoundary>
+                        <PublicRecordingDetailPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/digital-products"
+                    element={
+                      <ErrorBoundary>
+                        <PublicDigitalProductsPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/digital-products/:id"
+                    element={
+                      <ErrorBoundary>
+                        <PublicDigitalProductDetailPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
                     path="/tracks/:id"
                     element={
                       <ErrorBoundary>
@@ -394,7 +430,7 @@ const App = () => {
                     path="/series/:id"
                     element={
                       <ErrorBoundary>
-                        <SeriesStoreDetailPage />
+                        <PublicRecordingDetailPage />
                       </ErrorBoundary>
                     }
                   />
@@ -456,6 +492,16 @@ const App = () => {
                       <ProtectedRoute>
                         <ErrorBoundary>
                           <ThankYouTrack />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/thank-you-order/:orderId"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <ThankYouOrder />
                         </ErrorBoundary>
                       </ProtectedRoute>
                     }

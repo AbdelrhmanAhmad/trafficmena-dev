@@ -10,11 +10,11 @@ export type DigitalProductAdmin = {
   priceInCents: number | null;
   salesEnabled: boolean;
   isPublished: boolean;
-  videoAssetId: string | null;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
   fileCount?: number;
+  videoCount?: number;
 };
 
 export type DigitalProductFile = {
@@ -23,6 +23,15 @@ export type DigitalProductFile = {
   fileType: DigitalProductFileType;
   displayName: string;
   fileUrl: string;
+  sortOrder: number;
+  createdAt: string;
+};
+
+export type DigitalProductVideo = {
+  id: string;
+  productId: string;
+  title: string;
+  videoUrl: string;
   sortOrder: number;
   createdAt: string;
 };
@@ -36,6 +45,7 @@ export type DigitalProductStoreItem = {
   is_purchased: boolean;
   is_sellable: boolean;
   file_count: number;
+  first_video_url?: string | null;
 };
 
 export async function fetchAdminDigitalProducts(): Promise<DigitalProductAdmin[]> {
@@ -48,25 +58,13 @@ export async function fetchAdminDigitalProducts(): Promise<DigitalProductAdmin[]
 export async function fetchAdminDigitalProduct(id: string): Promise<{
   product: DigitalProductAdmin;
   files: DigitalProductFile[];
-  videoAsset: {
-    id: string;
-    title: string;
-    embedUrl: string | null;
-    videoUrl: string | null;
-    thumbnailUrl: string | null;
-  } | null;
+  videos: DigitalProductVideo[];
 }> {
   const data = await fetchJson<{
     data: {
       product: DigitalProductAdmin;
       files: DigitalProductFile[];
-      videoAsset: {
-        id: string;
-        title: string;
-        embedUrl: string | null;
-        videoUrl: string | null;
-        thumbnailUrl: string | null;
-      } | null;
+      videos: DigitalProductVideo[];
     };
   }>(`${API_BASE}/digital-products/${id}`);
   return data.data;
@@ -79,7 +77,6 @@ export async function createDigitalProduct(payload: {
   priceInCents?: number | null;
   salesEnabled?: boolean;
   isPublished?: boolean;
-  videoAssetId?: string | null;
   sortOrder?: number;
 }): Promise<DigitalProductAdmin> {
   const data = await fetchJson<{ data: DigitalProductAdmin }>(`${API_BASE}/digital-products`, {
@@ -98,7 +95,6 @@ export async function updateDigitalProduct(
     priceInCents: number | null;
     salesEnabled: boolean;
     isPublished: boolean;
-    videoAssetId: string | null;
     sortOrder: number;
   }>,
 ): Promise<DigitalProductAdmin> {
@@ -135,30 +131,6 @@ export async function addDigitalProductFile(
   return data.data;
 }
 
-export async function addDigitalProductFiles(
-  productId: string,
-  payloads: Array<{
-    fileType: DigitalProductFileType;
-    displayName: string;
-    fileUrl: string;
-    sortOrder?: number;
-  }>,
-): Promise<DigitalProductFile[]> {
-  if (payloads.length === 0) return [];
-  if (payloads.length === 1) {
-    return [await addDigitalProductFile(productId, payloads[0])];
-  }
-
-  const data = await fetchJson<{ data: { files: DigitalProductFile[]; count: number } }>(
-    `${API_BASE}/digital-products/${productId}/files`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ files: payloads }),
-    },
-  );
-  return data.data.files;
-}
-
 export async function updateDigitalProductFile(
   productId: string,
   fileId: string,
@@ -185,6 +157,49 @@ export async function removeDigitalProductFile(productId: string, fileId: string
   });
 }
 
+export async function addDigitalProductVideo(
+  productId: string,
+  payload: {
+    title: string;
+    videoUrl: string;
+    sortOrder?: number;
+  },
+): Promise<DigitalProductVideo> {
+  const data = await fetchJson<{ data: DigitalProductVideo }>(
+    `${API_BASE}/digital-products/${productId}/videos`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  );
+  return data.data;
+}
+
+export async function updateDigitalProductVideo(
+  productId: string,
+  videoId: string,
+  payload: Partial<{
+    title: string;
+    videoUrl: string;
+    sortOrder: number;
+  }>,
+): Promise<DigitalProductVideo> {
+  const data = await fetchJson<{ data: DigitalProductVideo }>(
+    `${API_BASE}/digital-products/${productId}/videos/${videoId}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    },
+  );
+  return data.data;
+}
+
+export async function removeDigitalProductVideo(productId: string, videoId: string): Promise<void> {
+  await fetchJson(`${API_BASE}/digital-products/${productId}/videos/${videoId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function fetchDigitalProductStore(
   filter: 'all' | 'mine' = 'all',
 ): Promise<DigitalProductStoreItem[]> {
@@ -192,6 +207,57 @@ export async function fetchDigitalProductStore(
     `${API_BASE}/digital-products/store?filter=${filter}`,
   );
   return data?.data?.items ?? [];
+}
+
+export type PublicDigitalProductItem = DigitalProductStoreItem;
+
+export async function fetchPublicDigitalProducts(params?: {
+  page?: number;
+  pageSize?: number;
+}): Promise<{
+  items: PublicDigitalProductItem[];
+  pagination: { page: number; pageSize: number; total: number };
+}> {
+  const query = new URLSearchParams();
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.pageSize) query.set('pageSize', String(params.pageSize));
+
+  const data = await fetchJson<{
+    data: {
+      items: PublicDigitalProductItem[];
+      pagination: { page: number; pageSize: number; total: number };
+    };
+  }>(`${API_BASE}/digital-products/public${query.toString() ? `?${query.toString()}` : ''}`);
+  return data.data;
+}
+
+export async function fetchPublicDigitalProductDetail(id: string): Promise<{
+  product: DigitalProductStoreItem & { video_count?: number };
+  files: Array<{
+    id: string;
+    file_type: DigitalProductFileType;
+    display_name: string;
+  }>;
+  videos: Array<{
+    id: string;
+    title: string;
+  }>;
+}> {
+  const data = await fetchJson<{
+    data: {
+      product: DigitalProductStoreItem & { video_count?: number };
+      files: Array<{
+        id: string;
+        file_type: DigitalProductFileType;
+        display_name: string;
+      }>;
+      videos: Array<{
+        id: string;
+        title: string;
+      }>;
+    };
+  }>(`${API_BASE}/digital-products/public/${id}`);
+  return data.data;
 }
 
 export async function fetchDigitalProductStoreDetail(id: string): Promise<{
@@ -202,14 +268,11 @@ export async function fetchDigitalProductStoreDetail(id: string): Promise<{
     display_name: string;
     file_url: string;
   }>;
-  video_asset: {
+  videos: Array<{
     id: string;
     title: string;
-    embed_url: string | null;
-    video_url: string | null;
-    embed_type: string | null;
-    thumbnail_url: string | null;
-  } | null;
+    video_url: string;
+  }>;
 }> {
   const data = await fetchJson<{
     data: {
@@ -220,14 +283,11 @@ export async function fetchDigitalProductStoreDetail(id: string): Promise<{
         display_name: string;
         file_url: string;
       }>;
-      video_asset: {
+      videos: Array<{
         id: string;
         title: string;
-        embed_url: string | null;
-        video_url: string | null;
-        embed_type: string | null;
-        thumbnail_url: string | null;
-      } | null;
+        video_url: string;
+      }>;
     };
   }>(`${API_BASE}/digital-products/store/${id}`);
   return data.data;
@@ -248,4 +308,3 @@ export const DIGITAL_PRODUCT_FILE_EXTENSIONS: Record<DigitalProductFileType, str
   text: ['.txt'],
   powerpoint: ['.ppt', '.pptx'],
 };
-

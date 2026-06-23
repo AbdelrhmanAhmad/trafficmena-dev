@@ -52,29 +52,38 @@ async function enrichOrderItems(rawItems: RawOrderItem[]) {
   const [seriesRows, productRows] = await Promise.all([
     seriesIds.length > 0
       ? db
-          .select({ id: series.id, title: series.title })
+          .select({ id: series.id, title: series.title, imageUrl: series.imageUrl })
           .from(series)
           .where(inArray(series.id, seriesIds))
       : Promise.resolve([]),
     productIds.length > 0
       ? db
-          .select({ id: digitalProducts.id, title: digitalProducts.title })
+          .select({
+            id: digitalProducts.id,
+            title: digitalProducts.title,
+            imageUrl: digitalProducts.imageUrl,
+          })
           .from(digitalProducts)
           .where(inArray(digitalProducts.id, productIds))
       : Promise.resolve([]),
   ]);
 
-  const seriesTitleMap = new Map(seriesRows.map((row) => [row.id, row.title]));
-  const productTitleMap = new Map(productRows.map((row) => [row.id, row.title]));
+  const seriesMetaMap = new Map(seriesRows.map((row) => [row.id, row]));
+  const productMetaMap = new Map(productRows.map((row) => [row.id, row]));
 
   return rawItems.map((item) => {
     let title: string | null = null;
+    let imageUrl: string | null = null;
     if (item.itemType === 'series' && item.seriesId) {
-      title = seriesTitleMap.get(item.seriesId) ?? null;
+      const meta = seriesMetaMap.get(item.seriesId);
+      title = meta?.title ?? null;
+      imageUrl = meta?.imageUrl ?? null;
     } else if (item.itemType === 'digital_product' && item.digitalProductId) {
-      title = productTitleMap.get(item.digitalProductId) ?? null;
+      const meta = productMetaMap.get(item.digitalProductId);
+      title = meta?.title ?? null;
+      imageUrl = meta?.imageUrl ?? null;
     }
-    return { ...item, title };
+    return { ...item, title, imageUrl };
   });
 }
 

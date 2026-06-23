@@ -76,8 +76,10 @@ export type MasterclassCertificateAdminRow = {
   name: string | null;
   firstName: string | null;
   lastName: string | null;
+  phoneNumber: string | null;
   enrolledAt: string;
   source: 'paid' | 'manual';
+  purchasedPriceInCents: number | null;
   totalLessons: number;
   completedLessons: number;
   isComplete: boolean;

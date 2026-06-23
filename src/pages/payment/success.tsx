@@ -82,6 +82,8 @@ export default function PaymentSuccessPage() {
       navigate(`/dashboard/masterclasses/${verifyData.itemId}/learn`, { replace: true });
     } else if (verifyData.itemType === 'subscription') {
       navigate('/dashboard?subscribed=1', { replace: true });
+    } else if (verifyData.itemType === 'order' && verifyData.itemId) {
+      navigate(`/thank-you-order/${verifyData.itemId}?paid=1`, { replace: true });
     } else if (verifyData.itemType === 'order') {
       navigate('/dashboard/library?purchased=1', { replace: true });
     }

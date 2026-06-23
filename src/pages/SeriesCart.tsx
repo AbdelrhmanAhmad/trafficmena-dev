@@ -126,7 +126,7 @@ export default function SeriesCartPage() {
               basePriceCents={cart.totalCents}
               onSuccess={() => {
                 cart.clearCart();
-                navigate('/dashboard/digital-products?filter=mine');
+                navigate(`/thank-you-order/${orderId}?paid=1`, { replace: true });
               }}
             />
           )}

@@ -2,6 +2,8 @@ import type { LucideIcon } from 'lucide-react';
 import {
   Calendar,
   Crown,
+  FileStack,
+  FolderOpen,
   Home,
   Info,
   Library,
@@ -30,8 +32,10 @@ type NavItem = {
 const NAVIGATION_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/meetups', label: 'Events', icon: Calendar },
-  { href: '/library', label: 'Library', icon: Library },
-  { href: '/community', label: 'Community', icon: MessageSquare },
+  // { href: '/library', label: 'Library', icon: Library },
+  { href: '/recordings', label: 'Recordings', icon: FolderOpen },
+  { href: '/digital-products', label: 'Digital Products', icon: FileStack },
+  // { href: '/community', label: 'Community', icon: MessageSquare },
   { href: '/about', label: 'About Us', icon: Info },
 ];
 

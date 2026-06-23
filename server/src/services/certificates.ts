@@ -11,6 +11,7 @@ import {
   masterclassLessons,
   masterclassModules,
   masterclasses,
+  payments,
   profiles,
   users,
   type CertificateDesignSettings,
@@ -573,12 +574,15 @@ export async function listMasterclassCertificateAdminRows(masterclassId: string)
       name: users.name,
       firstName: profiles.firstName,
       lastName: profiles.lastName,
+      phoneNumber: profiles.phoneNumber,
       enrolledAt: masterclassEnrollments.enrolledAt,
       source: masterclassEnrollments.source,
+      purchasedPriceInCents: payments.amountCents,
     })
     .from(masterclassEnrollments)
     .innerJoin(users, eq(users.id, masterclassEnrollments.userId))
     .leftJoin(profiles, eq(profiles.id, users.id))
+    .leftJoin(payments, eq(payments.id, masterclassEnrollments.paymentId))
     .where(eq(masterclassEnrollments.masterclassId, masterclassId))
     .orderBy(sql`${masterclassEnrollments.enrolledAt} desc`);
 
@@ -600,8 +604,10 @@ export async function listMasterclassCertificateAdminRows(masterclassId: string)
         name: enrollment.name,
         firstName: enrollment.firstName,
         lastName: enrollment.lastName,
+        phoneNumber: enrollment.phoneNumber,
         enrolledAt: enrollment.enrolledAt,
         source: enrollment.source,
+        purchasedPriceInCents: enrollment.purchasedPriceInCents,
         totalLessons,
         completedLessons,
         isComplete: totalLessons > 0 && completedLessons >= totalLessons,

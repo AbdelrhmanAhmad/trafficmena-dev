@@ -59,6 +59,7 @@ function EditDigitalProductPage() {
       <DigitalProductForm
         product={data.product}
         files={data.files}
+        videos={data.videos}
         onSubmit={handleSubmit}
         onCancel={() => navigate('/admin/digital-products')}
         isLoading={updateMutation.isPending}

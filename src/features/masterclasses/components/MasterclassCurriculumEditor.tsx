@@ -1,26 +1,18 @@
 import {
   ChevronDown,
   ChevronRight,
-  Loader2,
   Plus,
   Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
 import type { MasterclassModule } from '@/app/api/masterclasses';
 import type { MasterclassLesson } from '@/app/api/masterclasses';
-import { useLibraryList } from '@/app/hooks/useLibraryAssets';
 import { MasterclassLessonFilesCrud } from '@/features/masterclasses/components/MasterclassLessonFilesCrud';
+import { MasterclassLessonVideosCrud } from '@/features/masterclasses/components/MasterclassLessonVideosCrud';
 import { useMasterclassCurriculumMutations } from '@/features/masterclasses/hooks/useMasterclasses';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/components/ui/select';
 
 type MasterclassCurriculumEditorProps = {
   masterclassId: string;
@@ -54,90 +46,18 @@ function LessonMediaEditor({
   lesson: MasterclassLesson;
   canDelete?: boolean;
 }) {
-  const mutations = useMasterclassCurriculumMutations(masterclassId);
-  const { data: libraryData } = useLibraryList(1, 50, { type: 'Video' });
-  const videoOptions = libraryData?.items ?? [];
-
-  const [videoTitle, setVideoTitle] = useState('');
-  const [videoAssetId, setVideoAssetId] = useState('');
-
   const videos = lesson.videos ?? [];
   const files = lesson.files ?? [];
 
-  const handleAddVideo = async () => {
-    if (!videoTitle.trim()) return;
-    await mutations.addVideo.mutateAsync({
-      moduleId,
-      lessonId: lesson.id,
-      payload: {
-        title: videoTitle.trim(),
-        videoAssetId: videoAssetId || null,
-      },
-    });
-    setVideoTitle('');
-    setVideoAssetId('');
-  };
-
-  const busy = mutations.addVideo.isPending || mutations.removeVideo.isPending;
-
   return (
     <div className="mt-4 space-y-4 rounded-lg border bg-neutral-50 p-4">
-      <div>
-        <p className="mb-2 text-sm font-medium">Videos ({videos.length})</p>
-        {videos.length > 0 && (
-          <ul className="mb-3 divide-y rounded-md border bg-white">
-            {videos.map((video) => (
-              <li key={video.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
-                <div>
-                  <p className="font-medium">{video.title}</p>
-                  <p className="text-xs text-neutral-500">
-                    {video.assetTitle || video.videoAssetId || 'No library video'}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={busy || !canDelete}
-                  onClick={() =>
-                    void mutations.removeVideo.mutateAsync({
-                      moduleId,
-                      lessonId: lesson.id,
-                      videoId: video.id,
-                    })
-                  }
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Input
-            placeholder="Video title"
-            value={videoTitle}
-            onChange={(e) => setVideoTitle(e.target.value)}
-            className="max-w-xs"
-          />
-          <Select value={videoAssetId || 'none'} onValueChange={(v) => setVideoAssetId(v === 'none' ? '' : v)}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Library video" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No video</SelectItem>
-              {videoOptions.map((v) => (
-                <SelectItem key={v.id} value={v.id}>
-                  {v.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button type="button" size="sm" disabled={busy || !videoTitle.trim()} onClick={() => void handleAddVideo()}>
-            Add video
-          </Button>
-        </div>
-      </div>
+      <MasterclassLessonVideosCrud
+        masterclassId={masterclassId}
+        moduleId={moduleId}
+        lessonId={lesson.id}
+        videos={videos}
+        canDelete={canDelete}
+      />
 
       <MasterclassLessonFilesCrud
         masterclassId={masterclassId}

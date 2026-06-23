@@ -35,13 +35,9 @@ export type MasterclassLessonVideo = {
   id: string;
   lessonId: string;
   title: string;
-  videoAssetId: string | null;
+  videoUrl: string;
   sortOrder: number;
   createdAt: string;
-  assetTitle?: string | null;
-  embedUrl?: string | null;
-  videoUrl?: string | null;
-  thumbnailUrl?: string | null;
 };
 
 export type MasterclassLessonFile = {
@@ -89,11 +85,13 @@ export type MasterclassEnrollment = {
   name: string | null;
   firstName: string | null;
   lastName: string | null;
+  phoneNumber: string | null;
   source: 'paid' | 'manual';
   enrolledAt: string;
   enrollmentNote: string | null;
   enrolledBy: string | null;
   paymentId: string | null;
+  purchasedPriceInCents: number | null;
   totalLessons: number;
   completedLessons: number;
   isComplete: boolean;
@@ -147,14 +145,7 @@ export type MasterclassLessonContent = {
     id: string;
     title: string;
     sort_order: number;
-    video_asset: {
-      id: string;
-      title: string;
-      embed_url: string | null;
-      video_url: string | null;
-      embed_type: string | null;
-      thumbnail_url: string | null;
-    } | null;
+    video_url: string;
   }>;
   files: Array<{
     id: string;
@@ -323,7 +314,7 @@ export async function addMasterclassLessonVideo(
   masterclassId: string,
   moduleId: string,
   lessonId: string,
-  payload: { title: string; videoAssetId?: string | null; sortOrder?: number },
+  payload: { title: string; videoUrl: string; sortOrder?: number },
 ): Promise<MasterclassLessonVideo> {
   const data = await fetchJson<{ data: MasterclassLessonVideo }>(
     `${API_BASE}/masterclasses/${masterclassId}/modules/${moduleId}/lessons/${lessonId}/videos`,
@@ -337,7 +328,7 @@ export async function updateMasterclassLessonVideo(
   moduleId: string,
   lessonId: string,
   videoId: string,
-  payload: Partial<{ title: string; videoAssetId: string | null; sortOrder: number }>,
+  payload: Partial<{ title: string; videoUrl: string; sortOrder: number }>,
 ): Promise<MasterclassLessonVideo> {
   const data = await fetchJson<{ data: MasterclassLessonVideo }>(
     `${API_BASE}/masterclasses/${masterclassId}/modules/${moduleId}/lessons/${lessonId}/videos/${videoId}`,

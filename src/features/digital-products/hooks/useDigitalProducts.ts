@@ -1,15 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   addDigitalProductFile,
+  addDigitalProductVideo,
   createDigitalProduct,
   deleteDigitalProduct,
   fetchAdminDigitalProduct,
   fetchAdminDigitalProducts,
   fetchDigitalProductStore,
   fetchDigitalProductStoreDetail,
+  fetchPublicDigitalProductDetail,
+  fetchPublicDigitalProducts,
   removeDigitalProductFile,
+  removeDigitalProductVideo,
   updateDigitalProduct,
   updateDigitalProductFile,
+  updateDigitalProductVideo,
 } from '@/app/api/digitalProducts';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 
@@ -41,6 +46,22 @@ export function useDigitalProductStoreDetail(id: string) {
   return useQuery({
     queryKey: ['digital-products', 'store', id],
     queryFn: () => fetchDigitalProductStoreDetail(id),
+    enabled: !!id,
+  });
+}
+
+export function usePublicDigitalProducts(page = 1, pageSize = 12) {
+  return useQuery({
+    queryKey: ['digital-products', 'public', page, pageSize],
+    queryFn: () => fetchPublicDigitalProducts({ page, pageSize }),
+    staleTime: 60_000,
+  });
+}
+
+export function usePublicDigitalProductDetail(id: string) {
+  return useQuery({
+    queryKey: ['digital-products', 'public', id],
+    queryFn: () => fetchPublicDigitalProductDetail(id),
     enabled: !!id,
   });
 }
@@ -145,6 +166,65 @@ export function useRemoveDigitalProductFile(productId: string) {
       queryClient.invalidateQueries({ queryKey: ['digital-products', 'admin', productId] });
       queryClient.invalidateQueries({ queryKey: ['digital-products'] });
       toast({ title: 'File removed' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useAddDigitalProductVideo(productId: string) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (payload: Parameters<typeof addDigitalProductVideo>[1]) =>
+      addDigitalProductVideo(productId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['digital-products', 'admin', productId] });
+      queryClient.invalidateQueries({ queryKey: ['digital-products'] });
+      toast({ title: 'Video URL added' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useUpdateDigitalProductVideo(productId: string) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: ({
+      videoId,
+      payload,
+    }: {
+      videoId: string;
+      payload: Parameters<typeof updateDigitalProductVideo>[2];
+    }) => updateDigitalProductVideo(productId, videoId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['digital-products', 'admin', productId] });
+      queryClient.invalidateQueries({ queryKey: ['digital-products'] });
+      toast({ title: 'Video URL updated' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useRemoveDigitalProductVideo(productId: string) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (videoId: string) => removeDigitalProductVideo(productId, videoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['digital-products', 'admin', productId] });
+      queryClient.invalidateQueries({ queryKey: ['digital-products'] });
+      queryClient.invalidateQueries({ queryKey: ['digital-products', 'store'] });
+      toast({ title: 'Video removed' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

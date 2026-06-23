@@ -11,6 +11,7 @@ export type OrderItem = {
   lineTotalCents: number;
   fulfillmentStatus: 'pending' | 'fulfilled';
   title?: string | null;
+  imageUrl?: string | null;
 };
 
 export type Order = {

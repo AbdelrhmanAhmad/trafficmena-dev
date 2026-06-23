@@ -17,9 +17,18 @@ type SeriesBuyActionsProps = {
     'id' | 'title' | 'price_in_cents' | 'image_url' | 'sales_enabled' | 'asset_count' | 'has_purchased' | 'has_series_grant'
   >;
   layout?: 'inline' | 'stack';
+  signInReturnPath?: string;
+  onSuccessPath?: string;
+  onRequireAuth?: () => void;
 };
 
-export function SeriesBuyActions({ series, layout = 'inline' }: SeriesBuyActionsProps) {
+export function SeriesBuyActions({
+  series,
+  layout = 'inline',
+  signInReturnPath,
+  onSuccessPath = '/dashboard/library?purchased=1',
+  onRequireAuth,
+}: SeriesBuyActionsProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -35,11 +44,20 @@ export function SeriesBuyActions({ series, layout = 'inline' }: SeriesBuyActions
   const inCart = cart.hasItem('series', series.id);
   const stackClass = layout === 'stack' ? 'flex-col w-full' : 'flex-wrap';
 
-  const startCheckout = async () => {
-    if (!user) {
-      navigate('/signin', { state: { from: { pathname: `/series/${series.id}` } } });
-      return;
+  const guardAuth = () => {
+    if (user) return false;
+    if (onRequireAuth) {
+      onRequireAuth();
+      return true;
     }
+    navigate('/signin', {
+      state: { from: { pathname: signInReturnPath ?? `/recordings/${series.id}` } },
+    });
+    return true;
+  };
+
+  const startCheckout = async () => {
+    if (guardAuth()) return;
 
     setIsCreatingOrder(true);
     try {
@@ -62,7 +80,10 @@ export function SeriesBuyActions({ series, layout = 'inline' }: SeriesBuyActions
           type="button"
           variant="outline"
           disabled={inCart}
-          onClick={() => cart.addItem(seriesToCartItem(series))}
+          onClick={() => {
+            if (guardAuth()) return;
+            cart.addItem(seriesToCartItem(series));
+          }}
           className={layout === 'stack' ? 'w-full' : undefined}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
@@ -89,7 +110,7 @@ export function SeriesBuyActions({ series, layout = 'inline' }: SeriesBuyActions
           basePriceCents={series.price_in_cents}
           onSuccess={() => {
             cart.removeItem('series', series.id);
-            navigate('/dashboard/library?purchased=1');
+            navigate(onSuccessPath);
           }}
         />
       )}

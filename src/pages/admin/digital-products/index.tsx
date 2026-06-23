@@ -19,7 +19,7 @@ function DigitalProductsManagement() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Digital Products Management</h1>
           <p className="mt-1 text-neutral-600">
-            Manage digital products with files and optional tutorial videos.
+            Manage digital products with downloadable files and video URLs.
           </p>
         </div>
         <Button asChild>
@@ -73,7 +73,9 @@ function DigitalProductsManagement() {
                 </div>
               </CardHeader>
               <CardContent className="text-sm text-neutral-600">
-                <p>{product.fileCount ?? 0} files</p>
+                <p>
+                  {product.fileCount ?? 0} files · {product.videoCount ?? 0} videos
+                </p>
                 <p className="mt-1 font-medium text-neutral-900">
                   {product.priceInCents
                     ? formatSeriesPriceLabel(product.priceInCents)

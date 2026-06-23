@@ -7,6 +7,8 @@ import {
   type FetchSeriesParams,
   fetchSeries,
   fetchSeriesById,
+  fetchStoreSeries,
+  fetchStoreSeriesById,
   removeAssetFromSeries,
   reorderSeriesAssets,
   type UpdateSeriesPayload,
@@ -42,6 +44,30 @@ export const useSeriesDetail = (id: string) => {
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled: !!id,
+  });
+};
+
+export const useStoreSeries = (page = 1, pageSize = 12, search?: string) => {
+  const safePageSize = Math.min(pageSize, 50);
+  return useQuery({
+    queryKey: ['series', 'store', page, safePageSize, search],
+    queryFn: () =>
+      fetchStoreSeries({
+        page,
+        pageSize: safePageSize,
+        search,
+      }),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+};
+
+export const useStoreSeriesDetail = (id: string) => {
+  return useQuery({
+    queryKey: ['series', 'store', id],
+    queryFn: () => fetchStoreSeriesById(id),
+    enabled: !!id,
+    staleTime: 60_000,
   });
 };
 

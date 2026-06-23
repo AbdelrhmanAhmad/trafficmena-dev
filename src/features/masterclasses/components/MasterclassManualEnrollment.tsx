@@ -14,6 +14,7 @@ import type { KeyboardEvent } from 'react';
 import { useId, useState } from 'react';
 import { fetchUsersAdmin } from '@/app/api/users';
 import { useManualMasterclassEnrollment, useMasterclassEnrollments } from '@/features/masterclasses/hooks/useMasterclasses';
+import { MasterclassEnrolledLearnerDetails } from '@/features/masterclasses/components/MasterclassEnrolledLearnerDetails';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -191,18 +192,16 @@ export function MasterclassManualEnrollment({
               {enrollments.map((row) => (
                 <li key={row.id} className="px-4 py-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium">
-                        {row.firstName || row.lastName
-                          ? `${row.firstName ?? ''} ${row.lastName ?? ''}`.trim()
-                          : row.name || row.email}
-                      </p>
-                      <p className="text-sm text-neutral-500">{row.email}</p>
-                    </div>
+                    <MasterclassEnrolledLearnerDetails
+                      firstName={row.firstName}
+                      lastName={row.lastName}
+                      name={row.name}
+                      email={row.email}
+                      phoneNumber={row.phoneNumber}
+                      source={row.source}
+                      purchasedPriceInCents={row.purchasedPriceInCents}
+                    />
                     <div className="flex items-center gap-2">
-                      <Badge variant={row.source === 'paid' ? 'default' : 'secondary'}>
-                        {row.source}
-                      </Badge>
                       <span className="text-xs text-neutral-500">
                         {row.completedLessons}/{row.totalLessons} lessons
                         {row.isComplete ? ' · Complete' : ''}
