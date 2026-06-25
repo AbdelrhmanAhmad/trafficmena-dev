@@ -525,6 +525,29 @@ export const authVerifications = pgTable(
   }),
 );
 
+// Custom OTP-to-new-email flow for self-service email change (email is the sole auth factor,
+// so this is kept fully in our control rather than Better Auth's link-based change-email).
+export const emailChangeRequests = pgTable(
+  'email_change_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    newEmail: text('new_email').notNull(),
+    otpHash: text('otp_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userCreatedIdx: index('email_change_requests_user_created_at_idx').on(
+      table.userId,
+      table.createdAt,
+    ),
+  }),
+);
+
 // --- Payment Tables -----------------------------------------------------------
 
 export const promoCodes = pgTable(
