@@ -75,6 +75,19 @@ export class InMemoryRateLimiter {
     this.buckets.delete(key);
   }
 
+  decrement(key: string) {
+    const bucket = this.buckets.get(key);
+    if (!bucket || bucket.expiresAt <= Date.now()) {
+      this.buckets.delete(key);
+      return;
+    }
+
+    bucket.count -= 1;
+    if (bucket.count <= 0) {
+      this.buckets.delete(key);
+    }
+  }
+
   /**
    * Get the current count for a key without consuming.
    * Returns 0 if the key doesn't exist or has expired.

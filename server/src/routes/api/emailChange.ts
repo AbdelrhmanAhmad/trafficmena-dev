@@ -128,14 +128,30 @@ export function registerEmailChangeRoutes(app: Hono) {
       const otp = generateEmailChangeOtp();
       const otpHash = hashEmailChangeOtp(env.BETTER_AUTH_SECRET, userId, newEmail, otp);
 
-      await db.insert(emailChangeRequests).values({
-        userId,
-        newEmail,
-        otpHash,
-        expiresAt: new Date(Date.now() + EMAIL_CHANGE_OTP_TTL_MS),
-      });
+      const [createdRequest] = await db
+        .insert(emailChangeRequests)
+        .values({
+          userId,
+          newEmail,
+          otpHash,
+          expiresAt: new Date(Date.now() + EMAIL_CHANGE_OTP_TTL_MS),
+        })
+        .returning({ id: emailChangeRequests.id });
 
-      await sendOtpEmail({ email: newEmail, otp, ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES });
+      try {
+        await sendOtpEmail({ email: newEmail, otp, ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES });
+      } catch (error) {
+        if (createdRequest?.id) {
+          try {
+            await db
+              .delete(emailChangeRequests)
+              .where(eq(emailChangeRequests.id, createdRequest.id));
+          } catch {
+            console.error('[auth] email-change request cleanup failed after OTP send failure');
+          }
+        }
+        throw error;
+      }
       // Best-effort out-of-band notice to the current address; never block the flow on it.
       try {
         await sendEmailChangeNotice({
@@ -185,11 +201,14 @@ export function registerEmailChangeRoutes(app: Hono) {
     const oldEmail = normalizeEmail(session.user.email);
     const newEmail = normalizeEmail(body.data.newEmail);
 
-    // Peek the verify budget WITHOUT consuming, so a correct OTP that later hits a transient DB
-    // error doesn't burn an attempt (C-6). Only a genuinely failed guess — no pending request, or a
-    // wrong OTP — spends from the budget via spendVerifyAttempt() below.
     const verifyKey = emailChangeRateKeys.verify(userId);
-    if (otpVerificationRateLimiter.getCount(verifyKey) >= EMAIL_CHANGE_VERIFY_LIMIT) {
+    // Consume before any awaited work so concurrent wrong-code bursts cannot all pass a peek and
+    // exceed the brute-force cap. Correct-code DB failures refund this slot in the catch below.
+    const verifyAttempt = otpVerificationRateLimiter.consume(verifyKey, {
+      limit: EMAIL_CHANGE_VERIFY_LIMIT,
+      windowMs: SHORT_WINDOW_MS,
+    });
+    if (!verifyAttempt.allowed) {
       return c.json(
         {
           error: {
@@ -201,28 +220,39 @@ export function registerEmailChangeRoutes(app: Hono) {
       );
     }
 
-    const spendVerifyAttempt = () =>
-      otpVerificationRateLimiter.consume(verifyKey, {
-        limit: EMAIL_CHANGE_VERIFY_LIMIT,
-        windowMs: SHORT_WINDOW_MS,
-      });
-
-    const [request] = await db
-      .select()
-      .from(emailChangeRequests)
-      .where(
-        and(
-          eq(emailChangeRequests.userId, userId),
-          eq(emailChangeRequests.newEmail, newEmail),
-          isNull(emailChangeRequests.consumedAt),
-          gt(emailChangeRequests.expiresAt, new Date()),
-        ),
-      )
-      .orderBy(desc(emailChangeRequests.createdAt))
-      .limit(1);
+    let request: typeof emailChangeRequests.$inferSelect | undefined;
+    try {
+      [request] = await db
+        .select()
+        .from(emailChangeRequests)
+        .where(
+          and(
+            eq(emailChangeRequests.userId, userId),
+            eq(emailChangeRequests.newEmail, newEmail),
+            isNull(emailChangeRequests.consumedAt),
+            gt(emailChangeRequests.expiresAt, new Date()),
+          ),
+        )
+        .orderBy(desc(emailChangeRequests.createdAt))
+        .limit(1);
+    } catch (error) {
+      otpVerificationRateLimiter.decrement(verifyKey);
+      console.error(
+        '[auth] email-change verify lookup failed:',
+        error instanceof Error ? error.message : 'unknown error',
+      );
+      return c.json(
+        {
+          error: {
+            code: 'EMAIL_CHANGE_FAILED',
+            message: 'Unable to change email. Please try again.',
+          },
+        },
+        500,
+      );
+    }
 
     if (!request) {
-      spendVerifyAttempt();
       return c.json(
         {
           error: {
@@ -241,7 +271,6 @@ export function registerEmailChangeRoutes(app: Hono) {
       body.data.otp,
     );
     if (!safeCompareHex(candidateHash, request.otpHash)) {
-      spendVerifyAttempt();
       return c.json(
         { error: { code: 'OTP_INVALID', message: 'That code is incorrect or has expired.' } },
         400,
@@ -277,6 +306,7 @@ export function registerEmailChangeRoutes(app: Hono) {
           .where(and(eq(authSessions.userId, userId), ne(authSessions.id, currentSessionId)));
       });
     } catch (error) {
+      otpVerificationRateLimiter.decrement(verifyKey);
       // The in-transaction re-check can still lose a request→verify race; users.email UNIQUE is the
       // real backstop. Map that 23505 to the same 409 as an explicit conflict (C-2) so the riskiest
       // endpoint returns a clean "email in use" instead of a generic 500.

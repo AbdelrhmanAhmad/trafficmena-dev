@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 import {
   EMAIL_CHANGE_DEST_SHORT_LIMIT,
@@ -61,25 +62,62 @@ describe('email-change rate limits', () => {
     );
   });
 
-  // C-6: the verify path peeks getCount (blocking at the limit) and only a failed guess consumes, so
-  // a correct OTP that hits a transient error never burns an attempt. Model both halves here.
-  it('verify budget: getCount blocks once the failed-guess limit is reached', () => {
+  it('verify budget: consume is the atomic boundary for the sixth attempt', () => {
     const limiter = new InMemoryRateLimiter();
     const key = emailChangeRateKeys.verify('user-1');
     for (let i = 0; i < EMAIL_CHANGE_VERIFY_LIMIT; i++) {
-      assert.ok(limiter.getCount(key) < EMAIL_CHANGE_VERIFY_LIMIT); // peek lets it through
-      limiter.consume(key, { limit: EMAIL_CHANGE_VERIFY_LIMIT, windowMs: SHORT_WINDOW_MS });
+      assert.equal(
+        limiter.consume(key, { limit: EMAIL_CHANGE_VERIFY_LIMIT, windowMs: SHORT_WINDOW_MS })
+          .allowed,
+        true,
+      );
     }
-    assert.ok(limiter.getCount(key) >= EMAIL_CHANGE_VERIFY_LIMIT); // peek now blocks the next attempt
+    assert.equal(
+      limiter.consume(key, { limit: EMAIL_CHANGE_VERIFY_LIMIT, windowMs: SHORT_WINDOW_MS }).allowed,
+      false,
+    );
     limiter.dispose();
   });
 
-  it('verify budget: not consuming (success / transient failure) leaves the budget untouched', () => {
+  it('verify budget: a correct-code transient failure can refund its consumed slot', () => {
     const limiter = new InMemoryRateLimiter();
     const key = emailChangeRateKeys.verify('user-2');
-    // The route does not consume on a correct OTP, so repeated success-path entries never lock out.
+    assert.equal(
+      limiter.consume(key, { limit: EMAIL_CHANGE_VERIFY_LIMIT, windowMs: SHORT_WINDOW_MS }).allowed,
+      true,
+    );
+    limiter.decrement(key);
     assert.equal(limiter.getCount(key), 0);
     limiter.dispose();
+  });
+
+  it('verify route consumes before loading the pending request', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/emailChange.ts', import.meta.url),
+      'utf8',
+    );
+    const verifyRoute = source.indexOf("app.post('/auth/email-change/verify'");
+    const consumeCall = source.indexOf('otpVerificationRateLimiter.consume(verifyKey', verifyRoute);
+    const requestLookup = source.indexOf('.from(emailChangeRequests)', verifyRoute);
+
+    assert.ok(verifyRoute >= 0);
+    assert.ok(consumeCall > verifyRoute);
+    assert.ok(requestLookup > consumeCall);
+    assert.equal(source.slice(verifyRoute, requestLookup).includes('getCount(verifyKey)'), false);
+  });
+
+  it('request route deletes the pending request if OTP delivery fails', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/emailChange.ts', import.meta.url),
+      'utf8',
+    );
+    const requestRoute = source.indexOf("app.post('/auth/email-change/request'");
+    const sendOtp = source.indexOf('await sendOtpEmail', requestRoute);
+    const cleanup = source.indexOf('.delete(emailChangeRequests)', sendOtp);
+
+    assert.ok(requestRoute >= 0);
+    assert.ok(sendOtp > requestRoute);
+    assert.ok(cleanup > sendOtp);
   });
 });
 
