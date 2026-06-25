@@ -16,6 +16,7 @@ import {
   tracks,
   users,
 } from '../../db/schema/index.js';
+import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere, hasTrackBookingRow } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
@@ -842,13 +843,6 @@ export function registerTrackRoutes(app: Hono) {
         : undefined,
     );
 
-    const normalizedBookingSource = sql<'paid' | 'free' | 'manual'>`CASE
-      WHEN ${trackBookings.bookingSource} = 'manual' THEN 'manual'
-      WHEN ${payments.id} IS NOT NULL AND COALESCE(${payments.amountCents}, 0) > 0 THEN 'paid'
-      WHEN ${payments.id} IS NOT NULL THEN 'free'
-      ELSE ${trackBookings.bookingSource}::text
-    END`;
-
     const totalResult = await db
       .select({ value: count(trackBookings.id) })
       .from(trackBookings)
@@ -857,29 +851,7 @@ export function registerTrackRoutes(app: Hono) {
       .leftJoin(payments, eq(trackBookings.paymentId, payments.id))
       .where(attendeeFilter);
 
-    const items = await db
-      .select({
-        userId: users.id,
-        email: users.email,
-        name: users.name,
-        firstName: profiles.firstName,
-        lastName: profiles.lastName,
-        phoneNumber: profiles.phoneNumber,
-        bookedAt: trackBookings.bookedAt,
-        invoiceId: payments.fawaterkInvoiceId,
-        invoiceNumber: payments.fawaterkInvoiceKey,
-        source: normalizedBookingSource,
-        reference: sql<string | null>`CASE
-          WHEN ${trackBookings.bookingSource} = 'manual' THEN ${trackBookings.manualReference}
-          WHEN ${payments.id} IS NOT NULL AND COALESCE(${payments.amountCents}, 0) > 0 THEN ${payments.fawaterkInvoiceKey}
-          ELSE NULL
-        END`,
-      })
-      .from(trackBookings)
-      .leftJoin(users, eq(trackBookings.userId, users.id))
-      .leftJoin(profiles, eq(users.id, profiles.id))
-      .leftJoin(payments, eq(trackBookings.paymentId, payments.id))
-      .where(attendeeFilter)
+    const items = await buildTrackAttendeesQuery(db, attendeeFilter)
       .orderBy(desc(trackBookings.bookedAt))
       .limit(pageSize)
       .offset(offset);

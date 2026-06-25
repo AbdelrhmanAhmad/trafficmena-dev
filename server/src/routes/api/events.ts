@@ -15,6 +15,7 @@ import {
   tracks,
   users,
 } from '../../db/schema/index.js';
+import { attendeeAmountCents } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
@@ -438,6 +439,7 @@ export function registerEventRoutes(app: Hono) {
             status: eventAttendees.status,
             invoiceId: payments.fawaterkInvoiceId,
             invoiceNumber: payments.fawaterkInvoiceKey,
+            amountPaidCents: attendeeAmountCents(eventAttendees.pricePaidCents),
           })
           .from(eventAttendees)
           .leftJoin(users, eq(eventAttendees.userId, users.id))

@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Search, User } from 'lucide-react';
 import { useState } from 'react';
+import { formatAmountPaid } from '@/features/tracks/utils/manualEnrollmentAmount';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
@@ -88,6 +89,7 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
                   <TableHead>Timestamp</TableHead>
                   <TableHead>Invoice ID</TableHead>
                   <TableHead>Invoice Number</TableHead>
+                  <TableHead>Amount Paid</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -103,6 +105,7 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
                     </TableCell>
                     <TableCell>{attendee.invoice_id ?? '-'}</TableCell>
                     <TableCell>{attendee.invoice_number ?? '-'}</TableCell>
+                    <TableCell>{formatAmountPaid(attendee.amount_paid_cents)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
