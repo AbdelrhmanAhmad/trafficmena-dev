@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { cairoLocalToUtcIso, toCairoDatetimeLocal } from '../../src/shared/utils/dateUtils.ts';
+
+const DATE_UTILS_PATH = fileURLToPath(
+  new URL('../../src/shared/utils/dateUtils.ts', import.meta.url),
+);
 
 // Africa/Cairo observes DST: summer is +03:00, winter is +02:00. The save must derive the
 // correct offset *for the entered date* from IANA — the same source the display trusts — so the
@@ -35,4 +41,34 @@ describe('cairoLocalToUtcIso', () => {
     assert.equal(cairoLocalToUtcIso('not-a-date'), '');
     assert.equal(cairoLocalToUtcIso(undefined), '');
   });
+});
+
+// Node caches the process timezone at startup, so mutating process.env.TZ mid-run does NOT change
+// Date/Intl behavior. The only reliable way to prove cairoLocalToUtcIso is TZ-independent is to run
+// the conversion in CHILD PROCESSES, each spawned with a different TZ. If a regression ever made the
+// converter read the local zone (the bug Phase B fixed), one of these matrix rows would diverge and
+// fail CI. Children inherit the parent's execArgv (strip-types + loader) so they can import the .ts.
+describe('cairoLocalToUtcIso is environment-independent across TZ (child-process matrix)', () => {
+  const TIMEZONES = ['UTC', 'Africa/Cairo', 'America/New_York', 'Asia/Karachi'];
+  const EXPECTED = { summer: '2026-07-15T11:30:00.000Z', winter: '2026-01-15T12:30:00.000Z' };
+
+  const convertUnderTz = (tz: string) => {
+    const script = `import { cairoLocalToUtcIso } from ${JSON.stringify(DATE_UTILS_PATH)};
+process.stdout.write(JSON.stringify({
+  summer: cairoLocalToUtcIso('2026-07-15T14:30'),
+  winter: cairoLocalToUtcIso('2026-01-15T14:30'),
+}));`;
+    const stdout = execFileSync(
+      process.execPath,
+      [...process.execArgv, '--input-type=module', '--eval', script],
+      { env: { ...process.env, TZ: tz }, encoding: 'utf8' },
+    );
+    return JSON.parse(stdout);
+  };
+
+  for (const tz of TIMEZONES) {
+    it(`produces identical correct UTC under TZ=${tz}`, () => {
+      assert.deepEqual(convertUnderTz(tz), EXPECTED);
+    });
+  }
 });
