@@ -15,14 +15,19 @@ import {
   maskEmail,
   safeCompareHex,
 } from './emailChangeLogic.js';
-import { normalizeEmail } from './utils.js';
-
-const SHORT_WINDOW_MS = 10 * 60 * 1000;
-const DAILY_WINDOW_MS = 24 * 60 * 60 * 1000;
-const USER_REQUEST_LIMIT = 3; // per user per 10 min
-const DEST_SHORT_LIMIT = 3; // per destination email per 10 min
-const DEST_DAILY_LIMIT = 10; // per destination email per day
-const VERIFY_LIMIT = 5; // verify attempts per user per 10 min
+import {
+  DAILY_WINDOW_MS,
+  EMAIL_CHANGE_DEST_DAILY_LIMIT,
+  EMAIL_CHANGE_DEST_SHORT_LIMIT,
+  EMAIL_CHANGE_USER_REQUEST_LIMIT,
+  EMAIL_CHANGE_VERIFY_LIMIT,
+  emailChangeRateKeys,
+  SHORT_WINDOW_MS,
+} from './emailChangeRateLimits.js';
+// NOTE: the limiters below are in-memory and per-instance (see rateLimiter.ts). All email-change
+// throttles (per-user, per-destination bombing, verify brute-force) hold only within one process;
+// move to a shared store before horizontal scaling (C-7).
+import { isKnownDatabaseConflict, normalizeEmail } from './utils.js';
 
 const requestSchema = z.object({ newEmail: z.string().email() });
 const verifySchema = z.object({
@@ -32,16 +37,22 @@ const verifySchema = z.object({
 
 class EmailTakenError extends Error {}
 
-const rateLimited = (c: Context) =>
-  c.json(
+const rateLimited = (c: Context, resetAt: number) => {
+  // Tell the client exactly how long to wait so its resend cooldown matches the server window
+  // instead of inviting an immediate retry that just 429s again (C-8).
+  const retryAfterSeconds = Math.max(1, Math.ceil((resetAt - Date.now()) / 1000));
+  c.header('Retry-After', String(retryAfterSeconds));
+  return c.json(
     {
       error: {
         code: 'EMAIL_CHANGE_RATE_LIMITED',
         message: 'Too many email-change requests. Please wait a few minutes and try again.',
+        retryAfterSeconds,
       },
     },
     429,
   );
+};
 
 export function registerEmailChangeRoutes(app: Hono) {
   app.post('/auth/email-change/request', async (c) => {
@@ -73,6 +84,17 @@ export function registerEmailChangeRoutes(app: Hono) {
         );
       }
 
+      // Consume the per-user budget BEFORE probing whether the address is in use, so the 409-vs-200
+      // outcome can't be an unbounded account-enumeration oracle (C-1). The residual disclosure — an
+      // authenticated user learning an address is taken, now capped at the per-user short-window
+      // limit — is the same thing signup already reveals, so we keep the explicit "in use" 409 for
+      // clear UX rather than masking it behind a silent success.
+      const userWindow = otpRateLimiter.consume(emailChangeRateKeys.userRequest(userId), {
+        limit: EMAIL_CHANGE_USER_REQUEST_LIMIT,
+        windowMs: SHORT_WINDOW_MS,
+      });
+      if (!userWindow.allowed) return rateLimited(c, userWindow.resetAt);
+
       const [taken] = await db
         .select({ id: users.id })
         .from(users)
@@ -90,25 +112,18 @@ export function registerEmailChangeRoutes(app: Hono) {
         );
       }
 
-      // Per-user limit caps a logged-in attacker; per-destination limits (sharing the sign-in OTP
-      // budget for the target address) close the email-bombing vector.
-      const userWindow = otpRateLimiter.consume(`emailchange:user:${userId}`, {
-        limit: USER_REQUEST_LIMIT,
+      // Per-destination limits (shared with the sign-in OTP budget) close the email-bombing vector.
+      const destShort = otpRateLimiter.consume(emailChangeRateKeys.destShort(newEmail), {
+        limit: EMAIL_CHANGE_DEST_SHORT_LIMIT,
         windowMs: SHORT_WINDOW_MS,
       });
-      if (!userWindow.allowed) return rateLimited(c);
+      if (!destShort.allowed) return rateLimited(c, destShort.resetAt);
 
-      const destShort = otpRateLimiter.consume(`otp:email:short:${newEmail}`, {
-        limit: DEST_SHORT_LIMIT,
-        windowMs: SHORT_WINDOW_MS,
-      });
-      if (!destShort.allowed) return rateLimited(c);
-
-      const destDaily = otpRateLimiter.consume(`otp:email:daily:${newEmail}`, {
-        limit: DEST_DAILY_LIMIT,
+      const destDaily = otpRateLimiter.consume(emailChangeRateKeys.destDaily(newEmail), {
+        limit: EMAIL_CHANGE_DEST_DAILY_LIMIT,
         windowMs: DAILY_WINDOW_MS,
       });
-      if (!destDaily.allowed) return rateLimited(c);
+      if (!destDaily.allowed) return rateLimited(c, destDaily.resetAt);
 
       const otp = generateEmailChangeOtp();
       const otpHash = hashEmailChangeOtp(env.BETTER_AUTH_SECRET, userId, newEmail, otp);
@@ -134,7 +149,11 @@ export function registerEmailChangeRoutes(app: Hono) {
 
       return c.json({ success: true });
     } catch (error) {
-      console.error('[auth] email-change request failed', error);
+      // Log the message only, never the raw error: a DB error's detail can contain the new email.
+      console.error(
+        '[auth] email-change request failed:',
+        error instanceof Error ? error.message : 'unknown error',
+      );
       return c.json(
         { error: { code: 'EMAIL_CHANGE_FAILED', message: 'Unable to start the email change.' } },
         500,
@@ -166,11 +185,11 @@ export function registerEmailChangeRoutes(app: Hono) {
     const oldEmail = normalizeEmail(session.user.email);
     const newEmail = normalizeEmail(body.data.newEmail);
 
-    const verifyWindow = otpVerificationRateLimiter.consume(`emailchange:verify:${userId}`, {
-      limit: VERIFY_LIMIT,
-      windowMs: SHORT_WINDOW_MS,
-    });
-    if (!verifyWindow.allowed) {
+    // Peek the verify budget WITHOUT consuming, so a correct OTP that later hits a transient DB
+    // error doesn't burn an attempt (C-6). Only a genuinely failed guess — no pending request, or a
+    // wrong OTP — spends from the budget via spendVerifyAttempt() below.
+    const verifyKey = emailChangeRateKeys.verify(userId);
+    if (otpVerificationRateLimiter.getCount(verifyKey) >= EMAIL_CHANGE_VERIFY_LIMIT) {
       return c.json(
         {
           error: {
@@ -181,6 +200,12 @@ export function registerEmailChangeRoutes(app: Hono) {
         429,
       );
     }
+
+    const spendVerifyAttempt = () =>
+      otpVerificationRateLimiter.consume(verifyKey, {
+        limit: EMAIL_CHANGE_VERIFY_LIMIT,
+        windowMs: SHORT_WINDOW_MS,
+      });
 
     const [request] = await db
       .select()
@@ -197,6 +222,7 @@ export function registerEmailChangeRoutes(app: Hono) {
       .limit(1);
 
     if (!request) {
+      spendVerifyAttempt();
       return c.json(
         {
           error: {
@@ -215,6 +241,7 @@ export function registerEmailChangeRoutes(app: Hono) {
       body.data.otp,
     );
     if (!safeCompareHex(candidateHash, request.otpHash)) {
+      spendVerifyAttempt();
       return c.json(
         { error: { code: 'OTP_INVALID', message: 'That code is incorrect or has expired.' } },
         400,
@@ -237,17 +264,23 @@ export function registerEmailChangeRoutes(app: Hono) {
           .update(users)
           .set({ email: newEmail, emailVerified: true, updatedAt: new Date() })
           .where(eq(users.id, userId));
+        // Compare-and-swap: only the first verify to land consumes the request (single-use rigor).
         await tx
           .update(emailChangeRequests)
           .set({ consumedAt: new Date() })
-          .where(eq(emailChangeRequests.id, request.id));
+          .where(
+            and(eq(emailChangeRequests.id, request.id), isNull(emailChangeRequests.consumedAt)),
+          );
         // Invalidate the user's other sessions; the current session (keyed on userId) survives.
         await tx
           .delete(authSessions)
           .where(and(eq(authSessions.userId, userId), ne(authSessions.id, currentSessionId)));
       });
     } catch (error) {
-      if (error instanceof EmailTakenError) {
+      // The in-transaction re-check can still lose a request→verify race; users.email UNIQUE is the
+      // real backstop. Map that 23505 to the same 409 as an explicit conflict (C-2) so the riskiest
+      // endpoint returns a clean "email in use" instead of a generic 500.
+      if (error instanceof EmailTakenError || isKnownDatabaseConflict(error) === 'unique') {
         return c.json(
           {
             error: {
@@ -258,7 +291,11 @@ export function registerEmailChangeRoutes(app: Hono) {
           409,
         );
       }
-      console.error('[auth] email-change verify failed', error);
+      // Message only — a DB error's detail can contain the new email (C-3).
+      console.error(
+        '[auth] email-change verify failed:',
+        error instanceof Error ? error.message : 'unknown error',
+      );
       return c.json(
         {
           error: {
@@ -270,7 +307,7 @@ export function registerEmailChangeRoutes(app: Hono) {
       );
     }
 
-    otpVerificationRateLimiter.reset(`emailchange:verify:${userId}`);
+    otpVerificationRateLimiter.reset(verifyKey);
     // Best-effort completion notice to the old address.
     try {
       await sendEmailChangeNotice({

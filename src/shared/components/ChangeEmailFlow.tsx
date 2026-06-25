@@ -69,6 +69,12 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
       setResendIn(RESEND_COOLDOWN_SECONDS);
     } catch (sendError) {
       setError(messageFor(sendError, 'Unable to send the verification code. Please try again.'));
+      // Align the resend countdown with the server's actual window so we don't invite a retry that
+      // just 429s again (C-8). The server returns retryAfterSeconds on a rate-limit response.
+      if (sendError instanceof ApiError && sendError.status === 429) {
+        const retryAfter = Number(sendError.extra?.retryAfterSeconds);
+        setResendIn(retryAfter > 0 ? retryAfter : RESEND_COOLDOWN_SECONDS);
+      }
     } finally {
       setIsSubmitting(false);
     }
