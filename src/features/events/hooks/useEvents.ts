@@ -86,7 +86,9 @@ export const useCreateEvent = () => {
       queryClient.invalidateQueries({ queryKey: ['event', event.id] });
       toast({
         title: 'Event saved',
-        description: 'Your event is now available to members.',
+        description: event.is_published
+          ? 'Your event is now available to members.'
+          : 'Draft saved. Publish it when it is ready for members.',
       });
     },
     onError: (error) => {
@@ -113,7 +115,9 @@ export const useUpdateEvent = (id: string) => {
       queryClient.invalidateQueries({ queryKey: ['event', id] });
       toast({
         title: 'Event updated',
-        description: 'Your changes are live.',
+        description: event.is_published
+          ? 'Your changes are live.'
+          : 'Draft changes saved. Members cannot see this event yet.',
       });
       return event;
     },

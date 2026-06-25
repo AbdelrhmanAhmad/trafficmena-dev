@@ -263,13 +263,25 @@ export function AdminEventForm({
           <ToastAction
             altText="Publish now"
             onClick={() => {
-              void onSubmit({ ...payload, isPublished: true });
+              void handlePublishNow();
             }}
           >
             Publish now
           </ToastAction>
         ) : undefined,
       });
+    }
+  };
+
+  const handlePublishNow = async () => {
+    const previousIsPublished = form.getValues('isPublished');
+    const publishedValues = { ...form.getValues(), isPublished: true };
+    form.setValue('isPublished', true, { shouldDirty: true, shouldTouch: true });
+
+    try {
+      await handleSubmit(publishedValues);
+    } catch {
+      form.setValue('isPublished', previousIsPublished, { shouldDirty: true, shouldTouch: true });
     }
   };
 

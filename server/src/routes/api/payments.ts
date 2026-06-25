@@ -276,7 +276,7 @@ async function calculatePrice(
         .select()
         .from(eventAttendees)
         .where(and(eq(eventAttendees.eventId, itemId), eq(eventAttendees.userId, userId))),
-      getOptionalUserRole(userId),
+      getOptionalUserRole(userId, dbClient),
     ]);
 
     const [event] = eventResult;
