@@ -4,7 +4,10 @@ const isEmptyString = (value: string | null | undefined): value is null | undefi
   !value || value.trim().length === 0;
 
 export function normalizePhoneNumber(value: string) {
-  return value.replace(/[\s\-()]/g, '');
+  const stripped = value.replace(/[\s\-()]/g, '');
+  // Egypt guard: collapse a leftover trunk zero after the +20 country code so no path persists the
+  // double-zero form (+2001012… -> +201012…). Other country codes are left untouched.
+  return stripped.replace(/^\+200/, '+20');
 }
 
 export function isE164PhoneNumber(value: string) {

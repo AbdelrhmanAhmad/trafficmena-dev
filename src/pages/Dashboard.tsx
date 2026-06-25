@@ -18,6 +18,7 @@ import {
 } from '@/lib/analytics/profile';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
+import { PhoneNumberField } from '@/shared/components/PhoneNumberField';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -53,7 +54,6 @@ const Dashboard: React.FC = () => {
   const firstNameId = useId();
   const lastNameId = useId();
   const emailId = useId();
-  const phoneId = useId();
   const goalId = useId();
   const challengeId = useId();
 
@@ -282,13 +282,9 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor={phoneId}>Phone Number</Label>
-                    <Input
-                      id={phoneId}
-                      name="phone"
+                    <PhoneNumberField
                       value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="e.g. +971 50 123 4567"
+                      onChange={(phone) => setFormData((prev) => ({ ...prev, phone }))}
                     />
                   </div>
 
