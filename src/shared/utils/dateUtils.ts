@@ -104,16 +104,36 @@ export function toCairoDatetimeLocal(input: string | Date | undefined): string {
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
 }
 
-// Dynamically compute Cairo's current UTC offset (handles any future DST changes via IANA DB)
-export function getCairoOffsetString(): string {
-  const now = new Date();
-  const cairoStr = now.toLocaleString('en-US', { timeZone: CAIRO_TZ });
-  const cairoTime = new Date(cairoStr);
-  const offsetMinutes = Math.round((cairoTime.getTime() - now.getTime()) / 60_000);
-  const sign = offsetMinutes >= 0 ? '+' : '-';
-  const absH = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(2, '0');
-  const absM = String(Math.abs(offsetMinutes) % 60).padStart(2, '0');
-  return `${sign}${absH}:${absM}`;
+// Cairo's UTC offset (minutes east of UTC) at a given instant, read from IANA Africa/Cairo.
+function cairoOffsetMinutes(instant: Date): number {
+  const tzName = new Intl.DateTimeFormat('en-US', {
+    timeZone: CAIRO_TZ,
+    timeZoneName: 'longOffset',
+  })
+    .formatToParts(instant)
+    .find((part) => part.type === 'timeZoneName')?.value; // e.g. "GMT+03:00"
+  const match = tzName ? /GMT([+-])(\d{1,2})(?::(\d{2}))?/.exec(tzName) : null;
+  if (!match) return 0;
+  const sign = match[1] === '-' ? -1 : 1;
+  return sign * (Number(match[2]) * 60 + Number(match[3] ?? 0));
+}
+
+// Convert a Cairo wall-clock datetime-local value ("YYYY-MM-DDTHH:mm") to a UTC ISO string,
+// using the correct Cairo offset for THAT date (DST-aware). Environment-independent: the offset
+// comes from IANA — the same source the display functions trust — so the round-trip is exact
+// regardless of the machine's local timezone. Replaces the broken offset-by-device-tz approach.
+export function cairoLocalToUtcIso(datetimeLocal: string | undefined): string {
+  const match = datetimeLocal
+    ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(datetimeLocal)
+    : null;
+  if (!match) return '';
+  const [, year, month, day, hour, minute] = match.map(Number);
+  // Treat the wall time as if it were UTC, then subtract Cairo's offset at that instant. A second
+  // pass re-resolves the offset at the corrected instant so DST-boundary times stay exact.
+  const provisional = Date.UTC(year, month - 1, day, hour, minute);
+  const firstPass = provisional - cairoOffsetMinutes(new Date(provisional)) * 60_000;
+  const utc = provisional - cairoOffsetMinutes(new Date(firstPass)) * 60_000;
+  return new Date(utc).toISOString();
 }
 
 export const isUpcoming = (dateString: string): boolean => {

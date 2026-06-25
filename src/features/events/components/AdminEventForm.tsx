@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from '@/shared/components/ui/select';
 import { Textarea } from '@/shared/components/ui/textarea';
-import { CAIRO_TZ, getCairoOffsetString, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
+import { CAIRO_TZ, cairoLocalToUtcIso, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 
 const eventFormSchema = z.object({
   title: z
@@ -223,7 +223,7 @@ export function AdminEventForm({
     const payload: CreateEventPayload = {
       title: formValues.title.trim(),
       description: DOMPurify.sanitize(formValues.description.trim()),
-      date: new Date(`${formValues.date}${getCairoOffsetString()}`).toISOString(),
+      date: cairoLocalToUtcIso(formValues.date),
       eventType: formValues.eventType,
       location: formValues.location?.trim() ? formValues.location.trim() : null,
       locationUrl: formValues.locationUrl?.trim() ? formValues.locationUrl.trim() : null,
