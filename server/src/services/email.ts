@@ -87,6 +87,82 @@ export async function sendOtpEmail({ email, otp, ttlMinutes }: SendOtpEmailArgs)
   }
 }
 
+type SendEmailChangeNoticeArgs = {
+  email: string; // the current (old) address being notified
+  status: 'requested' | 'completed';
+  maskedNewEmail: string;
+};
+
+// Out-of-band notice to the CURRENT address when an email change is requested/completed — an
+// attack signal when the account is the target. Contains no OTP and only a masked new address.
+export async function sendEmailChangeNotice({
+  email,
+  status,
+  maskedNewEmail,
+}: SendEmailChangeNoticeArgs) {
+  if (!env.PLUNK_API_KEY || !env.PLUNK_API_KEY.startsWith('sk_')) {
+    console.warn('[plunk] Valid PLUNK_API_KEY missing; email-change notice simulated (redacted)');
+    return;
+  }
+
+  const requested = status === 'requested';
+  const subject = requested
+    ? 'Security alert: a change to your TrafficMENA email was requested'
+    : 'Your TrafficMENA email address was changed';
+  const sentence = requested
+    ? `We received a request to change your TrafficMENA email to ${escapeHtml(maskedNewEmail)}. If this wasn't you, do not share any code and contact support immediately — your account may be targeted.`
+    : `Your TrafficMENA email was changed to ${escapeHtml(maskedNewEmail)}. If you did not make this change, contact support immediately.`;
+  const textBody = requested
+    ? `We received a request to change your TrafficMENA email to ${maskedNewEmail}. If this wasn't you, contact support immediately.`
+    : `Your TrafficMENA email was changed to ${maskedNewEmail}. If you did not make this change, contact support immediately.`;
+  const htmlBody = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${subject}</title>
+    <style>
+      body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 24px; }
+      .card { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 12px 24px rgba(16, 16, 16, 0.08); }
+      .subtitle { color: #4b5563; margin-top: 16px; line-height: 1.5; }
+      .footer { margin-top: 32px; font-size: 14px; color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>${requested ? 'Email change requested' : 'Email address changed'}</h1>
+      <p class="subtitle">${sentence}</p>
+      <p class="footer">This is an automated security notice from TrafficMENA.</p>
+    </div>
+  </body>
+</html>`;
+
+  try {
+    const response = await fetch(PLUNK_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.PLUNK_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: email,
+        subject,
+        body: htmlBody,
+        text: textBody,
+        from: 'hello@trafficmena.com',
+        name: 'TrafficMENA',
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Plunk responded with ${response.status}: ${detail}`);
+    }
+  } catch (error) {
+    console.error('[plunk] Failed to send email-change notice', error);
+    throw error;
+  }
+}
+
 export async function sendInvitationEmail({
   email,
   invitationLink,
