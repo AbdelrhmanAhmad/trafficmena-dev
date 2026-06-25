@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 import {
   assembleE164,
@@ -57,6 +58,10 @@ describe('generic non-Egypt local-part floor (E-2)', () => {
   it('accepts a normal-length non-Egypt local part', () => {
     assert.equal(validateLocalPart('501234567', '971'), null);
   });
+
+  it('accepts the shared six-digit non-Egypt minimum used by profile and signup', () => {
+    assert.equal(validateLocalPart('123456', '971'), null);
+  });
 });
 
 describe('parseE164 round-trips known dials and does not corrupt unknown ones (E-3)', () => {
@@ -78,6 +83,19 @@ describe('parseE164 round-trips known dials and does not corrupt unknown ones (E
     // A dial that matches no known country must NOT come back as an Egyptian local part,
     // or a subsequent assembleE164('20', local) would corrupt it into a bogus +20 number.
     const parsed = parseE164('+9990000000');
+    assert.deepEqual(parsed, { code: 'EG', local: '' });
     assert.notEqual(assembleE164('20', parsed.local), '+209990000000');
+  });
+});
+
+describe('signup phone validation parity', () => {
+  it('uses the shared local-part validator instead of a separate digit floor', async () => {
+    const source = await readFile(
+      new URL('../../src/pages/signup/Step3.tsx', import.meta.url),
+      'utf8',
+    );
+
+    assert.equal(source.includes('MIN_LOCAL_DIGITS'), false);
+    assert.match(source, /validateLocalPart\(normalizedLocalNumber, dial\)/);
   });
 });
