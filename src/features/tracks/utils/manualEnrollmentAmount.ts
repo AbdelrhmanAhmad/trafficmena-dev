@@ -25,6 +25,16 @@ export function formatManualEnrollmentAmountEgp(
   return trimTrailingZeros((amountPaidCents / 100).toFixed(2));
 }
 
+// Display contract for the enrolled-list "Amount Paid" column (U4):
+//   null / undefined -> "—" (no captured amount, e.g. a manual series grant)
+//   0                -> "Free" (confirmed-free registration)
+//   positive         -> formatted EGP (final figure after discounts/promo)
+export function formatAmountPaid(amountPaidCents: number | null | undefined): string {
+  if (amountPaidCents === null || amountPaidCents === undefined) return '—';
+  if (amountPaidCents === 0) return 'Free';
+  return `${formatManualEnrollmentAmountEgp(amountPaidCents)} EGP`;
+}
+
 export function parseManualEnrollmentAmountEgp(input: string): number | null {
   let normalized = normalizeAmountInput(input);
   if (!normalized) return null;

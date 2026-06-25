@@ -190,6 +190,41 @@ export async function deleteSeries(id: string): Promise<void> {
   });
 }
 
+// Series enrolled-users (attendees) — camelCase, mirrors TrackAttendee
+export type SeriesEnrollmentSource = 'paid' | 'free' | 'manual';
+
+export interface SeriesAttendee {
+  userId: string;
+  email: string;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  bookedAt: string;
+  invoiceId: number | null;
+  invoiceNumber: string | null;
+  source: SeriesEnrollmentSource;
+  reference: string | null;
+  amountPaidCents: number | null;
+  // Present only for manual-grant rows (revoke is allowed there); null for track-buyer rows.
+  grantId: string | null;
+}
+
+export async function fetchSeriesAttendees(
+  seriesId: string,
+  params: { page?: number; pageSize?: number; search?: string } = {},
+): Promise<PaginatedResult<SeriesAttendee>> {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
+  if (params.search?.trim()) query.set('search', params.search.trim());
+
+  return fetchJson<PaginatedResult<SeriesAttendee>>(
+    `${API_BASE}/series/${seriesId}/attendees${query.toString() ? `?${query.toString()}` : ''}`,
+    { method: 'GET' },
+  );
+}
+
 // Series Assets API functions
 export async function addAssetsToSeries(
   seriesId: string,

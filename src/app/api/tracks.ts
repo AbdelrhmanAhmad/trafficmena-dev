@@ -261,6 +261,7 @@ export interface TrackAttendee {
   invoiceNumber: string | null;
   source: TrackEnrollmentSource;
   reference: string | null;
+  amountPaidCents: number | null;
 }
 
 // Fetch track attendees (manager+ only)

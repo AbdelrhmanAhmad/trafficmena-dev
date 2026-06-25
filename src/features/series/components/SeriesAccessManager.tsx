@@ -1,16 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2, Search, Upload } from 'lucide-react';
+import { Loader2, Search, Upload } from 'lucide-react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { ApiError } from '@/app/api/client';
 import { fetchUsersAdmin } from '@/app/api/users';
-import {
-  useBulkSeriesGrants,
-  useGrantSeriesAccess,
-  useRevokeSeriesAccess,
-  useSeriesGrants,
-} from '@/features/series/hooks/useSeriesGrants';
-import { Badge } from '@/shared/components/ui/badge';
+import { useBulkSeriesGrants, useGrantSeriesAccess } from '@/features/series/hooks/useSeriesGrants';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -20,34 +14,18 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { Checkbox } from '@/shared/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/components/ui/table';
 import { useToast } from '@/shared/hooks/custom/use-toast';
-
-const GRANTS_PAGE_SIZE = 50;
 
 type SeriesAccessManagerProps = {
   seriesId: string;
   seriesTitle: string;
 };
 
-export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAccessManagerProps) {
+// Add/bulk-grant controls only. Active grants are listed (and revoked) in the unified
+// "Enrolled Users" table above, so there is a single place to manage access.
+export default function SeriesAccessManager({ seriesId }: SeriesAccessManagerProps) {
   const { toast } = useToast();
   const [searchInput, setSearchInput] = useState('');
   const [committedSearch, setCommittedSearch] = useState('');
@@ -56,25 +34,20 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
   const [csvErrors, setCsvErrors] = useState<
     Array<{ line: number; email: string; reason: string }>
   >([]);
-  const [revokeDialog, setRevokeDialog] = useState<{
-    userId: string;
-    email: string;
-    reason: string;
-  } | null>(null);
-  const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
-  const [grantsPage, setGrantsPage] = useState(1);
   const bulkInputRef = useRef<HTMLInputElement | null>(null);
   const searchId = useId();
   const reasonId = useId();
-  const revokeReasonId = useId();
   const hasSearch = committedSearch.length > 0;
+
+  const grantMutation = useGrantSeriesAccess(seriesId);
+  const bulkMutation = useBulkSeriesGrants(seriesId);
+  const isAnyMutationPending = grantMutation.isPending || bulkMutation.isPending;
 
   const handleSearch = () => {
     const trimmed = searchInput.trim();
     if (trimmed === committedSearch) return;
     setCommittedSearch(trimmed);
     setSelectedUserIds([]);
-    setGrantsPage(1);
   };
 
   const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -83,25 +56,6 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
       if (!isAnyMutationPending) handleSearch();
     }
   };
-
-  const grantsQuery = useSeriesGrants(seriesId, {
-    page: grantsPage,
-    pageSize: GRANTS_PAGE_SIZE,
-    search: committedSearch,
-  });
-  const grantMutation = useGrantSeriesAccess(seriesId);
-  const revokeMutation = useRevokeSeriesAccess(seriesId);
-  const bulkMutation = useBulkSeriesGrants(seriesId);
-  const isAnyMutationPending =
-    grantMutation.isPending || revokeMutation.isPending || bulkMutation.isPending;
-
-  const grantsTotal = grantsQuery.data?.pagination.total ?? 0;
-  const grantsTotalPages = Math.max(1, Math.ceil(grantsTotal / GRANTS_PAGE_SIZE));
-
-  // Clamp page when total shrinks below current page (e.g., last-item revoke)
-  useEffect(() => {
-    if (grantsPage > grantsTotalPages) setGrantsPage(grantsTotalPages);
-  }, [grantsPage, grantsTotalPages]);
 
   const usersQuery = useQuery({
     queryKey: ['series-grant-users-search', committedSearch],
@@ -115,8 +69,6 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     staleTime: 30 * 1000,
     enabled: hasSearch,
   });
-
-  const isRevokeDialogPending = Boolean(revokeDialog && revokingUserId === revokeDialog.userId);
 
   const searchResults = usersQuery.data?.items ?? [];
   const grantUsersErrorMessage =
@@ -166,47 +118,6 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
     }
   };
 
-  const handleOpenRevokeDialog = (userId: string, email: string) => {
-    setRevokeDialog({
-      userId,
-      email,
-      reason: `Access no longer needed for ${seriesTitle}`,
-    });
-  };
-
-  const handleConfirmRevoke = async () => {
-    if (!revokeDialog) return;
-    const reason = revokeDialog.reason.trim();
-    if (reason.length < 3) {
-      toast({
-        title: 'Reason required',
-        description: 'Provide at least 3 characters for audit logs.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const targetUserId = revokeDialog.userId;
-    const targetEmail = revokeDialog.email;
-    setRevokingUserId(targetUserId);
-    try {
-      await revokeMutation.mutateAsync({ userId: targetUserId, reason });
-      toast({
-        title: 'Access revoked',
-        description: `${targetEmail} no longer has this series grant.`,
-      });
-      setRevokeDialog((current) => (current?.userId === targetUserId ? null : current));
-    } catch (error) {
-      toast({
-        title: 'Revoke failed',
-        description: error instanceof Error ? error.message : 'Unable to revoke access.',
-        variant: 'destructive',
-      });
-    } finally {
-      setRevokingUserId(null);
-    }
-  };
-
   const handleBulkUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     if (!file) return;
@@ -242,7 +153,8 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
         <CardTitle className="text-lg text-neutral-900">Manage Premium Access</CardTitle>
         <CardDescription className="text-neutral-600">
           Grant this premium series to specific members, or upload a CSV with columns
-          <code className="ml-1">email,series_id,reason</code>.
+          <code className="ml-1">email,series_id,reason</code>. Revoke grants from the Enrolled
+          Users table above.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -367,143 +279,6 @@ export default function SeriesAccessManager({ seriesId, seriesTitle }: SeriesAcc
             )}
           </div>
         </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-neutral-800">Active grants</h3>
-            <Badge variant="secondary">{grantsTotal}</Badge>
-          </div>
-
-          {grantsQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading active grants…</p>
-          ) : grantsQuery.data?.items.length ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Granted</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {grantsQuery.data.items.map((grant) => (
-                  <TableRow key={grant.id}>
-                    <TableCell>{grant.email}</TableCell>
-                    <TableCell className="max-w-[240px] truncate">{grant.grantReason}</TableCell>
-                    <TableCell>{new Date(grant.grantedAt).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleOpenRevokeDialog(grant.userId, grant.email)}
-                        disabled={isAnyMutationPending || revokingUserId === grant.userId}
-                      >
-                        {revokingUserId === grant.userId ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Revoking…
-                          </>
-                        ) : (
-                          'Revoke'
-                        )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-sm text-muted-foreground">No active grants for this series.</p>
-          )}
-
-          {grantsTotalPages > 1 && (
-            <div className="flex items-center justify-end gap-3 pt-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setGrantsPage((p) => Math.max(1, p - 1))}
-                disabled={grantsPage === 1}
-                className="rounded-lg"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-neutral-600">
-                Page {grantsPage} of {grantsTotalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setGrantsPage((p) => Math.min(grantsTotalPages, p + 1))}
-                disabled={grantsPage >= grantsTotalPages}
-                className="rounded-lg"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <Dialog
-          open={Boolean(revokeDialog)}
-          onOpenChange={(open) => {
-            if (!open && !isRevokeDialogPending) {
-              setRevokeDialog(null);
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Revoke Series Access</DialogTitle>
-              <DialogDescription>
-                Revoke premium access for {revokeDialog?.email}. This action is reversible by
-                granting access again.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor={revokeReasonId}>Reason</Label>
-              <Input
-                id={revokeReasonId}
-                value={revokeDialog?.reason ?? ''}
-                onChange={(event) =>
-                  setRevokeDialog((current) =>
-                    current
-                      ? {
-                          ...current,
-                          reason: event.target.value,
-                        }
-                      : current,
-                  )
-                }
-                placeholder="Required audit reason"
-              />
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setRevokeDialog(null)}
-                disabled={isRevokeDialogPending || isAnyMutationPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleConfirmRevoke}
-                disabled={isRevokeDialogPending || isAnyMutationPending}
-              >
-                {isRevokeDialogPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Revoking…
-                  </>
-                ) : (
-                  'Revoke Access'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
   );

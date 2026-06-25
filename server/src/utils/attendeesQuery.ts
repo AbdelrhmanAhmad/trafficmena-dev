@@ -1,4 +1,4 @@
-import { eq, sql, type SQL } from 'drizzle-orm';
+import { eq, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { db } from '../db/client.js';
 import { payments, profiles, trackBookings, users } from '../db/schema/index.js';

@@ -2,7 +2,13 @@ import { and, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { profiles, series, seriesAccessGrants, trackBookings, users } from '../../db/schema/index.js';
+import {
+  profiles,
+  series,
+  seriesAccessGrants,
+  trackBookings,
+  users,
+} from '../../db/schema/index.js';
 import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { mergeSeriesAttendees } from '../../utils/seriesAttendees.js';

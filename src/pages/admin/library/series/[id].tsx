@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { SeriesAssetSelector, SeriesForm } from '@/features/series';
 import SeriesAccessManager from '@/features/series/components/SeriesAccessManager';
+import { SeriesAttendeesList } from '@/features/series/components/SeriesAttendeesList';
 import {
   useAddAssetsToSeries,
   useDeleteSeries,
@@ -281,6 +282,8 @@ function SeriesDetailPage() {
               </CardContent>
             </Card>
           </div>
+
+          <SeriesAttendeesList seriesId={series.id} />
 
           {series.is_premium ? (
             <SeriesAccessManager seriesId={series.id} seriesTitle={series.title} />

@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2, Search, Users } from 'lucide-react';
 import { useId, useState } from 'react';
 import { ApiError } from '@/app/api/client';
+import { formatAmountPaid } from '@/features/tracks/utils/manualEnrollmentAmount';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import {
@@ -23,12 +24,11 @@ import {
   TableRow,
 } from '@/shared/components/ui/table';
 import { useToast } from '@/shared/hooks/custom/use-toast';
-import { useTrackAttendees } from '../hooks/useTrackAttendees';
-import { useRevokeTrackEnrollment } from '../hooks/useTrackEnrollmentManagement';
-import { formatAmountPaid } from '../utils/manualEnrollmentAmount';
+import { useSeriesAttendees } from '../hooks/useSeriesAttendees';
+import { useRevokeSeriesAccess } from '../hooks/useSeriesGrants';
 
-interface TrackAttendeesListProps {
-  trackId: string;
+interface SeriesAttendeesListProps {
+  seriesId: string;
 }
 
 function formatEnrollmentSource(source: 'paid' | 'free' | 'manual') {
@@ -37,7 +37,7 @@ function formatEnrollmentSource(source: 'paid' | 'free' | 'manual') {
   return 'Paid';
 }
 
-export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
+export const SeriesAttendeesList = ({ seriesId }: SeriesAttendeesListProps) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const revokeReasonId = useId();
@@ -46,12 +46,12 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
     email: string;
     reason: string;
   } | null>(null);
-  const { data, isLoading, isError, page, setPage, pageSize } = useTrackAttendees(
-    trackId,
+  const { data, isLoading, isError, page, setPage, pageSize } = useSeriesAttendees(
+    seriesId,
     20,
     search,
   );
-  const revokeMutation = useRevokeTrackEnrollment(trackId);
+  const revokeMutation = useRevokeSeriesAccess(seriesId);
 
   const totalPages = data?.total ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
   const isRevokePending = Boolean(
@@ -81,15 +81,15 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
         reason: trimmedReason,
       });
       toast({
-        title: 'Enrollment revoked',
-        description: `${revokeDialog.email} no longer has active access to this track.`,
+        title: 'Access revoked',
+        description: `${revokeDialog.email} no longer has this series grant.`,
       });
       setRevokeDialog(null);
     } catch (error) {
       const message =
         error instanceof ApiError || error instanceof Error
           ? error.message
-          : 'Unable to revoke the enrollment.';
+          : 'Unable to revoke the grant.';
 
       toast({
         title: 'Revoke failed',
@@ -129,6 +129,10 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
               ) : null}
             </CardTitle>
           </div>
+          <p className="text-sm text-muted-foreground">
+            Track buyers and members with a manual grant are listed here. Subscribers and staff also
+            have access and are not listed; non-premium series are visible to all members.
+          </p>
           <div className="relative max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -146,7 +150,7 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
             </div>
           ) : !data?.items || data.items.length === 0 ? (
             <div className="flex h-32 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
-              No users have enrolled in this track yet.
+              No users have enrolled in this series yet.
             </div>
           ) : (
             <div className="space-y-4">
@@ -184,20 +188,24 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
                       <TableCell>{attendee.reference ?? '-'}</TableCell>
                       <TableCell>{formatAmountPaid(attendee.amountPaidCents)}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setRevokeDialog({
-                              userId: attendee.userId,
-                              email: attendee.email,
-                              reason: `Access revoked for ${attendee.email}`,
-                            })
-                          }
-                        >
-                          Revoke
-                        </Button>
+                        {attendee.grantId ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setRevokeDialog({
+                                userId: attendee.userId,
+                                email: attendee.email,
+                                reason: `Series access revoked for ${attendee.email}`,
+                              })
+                            }
+                          >
+                            Revoke
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -242,10 +250,10 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Revoke Track Enrollment</DialogTitle>
+            <DialogTitle>Revoke Series Grant</DialogTitle>
             <DialogDescription>
-              This removes the track access and any event access that was created from this track
-              enrollment.
+              This removes the manual series access grant for {revokeDialog?.email}. It does not
+              affect access derived from a track booking or subscription.
             </DialogDescription>
           </DialogHeader>
 
@@ -259,7 +267,7 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
                   current ? { ...current, reason: event.target.value } : current,
                 )
               }
-              placeholder="Why this enrollment is being removed"
+              placeholder="Why this grant is being removed"
             />
           </div>
 
