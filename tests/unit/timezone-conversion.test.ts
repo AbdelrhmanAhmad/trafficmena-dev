@@ -30,6 +30,16 @@ describe('cairoLocalToUtcIso', () => {
     assert.equal(toCairoDatetimeLocal(utc), '2026-07-15T14:30');
   });
 
+  it('handles the 2026 spring DST boundary using each side of Cairo offset', () => {
+    assert.equal(cairoLocalToUtcIso('2026-04-23T23:30'), '2026-04-23T21:30:00.000Z');
+    assert.equal(cairoLocalToUtcIso('2026-04-24T01:30'), '2026-04-23T22:30:00.000Z');
+  });
+
+  it('handles the 2026 autumn DST boundary using each side of Cairo offset', () => {
+    assert.equal(cairoLocalToUtcIso('2026-10-29T22:30'), '2026-10-29T19:30:00.000Z');
+    assert.equal(cairoLocalToUtcIso('2026-10-29T23:30'), '2026-10-29T21:30:00.000Z');
+  });
+
   it('is environment-independent — never equals the old wall±deviceOffset output', () => {
     // The old getCairoOffsetString() produced (Cairo − browserOffset); on any non-Cairo TZ this
     // diverges from the correct UTC. The correct conversion is a fixed UTC instant.
