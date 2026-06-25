@@ -22,6 +22,7 @@ import {
   createEventIsPublishedSchema,
   updateEventIsPublishedSchema,
 } from './eventPublishSchema.js';
+import { isEventHiddenFromNonStaff } from './eventVisibility.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -703,6 +704,9 @@ export function registerEventRoutes(app: Hono) {
           throw new ApiError('INVALID_REQUEST', bodyParse.error.message, 400);
         }
 
+        const role = await getOptionalUserRole(userId);
+        const isStaff = Boolean(role && ['owner', 'admin', 'manager'].includes(role));
+
         const result = await db.transaction(async (tx) => {
           const [event] = await tx
             .select({
@@ -711,6 +715,7 @@ export function registerEventRoutes(app: Hono) {
               meetingLink: events.meetingLink,
               location: events.location,
               priceInCents: events.priceInCents,
+              isPublished: events.isPublished,
             })
             .from(events)
             .where(eq(events.id, eventId))
@@ -724,6 +729,7 @@ export function registerEventRoutes(app: Hono) {
           const [trackEvent] = await tx
             .select({
               trackId: tracks.id,
+              isPublished: tracks.isPublished,
               allowIndividualBooking: tracks.allowIndividualBooking,
               singleBookingStart: tracks.singleBookingStart,
               singleBookingEnd: tracks.singleBookingEnd,
@@ -731,6 +737,18 @@ export function registerEventRoutes(app: Hono) {
             .from(trackEvents)
             .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
             .where(eq(trackEvents.eventId, eventId));
+
+          // Drafts (and events in unpublished tracks) are unbookable: return the same 404 as a
+          // missing event so a known draft id can't be registered for. (D-1)
+          if (
+            isEventHiddenFromNonStaff({
+              isPublished: event.isPublished,
+              linkedTrackIsPublished: trackEvent ? trackEvent.isPublished : null,
+              isStaff,
+            })
+          ) {
+            throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
+          }
 
           // Enforce booking periods if in a track
           if (trackEvent) {

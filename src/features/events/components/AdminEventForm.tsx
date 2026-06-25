@@ -29,6 +29,7 @@ import {
 } from '@/shared/components/ui/select';
 import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { ToastAction } from '@/shared/components/ui/toast';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { CAIRO_TZ, getCairoOffsetString, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 
@@ -249,11 +250,25 @@ export function AdminEventForm({
 
     await onSubmit(payload);
 
-    // No-silent-draft safeguard: events publish instantly today, so confirm when one is hidden.
-    if (!formValues.isPublished) {
+    // No-silent-draft safeguard (D-2): warn only when an event becomes newly hidden — a brand-new
+    // draft or a published event flipped to draft — not on every re-save of an existing draft.
+    const newlyHidden = !formValues.isPublished && event?.is_published !== false;
+    if (newlyHidden) {
       toast({
-        title: 'Saved as draft — not visible publicly',
-        description: 'Toggle "Published" to make this event live for members.',
+        title: 'Saved as draft — not visible to members',
+        description: "Members can't see or register for it until you publish.",
+        // Edit keeps the user on the form, so offer a one-click publish (a safe in-place re-save).
+        // Create navigates to the event page, so it gets the notice without an unsafe re-create.
+        action: event ? (
+          <ToastAction
+            altText="Publish now"
+            onClick={() => {
+              void onSubmit({ ...payload, isPublished: true });
+            }}
+          >
+            Publish now
+          </ToastAction>
+        ) : undefined,
       });
     }
   };

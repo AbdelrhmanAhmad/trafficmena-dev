@@ -81,7 +81,8 @@ const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
   attendee_count: Number(event.attendeeCount ?? 0),
   guest_experts: [],
   price_in_cents: event.priceInCents ?? null,
-  is_published: event.isPublished ?? true,
+  // Draft-safe: a response that omits the flag should read as a draft, never silently published.
+  is_published: event.isPublished ?? false,
 });
 
 export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecord {
