@@ -46,16 +46,16 @@
   - Location: [src/shared/utils/dateUtils.ts](../../../src/shared/utils/dateUtils.ts) (line 77)
   - Dependencies: None
 - `toCairoDatetimeLocal(input: string | Date | undefined): string`
-  - Description: Implements to cairo datetime local behavior for this module.
+  - Description: Converts a UTC date to a `datetime-local` input value ("YYYY-MM-DDTHH:mm") in Cairo timezone.
   - Location: [src/shared/utils/dateUtils.ts](../../../src/shared/utils/dateUtils.ts) (line 92)
   - Dependencies: None
-- `getCairoOffsetString(): string`
-  - Description: Returns cairo offset string derived from current inputs or state.
-  - Location: [src/shared/utils/dateUtils.ts](../../../src/shared/utils/dateUtils.ts) (line 108)
+- `cairoLocalToUtcIso(datetimeLocal: string | undefined): string`
+  - Description: Converts a Cairo wall-clock datetime-local value to a UTC ISO string using the DST-aware Africa/Cairo offset for that date (environment-independent). Replaces the removed `getCairoOffsetString`.
+  - Location: [src/shared/utils/dateUtils.ts](../../../src/shared/utils/dateUtils.ts) (line 125)
   - Dependencies: None
 - `isUpcoming(dateString: string): boolean`
   - Description: Checks whether upcoming.
-  - Location: [src/shared/utils/dateUtils.ts](../../../src/shared/utils/dateUtils.ts) (line 119)
+  - Location: [src/shared/utils/dateUtils.ts](../../../src/shared/utils/dateUtils.ts) (line 139)
   - Dependencies: None
 - `createDevLogger(prefix?: string): unknown`
   - Description: Creates dev logger for downstream use.

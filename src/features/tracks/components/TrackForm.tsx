@@ -17,6 +17,7 @@ import {
 } from '@/shared/components/ui/form';
 import { Input } from '@/shared/components/ui/input';
 import { Switch } from '@/shared/components/ui/switch';
+import { cairoLocalToUtcIso, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 import type { Track } from '../types';
 
 const trackFormSchema = z
@@ -110,19 +111,9 @@ interface TrackFormProps {
 }
 
 function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormProps) {
-  // Helper to format date for datetime-local input (YYYY-MM-DDTHH:mm)
-  const formatDateForInput = (date: Date | string | null | undefined): string => {
-    if (!date) return '';
-    const d = new Date(date);
-    if (Number.isNaN(d.getTime())) return '';
-    // Format as local time, not UTC
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+  // Prefill datetime-local inputs from stored UTC, shown in Cairo wall-clock (empty stays empty).
+  const prefillCairo = (date: Date | string | null | undefined): string =>
+    date ? toCairoDatetimeLocal(date) : '';
 
   const form = useForm<TrackFormValues>({
     resolver: zodResolver(trackFormSchema),
@@ -132,11 +123,11 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
       imageUrl: track?.image_url || '',
       isPublished: track?.is_published ?? false, // Default to false - can't publish without events
       maxTrackBookings: track?.max_track_bookings ?? null,
-      trackBookingStart: formatDateForInput(track?.track_booking_start),
-      trackBookingEnd: formatDateForInput(track?.track_booking_end),
+      trackBookingStart: prefillCairo(track?.track_booking_start),
+      trackBookingEnd: prefillCairo(track?.track_booking_end),
       allowIndividualBooking: track?.allow_individual_booking ?? false,
-      singleBookingStart: formatDateForInput(track?.single_booking_start),
-      singleBookingEnd: formatDateForInput(track?.single_booking_end),
+      singleBookingStart: prefillCairo(track?.single_booking_start),
+      singleBookingEnd: prefillCairo(track?.single_booking_end),
       priceEgp: track?.price_in_cents ? String(track.price_in_cents / 100) : '',
       location: track?.location || '',
       locationUrl: track?.location_url || '',
@@ -164,7 +155,15 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
   };
 
   const handleSubmit = async (values: TrackFormValues) => {
-    await onSubmit(values);
+    // Convert Cairo wall-clock inputs to UTC using the correct per-date offset before submit.
+    const toUtc = (value: string | null | undefined) => (value ? cairoLocalToUtcIso(value) : value);
+    await onSubmit({
+      ...values,
+      trackBookingStart: toUtc(values.trackBookingStart),
+      trackBookingEnd: toUtc(values.trackBookingEnd),
+      singleBookingStart: toUtc(values.singleBookingStart),
+      singleBookingEnd: toUtc(values.singleBookingEnd),
+    });
   };
 
   return (
