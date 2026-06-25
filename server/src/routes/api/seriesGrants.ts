@@ -1,8 +1,9 @@
-import { and, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
+  payments,
   profiles,
   series,
   seriesAccessGrants,
@@ -172,14 +173,48 @@ export function registerSeriesGrantsRoutes(app: Hono) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
     }
 
+    const searchPattern = search ? `%${escapeLikePattern(search)}%` : null;
+    const bookingFilters = seriesRecord.trackId
+      ? [activeTrackBookingWhere(eq(trackBookings.trackId, seriesRecord.trackId))]
+      : [];
+    const grantFilters = [
+      eq(seriesAccessGrants.seriesId, seriesId),
+      isNull(seriesAccessGrants.revokedAt),
+    ];
+
+    if (searchPattern) {
+      const bookingSearchFilter = or(
+        ilike(users.name, searchPattern),
+        ilike(users.email, searchPattern),
+        ilike(profiles.firstName, searchPattern),
+        ilike(profiles.lastName, searchPattern),
+        ilike(profiles.phoneNumber, searchPattern),
+        ilike(sql`COALESCE(${trackBookings.manualReference}, '')`, searchPattern),
+        ilike(sql`COALESCE(${payments.fawaterkInvoiceKey}, '')`, searchPattern),
+        sql`CAST(${payments.fawaterkInvoiceId} AS TEXT) ILIKE ${searchPattern}`,
+      );
+      if (bookingSearchFilter) {
+        bookingFilters.push(bookingSearchFilter);
+      }
+
+      const grantSearchFilter = or(
+        ilike(users.name, searchPattern),
+        ilike(users.email, searchPattern),
+        ilike(profiles.firstName, searchPattern),
+        ilike(profiles.lastName, searchPattern),
+        ilike(profiles.phoneNumber, searchPattern),
+        ilike(seriesAccessGrants.grantReason, searchPattern),
+      );
+      if (grantSearchFilter) {
+        grantFilters.push(grantSearchFilter);
+      }
+    }
+
     // A series with no linked track yields manual grants only (no track join, no crash).
-    // Both sources are capped at MAX_MERGE_ROWS (newest first) since the merge happens in
-    // memory and a linked track's capacity can be uncapped (null maxTrackBookings).
+    // Both sources are capped after their own search predicates. That keeps the route bounded while
+    // preserving search correctness for older matching rows in large linked tracks or grant lists.
     const bookingRows = seriesRecord.trackId
-      ? await buildTrackAttendeesQuery(
-          db,
-          activeTrackBookingWhere(eq(trackBookings.trackId, seriesRecord.trackId)),
-        )
+      ? await buildTrackAttendeesQuery(db, and(...bookingFilters))
           .orderBy(desc(trackBookings.bookedAt))
           .limit(MAX_MERGE_ROWS)
       : [];
@@ -199,7 +234,7 @@ export function registerSeriesGrantsRoutes(app: Hono) {
       .from(seriesAccessGrants)
       .innerJoin(users, eq(users.id, seriesAccessGrants.userId))
       .leftJoin(profiles, eq(profiles.id, users.id))
-      .where(and(eq(seriesAccessGrants.seriesId, seriesId), isNull(seriesAccessGrants.revokedAt)))
+      .where(and(...grantFilters))
       .orderBy(desc(seriesAccessGrants.grantedAt))
       .limit(MAX_MERGE_ROWS);
 

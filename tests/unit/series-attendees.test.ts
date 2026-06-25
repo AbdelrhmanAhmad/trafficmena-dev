@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 import {
   isMergeTruncated,
@@ -128,5 +129,27 @@ describe('isMergeTruncated (A-3 cap signal)', () => {
 
   it('is true when the grant source reached the cap', () => {
     assert.equal(isMergeTruncated(0, MAX_MERGE_ROWS), true);
+  });
+});
+
+describe('series attendee route search source filtering', () => {
+  it('applies search predicates before each source cap', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/seriesGrants.ts', import.meta.url),
+      'utf8',
+    );
+    const routeStart = source.indexOf("app.get('/series/:id/attendees'");
+    const bookingFilter = source.indexOf('and(...bookingFilters)', routeStart);
+    const bookingCap = source.indexOf('.limit(MAX_MERGE_ROWS)', bookingFilter);
+    const grantFilter = source.indexOf('.where(and(...grantFilters))', bookingCap);
+    const grantCap = source.indexOf('.limit(MAX_MERGE_ROWS)', grantFilter);
+
+    assert.ok(routeStart >= 0);
+    assert.ok(bookingFilter > routeStart);
+    assert.ok(bookingCap > bookingFilter);
+    assert.ok(grantFilter > bookingCap);
+    assert.ok(grantCap > grantFilter);
+    assert.match(source, /trackBookings\.manualReference/);
+    assert.match(source, /seriesAccessGrants\.grantReason/);
   });
 });
