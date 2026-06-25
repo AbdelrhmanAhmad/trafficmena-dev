@@ -27,7 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { useToast } from '@/shared/hooks/custom/use-toast';
 import { CAIRO_TZ, getCairoOffsetString, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 
 const eventFormSchema = z.object({
@@ -92,6 +94,7 @@ const eventFormSchema = z.object({
         !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
       'Price must be between 0 and 100,000 EGP.',
     ),
+  isPublished: z.boolean(),
 });
 
 export type AdminEventFormValues = z.infer<typeof eventFormSchema>;
@@ -165,6 +168,7 @@ export function AdminEventForm({
     imageUrl: event?.image_url ?? '',
     tags: event?.tags?.length ? event.tags.join(', ') : '',
     priceEgp: event?.price_in_cents ? String(event.price_in_cents / 100) : '',
+    isPublished: event?.is_published ?? false,
   };
 
   const form = useForm<AdminEventFormValues>({
@@ -172,6 +176,7 @@ export function AdminEventForm({
     defaultValues,
   });
 
+  const { toast } = useToast();
   const values = form.watch();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -239,9 +244,18 @@ export function AdminEventForm({
             .slice(0, 12)
         : undefined,
       priceInCents: formValues.priceEgp ? Math.round(Number(formValues.priceEgp) * 100) : null,
+      isPublished: formValues.isPublished,
     };
 
     await onSubmit(payload);
+
+    // No-silent-draft safeguard: events publish instantly today, so confirm when one is hidden.
+    if (!formValues.isPublished) {
+      toast({
+        title: 'Saved as draft — not visible publicly',
+        description: 'Toggle "Published" to make this event live for members.',
+      });
+    }
   };
 
   return (
@@ -467,6 +481,26 @@ export function AdminEventForm({
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isPublished"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Published</FormLabel>
+                      <FormDescription>
+                        {field.value
+                          ? 'Visible to members in event listings.'
+                          : 'Draft — saved but hidden from members until you publish.'}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
                   </FormItem>
                 )}
               />

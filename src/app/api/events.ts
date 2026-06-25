@@ -15,6 +15,7 @@ type ApiEvent = {
   eventType: 'Event' | 'Meetup' | 'Mastermind' | 'Retreat';
   attendeeCount?: number | null;
   priceInCents: number | null;
+  isPublished?: boolean;
 };
 
 type ApiEventDetail = ApiEvent & {
@@ -46,6 +47,7 @@ export type EventRecord = {
   attendee_count: number;
   guest_experts: { name: string }[];
   price_in_cents: number | null;
+  is_published: boolean;
 };
 
 export interface EventDetailRecord extends EventRecord {
@@ -79,6 +81,7 @@ const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
   attendee_count: Number(event.attendeeCount ?? 0),
   guest_experts: [],
   price_in_cents: event.priceInCents ?? null,
+  is_published: event.isPublished ?? true,
 });
 
 export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecord {
@@ -122,6 +125,7 @@ export type CreateEventPayload = {
   tags?: string[];
   eventType?: ApiEvent['eventType'];
   priceInCents?: number | null;
+  isPublished?: boolean;
 };
 
 export type UpdateEventPayload = Partial<CreateEventPayload>;
