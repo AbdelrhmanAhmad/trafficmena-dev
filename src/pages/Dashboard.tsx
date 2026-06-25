@@ -79,6 +79,7 @@ const Dashboard: React.FC = () => {
   );
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState('');
+  const [isPhoneValid, setIsPhoneValid] = useState(true);
 
   useEffect(() => {
     const nextSnapshot: ProfileAnalyticsSnapshot = {
@@ -285,6 +286,7 @@ const Dashboard: React.FC = () => {
                     <PhoneNumberField
                       value={formData.phone}
                       onChange={(phone) => setFormData((prev) => ({ ...prev, phone }))}
+                      onValidChange={setIsPhoneValid}
                     />
                   </div>
 
@@ -314,10 +316,13 @@ const Dashboard: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex justify-end">
+              <div className="flex flex-col items-end gap-2">
+                {isPhoneValid ? null : (
+                  <p className="text-xs text-destructive">Fix the phone number before saving.</p>
+                )}
                 <Button
                   onClick={handleSaveProfile}
-                  disabled={updateProfileMutation.isPending}
+                  disabled={updateProfileMutation.isPending || !isPhoneValid}
                   className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
                 >
                   {updateProfileMutation.isPending ? 'Saving…' : 'Save Changes'}

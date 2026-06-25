@@ -48,3 +48,36 @@ describe('Egypt phone normalization', () => {
     assert.deepEqual(parseE164('+201012345678'), { code: 'EG', local: '1012345678' });
   });
 });
+
+describe('generic non-Egypt local-part floor (E-2)', () => {
+  it('rejects a too-short non-Egypt local part', () => {
+    assert.ok(validateLocalPart('1', '971'));
+  });
+
+  it('accepts a normal-length non-Egypt local part', () => {
+    assert.equal(validateLocalPart('501234567', '971'), null);
+  });
+});
+
+describe('parseE164 round-trips known dials and does not corrupt unknown ones (E-3)', () => {
+  // Known non-Egypt values are the important coverage gap: they must split + reassemble
+  // with zero digit loss, otherwise a later blur/save mutates a good number.
+  it('round-trips a stored UAE number with no digit loss', () => {
+    const parsed = parseE164('+971501234567');
+    assert.deepEqual(parsed, { code: 'AE', local: '501234567' });
+    assert.equal(assembleE164('971', parsed.local), '+971501234567');
+  });
+
+  it('round-trips a stored Morocco number with no digit loss', () => {
+    const parsed = parseE164('+212600000000');
+    assert.deepEqual(parsed, { code: 'MA', local: '600000000' });
+    assert.equal(assembleE164('212', parsed.local), '+212600000000');
+  });
+
+  it('does not silently assign an unmatched dial to Egypt and re-prefix it', () => {
+    // A dial that matches no known country must NOT come back as an Egyptian local part,
+    // or a subsequent assembleE164('20', local) would corrupt it into a bogus +20 number.
+    const parsed = parseE164('+9990000000');
+    assert.notEqual(assembleE164('20', parsed.local), '+209990000000');
+  });
+});

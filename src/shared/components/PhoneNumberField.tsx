@@ -26,6 +26,8 @@ type PhoneNumberFieldProps = {
   value: string; // stored E.164 (or '')
   onChange: (e164: string) => void;
   label?: string;
+  // Lifts current validity so a parent (e.g. profile Save) can block submit on an invalid number.
+  onValidChange?: (isValid: boolean) => void;
 };
 
 // Country-selector + local-part phone input that stores a single E.164 string. Egypt-specific
@@ -34,12 +36,20 @@ export function PhoneNumberField({
   value,
   onChange,
   label = 'Phone Number',
+  onValidChange,
 }: PhoneNumberFieldProps) {
   const fieldId = useId();
   const errorId = useId();
   const [code, setCode] = useState(() => parseE164(value).code);
   const [local, setLocal] = useState(() => parseE164(value).local);
   const [error, setError] = useState<string | null>(null);
+
+  // Emit validity on every meaningful change so Save stays in sync, independent of blur. Validate
+  // against the normalized local part (matches what gets persisted); empty is valid (optional).
+  useEffect(() => {
+    const dial = dialForCode(code);
+    onValidChange?.(validateLocalPart(normalizeLocalPart(local, dial), dial) === null);
+  }, [code, local, onValidChange]);
 
   // Re-seed from an externally pushed value (e.g. async profile load). The guard skips when the
   // incoming value already matches our internal state, so user edits never get clobbered and empty
@@ -80,7 +90,7 @@ export function PhoneNumberField({
       <Label htmlFor={fieldId}>{label}</Label>
       <div className="mt-1 flex gap-2">
         <Select value={code} onValueChange={handleCodeChange}>
-          <SelectTrigger className="w-[130px] shrink-0">
+          <SelectTrigger aria-label="Country code" className="w-[130px] shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -106,6 +116,7 @@ export function PhoneNumberField({
         <Input
           id={fieldId}
           type="tel"
+          inputMode="numeric"
           dir="ltr"
           className="flex-1"
           value={local}
