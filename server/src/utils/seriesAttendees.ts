@@ -1,0 +1,112 @@
+// Read-time union of a series' enrolled users (KTD-1): the linked track's bookers
+// (paid/free/manual) merged with the series' manual grants, deduped by user. Pure logic —
+// the route fetches both sources from the DB and delegates the merge/search/sort/paginate
+// here so it stays unit-testable without a database.
+
+export type SeriesAttendeeRow = {
+  userId: string;
+  email: string | null;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  bookedAt: Date | string;
+  invoiceId: number | null;
+  invoiceNumber: string | null;
+  source: 'paid' | 'free' | 'manual';
+  reference: string | null;
+  amountPaidCents: number | null;
+  // Discriminator for the UI: present only for manual-grant rows (revoke is allowed there).
+  grantId: string | null;
+};
+
+// Track-booking rows arrive already in the attendee shape (from buildTrackAttendeesQuery),
+// where the left-joined userId is nullable at the type level.
+export type SeriesBookingAttendeeInput = Omit<SeriesAttendeeRow, 'grantId' | 'userId'> & {
+  userId: string | null;
+};
+
+// Manual-grant rows arrive in their native shape and are mapped into the attendee shape.
+export type SeriesGrantAttendeeInput = {
+  grantId: string;
+  userId: string | null;
+  email: string | null;
+  name: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNumber: string | null;
+  grantedAt: Date | string;
+  grantReason: string | null;
+};
+
+function grantToRow(grant: SeriesGrantAttendeeInput): SeriesAttendeeRow {
+  return {
+    userId: grant.userId as string,
+    email: grant.email,
+    name: grant.name,
+    firstName: grant.firstName,
+    lastName: grant.lastName,
+    phoneNumber: grant.phoneNumber,
+    bookedAt: grant.grantedAt,
+    invoiceId: null,
+    invoiceNumber: null,
+    source: 'manual',
+    reference: grant.grantReason,
+    amountPaidCents: null,
+    grantId: grant.grantId,
+  };
+}
+
+function matchesSearch(row: SeriesAttendeeRow, search: string): boolean {
+  const haystack = [
+    row.name,
+    row.firstName,
+    row.lastName,
+    row.email,
+    row.phoneNumber,
+    row.invoiceNumber,
+    row.invoiceId == null ? null : String(row.invoiceId),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(search);
+}
+
+function bookedAtMs(value: Date | string): number {
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+export function mergeSeriesAttendees(
+  bookingRows: SeriesBookingAttendeeInput[],
+  grantRows: SeriesGrantAttendeeInput[],
+  options: { search?: string; page: number; pageSize: number },
+): { items: SeriesAttendeeRow[]; total: number } {
+  const byUserId = new Map<string, SeriesAttendeeRow>();
+
+  // Booking rows first so a user who both bought the track and holds a grant keeps the
+  // booking row (richer: invoice + amount), and shows no revoke affordance.
+  for (const booking of bookingRows) {
+    if (!booking.userId) continue;
+    byUserId.set(booking.userId, { ...booking, userId: booking.userId, grantId: null });
+  }
+  for (const grant of grantRows) {
+    if (!grant.userId || byUserId.has(grant.userId)) continue;
+    byUserId.set(grant.userId, grantToRow(grant));
+  }
+
+  let merged = [...byUserId.values()];
+
+  const normalizedSearch = options.search?.trim().toLowerCase();
+  if (normalizedSearch) {
+    merged = merged.filter((row) => matchesSearch(row, normalizedSearch));
+  }
+
+  merged.sort((a, b) => bookedAtMs(b.bookedAt) - bookedAtMs(a.bookedAt));
+
+  const total = merged.length;
+  const offset = (options.page - 1) * options.pageSize;
+  const items = merged.slice(offset, offset + options.pageSize);
+  return { items, total };
+}

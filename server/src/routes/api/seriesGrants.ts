@@ -2,7 +2,10 @@ import { and, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
-import { series, seriesAccessGrants, users } from '../../db/schema/index.js';
+import { profiles, series, seriesAccessGrants, trackBookings, users } from '../../db/schema/index.js';
+import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
+import { activeTrackBookingWhere } from '../../utils/booking.js';
+import { mergeSeriesAttendees } from '../../utils/seriesAttendees.js';
 import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
 import { handleSeriesBulkGrant } from './seriesGrantsBulk.js';
 import {
@@ -122,6 +125,75 @@ export function registerSeriesGrantsRoutes(app: Hono) {
         total: Number(totalRow?.value ?? 0),
       },
     });
+  });
+
+  // Enrolled-users parity with tracks (R1): linked-track bookers ∪ manual series grants.
+  app.get('/series/:id/attendees', async (c) => {
+    const actor = await requireManager(c);
+    if ('response' in actor) return actor.response;
+
+    const idParsed = uuidPathParamSchema.safeParse(c.req.param('id'));
+    if (!idParsed.success) {
+      return c.json(
+        { error: { code: 'INVALID_PARAM', message: 'Series ID must be a valid UUID.' } },
+        400,
+      );
+    }
+
+    const queryParsed = listGrantsQuerySchema.safeParse({
+      page: c.req.query('page'),
+      pageSize: c.req.query('pageSize'),
+      search: c.req.query('search'),
+    });
+    if (!queryParsed.success) {
+      return c.json({ error: { code: 'INVALID_QUERY', message: queryParsed.error.message } }, 400);
+    }
+
+    const seriesId = idParsed.data;
+    const { page, pageSize, search } = queryParsed.data;
+
+    const [seriesRecord] = await db
+      .select({ id: series.id, trackId: series.trackId })
+      .from(series)
+      .where(eq(series.id, seriesId))
+      .limit(1);
+
+    if (!seriesRecord) {
+      return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
+    }
+
+    // A series with no linked track yields manual grants only (no track join, no crash).
+    const bookingRows = seriesRecord.trackId
+      ? await buildTrackAttendeesQuery(
+          db,
+          activeTrackBookingWhere(eq(trackBookings.trackId, seriesRecord.trackId)),
+        )
+      : [];
+
+    const grantRows = await db
+      .select({
+        grantId: seriesAccessGrants.id,
+        userId: seriesAccessGrants.userId,
+        email: users.email,
+        name: users.name,
+        firstName: profiles.firstName,
+        lastName: profiles.lastName,
+        phoneNumber: profiles.phoneNumber,
+        grantedAt: seriesAccessGrants.grantedAt,
+        grantReason: seriesAccessGrants.grantReason,
+      })
+      .from(seriesAccessGrants)
+      .innerJoin(users, eq(users.id, seriesAccessGrants.userId))
+      .leftJoin(profiles, eq(profiles.id, users.id))
+      .where(and(eq(seriesAccessGrants.seriesId, seriesId), isNull(seriesAccessGrants.revokedAt)));
+
+    const { items, total } = mergeSeriesAttendees(bookingRows, grantRows, {
+      search,
+      page,
+      pageSize,
+    });
+
+    return c.json({ items, pagination: { page, pageSize, total } });
   });
 
   app.post('/series/:id/grants', async (c) => {
