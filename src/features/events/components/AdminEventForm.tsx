@@ -27,7 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { ToastAction } from '@/shared/components/ui/toast';
+import { useToast } from '@/shared/hooks/custom/use-toast';
 import { CAIRO_TZ, cairoLocalToUtcIso, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 
 const eventFormSchema = z.object({
@@ -92,6 +95,7 @@ const eventFormSchema = z.object({
         !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
       'Price must be between 0 and 100,000 EGP.',
     ),
+  isPublished: z.boolean(),
 });
 
 export type AdminEventFormValues = z.infer<typeof eventFormSchema>;
@@ -165,6 +169,7 @@ export function AdminEventForm({
     imageUrl: event?.image_url ?? '',
     tags: event?.tags?.length ? event.tags.join(', ') : '',
     priceEgp: event?.price_in_cents ? String(event.price_in_cents / 100) : '',
+    isPublished: event?.is_published ?? false,
   };
 
   const form = useForm<AdminEventFormValues>({
@@ -172,6 +177,7 @@ export function AdminEventForm({
     defaultValues,
   });
 
+  const { toast } = useToast();
   const values = form.watch();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -239,9 +245,44 @@ export function AdminEventForm({
             .slice(0, 12)
         : undefined,
       priceInCents: formValues.priceEgp ? Math.round(Number(formValues.priceEgp) * 100) : null,
+      isPublished: formValues.isPublished,
     };
 
     await onSubmit(payload);
+
+    // No-silent-draft safeguard (D-2): warn only when an event becomes newly hidden — a brand-new
+    // draft or a published event flipped to draft — not on every re-save of an existing draft.
+    const newlyHidden = !formValues.isPublished && event?.is_published !== false;
+    if (newlyHidden) {
+      toast({
+        title: 'Saved as draft — not visible to members',
+        description: "Members can't see or register for it until you publish.",
+        // Edit keeps the user on the form, so offer a one-click publish (a safe in-place re-save).
+        // Create navigates to the event page, so it gets the notice without an unsafe re-create.
+        action: event ? (
+          <ToastAction
+            altText="Publish now"
+            onClick={() => {
+              void handlePublishNow();
+            }}
+          >
+            Publish now
+          </ToastAction>
+        ) : undefined,
+      });
+    }
+  };
+
+  const handlePublishNow = async () => {
+    const previousIsPublished = form.getValues('isPublished');
+    const publishedValues = { ...form.getValues(), isPublished: true };
+    form.setValue('isPublished', true, { shouldDirty: true, shouldTouch: true });
+
+    try {
+      await handleSubmit(publishedValues);
+    } catch {
+      form.setValue('isPublished', previousIsPublished, { shouldDirty: true, shouldTouch: true });
+    }
   };
 
   return (
@@ -467,6 +508,26 @@ export function AdminEventForm({
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isPublished"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Published</FormLabel>
+                      <FormDescription>
+                        {field.value
+                          ? 'Visible to members in event listings.'
+                          : 'Draft — saved but hidden from members until you publish.'}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
                   </FormItem>
                 )}
               />

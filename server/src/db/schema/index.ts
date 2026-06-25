@@ -81,11 +81,15 @@ export const events = pgTable(
     eventType: eventTypeEnum('event_type').default('Event').notNull(),
     guestExperts: jsonb('guest_experts'),
     priceInCents: integer('price_in_cents'),
+    // Default true so existing events stay visible after the migration; the create route defaults
+    // NEW events to draft (false), mirroring tracks.
+    isPublished: boolean('is_published').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     dateIdx: index('events_date_idx').on(table.date),
+    publishedIdx: index('events_is_published_idx').on(table.isPublished),
   }),
 );
 

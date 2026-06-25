@@ -195,6 +195,9 @@ const AdminMeetups = () => {
                                 >
                                   {new Date(event.date) > new Date() ? 'Upcoming' : 'Past'}
                                 </Badge>
+                                <Badge variant={event.is_published ? 'default' : 'secondary'}>
+                                  {event.is_published ? 'Published' : 'Draft'}
+                                </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground">
                                 {new Date(event.date).toLocaleString()} ·{' '}

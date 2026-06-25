@@ -30,10 +30,11 @@ import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError } from '../../utils/errors.js';
 import { isInvoicePaid } from '../../utils/invoiceStatus.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { isEventHiddenFromNonStaff } from './eventVisibility.js';
 import { loadVerifiedPaymentAnalytics } from './paymentAnalytics.js';
 import { ONE_YEAR_MS } from './subscriptionShared.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
-import { isKnownDatabaseConflict } from './utils.js';
+import { getOptionalUserRole, isKnownDatabaseConflict } from './utils.js';
 
 // --- Rate Limit Rules ---
 const CHECKOUT_RATE_LIMIT = { limit: 5, windowMs: 60_000 }; // 5 checkouts per minute
@@ -258,11 +259,12 @@ async function calculatePrice(
   }
 
   if (itemType === 'event' && itemId) {
-    // Parallel fetch: event details + track event info + existing registration (all use itemId/userId)
-    const [eventResult, trackEventResult, existingRegResult] = await Promise.all([
+    // Parallel fetch: event details + track event info + existing registration + viewer role
+    const [eventResult, trackEventResult, existingRegResult, role] = await Promise.all([
       dbClient.select().from(events).where(eq(events.id, itemId)),
       dbClient
         .select({
+          isPublished: tracks.isPublished,
           allowIndividualBooking: tracks.allowIndividualBooking,
           singleBookingStart: tracks.singleBookingStart,
           singleBookingEnd: tracks.singleBookingEnd,
@@ -274,13 +276,27 @@ async function calculatePrice(
         .select()
         .from(eventAttendees)
         .where(and(eq(eventAttendees.eventId, itemId), eq(eventAttendees.userId, userId))),
+      getOptionalUserRole(userId, dbClient),
     ]);
 
     const [event] = eventResult;
     const [trackEvent] = trackEventResult;
     const [existingReg] = existingRegResult;
+    const isStaff = Boolean(role && ['owner', 'admin', 'manager'].includes(role));
 
     if (!event) throw new ApiError('NOT_FOUND', 'Event not found', 404);
+
+    // Drafts (and events in unpublished tracks) aren't payable: throw the same not-found as a
+    // missing event so price-preview/checkout can't reveal or transact a known draft id. (D-1)
+    if (
+      isEventHiddenFromNonStaff({
+        isPublished: event.isPublished,
+        linkedTrackIsPublished: trackEvent ? trackEvent.isPublished : null,
+        isStaff,
+      })
+    ) {
+      throw new ApiError('NOT_FOUND', 'Event not found', 404);
+    }
 
     if (trackEvent) {
       if (!trackEvent.allowIndividualBooking) {

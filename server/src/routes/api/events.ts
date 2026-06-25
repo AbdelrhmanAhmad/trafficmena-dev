@@ -19,6 +19,11 @@ import { attendeeAmountCents } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import {
+  createEventIsPublishedSchema,
+  updateEventIsPublishedSchema,
+} from './eventPublishSchema.js';
+import { isEventHiddenFromNonStaff } from './eventVisibility.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -139,9 +144,13 @@ const baseEventSchema = z.object({
   priceInCents: priceInCentsSchema,
 });
 
-const createEventSchema = baseEventSchema;
+// Mirror tracks: new events default to draft (false); update only flips it when provided.
+const createEventSchema = baseEventSchema.extend({
+  isPublished: createEventIsPublishedSchema,
+});
 const updateEventSchema = baseEventSchema
   .partial()
+  .extend({ isPublished: updateEventIsPublishedSchema })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
 export function registerEventRoutes(app: Hono) {
@@ -180,11 +189,12 @@ export function registerEventRoutes(app: Hono) {
           filters.push(ilike(events.title, `%${escapeLikePattern(search)}%`));
         }
 
-        // Hide events in unpublished tracks (unless staff)
+        // Hide drafts and events in unpublished tracks (unless staff)
         if (!isStaff) {
+          filters.push(eq(events.isPublished, true));
           filters.push(sql`NOT EXISTS (
-            SELECT 1 FROM track_events te 
-            JOIN tracks t ON t.id = te.track_id 
+            SELECT 1 FROM track_events te
+            JOIN tracks t ON t.id = te.track_id
             WHERE te.event_id = ${events.id} AND t.is_published = false
           )`);
         }
@@ -212,6 +222,7 @@ export function registerEventRoutes(app: Hono) {
             tags: events.tags,
             eventType: events.eventType,
             priceInCents: events.priceInCents,
+            isPublished: events.isPublished,
             attendeeCount: sql<number>`COALESCE(COUNT(${eventAttendees.id}) FILTER (WHERE ${eventAttendees.status} = 'active'), 0)`,
           })
           .from(events)
@@ -270,6 +281,7 @@ export function registerEventRoutes(app: Hono) {
             tags: events.tags,
             eventType: events.eventType,
             priceInCents: events.priceInCents,
+            isPublished: events.isPublished,
           })
           .from(events)
           .where(eq(events.id, eventId))
@@ -313,6 +325,12 @@ export function registerEventRoutes(app: Hono) {
         const trackInfo = trackInfoResult[0];
         const roleValue = role;
         const isStaff = roleValue && ['owner', 'admin', 'manager'].includes(roleValue);
+
+        // Draft events (and events in unpublished tracks) are invisible to non-staff — return the
+        // same 404 so a draft is indistinguishable from a missing event.
+        if (!event.isPublished && !isStaff) {
+          return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
+        }
 
         if (trackInfo && !trackInfo.isPublished && !isStaff) {
           return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
@@ -496,6 +514,7 @@ export function registerEventRoutes(app: Hono) {
               tags: payload.tags ?? [],
               eventType: payload.eventType,
               priceInCents: payload.priceInCents ?? null,
+              isPublished: payload.isPublished,
               guestExperts: [],
             })
             .returning({
@@ -511,6 +530,7 @@ export function registerEventRoutes(app: Hono) {
               tags: events.tags,
               eventType: events.eventType,
               priceInCents: events.priceInCents,
+              isPublished: events.isPublished,
             });
 
           await tx.insert(libraryAssets).values({
@@ -571,6 +591,7 @@ export function registerEventRoutes(app: Hono) {
         if (updates.tags !== undefined) updateValues.tags = updates.tags ?? [];
         if (updates.eventType !== undefined) updateValues.eventType = updates.eventType;
         if (updates.priceInCents !== undefined) updateValues.priceInCents = updates.priceInCents;
+        if (updates.isPublished !== undefined) updateValues.isPublished = updates.isPublished;
 
         // If reducing capacity, verify it's valid
         if (updates.maxAttendees !== undefined) {
@@ -625,6 +646,7 @@ export function registerEventRoutes(app: Hono) {
             tags: events.tags,
             eventType: events.eventType,
             priceInCents: events.priceInCents,
+            isPublished: events.isPublished,
           });
 
         if (!updated) {
@@ -684,6 +706,9 @@ export function registerEventRoutes(app: Hono) {
           throw new ApiError('INVALID_REQUEST', bodyParse.error.message, 400);
         }
 
+        const role = await getOptionalUserRole(userId);
+        const isStaff = Boolean(role && ['owner', 'admin', 'manager'].includes(role));
+
         const result = await db.transaction(async (tx) => {
           const [event] = await tx
             .select({
@@ -692,6 +717,7 @@ export function registerEventRoutes(app: Hono) {
               meetingLink: events.meetingLink,
               location: events.location,
               priceInCents: events.priceInCents,
+              isPublished: events.isPublished,
             })
             .from(events)
             .where(eq(events.id, eventId))
@@ -705,6 +731,7 @@ export function registerEventRoutes(app: Hono) {
           const [trackEvent] = await tx
             .select({
               trackId: tracks.id,
+              isPublished: tracks.isPublished,
               allowIndividualBooking: tracks.allowIndividualBooking,
               singleBookingStart: tracks.singleBookingStart,
               singleBookingEnd: tracks.singleBookingEnd,
@@ -712,6 +739,18 @@ export function registerEventRoutes(app: Hono) {
             .from(trackEvents)
             .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
             .where(eq(trackEvents.eventId, eventId));
+
+          // Drafts (and events in unpublished tracks) are unbookable: return the same 404 as a
+          // missing event so a known draft id can't be registered for. (D-1)
+          if (
+            isEventHiddenFromNonStaff({
+              isPublished: event.isPublished,
+              linkedTrackIsPublished: trackEvent ? trackEvent.isPublished : null,
+              isStaff,
+            })
+          ) {
+            throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
+          }
 
           // Enforce booking periods if in a track
           if (trackEvent) {

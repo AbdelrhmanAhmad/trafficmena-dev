@@ -18,6 +18,7 @@ const ROLE_PRIORITY: Record<UserRole, number> = {
 
 type RoleGuardSuccess = { userId: string; role: UserRole };
 type RoleGuardFailure = { response: Response };
+type RoleDbClient = Pick<typeof db, 'select'>;
 
 type NotImplementedOptions = {
   feature: string;
@@ -103,8 +104,11 @@ export function normalizeRole(value: string | null | undefined): UserRole {
   return 'user';
 }
 
-export async function getOptionalUserRole(userId: string): Promise<UserRole | null> {
-  const [record] = await db
+export async function getOptionalUserRole(
+  userId: string,
+  dbClient: RoleDbClient = db,
+): Promise<UserRole | null> {
+  const [record] = await dbClient
     .select({ role: profiles.role })
     .from(profiles)
     .where(eq(profiles.id, userId))
