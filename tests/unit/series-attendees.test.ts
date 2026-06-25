@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { mergeSeriesAttendees } from '../../server/src/utils/seriesAttendees.ts';
+import {
+  isMergeTruncated,
+  MAX_MERGE_ROWS,
+  mergeSeriesAttendees,
+} from '../../server/src/utils/seriesAttendees.ts';
 
 const booking = (over = {}) => ({
   userId: 'u-book',
@@ -84,6 +88,16 @@ describe('mergeSeriesAttendees', () => {
     assert.equal(mergeSeriesAttendees(rows, [], opts({ search: 'nobody' })).total, 0);
   });
 
+  it('search matches a manual booking reference (A-1)', () => {
+    const rows = [booking({ userId: 'u1', reference: 'MANUAL-REF-42', source: 'manual' })];
+    assert.equal(mergeSeriesAttendees(rows, [], opts({ search: 'manual-ref-42' })).total, 1);
+  });
+
+  it('search matches a grant by its reason (mapped to reference) (A-1)', () => {
+    const grants = [grant({ userId: 'g', grantReason: 'Sponsorship 2026' })];
+    assert.equal(mergeSeriesAttendees([], grants, opts({ search: 'sponsorship' })).total, 1);
+  });
+
   it('sorts by bookedAt descending (newest first)', () => {
     const older = booking({ userId: 'old', bookedAt: '2026-01-01T00:00:00.000Z' });
     const newer = grant({ userId: 'new', grantedAt: '2026-03-01T00:00:00.000Z' });
@@ -99,5 +113,20 @@ describe('mergeSeriesAttendees', () => {
     const { items, total } = mergeSeriesAttendees([], grants, opts({ page: 2, pageSize: 2 }));
     assert.equal(total, 5);
     assert.equal(items.length, 2);
+  });
+});
+
+describe('isMergeTruncated (A-3 cap signal)', () => {
+  it('is false when neither source hit the cap', () => {
+    assert.equal(isMergeTruncated(10, 5), false);
+    assert.equal(isMergeTruncated(MAX_MERGE_ROWS - 1, 0), false);
+  });
+
+  it('is true when the booking source reached the cap', () => {
+    assert.equal(isMergeTruncated(MAX_MERGE_ROWS, 0), true);
+  });
+
+  it('is true when the grant source reached the cap', () => {
+    assert.equal(isMergeTruncated(0, MAX_MERGE_ROWS), true);
   });
 });

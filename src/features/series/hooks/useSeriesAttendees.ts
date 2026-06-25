@@ -24,16 +24,16 @@ export const useSeriesAttendees = (
     }
   }, [seriesId, pageSize, search]);
 
-  const query = useQuery<{ items: SeriesAttendee[]; total: number }>({
+  const query = useQuery<{ items: SeriesAttendee[]; total: number; truncated: boolean }>({
     queryKey: ['series-attendees', seriesId, page, pageSize, search],
     queryFn: async () => {
-      if (!seriesId) return { items: [], total: 0 };
-      const { items, pagination } = await fetchSeriesAttendees(seriesId, {
+      if (!seriesId) return { items: [], total: 0, truncated: false };
+      const { items, pagination, truncated } = await fetchSeriesAttendees(seriesId, {
         page,
         pageSize,
         search,
       });
-      return { items, total: pagination.total };
+      return { items, total: pagination.total, truncated: Boolean(truncated) };
     },
     enabled: Boolean(seriesId),
     placeholderData: keepPreviousData,

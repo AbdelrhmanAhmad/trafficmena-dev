@@ -11,7 +11,11 @@ import {
 } from '../../db/schema/index.js';
 import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
-import { mergeSeriesAttendees } from '../../utils/seriesAttendees.js';
+import {
+  isMergeTruncated,
+  MAX_MERGE_ROWS,
+  mergeSeriesAttendees,
+} from '../../utils/seriesAttendees.js';
 import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
 import { handleSeriesBulkGrant } from './seriesGrantsBulk.js';
 import {
@@ -169,11 +173,15 @@ export function registerSeriesGrantsRoutes(app: Hono) {
     }
 
     // A series with no linked track yields manual grants only (no track join, no crash).
+    // Both sources are capped at MAX_MERGE_ROWS (newest first) since the merge happens in
+    // memory and a linked track's capacity can be uncapped (null maxTrackBookings).
     const bookingRows = seriesRecord.trackId
       ? await buildTrackAttendeesQuery(
           db,
           activeTrackBookingWhere(eq(trackBookings.trackId, seriesRecord.trackId)),
         )
+          .orderBy(desc(trackBookings.bookedAt))
+          .limit(MAX_MERGE_ROWS)
       : [];
 
     const grantRows = await db
@@ -191,7 +199,9 @@ export function registerSeriesGrantsRoutes(app: Hono) {
       .from(seriesAccessGrants)
       .innerJoin(users, eq(users.id, seriesAccessGrants.userId))
       .leftJoin(profiles, eq(profiles.id, users.id))
-      .where(and(eq(seriesAccessGrants.seriesId, seriesId), isNull(seriesAccessGrants.revokedAt)));
+      .where(and(eq(seriesAccessGrants.seriesId, seriesId), isNull(seriesAccessGrants.revokedAt)))
+      .orderBy(desc(seriesAccessGrants.grantedAt))
+      .limit(MAX_MERGE_ROWS);
 
     const { items, total } = mergeSeriesAttendees(bookingRows, grantRows, {
       search,
@@ -199,7 +209,10 @@ export function registerSeriesGrantsRoutes(app: Hono) {
       pageSize,
     });
 
-    return c.json({ items, pagination: { page, pageSize, total } });
+    // Staff-facing signal: the merged total is incomplete because a source hit the cap.
+    const truncated = isMergeTruncated(bookingRows.length, grantRows.length);
+
+    return c.json({ items, pagination: { page, pageSize, total }, truncated });
   });
 
   app.post('/series/:id/grants', async (c) => {

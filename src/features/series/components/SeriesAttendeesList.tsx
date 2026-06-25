@@ -31,6 +31,9 @@ interface SeriesAttendeesListProps {
   seriesId: string;
 }
 
+// Mirrors the server's MAX_MERGE_ROWS cap (server/src/utils/seriesAttendees.ts); display only.
+const MAX_MERGE_ROWS_DISPLAY = 2000;
+
 function formatEnrollmentSource(source: 'paid' | 'free' | 'manual') {
   if (source === 'manual') return 'Manual';
   if (source === 'free') return 'Free';
@@ -51,6 +54,7 @@ export const SeriesAttendeesList = ({ seriesId }: SeriesAttendeesListProps) => {
     20,
     search,
   );
+  const isTruncated = Boolean(data?.truncated);
   const revokeMutation = useRevokeSeriesAccess(seriesId);
 
   const totalPages = data?.total ? Math.max(1, Math.ceil(data.total / pageSize)) : 1;
@@ -133,6 +137,12 @@ export const SeriesAttendeesList = ({ seriesId }: SeriesAttendeesListProps) => {
             Track buyers and members with a manual grant are listed here. Subscribers and staff also
             have access and are not listed; non-premium series are visible to all members.
           </p>
+          {isTruncated ? (
+            <p className="text-sm text-amber-600">
+              Showing the {MAX_MERGE_ROWS_DISPLAY} most recent enrollments; older records are not
+              listed.
+            </p>
+          ) : null}
           <div className="relative max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input

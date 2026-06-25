@@ -3,6 +3,17 @@
 // the route fetches both sources from the DB and delegates the merge/search/sort/paginate
 // here so it stays unit-testable without a database.
 
+// Upper bound on rows pulled from each source before the in-memory merge. A linked track's
+// maxTrackBookings can be null (uncapped), so without this a popular track would load its full
+// booking history on every page. Both source queries fetch the most-recent N (bookedAt desc),
+// so the cap keeps the newest rows; the route flags `truncated` when either source hits it.
+export const MAX_MERGE_ROWS = 2000;
+
+// True when either fetched source reached the cap, meaning the merged total may be incomplete.
+export function isMergeTruncated(bookingCount: number, grantCount: number): boolean {
+  return bookingCount >= MAX_MERGE_ROWS || grantCount >= MAX_MERGE_ROWS;
+}
+
 export type SeriesAttendeeRow = {
   userId: string;
   email: string | null;
@@ -66,6 +77,7 @@ function matchesSearch(row: SeriesAttendeeRow, search: string): boolean {
     row.phoneNumber,
     row.invoiceNumber,
     row.invoiceId == null ? null : String(row.invoiceId),
+    row.reference,
   ]
     .filter(Boolean)
     .join(' ')

@@ -210,16 +210,19 @@ export interface SeriesAttendee {
   grantId: string | null;
 }
 
+// `truncated` is true when a source hit the server cap and the total may be incomplete.
+export type SeriesAttendeesResult = PaginatedResult<SeriesAttendee> & { truncated?: boolean };
+
 export async function fetchSeriesAttendees(
   seriesId: string,
   params: { page?: number; pageSize?: number; search?: string } = {},
-): Promise<PaginatedResult<SeriesAttendee>> {
+): Promise<SeriesAttendeesResult> {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
   if (params.search?.trim()) query.set('search', params.search.trim());
 
-  return fetchJson<PaginatedResult<SeriesAttendee>>(
+  return fetchJson<SeriesAttendeesResult>(
     `${API_BASE}/series/${seriesId}/attendees${query.toString() ? `?${query.toString()}` : ''}`,
     { method: 'GET' },
   );
