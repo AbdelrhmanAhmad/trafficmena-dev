@@ -33,7 +33,7 @@ export const useEventBooking = () => {
           itemId: variables.event_id,
           itemName: cachedEvent?.title ?? '',
           itemCategory: cachedEvent?.event_type ?? '',
-          isOnline: Boolean(cachedEvent?.meeting_link) && !cachedEvent?.location,
+          isOnline: cachedEvent?.event_format === 'online',
         });
 
         queryClient.invalidateQueries({ queryKey: ['event', variables.event_id] });

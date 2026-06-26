@@ -351,8 +351,8 @@ async function calculatePrice(
     let discountSource: PriceResult['discountSource'] = null;
     let promoCodeId: string | null = null;
 
-    // Online event = FREE for subscribers (derive from existing fields)
-    const isOnline = event.meetingLink && !event.location;
+    // Online event = FREE for subscribers (explicit delivery mode, no longer inferred from location)
+    const isOnline = event.eventFormat === 'online';
     if (isSubscriber && isOnline) {
       amountCents = 0;
       discountAppliedCents = basePrice > 0 ? basePrice : 0;

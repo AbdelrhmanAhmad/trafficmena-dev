@@ -46,6 +46,7 @@ const eventFormSchema = z.object({
     .max(8000, 'Descriptions are limited to 8,000 characters.'),
   date: z.string().min(1, 'Pick a date and time.'),
   eventType: z.enum(['Event', 'Meetup', 'Mastermind', 'Retreat']),
+  eventFormat: z.enum(['online', 'offline']),
   location: z.string().trim().max(255).optional(),
   locationUrl: z
     .string()
@@ -162,6 +163,7 @@ export function AdminEventForm({
     description: (event?.description ?? '').trim(),
     date: toCairoDatetimeLocal(event?.date),
     eventType: event?.event_type ?? 'Event',
+    eventFormat: event?.event_format ?? 'offline',
     location: event?.location ?? '',
     locationUrl: event?.location_url ?? '',
     meetingLink: event?.meeting_link ?? '',
@@ -231,6 +233,7 @@ export function AdminEventForm({
       description: DOMPurify.sanitize(formValues.description.trim()),
       date: cairoLocalToUtcIso(formValues.date),
       eventType: formValues.eventType,
+      eventFormat: formValues.eventFormat,
       location: formValues.location?.trim() ? formValues.location.trim() : null,
       locationUrl: formValues.locationUrl?.trim() ? formValues.locationUrl.trim() : null,
       meetingLink: formValues.meetingLink?.trim() ? formValues.meetingLink.trim() : null,
@@ -322,29 +325,56 @@ export function AdminEventForm({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="eventType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Event format</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select event format" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Event">Event</SelectItem>
-                        <SelectItem value="Meetup">Meetup</SelectItem>
-                        <SelectItem value="Mastermind">Mastermind</SelectItem>
-                        <SelectItem value="Retreat">Retreat</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="eventType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event type</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select event type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Event">Event</SelectItem>
+                          <SelectItem value="Meetup">Meetup</SelectItem>
+                          <SelectItem value="Mastermind">Mastermind</SelectItem>
+                          <SelectItem value="Retreat">Retreat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="eventFormat"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Delivery mode</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select delivery mode" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="online">Online (Zoom / live stream)</SelectItem>
+                          <SelectItem value="offline">Offline (in person)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Drives subscriber pricing and which sessions a ticket includes.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
@@ -352,10 +382,13 @@ export function AdminEventForm({
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
+                      <FormLabel>Location (address)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Dubai, UAE or Online" {...field} />
+                        <Input placeholder="Dubai, UAE" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Physical address for in-person events. Leave blank for online.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -141,6 +141,7 @@ const baseEventSchema = z.object({
   imageUrl: imageUrlSchema,
   tags: tagsSchema,
   eventType: z.enum(['Event', 'Meetup', 'Mastermind', 'Retreat']).default('Event'),
+  eventFormat: z.enum(['online', 'offline']).default('offline'),
   priceInCents: priceInCentsSchema,
 });
 
@@ -221,6 +222,7 @@ export function registerEventRoutes(app: Hono) {
             imageUrl: events.imageUrl,
             tags: events.tags,
             eventType: events.eventType,
+            eventFormat: events.eventFormat,
             priceInCents: events.priceInCents,
             isPublished: events.isPublished,
             attendeeCount: sql<number>`COALESCE(COUNT(${eventAttendees.id}) FILTER (WHERE ${eventAttendees.status} = 'active'), 0)`,
@@ -280,6 +282,7 @@ export function registerEventRoutes(app: Hono) {
             imageUrl: events.imageUrl,
             tags: events.tags,
             eventType: events.eventType,
+            eventFormat: events.eventFormat,
             priceInCents: events.priceInCents,
             isPublished: events.isPublished,
           })
@@ -513,6 +516,7 @@ export function registerEventRoutes(app: Hono) {
               imageUrl: payload.imageUrl ?? null,
               tags: payload.tags ?? [],
               eventType: payload.eventType,
+              eventFormat: payload.eventFormat,
               priceInCents: payload.priceInCents ?? null,
               isPublished: payload.isPublished,
               guestExperts: [],
@@ -529,6 +533,7 @@ export function registerEventRoutes(app: Hono) {
               imageUrl: events.imageUrl,
               tags: events.tags,
               eventType: events.eventType,
+              eventFormat: events.eventFormat,
               priceInCents: events.priceInCents,
               isPublished: events.isPublished,
             });
@@ -590,6 +595,7 @@ export function registerEventRoutes(app: Hono) {
         if (updates.imageUrl !== undefined) updateValues.imageUrl = updates.imageUrl ?? null;
         if (updates.tags !== undefined) updateValues.tags = updates.tags ?? [];
         if (updates.eventType !== undefined) updateValues.eventType = updates.eventType;
+        if (updates.eventFormat !== undefined) updateValues.eventFormat = updates.eventFormat;
         if (updates.priceInCents !== undefined) updateValues.priceInCents = updates.priceInCents;
         if (updates.isPublished !== undefined) updateValues.isPublished = updates.isPublished;
 
@@ -645,6 +651,7 @@ export function registerEventRoutes(app: Hono) {
             imageUrl: events.imageUrl,
             tags: events.tags,
             eventType: events.eventType,
+            eventFormat: events.eventFormat,
             priceInCents: events.priceInCents,
             isPublished: events.isPublished,
           });
@@ -716,6 +723,7 @@ export function registerEventRoutes(app: Hono) {
               maxAttendees: events.maxAttendees,
               meetingLink: events.meetingLink,
               location: events.location,
+              eventFormat: events.eventFormat,
               priceInCents: events.priceInCents,
               isPublished: events.isPublished,
             })
@@ -799,7 +807,7 @@ export function registerEventRoutes(app: Hono) {
               ),
             );
           const isSubscriber = !!subscription;
-          const isOnline = event.meetingLink && !event.location;
+          const isOnline = event.eventFormat === 'online';
           const requiresPayment = (event.priceInCents ?? 0) > 0 && !(isSubscriber && isOnline);
 
           if (requiresPayment) {

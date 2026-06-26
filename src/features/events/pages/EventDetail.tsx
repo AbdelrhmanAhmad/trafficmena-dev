@@ -115,7 +115,7 @@ const EventDetail: React.FC = () => {
   );
 
   const isPaidEvent = !!(event?.price_in_cents && event.price_in_cents > 0);
-  const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
+  const isOnlineEvent = event?.event_format === 'online';
   const needsPayment = isPaidEvent && !(pricePreview?.isSubscriber && isOnlineEvent);
   const promoError = pricePreview?.promoError ?? null;
   const isPromoApplied =
@@ -182,7 +182,7 @@ const EventDetail: React.FC = () => {
         currency: 'EGP',
         item_location: event.location ?? undefined,
         item_date: event.date,
-        is_online: Boolean(event.meeting_link) && !event.location,
+        is_online: event.event_format === 'online',
         spots_remaining: spotsRemaining,
       },
     });

@@ -18,6 +18,9 @@ import {
 export const userRoleEnum = pgEnum('user_role', ['owner', 'admin', 'manager', 'expert', 'user']);
 export const userTypeEnum = pgEnum('user_type', ['learner', 'expert']);
 export const eventTypeEnum = pgEnum('event_type', ['Event', 'Meetup', 'Mastermind', 'Retreat']);
+// Explicit delivery mode. Replaces the load-bearing `meetingLink && !location` inference; binary by
+// design (a hybrid day is modeled as separate online + offline sessions).
+export const eventFormatEnum = pgEnum('event_format', ['online', 'offline']);
 export const assetFileTypeEnum = pgEnum('asset_file_type', ['Document', 'Video', 'Presentation']);
 export const invitationStatusEnum = pgEnum('invitation_status', [
   'pending',
@@ -79,6 +82,9 @@ export const events = pgTable(
     imageUrl: text('image_url'),
     tags: text('tags').array(),
     eventType: eventTypeEnum('event_type').default('Event').notNull(),
+    // Online vs offline delivery, explicit (not inferred from location text). Default 'offline' is the
+    // safe choice: a new event is paid-for-subscribers until an admin marks it online.
+    eventFormat: eventFormatEnum('event_format').default('offline').notNull(),
     guestExperts: jsonb('guest_experts'),
     priceInCents: integer('price_in_cents'),
     // Default true so existing events stay visible after the migration; the create route defaults
