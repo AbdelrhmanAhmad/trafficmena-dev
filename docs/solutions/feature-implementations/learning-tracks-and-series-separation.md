@@ -90,16 +90,16 @@ CREATE TABLE "track_bookings" (
 );
 ```
 
+> **Evolution (ticket-types):** `tracks` now also carries per-ticket pricing (`price_in_cents`, `online_only_price_cents`, `online_offline_price_cents`, `offline_only_price_cents`), `location`/`location_url`, and `allow_individual_booking`. `track_bookings` now carries `ticket_type`, `booking_source`, `payment_id`, and `revoked_at` (active state = `revoked_at IS NULL`, queried via `activeTrackBookingWhere`). Paid/ticketed tracks are no longer booked inline: `POST /tracks/:id/book` rejects them with `PAYMENT_REQUIRED` (402) and booking writes go through `executeTrackBookingWrite()`.
+
 ### 2. Booking Window Logic
 
-All 4 booking period fields must be set together (or all left null):
+Two independent date pairs (a "2+2" model), not one strict 4-way chain:
 
-```
-trackBookingStart < trackBookingEnd < singleBookingStart < singleBookingEnd
-```
+- **Track booking window** (`trackBookingStart` < `trackBookingEnd`): set together; required alongside `maxTrackBookings` when track dates are present. Users book the entire track as a package.
+- **Single/individual event window** (`singleBookingStart` < `singleBookingEnd`): set together and validated **only when `allowIndividualBooking` is true**. Lets users book individual events from the track.
 
-- **Track Booking Period**: Users can book entire track as package
-- **Single Event Period**: After track booking closes, remaining spots available for individual events
+The two pairs are validated independently — the old rule that all four dates must be set together in a strict `trackStart < trackEnd < singleStart < singleEnd` chain no longer holds. See `validateBookingWindows()` in `server/src/routes/api/tracks.ts`.
 
 ### 3. Critical Bug Fix: Drizzle ORM SQL Array Syntax
 
@@ -269,21 +269,21 @@ import { inArray } from 'drizzle-orm';
 ```
 
 ### 2. Booking Window Validation
-Validate all 4 dates together with proper ordering:
+Validate the two date pairs independently (track pair always; single pair only when individual booking is enabled):
 ```typescript
 function validateBookingWindows(current, payload) {
-  // Count non-null values
-  const setCount = [trackStart, trackEnd, singleStart, singleEnd]
-    .filter(Boolean).length;
-
-  // All or nothing
-  if (setCount !== 0 && setCount !== 4) {
-    return { valid: false, error: 'All 4 booking dates required together' };
+  // Track pair: both or neither, start < end; required with maxTrackBookings
+  if (trackStart || trackEnd) {
+    if (!(trackStart && trackEnd && trackStart < trackEnd)) {
+      return { valid: false, error: 'Track booking start/end required together and ordered' };
+    }
   }
 
-  // Proper ordering
-  if (!(trackStart < trackEnd && trackEnd < singleStart && singleStart < singleEnd)) {
-    return { valid: false, error: 'Invalid date ordering' };
+  // Single/individual pair: only when allowIndividualBooking is true
+  if (allowIndividualBooking && (singleStart || singleEnd)) {
+    if (!(singleStart && singleEnd && singleStart < singleEnd)) {
+      return { valid: false, error: 'Single booking start/end required together and ordered' };
+    }
   }
 }
 ```

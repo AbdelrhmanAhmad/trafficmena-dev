@@ -14,7 +14,7 @@ This document captures all learnings from the payment gateway MVP implementation
 - Onboarding new developers
 - Similar integrations in other projects
 
-**Key Achievement**: Implemented a reservation-based payment system with capacity holds, supporting 5 payment methods (Card, Fawry, Aman, Masary, Meeza) integrated with Fawaterk payment gateway.
+**Key Achievement**: Implemented a reservation-based payment system with capacity holds, integrated with the Fawaterk payment gateway. The live payment methods depend on the Fawaterk account configuration — current accounts expose **Card (Visa/Mastercard), Fawry, and MobileWallets**; the code also handles Aman/Masary/Meeza reference codes when those are enabled.
 
 ---
 
@@ -302,22 +302,21 @@ try {
 if ('error' in result) throw result.error;
 ```
 
-### 5.2 Non-Redirect Payment Methods
+### 5.2 Non-Redirect Payment Methods + Mobile Wallet
 
-**Problem**: Frontend only handled `redirectUrl`, ignoring Fawry/Aman/Masary codes.
+**Problem**: Frontend only handled `redirectUrl`, ignoring the reference codes (`fawryCode`, `amanCode`, `masaryCode`, `meezaReference`/`meezaQrCode`) cash methods return.
 
-**Fix**: Return all payment method data:
+**Fix**: The backend returns every code field; the frontend routes the user to `/payment/pending`, whose page renders whichever code/QR is present. Offline methods (Fawry/Aman/Masary/Meeza/MobileWallet) are additionally *force-redirected* — checkout sets `redirectOption: true` (`forceRedirect`) so Fawaterk returns a hosted `redirectTo` and the SPA does `window.location = redirectUrl`.
+
 ```typescript
-return c.json({
-  data: {
-    redirectUrl: invoiceResult.paymentData.redirectTo,
-    fawryCode: invoiceResult.paymentData.fawryCode,
-    amanCode: invoiceResult.paymentData.amanCode,
-    masaryCode: invoiceResult.paymentData.masaryCode,
-    meezaReference: invoiceResult.paymentData.meezaReference,
-  },
-});
+// Backend returns every possible instrument; the pending page shows the relevant one
+return c.json({ data: {
+  redirectUrl: invoiceResult.paymentData.redirectTo,
+  fawryCode, amanCode, masaryCode, meezaReference, meezaQrCode,
+} });
 ```
+
+**Mobile Wallet (Fawaterk `paymentId 4`, `redirect:false`)** requires an **Egyptian phone in local `01…` format**. Fawaterk's wallet endpoint rejects E.164 `+20…` (verified HTTP 422 on staging). Profiles store canonical E.164, so checkout converts at the gateway boundary via `toFawaterkLocalPhone()` and rejects non-`+20` numbers for wallet (`PHONE_NOT_EGYPTIAN`) — see `server/src/routes/api/users-phone.ts`. Caveat: forcing `redirectOption` masks Fawaterk's own 422 validation; the native (non-redirect) wallet flow returns `meezaReference`/QR directly.
 
 ### 5.3 Subscription Query on Public Pages
 
@@ -376,6 +375,8 @@ if (existingPending && forceNewCode) {
 ---
 
 ## 7. First Principles Applied
+
+The irreducible core of a payment system is four steps: **Initiate** (capture intent → `POST /payments/checkout`) → **Execute** (collect money → Fawaterk) → **Confirm** (verify receipt → webhook + `getInvoiceData()` polling) → **Fulfill** (deliver value → atomic fulfillment). The principles below protect those four steps.
 
 | Principle | Implementation |
 |-----------|----------------|
@@ -436,19 +437,46 @@ await redis.set('fawaterk:circuit', 'open', 'EX', 30);
 
 | Code | HTTP | Meaning |
 |------|------|---------|
-| UNAUTHORIZED | 401 | No session |
+| UNAUTHORIZED | 401 | No session or invalid session |
+| INVALID_SIGNATURE | 401 | HMAC webhook verification failed |
+| PAYMENT_REQUIRED | 402 | Paid item requires the checkout flow |
+| PHONE_REQUIRED | 400 | Mobile wallet needs a phone on the profile |
+| PHONE_NOT_EGYPTIAN | 400 | Mobile wallet requires an Egyptian (+20) number |
+| NOT_FOUND | 404 | Item or payment not found |
+| ALREADY_REGISTERED | 400 | Already registered for event |
+| ALREADY_BOOKED | 400 | Already booked track |
+| ALREADY_SUBSCRIBED | 400 | Active subscription exists |
+| EVENT_FULL | 409 | Event capacity reached |
+| TRACK_FULL | 409 | Track booking limit reached |
+| PENDING_PAYMENT | 409 | Existing pending payment (use `forceNewCode`) |
+| RESERVATION_EXPIRED | 409 | Payment code expired, request new |
 | RATE_LIMITED | 429 | Too many requests |
-| INVALID_SIGNATURE | 401 | HMAC verification failed |
-| PENDING_PAYMENT | 409 | Existing pending payment |
-| EVENT_FULL | 409 | Capacity reached |
-| TRACK_FULL | 409 | Track booking limit |
-| ALREADY_REGISTERED | 409 | User already booked |
-| PAYMENT_ERROR | 500 | Fawaterk API failure |
+| PAYMENT_ERROR / PROCESSING_FAILED | 500 | Fawaterk API or fulfillment failure |
 
 ---
+
+## Implementation Checklist (Future Payment Features)
+
+**Pre-implementation**
+- [ ] Research all payment methods the gateway supports — and each method's quirks (e.g. mobile-wallet phone format)
+- [ ] Identify async/code methods vs redirects
+- [ ] Define capacity requirements (limited vs unlimited)
+- [ ] Plan payment-expiration windows
+
+**During implementation**
+- [ ] Atomic transactions for fulfillment; failure state persists outside the rolled-back tx
+- [ ] Rate limiting on all payment endpoints; circuit breaker for the external API
+- [ ] Idempotent checkout (partial unique index on pending)
+- [ ] Auth-gate user-specific queries; `FOR UPDATE` locks on capacity checks
+
+**Testing**
+- [ ] Concurrent checkout stress test; webhook signature verification
+- [ ] Payment-expiration job; free-item flow; subscription discount
+- [ ] Code/redirect display per method (Fawry, MobileWallet, …)
 
 ## Changelog
 
 - **2025-01-18**: Initial compound documentation created
 - Covers: Security, Data Integrity, Performance, Architecture patterns
 - Source: feat/payment-gateway-mvp branch
+- **2026-06-27**: Consolidated the payment-gateway learnings — absorbed `payment-gateway-lessons-learned.md` (implementation checklist, fuller error-code table) and `payment-gateway-mvp-compound-analysis.md` (irreducible-core framing) into this canonical doc; refreshed the non-redirect → `/payment/pending` flow and documented the Mobile Wallet (Fawaterk) `01…` phone-format requirement.

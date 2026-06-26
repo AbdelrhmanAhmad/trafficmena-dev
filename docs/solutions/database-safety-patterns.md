@@ -242,8 +242,11 @@ Transactions are already used correctly in:
 - `server/src/routes/api/library.ts`
 - `server/src/routes/api/series.ts`
 - `server/src/routes/api/tracks.ts`
+- `server/src/routes/api/users.ts`
+- `server/src/routes/api/invitations.ts`
+- `server/src/routes/api/seriesGrants.ts`
 
-**Known Issue**: `server/src/routes/api/invitations.ts` line 347 does NOT escape the search parameter. This should be fixed.
+All user-supplied search parameters are now escaped before interpolation into LIKE patterns (the previously-flagged `invitations.ts` search is escaped via `escapeLikePattern` as of the current code).
 
 ---
 

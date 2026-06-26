@@ -73,11 +73,11 @@ if (search) {
 
 | File | Line | Change |
 |------|------|--------|
-| `server/src/routes/api/utils.ts` | 163-169 | Added `escapeLikePattern()` function |
-| `server/src/routes/api/events.ts` | 129 | Applied to event search |
-| `server/src/routes/api/tracks.ts` | 398 | Applied to track search |
-| `server/src/routes/api/library.ts` | 146 | Applied to library search |
-| `server/src/routes/api/series.ts` | 67 | Applied to series search |
+| `server/src/routes/api/utils.ts` | 187-189 | Added `escapeLikePattern()` function |
+| `server/src/routes/api/events.ts` | 375 | Applied to event search |
+| `server/src/routes/api/tracks.ts` | 644 | Applied to track search |
+| `server/src/routes/api/library.ts` | 173 | Applied to library search |
+| `server/src/routes/api/series.ts` | 82 | Applied to series search |
 
 ## What Escaping Prevents
 

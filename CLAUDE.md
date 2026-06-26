@@ -110,8 +110,11 @@ npm run format                        # Ultracite format
 │   ├── unit/              # Unit test files
 │   └── node-loader.mjs    # Custom loader for TypeScript tests
 ├── local/postgres/bin/    # Project-scoped Postgres scripts
-└── docs/                  # Operational documentation + solution learnings
+└── docs/                  # Operational documentation
+    └── solutions/         # documented solutions to past problems (bugs, best practices, workflow patterns), by category w/ YAML frontmatter (module, tags, problem_type)
 ```
+
+`CONCEPTS.md` (repo root) — shared domain glossary; read when orienting to the codebase or discussing domain concepts.
 
 ### Key Architectural Patterns
 
