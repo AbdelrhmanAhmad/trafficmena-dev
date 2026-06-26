@@ -243,6 +243,8 @@ export function SimpleEditorWrapper({
         autocapitalize: 'off',
         'aria-label': placeholder,
         class: 'simple-editor',
+        // Editable base direction follows typed content so mixed AR/EN keeps correct word order
+        dir: 'auto',
       },
     },
     extensions: [
