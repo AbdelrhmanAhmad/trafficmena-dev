@@ -33,7 +33,12 @@ import { getSessionFromRequest } from '../../utils/session.js';
 import { isEventHiddenFromNonStaff } from './eventVisibility.js';
 import { loadVerifiedPaymentAnalytics } from './paymentAnalytics.js';
 import { ONE_YEAR_MS } from './subscriptionShared.js';
-import { liveIncludedFormats, resolveTrackBasePrice, type TicketType } from './ticketAccess.js';
+import {
+  filterLiveIncludedEvents,
+  liveIncludedFormats,
+  resolveTrackBasePrice,
+  type TicketType,
+} from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
 import { getOptionalUserRole, isKnownDatabaseConflict } from './utils.js';
 
@@ -715,8 +720,9 @@ async function processSuccessfulPayment(
         }
 
         const trackEventRows = await tx
-          .select({ eventId: trackEvents.eventId })
+          .select({ eventId: trackEvents.eventId, eventFormat: events.eventFormat })
           .from(trackEvents)
+          .innerJoin(events, eq(events.id, trackEvents.eventId))
           .where(eq(trackEvents.trackId, payment.itemId));
 
         if (trackEventRows.length === 0) {
@@ -724,7 +730,12 @@ async function processSuccessfulPayment(
         }
 
         if (trackReservation) {
-          const eventIds = trackEventRows.map((row) => row.eventId);
+          // Checkout only reserves the ticket's live-included sessions, so the fulfillment
+          // pre-check must require reservations for that same subset — not every track event —
+          // or an online_only/offline_only buyer would be falsely rejected as RESERVATION_EXPIRED.
+          const eventIds = filterLiveIncludedEvents(trackEventRows, payment.ticketType).map(
+            (row) => row.eventId,
+          );
           const existingEventRows = await tx
             .select({ eventId: eventAttendees.eventId })
             .from(eventAttendees)

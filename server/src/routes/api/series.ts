@@ -265,9 +265,11 @@ export function registerSeriesRoutes(app: Hono) {
       .where(eq(seriesAssets.seriesId, id))
       .orderBy(seriesAssets.sortOrder);
 
-    // Get user's registered event IDs for permission checking
+    // Get user's registered event IDs for permission checking. Booking holders are included now
+    // that the booking branch is ticket-aware: when their ticket doesn't cover an asset, the
+    // per-asset fallback honors a direct registration for that event (so it can't be empty for them).
     let userEventIds = new Set<string>();
-    if (!isStaff && !isSubscriber && !hasTrackBooking && !hasSeriesGrant && !isPremiumLocked) {
+    if (!isStaff && !isSubscriber && !hasSeriesGrant && !isPremiumLocked) {
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)

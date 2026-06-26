@@ -376,14 +376,13 @@ export function registerEventRoutes(app: Hono) {
         // direct attendee). Online events expose the Zoom link to live-online-entitled viewers;
         // offline events expose the map URL to in-person-entitled viewers. The location *text* below
         // stays public via the `...event` spread.
+        // A valid standalone registration (sourceTrackBookingId IS NULL) is additive: a track booking
+        // whose ticket doesn't cover this event's format must never mask it. Staff and direct
+        // attendees always pass; otherwise the booking's ticket matrix decides.
         const directAttendee = attending && (existing?.sourceTrackBookingId ?? null) === null;
-        let canAttendLiveSession = false;
-        if (isStaff) {
-          canAttendLiveSession = true;
-        } else if (trackBooked) {
+        let canAttendLiveSession = isStaff || directAttendee;
+        if (!canAttendLiveSession && trackBooked) {
           canAttendLiveSession = bookingGrantsLiveAttendance(bookingTicketType, event.eventFormat);
-        } else if (directAttendee) {
-          canAttendLiveSession = true;
         }
 
         const canAccessMeetingLink = event.eventFormat === 'online' && canAttendLiveSession;

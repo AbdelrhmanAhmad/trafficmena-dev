@@ -60,3 +60,38 @@ describe('event detail splits the access gate by format (wiring)', () => {
     assert.ok(source.includes('|| isStaff') || source.includes('isStaff\n'));
   });
 });
+
+// Regression guards for the three review findings (no DB harness, so wiring is pinned here).
+describe('ticket-types review regression guards', () => {
+  it('paid fulfillment requires reservations only for the ticket-included subset', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/payments.ts', import.meta.url),
+      'utf8',
+    );
+    // The fulfillment pre-check must filter by the payment's ticket type, matching what checkout
+    // reserved — otherwise online_only/offline_only buyers are falsely rejected RESERVATION_EXPIRED.
+    assert.ok(
+      source.includes('filterLiveIncludedEvents(trackEventRows, payment.ticketType)'),
+      'fulfillment pre-check no longer scoped to live-included events',
+    );
+  });
+
+  it('event detail keeps a standalone direct attendee additive to the booking verdict', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/events.ts', import.meta.url),
+      'utf8',
+    );
+    // Must be OR (additive), not an else-if chain that lets a non-covering booking mask access.
+    assert.ok(source.includes('let canAttendLiveSession = isStaff || directAttendee'));
+  });
+
+  it('series detail builds userEventIds for booking holders too', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/series.ts', import.meta.url),
+      'utf8',
+    );
+    // The guard must NOT exclude booking holders, or the ticket-aware fallback gets an empty set.
+    assert.ok(source.includes('!isStaff && !isSubscriber && !hasSeriesGrant && !isPremiumLocked'));
+    assert.ok(!source.includes('!hasTrackBooking && !hasSeriesGrant && !isPremiumLocked'));
+  });
+});
