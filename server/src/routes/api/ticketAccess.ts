@@ -31,6 +31,19 @@ export function liveIncludedFormats(ticketType: TicketType): EventFormat[] {
 }
 
 /**
+ * The subset of a track's events a ticket registers the buyer into (attendee + reservation rows).
+ * A null/undefined ticketType means a legacy booking that includes every session — unchanged.
+ */
+export function filterLiveIncludedEvents<T extends { eventFormat: EventFormat }>(
+  events: T[],
+  ticketType: TicketType | null | undefined,
+): T[] {
+  if (!ticketType) return events;
+  const formats = liveIncludedFormats(ticketType);
+  return events.filter((event) => formats.includes(event.eventFormat));
+}
+
+/**
  * The canonical matrix. Online sessions are live+recording for online-entitled tickets; offline
  * sessions are live for offline-entitled tickets but their recordings are available to ALL three
  * variants (online_only buyers get the offline recordings without being attendees).
