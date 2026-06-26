@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
-import { fetchPayment, type PaymentItemType } from '@/app/api/payments';
+import { fetchPayment, type PaymentItemType, type TicketType } from '@/app/api/payments';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { trackBeginCheckout, trackSelectPaymentMethod } from '@/lib/analytics/events';
 import { centsToUnits } from '@/lib/analytics/helpers';
@@ -36,6 +36,7 @@ interface PaymentCheckoutDialogProps {
   itemCategory?: string;
   basePriceCents?: number | null;
   appliedPromoCode?: string;
+  ticketType?: TicketType;
   onSuccess?: () => void;
 }
 
@@ -55,6 +56,7 @@ export function PaymentCheckoutDialog({
   itemCategory,
   basePriceCents,
   appliedPromoCode,
+  ticketType,
   onSuccess,
 }: PaymentCheckoutDialogProps) {
   const { user } = useAuth();
@@ -92,6 +94,7 @@ export function PaymentCheckoutDialog({
     shouldFetchPricing ? itemType : undefined,
     itemId,
     appliedPromoCode,
+    { ticketType },
   );
   const { data: methods } = usePaymentMethods({ enabled: shouldFetchPricing });
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
@@ -202,9 +205,10 @@ export function PaymentCheckoutDialog({
         itemId,
         paymentMethodId: selectedMethodId,
         idempotencyKey: createCheckoutIdempotencyKey(
-          `${itemType}:${analyticsItemId}:${selectedMethodId}`,
+          `${itemType}:${analyticsItemId}:${ticketType ?? 'none'}:${selectedMethodId}`,
         ),
         promoCode: appliedPromoCode,
+        ticketType,
       });
 
       if (result.free) {

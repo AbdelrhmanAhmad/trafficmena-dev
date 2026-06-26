@@ -373,6 +373,9 @@ export interface PublicTrackDetailRecord {
   pending_payment_id?: string | null;
   pending_invoice_id?: number | null;
   price_in_cents: number | null;
+  online_only_price_cents: number | null;
+  online_offline_price_cents: number | null;
+  offline_only_price_cents: number | null;
   location: string | null;
   location_url: string | null;
 }
@@ -384,6 +387,7 @@ export interface PublicTrackEventRecord {
   date: string;
   location: string | null;
   event_type: string;
+  event_format: 'online' | 'offline';
   image_url: string | null;
   max_attendees: number | null;
   attendee_count: number;
@@ -461,6 +465,9 @@ export async function fetchPublicTrackById(
     pendingPaymentId?: string | null;
     pendingInvoiceId?: number | null;
     priceInCents: number | null;
+    onlineOnlyPriceCents: number | null;
+    onlineOfflinePriceCents: number | null;
+    offlineOnlyPriceCents: number | null;
     location: string | null;
     locationUrl: string | null;
   };
@@ -472,6 +479,7 @@ export async function fetchPublicTrackById(
     date: string;
     location: string | null;
     eventType: string;
+    eventFormat: 'online' | 'offline';
     imageUrl: string | null;
     maxAttendees: number | null;
     attendeeCount: number;
@@ -509,6 +517,9 @@ export async function fetchPublicTrackById(
       pending_payment_id: data.track.pendingPaymentId ?? null,
       pending_invoice_id: data.track.pendingInvoiceId ?? null,
       price_in_cents: data.track.priceInCents,
+      online_only_price_cents: data.track.onlineOnlyPriceCents ?? null,
+      online_offline_price_cents: data.track.onlineOfflinePriceCents ?? null,
+      offline_only_price_cents: data.track.offlineOnlyPriceCents ?? null,
       location: data.track.location,
       location_url: data.track.locationUrl,
     },
@@ -519,6 +530,7 @@ export async function fetchPublicTrackById(
       date: event.date,
       location: event.location,
       event_type: event.eventType,
+      event_format: event.eventFormat ?? 'offline',
       image_url: event.imageUrl,
       max_attendees: event.maxAttendees,
       attendee_count: event.attendeeCount,
