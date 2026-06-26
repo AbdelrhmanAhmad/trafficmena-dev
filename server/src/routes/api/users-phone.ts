@@ -13,6 +13,20 @@ const isValidEgyptE164 = (value: string): boolean => {
   return local.length === 10 && EGYPT_MOBILE_PREFIXES.some((prefix) => local.startsWith(prefix));
 };
 
+// True only for valid Egyptian mobiles in E.164. The +20-prefix check must run first: without it
+// a non-Egypt number whose tail resembles an EG local part (e.g. +971501234567 -> "1501234567")
+// would slip through isValidEgyptE164.
+export function isEgyptianMobileE164(value: string): boolean {
+  return value.startsWith(EGYPT_E164_PREFIX) && isValidEgyptE164(value);
+}
+
+// Fawaterk (Egypt) wallet/cash methods expect a local MSISDN (01XXXXXXXXX) and reject E.164 +20
+// (verified: invoiceInitPay returns HTTP 422). We store canonical E.164 and convert only here, at
+// the gateway boundary. Non-+20 numbers (card/Fawry paths only) pass through unchanged.
+export function toFawaterkLocalPhone(value: string): string {
+  return value.startsWith(EGYPT_E164_PREFIX) ? `0${value.slice(EGYPT_E164_PREFIX.length)}` : value;
+}
+
 const isEmptyString = (value: string | null | undefined): value is null | undefined | '' =>
   !value || value.trim().length === 0;
 

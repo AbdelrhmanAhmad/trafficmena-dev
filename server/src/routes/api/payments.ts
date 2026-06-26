@@ -41,6 +41,7 @@ import {
   type TicketType,
 } from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
+import { isEgyptianMobileE164, toFawaterkLocalPhone } from './users-phone.js';
 import { getOptionalUserRole, isKnownDatabaseConflict } from './utils.js';
 
 // --- Rate Limit Rules ---
@@ -1535,12 +1536,23 @@ export function registerPaymentRoutes(app: Hono) {
           normalizedMethodName.includes('mobilewallet'));
       const requiresPhone = normalizedMethodName.includes('mobilewallet');
       const phoneNumber = user.phoneNumber?.trim();
-      if (requiresPhone && !phoneNumber) {
-        throw new ApiError(
-          'PHONE_REQUIRED',
-          'Phone number is required for mobile wallet payments. Please update your profile.',
-          400,
-        );
+      if (requiresPhone) {
+        if (!phoneNumber) {
+          throw new ApiError(
+            'PHONE_REQUIRED',
+            'Phone number is required for mobile wallet payments. Please update your profile.',
+            400,
+          );
+        }
+        // Fawaterk mobile wallet only works for Egyptian (+20) numbers. Reject others up front
+        // instead of sending the user into a gateway flow that can't fulfill the charge.
+        if (!isEgyptianMobileE164(phoneNumber)) {
+          throw new ApiError(
+            'PHONE_NOT_EGYPTIAN',
+            'Mobile wallet payments require an Egyptian (+20) mobile number. Please update your profile or choose another payment method.',
+            400,
+          );
+        }
       }
 
       // If free, process immediately without payment
@@ -2033,7 +2045,9 @@ export function registerPaymentRoutes(app: Hono) {
             first_name: firstName,
             last_name: lastName,
             email: user.email,
-            phone: phoneNumber || undefined,
+            // Convert canonical E.164 (+20...) to the local MSISDN (01...) Fawaterk expects.
+            // Non-+20 numbers pass through unchanged; wallet is already guarded to +20 above.
+            phone: phoneNumber ? toFawaterkLocalPhone(phoneNumber) : undefined,
           },
           cartItems: [
             {
