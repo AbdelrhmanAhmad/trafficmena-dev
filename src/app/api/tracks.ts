@@ -376,6 +376,7 @@ export interface PublicTrackDetailRecord {
   user_has_pending_payment: boolean;
   pending_payment_id?: string | null;
   pending_invoice_id?: number | null;
+  pending_ticket_type?: TicketType | null;
   price_in_cents: number | null;
   online_only_price_cents: number | null;
   online_offline_price_cents: number | null;
@@ -468,6 +469,7 @@ export async function fetchPublicTrackById(
     userHasPendingPayment: boolean;
     pendingPaymentId?: string | null;
     pendingInvoiceId?: number | null;
+    pendingTicketType?: TicketType | null;
     priceInCents: number | null;
     onlineOnlyPriceCents: number | null;
     onlineOfflinePriceCents: number | null;
@@ -520,6 +522,7 @@ export async function fetchPublicTrackById(
       user_has_pending_payment: data.track.userHasPendingPayment,
       pending_payment_id: data.track.pendingPaymentId ?? null,
       pending_invoice_id: data.track.pendingInvoiceId ?? null,
+      pending_ticket_type: data.track.pendingTicketType ?? null,
       price_in_cents: data.track.priceInCents,
       online_only_price_cents: data.track.onlineOnlyPriceCents ?? null,
       online_offline_price_cents: data.track.onlineOfflinePriceCents ?? null,

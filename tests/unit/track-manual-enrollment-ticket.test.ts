@@ -20,7 +20,7 @@ describe('manual enrollment ticket-type wiring', () => {
 
   it('defaults the amount to the variant base price via resolveTrackBasePrice', async () => {
     const source = await readSource('../../server/src/routes/api/trackEnrollments.ts');
-    assert.ok(source.includes("import { resolveTrackBasePrice } from './ticketAccess.js'"));
+    assert.ok(source.includes('resolveTrackBasePrice('));
     // Default amount falls back to the resolved variant/legacy base price when no override is given.
     assert.ok(source.includes('parsed.data.amountPaidCents ?? baseResult.basePrice'));
   });

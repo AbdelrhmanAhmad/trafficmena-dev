@@ -44,8 +44,8 @@ describe('event detail splits the access gate by format (wiring)', () => {
     // Resolution order: staff -> track-booking ticket -> standalone direct attendee.
     assert.ok(source.includes('bookingGrantsLiveAttendance(bookingTicketType, event.eventFormat)'));
     assert.ok(source.includes('(existing?.sourceTrackBookingId ?? null) === null'));
-    // Viewer's ticket type is surfaced to the client.
-    assert.ok(source.includes('viewerTicketType: bookingTicketType'));
+    // The ticket type is used internally for access, not exposed as dead response state.
+    assert.ok(!source.includes('viewerTicketType'));
   });
 
   it('gates the track-level location URL to offline-entitled buyers + staff', async () => {
@@ -53,11 +53,18 @@ describe('event detail splits the access gate by format (wiring)', () => {
       new URL('../../server/src/routes/api/tracks.ts', import.meta.url),
       'utf8',
     );
-    assert.ok(
-      source.includes("userHasBooked && bookingGrantsLiveAttendance(bookingTicketType, 'offline')"),
-    );
+    assert.ok(source.includes("bookingGrantsLiveAttendance(params.bookingTicketType, 'offline')"));
     // Staff still see the URL regardless of ticket.
-    assert.ok(source.includes('|| isStaff') || source.includes('isStaff\n'));
+    assert.ok(source.includes('if (params.isStaff)'));
+  });
+
+  it('uses the same track location URL serializer on authenticated track routes', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/tracks.ts', import.meta.url),
+      'utf8',
+    );
+    assert.ok(source.includes('serializeTrackLocationUrl('));
+    assert.ok(source.includes('locationUrl: serializeTrackLocationUrl('));
   });
 });
 
@@ -74,6 +81,15 @@ describe('ticket-types review regression guards', () => {
       source.includes('filterLiveIncludedEvents(trackEventRows, payment.ticketType)'),
       'fulfillment pre-check no longer scoped to live-included events',
     );
+  });
+
+  it('checkout capacity uses the canonical live-included filter helper', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/payments.ts', import.meta.url),
+      'utf8',
+    );
+    assert.ok(source.includes('filterLiveIncludedEvents(trackEventRows, ticketType)'));
+    assert.ok(!source.includes('const includedFormats = ticketType ? liveIncludedFormats'));
   });
 
   it('event detail keeps a standalone direct attendee additive to the booking verdict', async () => {

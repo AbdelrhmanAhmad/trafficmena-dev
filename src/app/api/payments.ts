@@ -70,6 +70,7 @@ export type Payment = {
   currency: string;
   itemType: PaymentItemType;
   itemId: string | null;
+  ticketType?: TicketType | null;
   fawaterkInvoiceId?: number | null;
   fawryCode?: string | null;
   amanCode?: string | null;

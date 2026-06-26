@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 import {
   hasTicketTypes,
@@ -69,5 +70,73 @@ describe('publish-time event coverage guard', () => {
       ticketEventCoverageError(allNull, { hasOnlineEvent: false, hasOfflineEvent: false }),
       null,
     );
+  });
+});
+
+describe('track ticket-type route wiring', () => {
+  it('rejects ticket-configured tracks from the legacy free-book endpoint', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/tracks.ts', import.meta.url),
+      'utf8',
+    );
+    const freeBookRoute = source.indexOf("'/tracks/:id/book'");
+    const rejectTicketedTrack = source.indexOf(
+      'hasTicketTypes(track) || isPaidTrack',
+      freeBookRoute,
+    );
+    const bookingWrite = source.indexOf('executeTrackBookingWrite(tx, {', freeBookRoute);
+
+    assert.ok(freeBookRoute >= 0);
+    assert.ok(rejectTicketedTrack > freeBookRoute);
+    assert.ok(bookingWrite > rejectTicketedTrack);
+  });
+
+  it('marks auto-linked recordings premium when any ticket variant is paid', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/tracks.ts', import.meta.url),
+      'utf8',
+    );
+    const addEventsRoute = source.indexOf("'/tracks/:id/events'");
+    const paidHelper = source.indexOf('isPaidTrackOffering(track)', addEventsRoute);
+    const premiumUpdate = source.indexOf('set({ isPremium: true', paidHelper);
+
+    assert.ok(addEventsRoute >= 0);
+    assert.ok(paidHelper > addEventsRoute);
+    assert.ok(premiumUpdate > paidHelper);
+  });
+
+  it('checks ticket coverage before removing events from a published ticketed track', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/tracks.ts', import.meta.url),
+      'utf8',
+    );
+    const removeRoute = source.indexOf("'/tracks/:id/events/:eventId'");
+    const coverageCheck = source.indexOf('ticketEventCoverageError(track', removeRoute);
+    const deleteEvent = source.indexOf('.delete(trackEvents)', removeRoute);
+
+    assert.ok(removeRoute >= 0);
+    assert.ok(coverageCheck > removeRoute);
+    assert.ok(deleteEvent > coverageCheck);
+  });
+
+  it('rejects direct event registration for sessions in ticket-configured tracks', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/events.ts', import.meta.url),
+      'utf8',
+    );
+    const registerRoute = source.indexOf("'/events/:id/register'");
+    const ticketColumns = source.indexOf(
+      'onlineOnlyPriceCents: tracks.onlineOnlyPriceCents',
+      registerRoute,
+    );
+    const ticketGuard = source.indexOf('hasTicketTypes(trackEvent)', registerRoute);
+    const paymentRequired = source.indexOf("'PAYMENT_REQUIRED'", ticketGuard);
+    const freeInsert = source.indexOf('tx.insert(eventAttendees)', registerRoute);
+
+    assert.ok(registerRoute >= 0);
+    assert.ok(ticketColumns > registerRoute);
+    assert.ok(ticketGuard > ticketColumns);
+    assert.ok(paymentRequired > ticketGuard);
+    assert.ok(freeInsert > paymentRequired);
   });
 });

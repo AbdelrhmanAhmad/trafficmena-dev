@@ -2,14 +2,10 @@
 // locations, recordings, capacity) routes through these pure functions so the matrix is never
 // reimplemented inline. See the plan's "Access entitlement matrix" (2026-06-26-003).
 
-export type TicketType = 'online_only' | 'online_offline' | 'offline_only';
 export type EventFormat = 'online' | 'offline';
 
-export const TICKET_TYPES: readonly TicketType[] = [
-  'online_only',
-  'online_offline',
-  'offline_only',
-];
+export const TICKET_TYPES = ['online_only', 'online_offline', 'offline_only'] as const;
+export type TicketType = (typeof TICKET_TYPES)[number];
 
 export type TicketAccess = {
   /** Can join the live session (Zoom for online events, venue for offline events). */

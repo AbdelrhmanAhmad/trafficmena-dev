@@ -130,6 +130,7 @@ export type CreateEventPayload = {
   tags?: string[];
   eventType?: ApiEvent['eventType'];
   eventFormat?: ApiEvent['eventFormat'];
+  eventFormatOverrideReason?: string;
   priceInCents?: number | null;
   isPublished?: boolean;
 };

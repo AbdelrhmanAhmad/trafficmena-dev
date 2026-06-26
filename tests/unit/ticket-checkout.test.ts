@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 import { resolveTrackBasePrice } from '../../server/src/routes/api/ticketAccess.ts';
 
@@ -68,5 +69,49 @@ describe('resolveTrackBasePrice (checkout pricing decision)', () => {
       ok: true,
       basePrice: 0,
     });
+  });
+});
+
+describe('checkout pending-payment safety wiring', () => {
+  it('validates replacement pricing before expiring an existing pending hold', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/payments.ts', import.meta.url),
+      'utf8',
+    );
+    const prePrice = source.indexOf('const calculatedPriceResult = await calculatePrice(');
+    const existingPending = source.indexOf('if (existingPending) {');
+    const expirePending = source.indexOf(
+      'expirePendingPaymentsForReplacement(tx, replacedPendingPaymentIds)',
+      existingPending,
+    );
+
+    assert.ok(prePrice >= 0, 'checkout must calculate price before creating/expiring holds');
+    assert.ok(expirePending >= 0, 'checkout must explicitly expire replaced pending holds');
+    assert.ok(
+      prePrice < expirePending,
+      'replacement checkout must validate ticketType before expiring a valid pending hold',
+    );
+  });
+
+  it('times out duplicate idempotency waits with a retryable response', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/payments.ts', import.meta.url),
+      'utf8',
+    );
+
+    assert.ok(source.includes('CHECKOUT_IDEMPOTENCY_WAIT_TIMEOUT_MS'));
+    assert.ok(source.includes('waitForCheckoutInFlight(existingInFlight)'));
+    assert.ok(source.includes('checkoutIdempotencyInFlight.delete(checkoutIdempotencyCacheKey)'));
+    assert.ok(source.includes("code: 'CHECKOUT_IN_PROGRESS'"));
+  });
+
+  it('returns an existing fulfilled free checkout after a unique race', async () => {
+    const source = await readFile(
+      new URL('../../server/src/routes/api/payments.ts', import.meta.url),
+      'utf8',
+    );
+
+    assert.ok(source.includes('readExistingFreeCheckoutPayment'));
+    assert.ok(source.includes('checkoutPriceResult?.amountCents === 0'));
   });
 });

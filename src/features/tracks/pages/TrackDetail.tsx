@@ -35,7 +35,12 @@ import {
 import { storePendingTrackContext } from '@/shared/utils/trackRedirectUtils';
 import { TrackTicketSelector } from '../components/TrackTicketSelector';
 import { useBookTrack, usePublicTrack } from '../hooks/useTracks';
-import { getEnabledTicketTypes, includedFormatsFor, type TicketType } from '../ticketTypes';
+import {
+  getAllTicketTypes,
+  getEnabledTicketTypes,
+  includedFormatsFor,
+  type TicketType,
+} from '../ticketTypes';
 import { getTrackBookingState } from '../utils/trackBookingState';
 
 type SanitizedHtmlProps = {
@@ -131,6 +136,7 @@ const TrackDetail: React.FC = () => {
   const { data, isLoading, error } = usePublicTrack(id || '', user?.id);
   const bookMutation = useBookTrack();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [requestingNewCode, setRequestingNewCode] = useState(false);
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [promoAttemptKey, setPromoAttemptKey] = useState(0);
   const [selectedTicketType, setSelectedTicketType] = useState<TicketType | null>(null);
@@ -140,7 +146,13 @@ const TrackDetail: React.FC = () => {
 
   // Ticket types for this track (empty = legacy single-price track, unchanged).
   const enabledTickets = useMemo(() => (track ? getEnabledTicketTypes(track) : []), [track]);
+  // All three variants (incl. disabled) for the public selector, which shows disabled ones greyed.
+  const allTickets = useMemo(() => (track ? getAllTicketTypes(track) : []), [track]);
   const usesTicketTypes = enabledTickets.length > 0;
+  const enabledTicketTypeSet = useMemo(
+    () => new Set(enabledTickets.map((ticket) => ticket.type)),
+    [enabledTickets],
+  );
   const selectedTicket = enabledTickets.find((t) => t.type === selectedTicketType) ?? null;
   // For ticket-typed tracks a variant must be picked before pricing/booking is meaningful.
   const ticketSelectionReady = !usesTicketTypes || Boolean(selectedTicketType);
@@ -199,6 +211,23 @@ const TrackDetail: React.FC = () => {
       }),
     [track?.user_has_booked, track?.user_has_pending_payment],
   );
+
+  useEffect(() => {
+    if (!usesTicketTypes) {
+      setSelectedTicketType(null);
+      return;
+    }
+
+    const pendingTicketType = track?.pending_ticket_type ?? null;
+    if (pendingTicketType && enabledTicketTypeSet.has(pendingTicketType)) {
+      setSelectedTicketType(pendingTicketType);
+      return;
+    }
+
+    setSelectedTicketType((current) =>
+      current && enabledTicketTypeSet.has(current) ? current : null,
+    );
+  }, [enabledTicketTypeSet, track?.pending_ticket_type, usesTicketTypes]);
 
   const pendingPaymentUrl = useMemo(() => {
     if (!track?.user_has_pending_payment || !id) return null;
@@ -327,6 +356,7 @@ const TrackDetail: React.FC = () => {
 
     // If track requires payment, open payment dialog
     if (needsPayment) {
+      setRequestingNewCode(false);
       setShowPaymentDialog(true);
       return;
     }
@@ -340,10 +370,12 @@ const TrackDetail: React.FC = () => {
       navigate(pendingPaymentUrl);
       return;
     }
+    setRequestingNewCode(false);
     setShowPaymentDialog(true);
   };
 
   const handleRequestNewCode = () => {
+    setRequestingNewCode(true);
     setShowPaymentDialog(true);
   };
 
@@ -407,17 +439,6 @@ const TrackDetail: React.FC = () => {
                       </div>
                     )}
                   </div>
-
-                  {/* Ticket selector (only for tracks configured with ticket types) */}
-                  {usesTicketTypes && bookingState === 'available' && (
-                    <div className="rounded-[28px] border border-neutral-200 bg-white/95 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
-                      <TrackTicketSelector
-                        options={enabledTickets}
-                        value={selectedTicketType}
-                        onChange={setSelectedTicketType}
-                      />
-                    </div>
-                  )}
 
                   {/* Events in Track */}
                   <div className="rounded-[28px] border border-neutral-200 bg-white/95 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
@@ -538,6 +559,17 @@ const TrackDetail: React.FC = () => {
                               : 'Limited Spots'}
                           </p>
                         </div>
+
+                        {/* Ticket selector — pick a variant before pricing/booking (ticketed tracks) */}
+                        {usesTicketTypes && bookingState === 'available' && (
+                          <div className="border-t border-neutral-200 pt-4">
+                            <TrackTicketSelector
+                              onChange={setSelectedTicketType}
+                              options={allTickets}
+                              value={selectedTicketType}
+                            />
+                          </div>
+                        )}
 
                         {/* Price display */}
                         {isPaidTrack && (
@@ -663,17 +695,24 @@ const TrackDetail: React.FC = () => {
       {track && id && (
         <PaymentCheckoutDialog
           open={showPaymentDialog}
-          onOpenChange={setShowPaymentDialog}
+          onOpenChange={(open) => {
+            setShowPaymentDialog(open);
+            if (!open) {
+              setRequestingNewCode(false);
+            }
+          }}
           itemType="track"
           itemId={id}
           itemName={track.title}
           itemCategory="Track"
           basePriceCents={effectiveBasePriceCents}
           ticketType={selectedTicketType ?? undefined}
+          forceNewCode={requestingNewCode}
           appliedPromoCode={isPromoApplied ? (appliedPromoCode ?? undefined) : undefined}
           onSuccess={() => {
             // Refresh the track data after successful payment
             queryClient.invalidateQueries({ queryKey: ['tracks', 'public', 'detail', id] });
+            setRequestingNewCode(false);
             setShowPaymentDialog(false);
           }}
         />

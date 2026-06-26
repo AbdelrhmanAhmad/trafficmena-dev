@@ -19,6 +19,7 @@ import {
 } from '../../utils/seriesAttendees.js';
 import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
 import { handleSeriesBulkGrant } from './seriesGrantsBulk.js';
+import { TICKET_TYPES } from './ticketAccess.js';
 import {
   consumeRateLimit,
   escapeLikePattern,
@@ -177,9 +178,7 @@ export function registerSeriesGrantsRoutes(app: Hono) {
 
     // Ticket-type filter applies to track-booking rows only; a specific type excludes manual grants.
     const ticketTypeParam = c.req.query('ticketType');
-    const ticketTypeFilter = (['online_only', 'online_offline', 'offline_only'] as const).find(
-      (value) => value === ticketTypeParam,
-    );
+    const ticketTypeFilter = TICKET_TYPES.find((value) => value === ticketTypeParam);
 
     const bookingFilters = seriesRecord.trackId
       ? [

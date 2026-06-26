@@ -298,19 +298,33 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
         <FormField
           control={form.control}
           name="priceEgp"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Price (EGP)</FormLabel>
-              <FormControl>
-                <Input placeholder="0 for free" inputMode="decimal" {...field} />
-              </FormControl>
-              <FormDescription>
-                Leave empty or set to 0 for free tracks. Used as the fallback when no ticket types
-                below are enabled.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            // When any ticket type is enabled the track is sold per-variant and this single price is
+            // ignored (see resolveTrackBasePrice). Disable it so the two price concepts don't compete.
+            const ticketPricingActive =
+              form.watch('onlineOnlyEnabled') ||
+              form.watch('onlineOfflineEnabled') ||
+              form.watch('offlineOnlyEnabled');
+            return (
+              <FormItem>
+                <FormLabel>Price (EGP)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="0 for free"
+                    inputMode="decimal"
+                    {...field}
+                    disabled={ticketPricingActive}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {ticketPricingActive
+                    ? 'Ignored while ticket types are enabled — each ticket below sets its own price. This single price applies only to tracks without ticket types.'
+                    : 'Leave empty or set to 0 for free tracks. Used as the fallback when no ticket types below are enabled.'}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
 
         {/* Ticket Types — optional per-variant pricing. Enabling any switches the track to ticket

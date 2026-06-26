@@ -643,6 +643,39 @@ export const payments = pgTable(
   }),
 );
 
+export const paymentFulfillmentFailures = pgTable(
+  'payment_fulfillment_failures',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    paymentId: uuid('payment_id')
+      .references(() => payments.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    paymentStatus: paymentStatusEnum('payment_status').notNull(),
+    itemType: paymentItemTypeEnum('item_type').notNull(),
+    itemId: uuid('item_id'),
+    ticketType: ticketTypeEnum('ticket_type'),
+    invoiceId: integer('invoice_id'),
+    amountCents: integer('amount_cents').notNull(),
+    confirmationSource: text('confirmation_source').notNull(),
+    errorCode: text('error_code'),
+    errorMessage: text('error_message').notNull(),
+    failureCount: integer('failure_count').default(1).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolutionNote: text('resolution_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    paymentIdx: index('payment_fulfillment_failures_payment_idx').on(table.paymentId),
+    unresolvedIdx: index('payment_fulfillment_failures_unresolved_idx').on(table.resolvedAt),
+    invoiceIdx: index('payment_fulfillment_failures_invoice_idx').on(table.invoiceId),
+  }),
+);
+
 export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'expired']);
 export const subscriptionSourceEnum = pgEnum('subscription_source', ['paid', 'legacy', 'gift']);
 

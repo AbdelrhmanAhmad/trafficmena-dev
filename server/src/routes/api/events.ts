@@ -12,6 +12,7 @@ import {
   subscriptions,
   trackBookings,
   trackEvents,
+  trackReservations,
   tracks,
   users,
 } from '../../db/schema/index.js';
@@ -24,7 +25,12 @@ import {
   updateEventIsPublishedSchema,
 } from './eventPublishSchema.js';
 import { isEventHiddenFromNonStaff } from './eventVisibility.js';
-import { bookingGrantsLiveAttendance } from './ticketAccess.js';
+import {
+  bookingGrantsLiveAttendance,
+  type EventFormat,
+  hasTicketTypes,
+  ticketEventCoverageError,
+} from './ticketAccess.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -146,14 +152,192 @@ const baseEventSchema = z.object({
   priceInCents: priceInCentsSchema,
 });
 
+const eventFormatOverrideReasonSchema = z.string().trim().min(3).max(500).optional();
+
 // Mirror tracks: new events default to draft (false); update only flips it when provided.
 const createEventSchema = baseEventSchema.extend({
   isPublished: createEventIsPublishedSchema,
 });
 const updateEventSchema = baseEventSchema
   .partial()
-  .extend({ isPublished: updateEventIsPublishedSchema })
+  .extend({
+    isPublished: updateEventIsPublishedSchema,
+    eventFormatOverrideReason: eventFormatOverrideReasonSchema,
+  })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
+
+type EventFormatChangeReport = {
+  eventId: string;
+  from: EventFormat;
+  to: EventFormat;
+  activeEventReservations: number;
+  affectedTracks: Array<{
+    trackId: string;
+    title: string;
+    activeBookings: number;
+    pendingPayments: number;
+    activeTrackReservations: number;
+  }>;
+};
+
+const isAdminRole = (role: string) => role === 'owner' || role === 'admin';
+
+async function buildEventFormatChangeReport(params: {
+  eventId: string;
+  from: EventFormat;
+  to: EventFormat;
+}): Promise<EventFormatChangeReport> {
+  const linkedTracks = await db
+    .select({
+      trackId: tracks.id,
+      title: tracks.title,
+      onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+      onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+      offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
+    })
+    .from(trackEvents)
+    .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
+    .where(eq(trackEvents.eventId, params.eventId));
+
+  const ticketedTracks = linkedTracks.filter(
+    (track) =>
+      track.onlineOnlyPriceCents !== null ||
+      track.onlineOfflinePriceCents !== null ||
+      track.offlineOnlyPriceCents !== null,
+  );
+  const trackIds = ticketedTracks.map((track) => track.trackId);
+
+  if (trackIds.length === 0) {
+    return { ...params, activeEventReservations: 0, affectedTracks: [] };
+  }
+
+  const [bookingCounts, pendingPaymentCounts, trackReservationCounts, eventReservationCounts] =
+    await Promise.all([
+      db
+        .select({ trackId: trackBookings.trackId, count: sql<number>`count(*)::int` })
+        .from(trackBookings)
+        .where(and(inArray(trackBookings.trackId, trackIds), isNull(trackBookings.revokedAt)))
+        .groupBy(trackBookings.trackId),
+      db
+        .select({ trackId: payments.itemId, count: sql<number>`count(*)::int` })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.itemType, 'track'),
+            eq(payments.status, 'pending'),
+            inArray(payments.itemId, trackIds),
+          ),
+        )
+        .groupBy(payments.itemId),
+      db
+        .select({ trackId: trackReservations.trackId, count: sql<number>`count(*)::int` })
+        .from(trackReservations)
+        .where(
+          and(
+            inArray(trackReservations.trackId, trackIds),
+            gt(trackReservations.expiresAt, new Date()),
+          ),
+        )
+        .groupBy(trackReservations.trackId),
+      db
+        .select({ eventId: eventReservations.eventId, count: sql<number>`count(*)::int` })
+        .from(eventReservations)
+        .where(
+          and(
+            eq(eventReservations.eventId, params.eventId),
+            gt(eventReservations.expiresAt, new Date()),
+          ),
+        )
+        .groupBy(eventReservations.eventId),
+    ]);
+
+  const bookingCountByTrackId = new Map(
+    bookingCounts.map((row) => [row.trackId, Number(row.count)]),
+  );
+  const pendingPaymentCountByTrackId = new Map(
+    pendingPaymentCounts
+      .filter((row) => row.trackId !== null)
+      .map((row) => [row.trackId as string, Number(row.count)]),
+  );
+  const reservationCountByTrackId = new Map(
+    trackReservationCounts.map((row) => [row.trackId, Number(row.count)]),
+  );
+  const activeEventReservations = Number(eventReservationCounts[0]?.count ?? 0);
+
+  return {
+    ...params,
+    activeEventReservations,
+    affectedTracks: ticketedTracks
+      .map((track) => ({
+        trackId: track.trackId,
+        title: track.title,
+        activeBookings: bookingCountByTrackId.get(track.trackId) ?? 0,
+        pendingPayments: pendingPaymentCountByTrackId.get(track.trackId) ?? 0,
+        activeTrackReservations: reservationCountByTrackId.get(track.trackId) ?? 0,
+      }))
+      .filter(
+        (track) =>
+          track.activeBookings > 0 ||
+          track.pendingPayments > 0 ||
+          track.activeTrackReservations > 0,
+      ),
+  };
+}
+
+async function assertEventFormatChangeKeepsTicketCoverage(params: {
+  eventId: string;
+  to: EventFormat;
+}): Promise<void> {
+  const linkedTracks = await db
+    .select({
+      trackId: tracks.id,
+      title: tracks.title,
+      isPublished: tracks.isPublished,
+      onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+      onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+      offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
+    })
+    .from(trackEvents)
+    .innerJoin(tracks, eq(tracks.id, trackEvents.trackId))
+    .where(eq(trackEvents.eventId, params.eventId));
+
+  const publishedTicketedTracks = linkedTracks.filter(
+    (track) => track.isPublished && hasTicketTypes(track),
+  );
+  if (publishedTicketedTracks.length === 0) {
+    return;
+  }
+
+  const trackIds = publishedTicketedTracks.map((track) => track.trackId);
+  const formatRows = await db
+    .select({
+      trackId: trackEvents.trackId,
+      eventId: events.id,
+      eventFormat: events.eventFormat,
+    })
+    .from(trackEvents)
+    .innerJoin(events, eq(events.id, trackEvents.eventId))
+    .where(inArray(trackEvents.trackId, trackIds));
+
+  for (const track of publishedTicketedTracks) {
+    const projectedFormats = formatRows
+      .filter((row) => row.trackId === track.trackId)
+      .map((row) => (row.eventId === params.eventId ? params.to : row.eventFormat));
+    const coverageError = ticketEventCoverageError(track, {
+      hasOnlineEvent: projectedFormats.includes('online'),
+      hasOfflineEvent: projectedFormats.includes('offline'),
+    });
+
+    if (coverageError) {
+      throw new ApiError(
+        'TICKET_EVENT_COVERAGE',
+        `Changing this event would break ticket coverage for ${track.title}: ${coverageError}`,
+        400,
+        { trackId: track.trackId },
+      );
+    }
+  }
+}
 
 export function registerEventRoutes(app: Hono) {
   app.get(
@@ -393,7 +577,6 @@ export function registerEventRoutes(app: Hono) {
           attendeeCount,
           attending,
           registrationStatus,
-          viewerTicketType: bookingTicketType,
           meetingLink: canAccessMeetingLink ? event.meetingLink : null,
           locationUrl: canAccessLocationUrl ? event.locationUrl : null,
           trackInfo: trackInfo
@@ -601,6 +784,64 @@ export function registerEventRoutes(app: Hono) {
 
         const updates = parsed.data;
         const updateValues: Record<string, unknown> = { updatedAt: new Date() };
+        let eventFormatChangeReport: EventFormatChangeReport | null = null;
+
+        if (updates.eventFormat !== undefined) {
+          const [currentEvent] = await db
+            .select({ id: events.id, eventFormat: events.eventFormat })
+            .from(events)
+            .where(eq(events.id, eventId))
+            .limit(1);
+
+          if (!currentEvent) {
+            throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
+          }
+
+          if (updates.eventFormat !== currentEvent.eventFormat) {
+            await assertEventFormatChangeKeepsTicketCoverage({
+              eventId,
+              to: updates.eventFormat,
+            });
+
+            eventFormatChangeReport = await buildEventFormatChangeReport({
+              eventId,
+              from: currentEvent.eventFormat,
+              to: updates.eventFormat,
+            });
+
+            const hasRiskyFormatChange =
+              eventFormatChangeReport.affectedTracks.length > 0 ||
+              eventFormatChangeReport.activeEventReservations > 0;
+
+            if (hasRiskyFormatChange) {
+              if (!isAdminRole(staff.role)) {
+                throw new ApiError(
+                  'EVENT_FORMAT_LOCKED',
+                  'This event is linked to ticketed tracks with bookings or pending reservations. Ask an owner/admin to override with an audit reason.',
+                  409,
+                  { eventFormatChangeReport },
+                );
+              }
+
+              const reason = updates.eventFormatOverrideReason?.trim();
+              if (!reason) {
+                throw new ApiError(
+                  'EVENT_FORMAT_OVERRIDE_REASON_REQUIRED',
+                  'Provide an audit reason to change the delivery mode for a sold ticketed track event.',
+                  400,
+                  { eventFormatChangeReport },
+                );
+              }
+
+              console.warn('[events/event_format_override]', {
+                actorUserId: staff.userId,
+                actorRole: staff.role,
+                reason,
+                eventFormatChangeReport,
+              });
+            }
+          }
+        }
 
         if (updates.title !== undefined) updateValues.title = updates.title;
         if (updates.description !== undefined)
@@ -681,7 +922,7 @@ export function registerEventRoutes(app: Hono) {
           throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
         }
 
-        return c.json({ event: updated });
+        return c.json({ event: updated, eventFormatChangeReport });
       },
       'EVENT_UPDATE_FAILED',
       'Unable to update event.',
@@ -761,6 +1002,9 @@ export function registerEventRoutes(app: Hono) {
             .select({
               trackId: tracks.id,
               isPublished: tracks.isPublished,
+              onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+              onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+              offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
               allowIndividualBooking: tracks.allowIndividualBooking,
               singleBookingStart: tracks.singleBookingStart,
               singleBookingEnd: tracks.singleBookingEnd,
@@ -813,6 +1057,14 @@ export function registerEventRoutes(app: Hono) {
             }
             if (now > trackEvent.singleBookingEnd) {
               throw new ApiError('BOOKING_PERIOD_CLOSED', 'Single booking period has ended.', 400);
+            }
+
+            if (hasTicketTypes(trackEvent)) {
+              throw new ApiError(
+                'PAYMENT_REQUIRED',
+                'This session is part of a ticketed track. Use the track checkout flow.',
+                402,
+              );
             }
           }
 

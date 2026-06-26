@@ -31,6 +31,7 @@ import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
 import { ToastAction } from '@/shared/components/ui/toast';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 import { CAIRO_TZ, cairoLocalToUtcIso, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 
 const eventFormSchema = z.object({
@@ -47,6 +48,7 @@ const eventFormSchema = z.object({
   date: z.string().min(1, 'Pick a date and time.'),
   eventType: z.enum(['Event', 'Meetup', 'Mastermind', 'Retreat']),
   eventFormat: z.enum(['online', 'offline']),
+  eventFormatOverrideReason: z.string().trim().max(500).optional(),
   location: z.string().trim().max(255).optional(),
   locationUrl: z
     .string()
@@ -164,6 +166,7 @@ export function AdminEventForm({
     date: toCairoDatetimeLocal(event?.date),
     eventType: event?.event_type ?? 'Event',
     eventFormat: event?.event_format ?? 'offline',
+    eventFormatOverrideReason: '',
     location: event?.location ?? '',
     locationUrl: event?.location_url ?? '',
     meetingLink: event?.meeting_link ?? '',
@@ -180,6 +183,7 @@ export function AdminEventForm({
   });
 
   const { toast } = useToast();
+  const isAdminOverrideAllowed = useRolePermissions().isAdmin;
   const values = form.watch();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -201,6 +205,7 @@ export function AdminEventForm({
     values.description || 'Add an engaging summary so members know what to expect.';
   const sanitizedPreviewDescription = DOMPurify.sanitize(previewDescription);
   const previewImageUrl = values.imageUrl?.trim() ? values.imageUrl.trim() : '';
+  const eventFormatChanged = Boolean(event && values.eventFormat !== event.event_format);
   const preview = {
     title: previewTitle,
     date: previewDateIso,
@@ -228,12 +233,18 @@ export function AdminEventForm({
   };
 
   const handleSubmit = async (formValues: AdminEventFormValues) => {
+    const formatOverrideReason = formValues.eventFormatOverrideReason?.trim() ?? '';
+
     const payload: CreateEventPayload = {
       title: formValues.title.trim(),
       description: DOMPurify.sanitize(formValues.description.trim()),
       date: cairoLocalToUtcIso(formValues.date),
       eventType: formValues.eventType,
       eventFormat: formValues.eventFormat,
+      eventFormatOverrideReason:
+        event && formValues.eventFormat !== event.event_format && formatOverrideReason
+          ? formatOverrideReason
+          : undefined,
       location: formValues.location?.trim() ? formValues.location.trim() : null,
       locationUrl: formValues.locationUrl?.trim() ? formValues.locationUrl.trim() : null,
       meetingLink: formValues.meetingLink?.trim() ? formValues.meetingLink.trim() : null,
@@ -375,6 +386,30 @@ export function AdminEventForm({
                   )}
                 />
               </div>
+
+              {eventFormatChanged && isAdminOverrideAllowed && (
+                <FormField
+                  control={form.control}
+                  name="eventFormatOverrideReason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Delivery mode change reason</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="Required if this event is linked to sold ticketed tracks"
+                          rows={3}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Stored in server logs with the affected track report when an override is
+                        required.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField

@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, isNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import {
   eventAttendees,
   eventReservations,
   events,
+  paymentFulfillmentFailures,
   payments,
   platformSettings,
   profiles,
@@ -35,8 +36,8 @@ import { loadVerifiedPaymentAnalytics } from './paymentAnalytics.js';
 import { ONE_YEAR_MS } from './subscriptionShared.js';
 import {
   filterLiveIncludedEvents,
-  liveIncludedFormats,
   resolveTrackBasePrice,
+  TICKET_TYPES,
   type TicketType,
 } from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
@@ -49,6 +50,7 @@ const METHODS_RATE_LIMIT = { limit: 60, windowMs: 60_000 }; // 60 method fetches
 const WEBHOOK_RATE_LIMIT = { limit: 100, windowMs: 60_000 }; // 100 webhooks per minute per IP
 const RESERVATION_TTL_MS = 72 * 60 * 60 * 1000;
 const CHECKOUT_IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
+const CHECKOUT_IDEMPOTENCY_WAIT_TIMEOUT_MS = 30_000;
 
 // --- Schemas ---
 
@@ -59,7 +61,7 @@ const checkoutSchema = z.object({
   forceNewCode: z.boolean().optional(),
   idempotencyKey: z.string().trim().min(8).max(128).optional(),
   promoCode: z.string().optional(),
-  ticketType: z.enum(['online_only', 'online_offline', 'offline_only']).optional(),
+  ticketType: z.enum(TICKET_TYPES).optional(),
 });
 
 const verifySchema = z.object({
@@ -99,6 +101,8 @@ type CheckoutSuccessPayload = {
   amanCode?: string;
   masaryCode?: string;
 };
+
+type DbClient = typeof db | DbTransaction;
 
 type ConfirmationSource = 'verify' | 'webhook' | 'reconcile';
 
@@ -213,8 +217,206 @@ function createCheckoutInFlightReservation(): CheckoutInFlightReservation {
   };
 }
 
+async function waitForCheckoutInFlight(
+  reservation: CheckoutInFlightReservation,
+): Promise<'completed' | 'timeout'> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      reservation.waitForCompletion.then(() => 'completed' as const),
+      new Promise<'timeout'>((resolve) => {
+        timeout = setTimeout(() => resolve('timeout'), CHECKOUT_IDEMPOTENCY_WAIT_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
+}
+
+async function readExistingFreeCheckoutPayment(params: {
+  userId: string;
+  itemType: 'event' | 'track' | 'subscription';
+  itemId: string | null;
+  ticketType?: TicketType | null;
+}): Promise<CheckoutSuccessPayload | null> {
+  const [payment] = await db
+    .select({ id: payments.id })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.userId, params.userId),
+        eq(payments.itemType, params.itemType),
+        params.itemId ? eq(payments.itemId, params.itemId) : isNull(payments.itemId),
+        params.ticketType
+          ? eq(payments.ticketType, params.ticketType)
+          : isNull(payments.ticketType),
+        eq(payments.status, 'paid'),
+        eq(payments.amountCents, 0),
+      ),
+    )
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
+
+  return payment ? { free: true, paymentId: payment.id } : null;
+}
+
+function replacementReservationExclusion(
+  paymentIdColumn: typeof eventReservations.paymentId | typeof trackReservations.paymentId,
+  replacedPendingPaymentIds: string[],
+) {
+  const [paymentId] = replacedPendingPaymentIds;
+  return paymentId ? ne(paymentIdColumn, paymentId) : undefined;
+}
+
+async function expirePendingPaymentsForReplacement(
+  dbClient: DbClient,
+  replacedPendingPaymentIds: string[],
+): Promise<void> {
+  if (replacedPendingPaymentIds.length === 0) {
+    return;
+  }
+
+  await dbClient
+    .update(payments)
+    .set({ status: 'expired' })
+    .where(inArray(payments.id, replacedPendingPaymentIds));
+}
+
+async function restoreReplacedPendingPayment(replacedPendingPaymentIds: string[]): Promise<void> {
+  if (replacedPendingPaymentIds.length === 0) {
+    return;
+  }
+
+  await db
+    .update(payments)
+    .set({ status: 'pending' })
+    .where(and(inArray(payments.id, replacedPendingPaymentIds), eq(payments.status, 'expired')));
+}
+
+async function deleteReplacedPendingReservations(
+  dbClient: DbClient,
+  replacedPendingPaymentIds: string[],
+): Promise<void> {
+  if (replacedPendingPaymentIds.length === 0) {
+    return;
+  }
+
+  await dbClient
+    .delete(eventReservations)
+    .where(inArray(eventReservations.paymentId, replacedPendingPaymentIds));
+  await dbClient
+    .delete(trackReservations)
+    .where(inArray(trackReservations.paymentId, replacedPendingPaymentIds));
+}
+
 function isPostgresUniqueViolation(error: unknown): boolean {
   return isKnownDatabaseConflict(error) === 'unique';
+}
+
+function formatPaymentFailureError(error: unknown): { code?: string; message: string } {
+  if (error instanceof ApiError) {
+    return { code: error.code, message: error.message };
+  }
+  if (error instanceof Error) {
+    return { message: error.message };
+  }
+  return { message: String(error) };
+}
+
+async function recordPaymentFulfillmentFailure(
+  paymentId: string,
+  error: unknown,
+  source: ConfirmationSource,
+) {
+  const failure = formatPaymentFailureError(error);
+  const [payment] = await db
+    .select({
+      id: payments.id,
+      userId: payments.userId,
+      status: payments.status,
+      itemType: payments.itemType,
+      itemId: payments.itemId,
+      ticketType: payments.ticketType,
+      amountCents: payments.amountCents,
+      invoiceId: payments.fawaterkInvoiceId,
+      createdAt: payments.createdAt,
+    })
+    .from(payments)
+    .where(eq(payments.id, paymentId))
+    .limit(1);
+
+  if (!payment) {
+    return { payment: null, failure };
+  }
+
+  const now = new Date();
+  const [existingFailure] = await db
+    .select({ id: paymentFulfillmentFailures.id })
+    .from(paymentFulfillmentFailures)
+    .where(
+      and(
+        eq(paymentFulfillmentFailures.paymentId, payment.id),
+        isNull(paymentFulfillmentFailures.resolvedAt),
+      ),
+    )
+    .limit(1);
+
+  const failureValues = {
+    userId: payment.userId,
+    paymentStatus: payment.status,
+    itemType: payment.itemType,
+    itemId: payment.itemId,
+    ticketType: payment.ticketType,
+    invoiceId: payment.invoiceId,
+    amountCents: payment.amountCents,
+    confirmationSource: source,
+    errorCode: failure.code ?? null,
+    errorMessage: failure.message,
+    updatedAt: now,
+  };
+
+  if (existingFailure) {
+    await db
+      .update(paymentFulfillmentFailures)
+      .set({
+        ...failureValues,
+        failureCount: sql`${paymentFulfillmentFailures.failureCount} + 1`,
+      })
+      .where(eq(paymentFulfillmentFailures.id, existingFailure.id));
+  } else {
+    await db.insert(paymentFulfillmentFailures).values({
+      paymentId: payment.id,
+      ...failureValues,
+    });
+  }
+
+  return { payment, failure };
+}
+
+async function reportPaidFulfillmentFailure(
+  paymentId: string,
+  error: unknown,
+  source: ConfirmationSource,
+): Promise<void> {
+  const failure = formatPaymentFailureError(error);
+  try {
+    const report = await recordPaymentFulfillmentFailure(paymentId, error, source);
+
+    console.error('[payments/fulfillment_failed_after_gateway_paid]', {
+      payment: report.payment ?? { id: paymentId },
+      failure: report.failure,
+      opsAction:
+        'Gateway confirmed payment but local fulfillment failed. Review payment_fulfillment_failures and contact the buyer for manual booking or refund.',
+    });
+  } catch (reportError) {
+    console.error('[payments/fulfillment_failed_after_gateway_paid] report failed', {
+      paymentId,
+      failure,
+      reportError: reportError instanceof Error ? reportError.message : String(reportError),
+    });
+  }
 }
 
 async function calculatePrice(
@@ -523,6 +725,7 @@ async function calculatePrice(
 
 type ProcessSuccessfulPaymentOptions = {
   allowExpiredRecovery?: boolean;
+  confirmationSource?: ConfirmationSource;
 };
 
 type ProcessSuccessfulPaymentResult = {
@@ -534,8 +737,7 @@ async function processSuccessfulPayment(
   paymentId: string,
   options: ProcessSuccessfulPaymentOptions = {},
 ): Promise<ProcessSuccessfulPaymentResult> {
-  const { allowExpiredRecovery = false } = options;
-  let shouldMarkFailedOnError = false;
+  const { allowExpiredRecovery = false, confirmationSource = 'verify' } = options;
 
   // CRITICAL: Fulfillment happens before status is marked paid so failures persist.
   try {
@@ -559,7 +761,6 @@ async function processSuccessfulPayment(
       if (payment.status !== 'pending' && !canRecoverExpired) {
         return { status: payment.status };
       }
-      shouldMarkFailedOnError = payment.status === 'pending';
       let alreadyProcessed = false;
 
       const paidAt = new Date();
@@ -886,14 +1087,9 @@ async function processSuccessfulPayment(
       return { status: 'paid', alreadyProcessed };
     });
   } catch (error) {
-    if (shouldMarkFailedOnError) {
-      await db
-        .update(payments)
-        .set({ status: 'failed' })
-        .where(and(eq(payments.id, paymentId), eq(payments.status, 'pending')));
-    }
-    await db.delete(eventReservations).where(eq(eventReservations.paymentId, paymentId));
-    await db.delete(trackReservations).where(eq(trackReservations.paymentId, paymentId));
+    // Gateway has already confirmed money movement before this function runs. Keep the local
+    // payment retryable and preserve reservations; operators can resolve the dead-letter row.
+    await reportPaidFulfillmentFailure(paymentId, error, confirmationSource);
     throw error;
   }
 }
@@ -1026,6 +1222,7 @@ export async function confirmGatewayInvoicePayment(args: {
 
   const processResult = await processSuccessfulPayment(payment.id, {
     allowExpiredRecovery: initialStatus === 'expired',
+    confirmationSource: args.source,
   });
   const processStatus = processResult.status;
   const alreadyProcessed = Boolean(processResult.alreadyProcessed);
@@ -1198,7 +1395,24 @@ export function registerPaymentRoutes(app: Hono) {
       ? readCheckoutIdempotencyInFlight(checkoutIdempotencyCacheKey)
       : null;
     if (checkoutIdempotencyCacheKey && existingInFlight) {
-      await existingInFlight.waitForCompletion;
+      const waitResult = await waitForCheckoutInFlight(existingInFlight);
+      if (waitResult === 'timeout') {
+        console.warn('[payments/checkout] Idempotent checkout still in progress after wait', {
+          userId,
+          itemType,
+          itemId: itemId ?? null,
+          paymentMethodId,
+        });
+        return c.json(
+          {
+            error: {
+              code: 'CHECKOUT_IN_PROGRESS',
+              message: 'Checkout request is still processing. Please retry shortly.',
+            },
+          },
+          409,
+        );
+      }
 
       const completedResponse = readCheckoutIdempotencyResponse(checkoutIdempotencyCacheKey);
       if (completedResponse) {
@@ -1226,6 +1440,8 @@ export function registerPaymentRoutes(app: Hono) {
       return c.json({ data: payload });
     };
 
+    let checkoutPriceResult: PriceResult | null = null;
+
     try {
       // Note: Stale payment expiration moved to background job (see jobs/paymentExpiration.ts)
 
@@ -1236,13 +1452,20 @@ export function registerPaymentRoutes(app: Hono) {
         .orderBy(desc(payments.createdAt))
         .limit(1);
 
+      const calculatedPriceResult = await calculatePrice(
+        userId,
+        itemType,
+        itemId ?? null,
+        undefined,
+        undefined,
+        ticketType,
+      );
+      checkoutPriceResult = calculatedPriceResult;
+      let replacedPendingPaymentIds: string[] = [];
+
       if (existingPending) {
         const hasInvoice = Boolean(existingPending.fawaterkInvoiceId);
-        // Only one pending payment is allowed per (user, track), regardless of ticket type. If the
-        // buyer switches variant, the existing invoice is for the wrong price — treat it like
-        // forceNewCode so it's expired and reissued rather than resumed.
-        const ticketTypeMismatch = (existingPending.ticketType ?? null) !== (ticketType ?? null);
-        if (!forceNewCode && hasInvoice && !ticketTypeMismatch) {
+        if (!forceNewCode) {
           return c.json(
             {
               error: {
@@ -1258,103 +1481,25 @@ export function registerPaymentRoutes(app: Hono) {
                 itemType,
                 itemId,
                 paymentMethodId,
+                ticketType: existingPending.ticketType,
               },
             },
             409,
           );
         }
 
-        const expiredPayments = await db
-          .update(payments)
-          .set({ status: 'expired' })
-          .where(pendingWhere)
-          .returning({ id: payments.id });
-
-        if (expiredPayments.length > 0) {
-          const expiredPaymentIds = expiredPayments.map((row) => row.id);
-          await db
-            .delete(eventReservations)
-            .where(inArray(eventReservations.paymentId, expiredPaymentIds));
-          await db
-            .delete(trackReservations)
-            .where(inArray(trackReservations.paymentId, expiredPaymentIds));
+        if (!hasInvoice) {
+          console.info('[payments/checkout] Replacing pending payment without gateway invoice', {
+            paymentId: existingPending.id,
+            itemType,
+            itemId: itemId ?? null,
+          });
         }
+        replacedPendingPaymentIds = [existingPending.id];
       }
 
-      // Calculate base price (promo is validated later inside transaction for paid items)
-      const prePriceResult = await calculatePrice(
-        userId,
-        itemType,
-        itemId ?? null,
-        undefined,
-        undefined,
-        ticketType,
-      );
-
-      // If free, process immediately without payment
-      if (prePriceResult.amountCents === 0) {
-        // Handle free registration/booking in a transaction
-        const result = await db.transaction(async (tx) => {
-          // Create payment record for tracking
-          const [payment] = await tx
-            .insert(payments)
-            .values({
-              userId,
-              status: 'paid',
-              amountCents: 0,
-              currency: 'EGP',
-              itemType,
-              itemId: itemId ?? null,
-              ticketType: ticketType ?? null,
-              paidAt: new Date(),
-              promoCodeId: prePriceResult.promoCodeId,
-              discountAppliedCents: prePriceResult.discountAppliedCents,
-              originalAmountCents: prePriceResult.originalAmountCents,
-            })
-            .returning();
-
-          // Process based on item type
-          if (itemType === 'event' && itemId) {
-            await tx.insert(eventAttendees).values({
-              eventId: itemId,
-              userId,
-              paidAt: new Date(),
-              pricePaidCents: 0,
-              paymentId: payment.id,
-              sourceTrackBookingId: null,
-            });
-          }
-
-          if (itemType === 'track' && itemId) {
-            // Fetch track for maxTrackBookings (booking window already validated in calculatePrice)
-            const [track] = await tx
-              .select({ maxTrackBookings: tracks.maxTrackBookings })
-              .from(tracks)
-              .where(eq(tracks.id, itemId));
-
-            const paidAt = new Date();
-            await executeTrackBookingWrite(tx, {
-              trackId: itemId,
-              userId,
-              bookingSource: 'free',
-              paymentId: payment.id,
-              pricePaidCents: 0,
-              ticketType: ticketType ?? null,
-              maxTrackBookings: track?.maxTrackBookings ?? null,
-              bookedAt: paidAt,
-              paidAt,
-            });
-          }
-
-          // Note: Free subscriptions are not expected in normal flow
-          return payment;
-        });
-
-        return respondCheckoutSuccess({ free: true, paymentId: result.id });
-      }
-
-      let amountCents = prePriceResult.amountCents;
-      let itemName = prePriceResult.itemName;
+      let amountCents = calculatedPriceResult.amountCents;
+      let itemName = calculatedPriceResult.itemName;
 
       // Get user info for Fawaterk
       const [user] = await db
@@ -1398,6 +1543,71 @@ export function registerPaymentRoutes(app: Hono) {
         );
       }
 
+      // If free, process immediately without payment
+      if (calculatedPriceResult.amountCents === 0) {
+        // Handle free registration/booking in a transaction
+        const result = await db.transaction(async (tx) => {
+          await expirePendingPaymentsForReplacement(tx, replacedPendingPaymentIds);
+          await deleteReplacedPendingReservations(tx, replacedPendingPaymentIds);
+
+          // Create payment record for tracking
+          const paidAt = new Date();
+          const [payment] = await tx
+            .insert(payments)
+            .values({
+              userId,
+              status: 'paid',
+              amountCents: 0,
+              currency: 'EGP',
+              itemType,
+              itemId: itemId ?? null,
+              ticketType: ticketType ?? null,
+              paidAt,
+              promoCodeId: calculatedPriceResult.promoCodeId,
+              discountAppliedCents: calculatedPriceResult.discountAppliedCents,
+              originalAmountCents: calculatedPriceResult.originalAmountCents,
+            })
+            .returning();
+
+          // Process based on item type
+          if (itemType === 'event' && itemId) {
+            await tx.insert(eventAttendees).values({
+              eventId: itemId,
+              userId,
+              paidAt,
+              pricePaidCents: 0,
+              paymentId: payment.id,
+              sourceTrackBookingId: null,
+            });
+          }
+
+          if (itemType === 'track' && itemId) {
+            // Fetch track for maxTrackBookings (booking window already validated in calculatePrice)
+            const [track] = await tx
+              .select({ maxTrackBookings: tracks.maxTrackBookings })
+              .from(tracks)
+              .where(eq(tracks.id, itemId));
+
+            await executeTrackBookingWrite(tx, {
+              trackId: itemId,
+              userId,
+              bookingSource: 'free',
+              paymentId: payment.id,
+              pricePaidCents: 0,
+              ticketType: ticketType ?? null,
+              maxTrackBookings: track?.maxTrackBookings ?? null,
+              bookedAt: paidAt,
+              paidAt,
+            });
+          }
+
+          // Note: Free subscriptions are not expected in normal flow
+          return payment;
+        });
+
+        return respondCheckoutSuccess({ free: true, paymentId: result.id });
+      }
+
       const reservedAt = new Date();
       const expiresAt = new Date(reservedAt.getTime() + RESERVATION_TTL_MS);
       let paymentId: string;
@@ -1428,6 +1638,11 @@ export function registerPaymentRoutes(app: Hono) {
           if (existingRegistration && existingRegistration.status !== 'cancelled') {
             throw new ApiError('ALREADY_REGISTERED', 'Already registered for this event.', 400);
           }
+
+          await expirePendingPaymentsForReplacement(tx, replacedPendingPaymentIds);
+          // Free the (event_id,user_id) reservation slot now, before inserting the new hold below —
+          // the unique index would otherwise collide on a "change ticket / new code" replacement.
+          await deleteReplacedPendingReservations(tx, replacedPendingPaymentIds);
 
           const [trackEvent] = await tx
             .select({
@@ -1482,6 +1697,10 @@ export function registerPaymentRoutes(app: Hono) {
                 and(
                   eq(eventReservations.eventId, itemId),
                   gt(eventReservations.expiresAt, reservedAt),
+                  replacementReservationExclusion(
+                    eventReservations.paymentId,
+                    replacedPendingPaymentIds,
+                  ),
                 ),
               );
 
@@ -1573,6 +1792,12 @@ export function registerPaymentRoutes(app: Hono) {
             throw new ApiError('ALREADY_BOOKED', 'Already booked this track', 400);
           }
 
+          await expirePendingPaymentsForReplacement(tx, replacedPendingPaymentIds);
+          // Free the (track_id,user_id) + per-event reservation slots now, before inserting the new
+          // holds below — the unique indexes would otherwise collide on a "change ticket / new code"
+          // replacement, destroying the buyer's hold and 500ing the request.
+          await deleteReplacedPendingReservations(tx, replacedPendingPaymentIds);
+
           const trackEventRows = await tx
             .select({
               eventId: events.id,
@@ -1590,15 +1815,21 @@ export function registerPaymentRoutes(app: Hono) {
 
           // Capacity + reservations only cover the sessions this ticket includes. Legacy tracks
           // (no ticketType) include every event, preserving today's behavior.
-          const includedFormats = ticketType ? liveIncludedFormats(ticketType) : null;
-          const isLiveIncluded = (row: { eventFormat: 'online' | 'offline' }) =>
-            includedFormats === null || includedFormats.includes(row.eventFormat);
+          const liveIncludedEventRows = filterLiveIncludedEvents(trackEventRows, ticketType);
 
-          if (trackEventRows.some((row) => row.maxAttendees === null)) {
+          if (liveIncludedEventRows.length === 0) {
+            throw new ApiError(
+              'TICKET_EVENT_COVERAGE',
+              'This ticket type has no matching live sessions.',
+              400,
+            );
+          }
+
+          if (liveIncludedEventRows.some((row) => row.maxAttendees === null)) {
             throw new ApiError('CAPACITY_NOT_SET', 'Some events have no capacity set.', 400);
           }
 
-          const eventIds = trackEventRows.map((row) => row.eventId);
+          const eventIds = liveIncludedEventRows.map((row) => row.eventId);
 
           const existingEventRows = await tx
             .select({ eventId: eventAttendees.eventId })
@@ -1635,6 +1866,10 @@ export function registerPaymentRoutes(app: Hono) {
               and(
                 inArray(eventReservations.eventId, eventIds),
                 gt(eventReservations.expiresAt, reservedAt),
+                replacementReservationExclusion(
+                  eventReservations.paymentId,
+                  replacedPendingPaymentIds,
+                ),
               ),
             )
             .groupBy(eventReservations.eventId);
@@ -1646,8 +1881,8 @@ export function registerPaymentRoutes(app: Hono) {
             reservationCounts.map((row) => [row.eventId, Number(row.count)]),
           );
 
-          for (const row of trackEventRows) {
-            if (existingEventIds.has(row.eventId) || !isLiveIncluded(row)) {
+          for (const row of liveIncludedEventRows) {
+            if (existingEventIds.has(row.eventId)) {
               continue;
             }
             const attendeeCount = attendeeCountMap.get(row.eventId) ?? 0;
@@ -1672,6 +1907,10 @@ export function registerPaymentRoutes(app: Hono) {
               and(
                 eq(trackReservations.trackId, itemId),
                 gt(trackReservations.expiresAt, reservedAt),
+                replacementReservationExclusion(
+                  trackReservations.paymentId,
+                  replacedPendingPaymentIds,
+                ),
               ),
             );
 
@@ -1716,8 +1955,8 @@ export function registerPaymentRoutes(app: Hono) {
             expiresAt,
           });
 
-          const reservationValues = trackEventRows
-            .filter((row) => !existingEventIds.has(row.eventId) && isLiveIncluded(row))
+          const reservationValues = liveIncludedEventRows
+            .filter((row) => !existingEventIds.has(row.eventId))
             .map((row) => ({
               eventId: row.eventId,
               userId,
@@ -1740,20 +1979,23 @@ export function registerPaymentRoutes(app: Hono) {
         amountCents = trackResult.amountCents;
         itemName = trackResult.itemName;
       } else {
-        const [payment] = await db
-          .insert(payments)
-          .values({
-            userId,
-            status: 'pending',
-            amountCents,
-            currency: 'EGP',
-            itemType,
-            itemId: itemId ?? null,
-            promoCodeId: prePriceResult.promoCodeId,
-            discountAppliedCents: prePriceResult.discountAppliedCents,
-            originalAmountCents: prePriceResult.originalAmountCents,
-          })
-          .returning({ id: payments.id });
+        const [payment] = await db.transaction(async (tx) => {
+          await expirePendingPaymentsForReplacement(tx, replacedPendingPaymentIds);
+          return tx
+            .insert(payments)
+            .values({
+              userId,
+              status: 'pending',
+              amountCents,
+              currency: 'EGP',
+              itemType,
+              itemId: itemId ?? null,
+              promoCodeId: calculatedPriceResult.promoCodeId,
+              discountAppliedCents: calculatedPriceResult.discountAppliedCents,
+              originalAmountCents: calculatedPriceResult.originalAmountCents,
+            })
+            .returning({ id: payments.id });
+        });
         paymentId = payment.id;
       }
 
@@ -1809,26 +2051,28 @@ export function registerPaymentRoutes(app: Hono) {
           redirectOption: forceRedirect ? true : undefined,
           payload: { paymentId },
         });
+
+        // Persist the Fawaterk invoice details. The replaced hold was already released inside the
+        // checkout transaction above, so there is nothing left to clean up on the success path.
+        await db
+          .update(payments)
+          .set({
+            fawaterkInvoiceId: invoiceResult.invoiceId,
+            fawaterkInvoiceKey: invoiceResult.invoiceKey,
+            fawryCode: invoiceResult.paymentData.fawryCode ?? null,
+            amanCode: invoiceResult.paymentData.amanCode ?? null,
+            masaryCode: invoiceResult.paymentData.masaryCode ?? null,
+            meezaReference: invoiceResult.paymentData.meezaReference ?? null,
+            meezaQrCode: invoiceResult.paymentData.meezaQrCode ?? null,
+          })
+          .where(eq(payments.id, paymentId));
       } catch (error) {
         await db.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
         await db.delete(eventReservations).where(eq(eventReservations.paymentId, paymentId));
         await db.delete(trackReservations).where(eq(trackReservations.paymentId, paymentId));
+        await restoreReplacedPendingPayment(replacedPendingPaymentIds);
         throw error;
       }
-
-      // Update payment with Fawaterk invoice info
-      await db
-        .update(payments)
-        .set({
-          fawaterkInvoiceId: invoiceResult.invoiceId,
-          fawaterkInvoiceKey: invoiceResult.invoiceKey,
-          fawryCode: invoiceResult.paymentData.fawryCode ?? null,
-          amanCode: invoiceResult.paymentData.amanCode ?? null,
-          masaryCode: invoiceResult.paymentData.masaryCode ?? null,
-          meezaReference: invoiceResult.paymentData.meezaReference ?? null,
-          meezaQrCode: invoiceResult.paymentData.meezaQrCode ?? null,
-        })
-        .where(eq(payments.id, paymentId));
 
       return respondCheckoutSuccess({
         paymentId,
@@ -1871,10 +2115,23 @@ export function registerPaymentRoutes(app: Hono) {
                 itemType,
                 itemId,
                 paymentMethodId,
+                ticketType: pendingPayment.ticketType,
               },
             },
             409,
           );
+        }
+
+        if (checkoutPriceResult?.amountCents === 0) {
+          const existingFreePayment = await readExistingFreeCheckoutPayment({
+            userId,
+            itemType,
+            itemId: itemId ?? null,
+            ticketType,
+          });
+          if (existingFreePayment) {
+            return c.json({ data: existingFreePayment });
+          }
         }
       }
       console.error('[payments/checkout] Error:', error);
@@ -1953,7 +2210,7 @@ export function registerPaymentRoutes(app: Hono) {
       itemType: z.enum(['event', 'track', 'subscription']),
       itemId: z.string().uuid().optional(),
       promoCode: z.string().optional(),
-      ticketType: z.enum(['online_only', 'online_offline', 'offline_only']).optional(),
+      ticketType: z.enum(TICKET_TYPES).optional(),
     });
 
     const parseResult = pricePreviewSchema.safeParse({
@@ -2059,6 +2316,7 @@ export function registerPaymentRoutes(app: Hono) {
         currency: payment.currency,
         itemType: payment.itemType,
         itemId: payment.itemId,
+        ticketType: payment.ticketType,
         fawaterkInvoiceId: payment.fawaterkInvoiceId,
         fawryCode: payment.fawryCode,
         amanCode: payment.amanCode,

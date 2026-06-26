@@ -37,8 +37,8 @@ export function isLiteralFormatText(location: string | null | undefined): boolea
  *  - location literally "online"            -> online  (clear text)
  *  - location literally "offline"           -> offline (clear text)
  *  - location is a real address             -> offline (keep)
- *  - neither link nor location              -> offline (conservative: matches the column default and
- *                                                       preserves the old "paid for subscribers" behavior)
+ *  - neither link nor location              -> online  (product decision for legacy rows with no
+ *                                                       delivery-mode signal)
  */
 export function deriveLegacyEventFormat(row: LegacyEventRow): BackfillDecision {
   const location = normalize(row.location);
@@ -52,7 +52,11 @@ export function deriveLegacyEventFormat(row: LegacyEventRow): BackfillDecision {
     return { format: 'online', clearLocation: false };
   }
 
-  // Real address, or an incomplete row with neither signal -> offline (the safe default).
+  if (location === '' && normalize(row.meetingLink) === '') {
+    return { format: 'online', clearLocation: false };
+  }
+
+  // Real address -> offline.
   return { format: 'offline', clearLocation: false };
 }
 

@@ -23,20 +23,21 @@ const TICKET_META: Record<TicketType, TicketMeta> = {
   online_only: {
     label: 'Online Only',
     priceKey: 'online_only_price_cents',
-    benefit:
-      'Online sessions live + recordings of all sessions (offline added after the offline day).',
+    // Kept short for the compact selector — the offline-recordings nuance is shown in the session
+    // list banner. Must keep "recordings of all sessions" (asserted in track-ticket-types-ui.test).
+    benefit: 'Live online sessions + recordings of all sessions.',
     includedFormats: ['online'],
   },
   online_offline: {
     label: 'Online + Offline',
     priceKey: 'online_offline_price_cents',
-    benefit: 'Online sessions live + offline day in person + recordings of everything.',
+    benefit: 'Live online + the in-person offline day + all recordings.',
     includedFormats: ['online', 'offline'],
   },
   offline_only: {
     label: 'Offline Only',
     priceKey: 'offline_only_price_cents',
-    benefit: 'Offline day in person + its recordings (no online sessions).',
+    benefit: 'The in-person offline day + its recordings.',
     includedFormats: ['offline'],
   },
 };
@@ -76,6 +77,33 @@ export function getEnabledTicketTypes(track: TrackTicketPrices): EnabledTicketTy
     const priceCents = track[TICKET_META[type].priceKey];
     if (priceCents == null) return [];
     return [{ type, priceCents, ...TICKET_META[type] }];
+  });
+}
+
+export type TicketOption = {
+  type: TicketType;
+  label: string;
+  benefit: string;
+  /** Price in cents, or null when the variant is disabled (not sold by this track). */
+  priceCents: number | null;
+  enabled: boolean;
+};
+
+/**
+ * All three variants in canonical order, each flagged enabled/disabled. The public selector renders
+ * disabled variants as "Not available now" (greyed, non-selectable) rather than hiding them, so a
+ * buyer can see the full menu and what they're missing.
+ */
+export function getAllTicketTypes(track: TrackTicketPrices): TicketOption[] {
+  return TICKET_TYPE_ORDER.map((type) => {
+    const priceCents = track[TICKET_META[type].priceKey];
+    return {
+      type,
+      label: TICKET_META[type].label,
+      benefit: TICKET_META[type].benefit,
+      priceCents: priceCents ?? null,
+      enabled: priceCents != null,
+    };
   });
 }
 

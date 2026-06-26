@@ -37,6 +37,7 @@ interface PaymentCheckoutDialogProps {
   basePriceCents?: number | null;
   appliedPromoCode?: string;
   ticketType?: TicketType;
+  forceNewCode?: boolean;
   onSuccess?: () => void;
 }
 
@@ -57,6 +58,7 @@ export function PaymentCheckoutDialog({
   basePriceCents,
   appliedPromoCode,
   ticketType,
+  forceNewCode,
   onSuccess,
 }: PaymentCheckoutDialogProps) {
   const { user } = useAuth();
@@ -209,6 +211,7 @@ export function PaymentCheckoutDialog({
         ),
         promoCode: appliedPromoCode,
         ticketType,
+        forceNewCode,
       });
 
       if (result.free) {

@@ -5,7 +5,7 @@ import { db } from '../../db/client.js';
 import { tracks, users } from '../../db/schema/index.js';
 import { handleRoute } from '../../utils/errors.js';
 import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
-import { resolveTrackBasePrice } from './ticketAccess.js';
+import { resolveTrackBasePrice, TICKET_TYPES } from './ticketAccess.js';
 import { executeTrackBookingWrite, revokeTrackBookingAccess } from './trackBookingShared.js';
 import { consumeRateLimit, requireManager } from './utils.js';
 
@@ -17,7 +17,7 @@ const manualEnrollmentSchema = z.object({
   userId: z.string().uuid(),
   reason: z.string().trim().min(3).max(500),
   reference: z.string().trim().min(3).max(255),
-  ticketType: z.enum(['online_only', 'online_offline', 'offline_only']).optional(),
+  ticketType: z.enum(TICKET_TYPES).optional(),
   amountPaidCents: z
     .union([
       z.coerce

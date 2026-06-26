@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 import {
   deriveLegacyEventFormat,
@@ -42,13 +43,13 @@ describe('event_format backfill intent', () => {
     });
   });
 
-  it('defaults an incomplete row (neither link nor location) to offline', () => {
+  it('defaults an incomplete row (neither link nor location) to online', () => {
     assert.deepEqual(deriveLegacyEventFormat({ meetingLink: null, location: null }), {
-      format: 'offline',
+      format: 'online',
       clearLocation: false,
     });
     assert.deepEqual(deriveLegacyEventFormat({ meetingLink: '', location: '' }), {
-      format: 'offline',
+      format: 'online',
       clearLocation: false,
     });
   });
@@ -84,5 +85,47 @@ describe('event_format pricing characterization (no silent flips)', () => {
     assert.equal(legacyOnlineInference(row), false);
     // New intent recognizes it as online (free for subscribers) — surfaced in the diff report.
     assert.equal(deriveLegacyEventFormat(row).format, 'online');
+  });
+
+  it('flags the product decision: no location and no meeting link flips offline -> online', () => {
+    const row: LegacyEventRow = { meetingLink: null, location: null };
+    assert.equal(legacyOnlineInference(row), false);
+    assert.equal(deriveLegacyEventFormat(row).format, 'online');
+  });
+});
+
+describe('event_format production migration gate', () => {
+  it('documents the preflight report and human signoff requirement', async () => {
+    const runbook = await readFile(
+      new URL('../../docs/runbooks/event-format-0018-migration-preflight.md', import.meta.url),
+      'utf8',
+    );
+    const serverPackage = JSON.parse(
+      await readFile(new URL('../../server/package.json', import.meta.url), 'utf8'),
+    );
+
+    assert.match(runbook, /preflight_event_format_report\.sql/);
+    assert.match(runbook, /human signoff/i);
+    assert.match(runbook, /0018_fast_sleepwalker\.sql/);
+    assert.equal(
+      serverPackage.scripts['db:preflight:event-format'],
+      'psql "$DATABASE_URL" -f ./drizzle/preflight_event_format_report.sql',
+    );
+  });
+
+  it('blocks production-like db:migrate unless the preflight gate is signed off', async () => {
+    const serverPackage = JSON.parse(
+      await readFile(new URL('../../server/package.json', import.meta.url), 'utf8'),
+    );
+    const guard = await readFile(
+      new URL('../../server/scripts/guard-event-format-migration.mjs', import.meta.url),
+      'utf8',
+    );
+
+    assert.match(serverPackage.scripts['db:migrate'], /guard-event-format-migration\.mjs/);
+    assert.match(guard, /EVENT_FORMAT_0018_SIGNOFF/);
+    assert.match(guard, /EVENT_FORMAT_0018_SIGNOFF_BY/);
+    assert.match(guard, /preflight:event-format/);
+    assert.match(guard, /backup/i);
   });
 });
