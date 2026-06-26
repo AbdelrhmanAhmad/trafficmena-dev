@@ -100,3 +100,28 @@ export function hasTicketTypes(track: TrackTicketPrices): boolean {
 export function enabledTicketTypes(track: TrackTicketPrices): TicketType[] {
   return TICKET_TYPES.filter((ticketType) => isTicketEnabled(track, ticketType));
 }
+
+export type TrackBasePriceResult =
+  | { ok: true; basePrice: number }
+  | { ok: false; reason: 'ticket_type_required' | 'ticket_type_disabled' };
+
+/**
+ * The base price to charge for a track, before subscriber/promo discounts. Ticket-typed tracks
+ * require an enabled variant; legacy tracks fall back to the single priceInCents. Pure so the
+ * checkout/price-preview money decision is testable without a DB.
+ */
+export function resolveTrackBasePrice(
+  track: TrackTicketPrices & { priceInCents: number | null },
+  ticketType: TicketType | null | undefined,
+): TrackBasePriceResult {
+  if (hasTicketTypes(track)) {
+    if (!ticketType) {
+      return { ok: false, reason: 'ticket_type_required' };
+    }
+    if (!isTicketEnabled(track, ticketType)) {
+      return { ok: false, reason: 'ticket_type_disabled' };
+    }
+    return { ok: true, basePrice: getTrackTicketPrice(track, ticketType) ?? 0 };
+  }
+  return { ok: true, basePrice: track.priceInCents ?? 0 };
+}

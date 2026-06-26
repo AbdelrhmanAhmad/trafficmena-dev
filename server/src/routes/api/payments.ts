@@ -33,6 +33,7 @@ import { getSessionFromRequest } from '../../utils/session.js';
 import { isEventHiddenFromNonStaff } from './eventVisibility.js';
 import { loadVerifiedPaymentAnalytics } from './paymentAnalytics.js';
 import { ONE_YEAR_MS } from './subscriptionShared.js';
+import { liveIncludedFormats, resolveTrackBasePrice, type TicketType } from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
 import { getOptionalUserRole, isKnownDatabaseConflict } from './utils.js';
 
@@ -53,6 +54,7 @@ const checkoutSchema = z.object({
   forceNewCode: z.boolean().optional(),
   idempotencyKey: z.string().trim().min(8).max(128).optional(),
   promoCode: z.string().optional(),
+  ticketType: z.enum(['online_only', 'online_offline', 'offline_only']).optional(),
 });
 
 const verifySchema = z.object({
@@ -134,10 +136,20 @@ function buildCheckoutIdempotencyCacheKey(params: {
   itemId?: string;
   paymentMethodId: number;
   idempotencyKey: string;
+  ticketType?: TicketType | null;
 }): string {
-  const { userId, itemType, itemId, paymentMethodId, idempotencyKey } = params;
+  const { userId, itemType, itemId, paymentMethodId, idempotencyKey, ticketType } = params;
   const normalizedItemId = itemId ?? 'none';
-  return [userId, itemType, normalizedItemId, String(paymentMethodId), idempotencyKey].join(':');
+  // ticketType is part of the key so re-submitting the same idempotency key with a different ticket
+  // type issues a fresh checkout instead of returning the cached (wrong-variant) response.
+  return [
+    userId,
+    itemType,
+    normalizedItemId,
+    String(paymentMethodId),
+    ticketType ?? 'none',
+    idempotencyKey,
+  ].join(':');
 }
 
 function readCheckoutIdempotencyResponse(cacheKey: string): CheckoutSuccessPayload | null {
@@ -206,6 +218,7 @@ async function calculatePrice(
   itemId: string | null,
   promoCode?: string,
   tx?: DbTransaction,
+  ticketType?: TicketType | null,
 ): Promise<PriceResult> {
   const dbClient = tx ?? db;
   const normalizedPromoCode = promoCode?.trim() || undefined;
@@ -446,7 +459,16 @@ async function calculatePrice(
       throw new ApiError('ALREADY_BOOKED', 'Already booked this track', 400);
     }
 
-    const basePrice = track.priceInCents ?? 0;
+    // When the track offers ticket types, price comes from the selected variant (required + enabled).
+    // Otherwise fall back to the legacy single price — unchanged for tracks not using ticket types.
+    const baseResult = resolveTrackBasePrice(track, ticketType);
+    if (!baseResult.ok) {
+      if (baseResult.reason === 'ticket_type_required') {
+        throw new ApiError('TICKET_TYPE_REQUIRED', 'Select a ticket type for this track.', 400);
+      }
+      throw new ApiError('TICKET_TYPE_DISABLED', 'That ticket type is not available.', 400);
+    }
+    const basePrice = baseResult.basePrice;
     let amountCents = basePrice;
     let discountAppliedCents = 0;
     let discountSource: PriceResult['discountSource'] = null;
@@ -1094,7 +1116,8 @@ export function registerPaymentRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: result.error.message } }, 400);
     }
 
-    const { itemType, itemId, paymentMethodId, forceNewCode, idempotencyKey } = result.data;
+    const { itemType, itemId, paymentMethodId, forceNewCode, idempotencyKey, ticketType } =
+      result.data;
     const promoCode = result.data.promoCode?.trim() || undefined;
 
     // Validate subscription doesn't need itemId
@@ -1142,6 +1165,7 @@ export function registerPaymentRoutes(app: Hono) {
           itemId,
           paymentMethodId,
           idempotencyKey,
+          ticketType,
         })
       : null;
 
@@ -1202,7 +1226,11 @@ export function registerPaymentRoutes(app: Hono) {
 
       if (existingPending) {
         const hasInvoice = Boolean(existingPending.fawaterkInvoiceId);
-        if (!forceNewCode && hasInvoice) {
+        // Only one pending payment is allowed per (user, track), regardless of ticket type. If the
+        // buyer switches variant, the existing invoice is for the wrong price — treat it like
+        // forceNewCode so it's expired and reissued rather than resumed.
+        const ticketTypeMismatch = (existingPending.ticketType ?? null) !== (ticketType ?? null);
+        if (!forceNewCode && hasInvoice && !ticketTypeMismatch) {
           return c.json(
             {
               error: {
@@ -1242,7 +1270,14 @@ export function registerPaymentRoutes(app: Hono) {
       }
 
       // Calculate base price (promo is validated later inside transaction for paid items)
-      const prePriceResult = await calculatePrice(userId, itemType, itemId ?? null);
+      const prePriceResult = await calculatePrice(
+        userId,
+        itemType,
+        itemId ?? null,
+        undefined,
+        undefined,
+        ticketType,
+      );
 
       // If free, process immediately without payment
       if (prePriceResult.amountCents === 0) {
@@ -1258,6 +1293,7 @@ export function registerPaymentRoutes(app: Hono) {
               currency: 'EGP',
               itemType,
               itemId: itemId ?? null,
+              ticketType: ticketType ?? null,
               paidAt: new Date(),
               promoCodeId: prePriceResult.promoCodeId,
               discountAppliedCents: prePriceResult.discountAppliedCents,
@@ -1525,7 +1561,11 @@ export function registerPaymentRoutes(app: Hono) {
           }
 
           const trackEventRows = await tx
-            .select({ eventId: events.id, maxAttendees: events.maxAttendees })
+            .select({
+              eventId: events.id,
+              maxAttendees: events.maxAttendees,
+              eventFormat: events.eventFormat,
+            })
             .from(trackEvents)
             .innerJoin(events, eq(events.id, trackEvents.eventId))
             .where(eq(trackEvents.trackId, itemId))
@@ -1534,6 +1574,12 @@ export function registerPaymentRoutes(app: Hono) {
           if (trackEventRows.length === 0) {
             throw new ApiError('TRACK_EMPTY', 'Track has no events.', 400);
           }
+
+          // Capacity + reservations only cover the sessions this ticket includes. Legacy tracks
+          // (no ticketType) include every event, preserving today's behavior.
+          const includedFormats = ticketType ? liveIncludedFormats(ticketType) : null;
+          const isLiveIncluded = (row: { eventFormat: 'online' | 'offline' }) =>
+            includedFormats === null || includedFormats.includes(row.eventFormat);
 
           if (trackEventRows.some((row) => row.maxAttendees === null)) {
             throw new ApiError('CAPACITY_NOT_SET', 'Some events have no capacity set.', 400);
@@ -1588,7 +1634,7 @@ export function registerPaymentRoutes(app: Hono) {
           );
 
           for (const row of trackEventRows) {
-            if (existingEventIds.has(row.eventId)) {
+            if (existingEventIds.has(row.eventId) || !isLiveIncluded(row)) {
               continue;
             }
             const attendeeCount = attendeeCountMap.get(row.eventId) ?? 0;
@@ -1624,7 +1670,14 @@ export function registerPaymentRoutes(app: Hono) {
             throw new ApiError('TRACK_FULL', 'Track booking limit reached.', 409);
           }
 
-          const priceResult = await calculatePrice(userId, itemType, itemId, promoCode, tx);
+          const priceResult = await calculatePrice(
+            userId,
+            itemType,
+            itemId,
+            promoCode,
+            tx,
+            ticketType,
+          );
 
           const [payment] = await tx
             .insert(payments)
@@ -1635,6 +1688,7 @@ export function registerPaymentRoutes(app: Hono) {
               currency: 'EGP',
               itemType,
               itemId,
+              ticketType: ticketType ?? null,
               promoCodeId: priceResult.promoCodeId,
               discountAppliedCents: priceResult.discountAppliedCents,
               originalAmountCents: priceResult.originalAmountCents,
@@ -1650,7 +1704,7 @@ export function registerPaymentRoutes(app: Hono) {
           });
 
           const reservationValues = trackEventRows
-            .filter((row) => !existingEventIds.has(row.eventId))
+            .filter((row) => !existingEventIds.has(row.eventId) && isLiveIncluded(row))
             .map((row) => ({
               eventId: row.eventId,
               userId,
@@ -1886,19 +1940,21 @@ export function registerPaymentRoutes(app: Hono) {
       itemType: z.enum(['event', 'track', 'subscription']),
       itemId: z.string().uuid().optional(),
       promoCode: z.string().optional(),
+      ticketType: z.enum(['online_only', 'online_offline', 'offline_only']).optional(),
     });
 
     const parseResult = pricePreviewSchema.safeParse({
       itemType: c.req.query('itemType'),
       itemId: c.req.query('itemId') || undefined,
       promoCode: c.req.query('promoCode') || undefined,
+      ticketType: c.req.query('ticketType') || undefined,
     });
 
     if (!parseResult.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: 'Invalid parameters' } }, 400);
     }
 
-    const { itemType, itemId } = parseResult.data;
+    const { itemType, itemId, ticketType } = parseResult.data;
     const promoCode = parseResult.data.promoCode?.trim() || undefined;
 
     try {
@@ -1906,11 +1962,25 @@ export function registerPaymentRoutes(app: Hono) {
       let priceResult: PriceResult;
 
       try {
-        priceResult = await calculatePrice(session.user.id, itemType, itemId ?? null, promoCode);
+        priceResult = await calculatePrice(
+          session.user.id,
+          itemType,
+          itemId ?? null,
+          promoCode,
+          undefined,
+          ticketType,
+        );
       } catch (error) {
         if (error instanceof ApiError && error.code === 'PROMO_INVALID') {
           promoError = error.message;
-          priceResult = await calculatePrice(session.user.id, itemType, itemId ?? null);
+          priceResult = await calculatePrice(
+            session.user.id,
+            itemType,
+            itemId ?? null,
+            undefined,
+            undefined,
+            ticketType,
+          );
         } else {
           throw error;
         }

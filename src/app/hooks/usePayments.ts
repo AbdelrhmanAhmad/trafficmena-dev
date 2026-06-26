@@ -6,6 +6,7 @@ import type {
   PaymentItemType,
   PaymentMethod,
   PricePreview,
+  TicketType,
   VerifyPaymentRequest,
   VerifyPaymentResponse,
 } from '@/app/api/payments';
@@ -80,13 +81,20 @@ export function usePricePreview(
   itemType: PaymentItemType | undefined,
   itemId?: string,
   promoCode?: string,
-  options?: { enabled?: boolean; requestKey?: number | string },
+  options?: { enabled?: boolean; requestKey?: number | string; ticketType?: TicketType },
 ) {
   return useQuery<PricePreview>({
-    queryKey: [...PRICE_PREVIEW_KEY, itemType, itemId, promoCode, options?.requestKey ?? 'default'],
+    queryKey: [
+      ...PRICE_PREVIEW_KEY,
+      itemType,
+      itemId,
+      promoCode,
+      options?.ticketType ?? 'none',
+      options?.requestKey ?? 'default',
+    ],
     queryFn: ({ signal }) => {
       if (!itemType) throw new Error('Item type required');
-      return fetchPricePreview(itemType, itemId, promoCode, signal);
+      return fetchPricePreview(itemType, itemId, promoCode, signal, options?.ticketType);
     },
     enabled: (options?.enabled ?? true) && !!itemType,
     staleTime: 60 * 1000, // 1 minute - depends on subscription status
