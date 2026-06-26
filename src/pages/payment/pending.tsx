@@ -213,6 +213,7 @@ export default function PaymentPendingPage() {
         itemId: itemType === 'subscription' ? undefined : itemId,
         paymentMethodId,
         forceNewCode: true,
+        ticketType: payment?.ticketType ?? undefined,
         idempotencyKey: createCheckoutIdempotencyKey(
           `${itemType}:${itemId ?? 'subscription'}:${paymentMethodId}:replace`,
         ),

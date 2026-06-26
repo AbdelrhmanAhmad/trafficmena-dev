@@ -2,6 +2,9 @@ import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2, Search, Users } from 'lucide-react';
 import { useId, useState } from 'react';
 import { ApiError } from '@/app/api/client';
+import type { TicketType } from '@/app/api/payments';
+import { TicketTypeFilter } from '@/features/tracks/components/TicketTypeFilter';
+import { ticketTypeLabel } from '@/features/tracks/ticketTypes';
 import { formatAmountPaid } from '@/features/tracks/utils/manualEnrollmentAmount';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -43,6 +46,7 @@ function formatEnrollmentSource(source: 'paid' | 'free' | 'manual') {
 export const SeriesAttendeesList = ({ seriesId }: SeriesAttendeesListProps) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<TicketType | 'all'>('all');
   const revokeReasonId = useId();
   const [revokeDialog, setRevokeDialog] = useState<{
     userId: string;
@@ -53,6 +57,7 @@ export const SeriesAttendeesList = ({ seriesId }: SeriesAttendeesListProps) => {
     seriesId,
     20,
     search,
+    ticketTypeFilter === 'all' ? undefined : ticketTypeFilter,
   );
   const isTruncated = Boolean(data?.truncated);
   const revokeMutation = useRevokeSeriesAccess(seriesId);
@@ -143,14 +148,17 @@ export const SeriesAttendeesList = ({ seriesId }: SeriesAttendeesListProps) => {
               listed.
             </p>
           ) : null}
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Quick search by name, email, phone, invoice ID, invoice number, or reference"
-              className="pl-9"
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative max-w-md flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Quick search by name, email, phone, invoice ID, invoice number, or reference"
+                className="pl-9"
+              />
+            </div>
+            <TicketTypeFilter value={ticketTypeFilter} onChange={setTicketTypeFilter} />
           </div>
         </CardHeader>
         <CardContent>
@@ -173,6 +181,7 @@ export const SeriesAttendeesList = ({ seriesId }: SeriesAttendeesListProps) => {
                     <TableHead>Timestamp</TableHead>
                     <TableHead>Invoice ID</TableHead>
                     <TableHead>Invoice Number</TableHead>
+                    <TableHead>Ticket Type</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Reference</TableHead>
                     <TableHead>Amount Paid</TableHead>
@@ -194,6 +203,9 @@ export const SeriesAttendeesList = ({ seriesId }: SeriesAttendeesListProps) => {
                       </TableCell>
                       <TableCell>{attendee.invoiceId ?? '-'}</TableCell>
                       <TableCell>{attendee.invoiceNumber ?? '-'}</TableCell>
+                      <TableCell>
+                        {ticketTypeLabel(attendee.ticketType, Boolean(attendee.grantId))}
+                      </TableCell>
                       <TableCell>{formatEnrollmentSource(attendee.source)}</TableCell>
                       <TableCell>{attendee.reference ?? '-'}</TableCell>
                       <TableCell>{formatAmountPaid(attendee.amountPaidCents)}</TableCell>

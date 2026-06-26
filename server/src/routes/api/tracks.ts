@@ -20,8 +20,15 @@ import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere, hasTrackBookingRow } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import {
+  bookingGrantsLiveAttendance,
+  hasTicketTypes,
+  TICKET_TYPES,
+  type TicketType,
+  ticketEventCoverageError,
+} from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
-import { isPaidTrack } from './trackPaidStatus.js';
+import { isPaidTrack, isPaidTrackOffering } from './trackPaidStatus.js';
 import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
@@ -32,9 +39,11 @@ const listQuerySchema = z.object({
 });
 
 const priceInCentsSchema = z
+  // z.null() MUST be first: z.coerce.number() coerces null -> Number(null) === 0, which would turn a
+  // disabled ticket (null) into an enabled, free one (0). Null input must stay null.
   .union([
-    z.coerce.number().int().min(0, 'Price cannot be negative.').max(10000000, 'Price too large.'),
     z.null(),
+    z.coerce.number().int().min(0, 'Price cannot be negative.').max(10000000, 'Price too large.'),
   ])
   .optional()
   .transform((value) => (value === undefined ? undefined : value));
@@ -66,6 +75,9 @@ const createTrackSchema = z.object({
   allowIndividualBooking: z.boolean().default(false),
   maxTrackBookings: z.number().int().positive().nullable().optional(),
   priceInCents: priceInCentsSchema,
+  onlineOnlyPriceCents: priceInCentsSchema,
+  onlineOfflinePriceCents: priceInCentsSchema,
+  offlineOnlyPriceCents: priceInCentsSchema,
   location: locationSchema,
   locationUrl: locationUrlSchema,
 });
@@ -84,6 +96,9 @@ const updateTrackSchema = z
     allowIndividualBooking: z.boolean().optional(),
     maxTrackBookings: z.number().int().positive().nullable().optional(),
     priceInCents: priceInCentsSchema,
+    onlineOnlyPriceCents: priceInCentsSchema,
+    onlineOfflinePriceCents: priceInCentsSchema,
+    offlineOnlyPriceCents: priceInCentsSchema,
     location: z.union([z.string().trim().max(255), z.null()]).optional(),
     locationUrl: z
       .union([
@@ -233,6 +248,21 @@ const reorderEventsSchema = z.object({
 });
 
 const uuidSchema = z.string().uuid('Invalid ID format');
+
+function serializeTrackLocationUrl(params: {
+  locationUrl: string | null;
+  isStaff: boolean;
+  userHasBooked: boolean;
+  bookingTicketType: TicketType | null;
+}): string | null {
+  if (params.isStaff) {
+    return params.locationUrl;
+  }
+  if (params.userHasBooked && bookingGrantsLiveAttendance(params.bookingTicketType, 'offline')) {
+    return params.locationUrl;
+  }
+  return null;
+}
 
 function validateUuid(
   value: string,
@@ -396,6 +426,9 @@ export function registerTrackRoutes(app: Hono) {
             allowIndividualBooking: tracks.allowIndividualBooking,
             maxTrackBookings: tracks.maxTrackBookings,
             priceInCents: tracks.priceInCents,
+            onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+            onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+            offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
             location: tracks.location,
             locationUrl: tracks.locationUrl,
           })
@@ -419,6 +452,7 @@ export function registerTrackRoutes(app: Hono) {
               date: events.date,
               location: events.location,
               eventType: events.eventType,
+              eventFormat: events.eventFormat,
               imageUrl: events.imageUrl,
               maxAttendees: events.maxAttendees,
             },
@@ -456,6 +490,7 @@ export function registerTrackRoutes(app: Hono) {
           date: te.event.date,
           location: te.event.location,
           eventType: te.event.eventType,
+          eventFormat: te.event.eventFormat,
           imageUrl: te.event.imageUrl,
           maxAttendees: te.event.maxAttendees,
           attendeeCount: attendeeCountsMap.get(te.eventId) ?? 0,
@@ -473,10 +508,12 @@ export function registerTrackRoutes(app: Hono) {
         let userHasPendingPayment = false;
         let pendingPaymentId: string | null = null;
         let pendingInvoiceId: number | null = null;
+        let pendingTicketType: TicketType | null = null;
+        let bookingTicketType: TicketType | null = null;
         if (session?.user) {
           const [bookingRows, role, pendingPayment] = await Promise.all([
             db
-              .select({ id: trackBookings.id })
+              .select({ id: trackBookings.id, ticketType: trackBookings.ticketType })
               .from(trackBookings)
               .where(
                 activeTrackBookingWhere(
@@ -490,6 +527,7 @@ export function registerTrackRoutes(app: Hono) {
               .select({
                 id: payments.id,
                 invoiceId: payments.fawaterkInvoiceId,
+                ticketType: payments.ticketType,
               })
               .from(payments)
               .where(
@@ -504,6 +542,7 @@ export function registerTrackRoutes(app: Hono) {
               .limit(1),
           ]);
           userHasBooked = hasTrackBookingRow(bookingRows);
+          bookingTicketType = bookingRows[0]?.ticketType ?? null;
           isStaff = role ? ['owner', 'admin', 'manager'].includes(role) : false;
 
           const [pending] = pendingPayment;
@@ -526,6 +565,7 @@ export function registerTrackRoutes(app: Hono) {
               userHasPendingPayment = true;
               pendingPaymentId = pending.id;
               pendingInvoiceId = pending.invoiceId ?? null;
+              pendingTicketType = pending.ticketType ?? null;
             }
           }
         }
@@ -551,9 +591,20 @@ export function registerTrackRoutes(app: Hono) {
             userHasPendingPayment,
             pendingPaymentId,
             pendingInvoiceId,
+            pendingTicketType,
             priceInCents: track.priceInCents,
+            onlineOnlyPriceCents: track.onlineOnlyPriceCents,
+            onlineOfflinePriceCents: track.onlineOfflinePriceCents,
+            offlineOnlyPriceCents: track.offlineOnlyPriceCents,
             location: track.location,
-            locationUrl: userHasBooked || isStaff ? track.locationUrl : null, // Only reveal URL to booked users or staff
+            // Track-level map URL is for the offline day: only offline-entitled buyers + staff see it.
+            // The location text above stays public.
+            locationUrl: serializeTrackLocationUrl({
+              locationUrl: track.locationUrl,
+              isStaff,
+              userHasBooked,
+              bookingTicketType,
+            }),
           },
           events: trackEventsFormatted,
         });
@@ -648,10 +699,36 @@ export function registerTrackRoutes(app: Hono) {
       }
     }
 
-    const items = trackList.map((t) => ({
-      ...t,
-      eventCount: countsMap.get(t.id) ?? 0,
-    }));
+    const bookingTicketTypesByTrackId = new Map<string, TicketType | null>();
+    if (!isStaff && trackIds.length > 0) {
+      const bookingRows = await db
+        .select({ trackId: trackBookings.trackId, ticketType: trackBookings.ticketType })
+        .from(trackBookings)
+        .where(
+          activeTrackBookingWhere(
+            inArray(trackBookings.trackId, trackIds),
+            eq(trackBookings.userId, session.user.id),
+          ),
+        );
+      for (const booking of bookingRows) {
+        bookingTicketTypesByTrackId.set(booking.trackId, booking.ticketType ?? null);
+      }
+    }
+
+    const items = trackList.map((t) => {
+      const bookingTicketType = bookingTicketTypesByTrackId.get(t.id) ?? null;
+      const userHasBooked = isStaff ? false : bookingTicketTypesByTrackId.has(t.id);
+      return {
+        ...t,
+        locationUrl: serializeTrackLocationUrl({
+          locationUrl: t.locationUrl,
+          isStaff: Boolean(isStaff),
+          userHasBooked,
+          bookingTicketType,
+        }),
+        eventCount: countsMap.get(t.id) ?? 0,
+      };
+    });
 
     return c.json({
       items,
@@ -691,6 +768,9 @@ export function registerTrackRoutes(app: Hono) {
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
         priceInCents: tracks.priceInCents,
+        onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+        onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+        offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
         location: tracks.location,
         locationUrl: tracks.locationUrl,
       })
@@ -765,9 +845,10 @@ export function registerTrackRoutes(app: Hono) {
       .where(activeTrackBookingWhere(eq(trackBookings.trackId, id)));
 
     let userHasBooked = false;
+    let bookingTicketType: TicketType | null = null;
     if (session?.user) {
       const [booking] = await db
-        .select({ id: trackBookings.id })
+        .select({ id: trackBookings.id, ticketType: trackBookings.ticketType })
         .from(trackBookings)
         .where(
           activeTrackBookingWhere(
@@ -777,10 +858,17 @@ export function registerTrackRoutes(app: Hono) {
         )
         .limit(1);
       userHasBooked = Boolean(booking);
+      bookingTicketType = booking?.ticketType ?? null;
     }
 
     return c.json({
       ...track,
+      locationUrl: serializeTrackLocationUrl({
+        locationUrl: track.locationUrl,
+        isStaff: Boolean(isStaff),
+        userHasBooked,
+        bookingTicketType,
+      }),
       eventCount: eventsWithAssets.length,
       events: eventsWithAssets,
       bookingsCount: Number(bookingStats?.value ?? 0),
@@ -818,6 +906,9 @@ export function registerTrackRoutes(app: Hono) {
     const normalizedSearch = search?.trim();
     const searchPattern = normalizedSearch ? `%${escapeLikePattern(normalizedSearch)}%` : null;
 
+    const ticketTypeParam = c.req.query('ticketType');
+    const ticketTypeFilter = TICKET_TYPES.find((value) => value === ticketTypeParam);
+
     // Verify track exists
     const [trackExists] = await db
       .select({ id: tracks.id })
@@ -831,6 +922,7 @@ export function registerTrackRoutes(app: Hono) {
 
     const attendeeFilter = activeTrackBookingWhere(
       eq(trackBookings.trackId, trackId),
+      ticketTypeFilter ? eq(trackBookings.ticketType, ticketTypeFilter) : undefined,
       searchPattern
         ? or(
             ilike(users.name, searchPattern),
@@ -916,6 +1008,9 @@ export function registerTrackRoutes(app: Hono) {
               allowIndividualBooking: payload.allowIndividualBooking ?? false,
               maxTrackBookings: payload.maxTrackBookings ?? null,
               priceInCents: payload.priceInCents ?? null,
+              onlineOnlyPriceCents: payload.onlineOnlyPriceCents ?? null,
+              onlineOfflinePriceCents: payload.onlineOfflinePriceCents ?? null,
+              offlineOnlyPriceCents: payload.offlineOnlyPriceCents ?? null,
               location: payload.location || null,
               locationUrl: payload.locationUrl || null,
             })
@@ -984,6 +1079,12 @@ export function registerTrackRoutes(app: Hono) {
           updateValues.maxTrackBookings = updates.maxTrackBookings ?? null;
         if (updates.priceInCents !== undefined)
           updateValues.priceInCents = updates.priceInCents ?? null;
+        if (updates.onlineOnlyPriceCents !== undefined)
+          updateValues.onlineOnlyPriceCents = updates.onlineOnlyPriceCents ?? null;
+        if (updates.onlineOfflinePriceCents !== undefined)
+          updateValues.onlineOfflinePriceCents = updates.onlineOfflinePriceCents ?? null;
+        if (updates.offlineOnlyPriceCents !== undefined)
+          updateValues.offlineOnlyPriceCents = updates.offlineOnlyPriceCents ?? null;
         if (updates.location !== undefined) updateValues.location = updates.location || null;
         if (updates.locationUrl !== undefined)
           updateValues.locationUrl = updates.locationUrl || null;
@@ -1003,7 +1104,7 @@ export function registerTrackRoutes(app: Hono) {
         }
 
         const mergedIsPublished = updates.isPublished ?? currentTrack.isPublished;
-        if (mergedIsPublished && !currentTrack.isPublished) {
+        if (mergedIsPublished) {
           const [{ count: eventCount }] = await db
             .select({ count: count(trackEvents.id) })
             .from(trackEvents)
@@ -1021,6 +1122,35 @@ export function registerTrackRoutes(app: Hono) {
               'Published tracks must have track booking period and maxTrackBookings configured.',
               400,
             );
+          }
+
+          const mergedTicketPrices = {
+            onlineOnlyPriceCents:
+              updates.onlineOnlyPriceCents !== undefined
+                ? (updates.onlineOnlyPriceCents ?? null)
+                : currentTrack.onlineOnlyPriceCents,
+            onlineOfflinePriceCents:
+              updates.onlineOfflinePriceCents !== undefined
+                ? (updates.onlineOfflinePriceCents ?? null)
+                : currentTrack.onlineOfflinePriceCents,
+            offlineOnlyPriceCents:
+              updates.offlineOnlyPriceCents !== undefined
+                ? (updates.offlineOnlyPriceCents ?? null)
+                : currentTrack.offlineOnlyPriceCents,
+          };
+          if (hasTicketTypes(mergedTicketPrices)) {
+            const formatRows = await db
+              .select({ eventFormat: events.eventFormat })
+              .from(trackEvents)
+              .innerJoin(events, eq(events.id, trackEvents.eventId))
+              .where(eq(trackEvents.trackId, id));
+            const coverageError = ticketEventCoverageError(mergedTicketPrices, {
+              hasOnlineEvent: formatRows.some((row) => row.eventFormat === 'online'),
+              hasOfflineEvent: formatRows.some((row) => row.eventFormat === 'offline'),
+            });
+            if (coverageError) {
+              throw new ApiError('TICKET_EVENT_COVERAGE', coverageError, 400);
+            }
           }
         }
 
@@ -1063,8 +1193,22 @@ export function registerTrackRoutes(app: Hono) {
           nextIsPublished: updates.isPublished,
         });
 
-        const mergedPriceInCents = updates.priceInCents ?? currentTrack.priceInCents;
-        const trackIsPaid = shouldPublishSeries ? isPaidTrack(mergedPriceInCents) : false;
+        const mergedTrackOffering = {
+          priceInCents: updates.priceInCents ?? currentTrack.priceInCents,
+          onlineOnlyPriceCents:
+            updates.onlineOnlyPriceCents !== undefined
+              ? (updates.onlineOnlyPriceCents ?? null)
+              : currentTrack.onlineOnlyPriceCents,
+          onlineOfflinePriceCents:
+            updates.onlineOfflinePriceCents !== undefined
+              ? (updates.onlineOfflinePriceCents ?? null)
+              : currentTrack.onlineOfflinePriceCents,
+          offlineOnlyPriceCents:
+            updates.offlineOnlyPriceCents !== undefined
+              ? (updates.offlineOnlyPriceCents ?? null)
+              : currentTrack.offlineOnlyPriceCents,
+        };
+        const trackIsPaid = shouldPublishSeries ? isPaidTrackOffering(mergedTrackOffering) : false;
 
         const updated = await db.transaction(async (tx) => {
           const [trackResult] = await tx
@@ -1151,6 +1295,9 @@ export function registerTrackRoutes(app: Hono) {
             id: tracks.id,
             maxTrackBookings: tracks.maxTrackBookings,
             priceInCents: tracks.priceInCents,
+            onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+            onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+            offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
           })
           .from(tracks)
           .where(eq(tracks.id, trackId));
@@ -1158,7 +1305,7 @@ export function registerTrackRoutes(app: Hono) {
           throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
         }
 
-        const trackIsPaid = isPaidTrack(track.priceInCents);
+        const trackIsPaid = isPaidTrackOffering(track);
 
         const [{ count: bookingCount }] = await db
           .select({ count: count(trackBookings.id) })
@@ -1315,6 +1462,34 @@ export function registerTrackRoutes(app: Hono) {
           );
         }
 
+        const [track] = await db
+          .select({
+            isPublished: tracks.isPublished,
+            onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+            onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+            offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
+          })
+          .from(tracks)
+          .where(eq(tracks.id, trackId))
+          .limit(1);
+
+        if (track?.isPublished && hasTicketTypes(track)) {
+          const remainingFormats = await db
+            .select({ eventFormat: events.eventFormat })
+            .from(trackEvents)
+            .innerJoin(events, eq(events.id, trackEvents.eventId))
+            .where(
+              and(eq(trackEvents.trackId, trackId), sql`${trackEvents.eventId} <> ${eventId}`),
+            );
+          const coverageError = ticketEventCoverageError(track, {
+            hasOnlineEvent: remainingFormats.some((row) => row.eventFormat === 'online'),
+            hasOfflineEvent: remainingFormats.some((row) => row.eventFormat === 'offline'),
+          });
+          if (coverageError) {
+            throw new ApiError('TICKET_EVENT_COVERAGE', coverageError, 400);
+          }
+        }
+
         const deleted = await db
           .delete(trackEvents)
           .where(and(eq(trackEvents.trackId, trackId), eq(trackEvents.eventId, eventId)))
@@ -1433,6 +1608,9 @@ export function registerTrackRoutes(app: Hono) {
               maxTrackBookings: tracks.maxTrackBookings,
               isPublished: tracks.isPublished,
               priceInCents: tracks.priceInCents,
+              onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+              onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+              offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
             })
             .from(tracks)
             .where(eq(tracks.id, trackId))
@@ -1443,12 +1621,8 @@ export function registerTrackRoutes(app: Hono) {
             throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
           }
 
-          if (track.priceInCents && track.priceInCents > 0) {
-            throw new ApiError(
-              'PAYMENT_REQUIRED',
-              'This track requires payment. Use the checkout flow.',
-              402,
-            );
+          if (hasTicketTypes(track) || isPaidTrack(track.priceInCents)) {
+            throw new ApiError('PAYMENT_REQUIRED', 'This track requires the checkout flow.', 402);
           }
 
           if (track.trackBookingStart === null || track.trackBookingEnd === null) {

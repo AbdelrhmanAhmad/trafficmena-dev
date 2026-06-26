@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  events,
   libraryAssets,
   series,
   seriesAccessGrants,
@@ -14,6 +15,7 @@ import {
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { hasActiveSubscription } from './subscriptionShared.js';
+import { bookingGrantsRecording } from './ticketAccess.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -233,10 +235,16 @@ export function registerLibraryRoutes(app: Hono) {
       if (premiumAssetIds.length > 0) {
         const [bookedAssets, grantedAssets] = await Promise.all([
           db
-            .select({ assetId: seriesAssets.assetId })
+            .select({
+              assetId: seriesAssets.assetId,
+              ticketType: trackBookings.ticketType,
+              eventFormat: events.eventFormat,
+            })
             .from(seriesAssets)
             .innerJoin(series, eq(series.id, seriesAssets.seriesId))
             .innerJoin(trackBookings, eq(trackBookings.trackId, series.trackId))
+            .leftJoin(libraryAssets, eq(libraryAssets.id, seriesAssets.assetId))
+            .leftJoin(events, eq(events.id, libraryAssets.eventId))
             .where(
               activeTrackBookingWhere(
                 eq(trackBookings.userId, session.user.id),
@@ -256,7 +264,13 @@ export function registerLibraryRoutes(app: Hono) {
             ),
         ]);
 
-        bookedAssetIds = new Set(bookedAssets.map((asset) => asset.assetId));
+        // A booking only unlocks a recording its ticket matrix allows (offline recordings for all,
+        // online recordings only for online-entitled tickets); legacy null tickets unlock everything.
+        bookedAssetIds = new Set(
+          bookedAssets
+            .filter((asset) => bookingGrantsRecording(asset.ticketType, asset.eventFormat ?? null))
+            .map((asset) => asset.assetId),
+        );
         grantedAssetIds = new Set(grantedAssets.map((asset) => asset.assetId));
       }
     }
@@ -335,6 +349,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedType: libraryAssets.embedType,
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
+        eventFormat: events.eventFormat,
         isPublic: libraryAssets.isPublic,
         isPremium: libraryAssets.isPremium,
         viewCount: libraryAssets.viewCount,
@@ -343,6 +358,7 @@ export function registerLibraryRoutes(app: Hono) {
         createdAt: libraryAssets.createdAt,
       })
       .from(libraryAssets)
+      .leftJoin(events, eq(events.id, libraryAssets.eventId))
       .where(eq(libraryAssets.id, id))
       .limit(1);
 
@@ -385,7 +401,7 @@ export function registerLibraryRoutes(app: Hono) {
         const [registrationRows, bookingRows, seriesGrantRows] = await Promise.all([
           registrationPromise,
           db
-            .select({ assetId: seriesAssets.assetId })
+            .select({ ticketType: trackBookings.ticketType })
             .from(seriesAssets)
             .innerJoin(series, eq(series.id, seriesAssets.seriesId))
             .innerJoin(trackBookings, eq(trackBookings.trackId, series.trackId))
@@ -394,8 +410,7 @@ export function registerLibraryRoutes(app: Hono) {
                 eq(trackBookings.userId, session.user.id),
                 eq(seriesAssets.assetId, asset[0].id),
               ),
-            )
-            .limit(1),
+            ),
           db
             .select({ assetId: seriesAssets.assetId })
             .from(seriesAssets)
@@ -411,7 +426,10 @@ export function registerLibraryRoutes(app: Hono) {
         ]);
 
         hasRegistration = Boolean(registrationRows[0]);
-        hasTrackBooking = Boolean(bookingRows[0]);
+        // A booking unlocks this recording only when its ticket matrix allows the asset's format.
+        hasTrackBooking = bookingRows.some((booking) =>
+          bookingGrantsRecording(booking.ticketType, asset[0].eventFormat ?? null),
+        );
         hasSeriesGrant = Boolean(seriesGrantRows[0]);
 
         if (!hasTrackBooking && !hasSeriesGrant && !hasRegistration) {

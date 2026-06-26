@@ -1,6 +1,9 @@
 import { ArrowLeft, Layers } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import TrackForm from '@/features/tracks/components/TrackForm';
+import TrackForm, {
+  mapTrackTicketPrices,
+  type TrackFormValues,
+} from '@/features/tracks/components/TrackForm';
 import { useCreateTrack } from '@/features/tracks/hooks/useTracks';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -17,18 +20,7 @@ function NewTrackPage() {
   const navigate = useNavigate();
   const createMutation = useCreateTrack();
 
-  const handleSubmit = async (values: {
-    title: string;
-    description?: string;
-    imageUrl?: string;
-    isPublished: boolean;
-    maxTrackBookings?: number | null;
-    trackBookingStart?: string | null;
-    trackBookingEnd?: string | null;
-    singleBookingStart?: string | null;
-    singleBookingEnd?: string | null;
-    priceEgp?: string;
-  }) => {
+  const handleSubmit = async (values: TrackFormValues) => {
     await createMutation.mutateAsync({
       title: values.title,
       description: values.description || null,
@@ -40,6 +32,7 @@ function NewTrackPage() {
       singleBookingStart: values.singleBookingStart || null,
       singleBookingEnd: values.singleBookingEnd || null,
       priceInCents: values.priceEgp ? Math.round(Number(values.priceEgp) * 100) : null,
+      ...mapTrackTicketPrices(values),
     });
     navigate('/admin/meetups?tab=tracks');
   };

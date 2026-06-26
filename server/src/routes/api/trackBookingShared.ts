@@ -11,6 +11,7 @@ import {
 } from '../../db/schema/index.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError } from '../../utils/errors.js';
+import { filterLiveIncludedEvents, type TicketType } from './ticketAccess.js';
 
 const ACTIVE_EVENT_ATTENDEE_STATUSES = ['active', 'refund_requested'] as const;
 
@@ -28,6 +29,7 @@ type TrackBookingWriteParams = {
   paidAt: Date | null;
   pricePaidCents: number | null;
   paymentId: string | null;
+  ticketType?: TicketType | null;
   manualReference?: string | null;
   grantedBy?: string | null;
   grantReason?: string | null;
@@ -89,19 +91,25 @@ export async function executeTrackBookingWrite(
     throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
   }
 
-  const trackEventRows = await tx
+  const allTrackEventRows = await tx
     .select({
       eventId: trackEvents.eventId,
       maxAttendees: events.maxAttendees,
+      eventFormat: events.eventFormat,
     })
     .from(trackEvents)
     .innerJoin(events, eq(events.id, trackEvents.eventId))
     .where(eq(trackEvents.trackId, params.trackId))
     .for('update');
 
-  if (trackEventRows.length === 0) {
+  if (allTrackEventRows.length === 0) {
     throw new ApiError('TRACK_EMPTY', 'Track has no events.', 400);
   }
+
+  // Register the buyer only into the sessions their ticket includes. Capacity, reservations, and
+  // attendee rows below all operate on this filtered set, so an online_only buyer never consumes an
+  // offline seat. Legacy bookings (no ticketType) keep every event.
+  const trackEventRows = filterLiveIncludedEvents(allTrackEventRows, params.ticketType);
 
   if (trackEventRows.some((row) => row.maxAttendees === null)) {
     throw new ApiError('CAPACITY_NOT_SET', 'Some events have no capacity set.', 400);
@@ -243,6 +251,7 @@ export async function executeTrackBookingWrite(
     paidAt: params.paidAt,
     pricePaidCents: params.pricePaidCents,
     paymentId: params.paymentId,
+    ticketType: params.ticketType ?? null,
     bookingSource: params.bookingSource,
     manualReference: params.bookingSource === 'manual' ? (params.manualReference ?? null) : null,
     grantedBy: params.bookingSource === 'manual' ? (params.grantedBy ?? null) : null,

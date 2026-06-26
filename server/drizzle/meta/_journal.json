@@ -127,6 +127,27 @@
       "when": 1782419915695,
       "tag": "0017_amazing_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782432875968,
+      "tag": "0018_fast_sleepwalker",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1782433917771,
+      "tag": "0019_misty_wallow",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1782449185600,
+      "tag": "0020_complete_sandman",
+      "breakpoints": true
     }
   ]
 }

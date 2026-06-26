@@ -13,6 +13,7 @@ type ApiEvent = {
   imageUrl: string | null;
   tags: string[] | null;
   eventType: 'Event' | 'Meetup' | 'Mastermind' | 'Retreat';
+  eventFormat: 'online' | 'offline';
   attendeeCount?: number | null;
   priceInCents: number | null;
   isPublished?: boolean;
@@ -44,6 +45,7 @@ export type EventRecord = {
   image_url: string | null;
   tags: string[];
   event_type: ApiEvent['eventType'];
+  event_format: ApiEvent['eventFormat'];
   attendee_count: number;
   guest_experts: { name: string }[];
   price_in_cents: number | null;
@@ -78,6 +80,8 @@ const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
   image_url: event.imageUrl ?? null,
   tags: event.tags ?? [],
   event_type: event.eventType,
+  // Default to offline (paid for subscribers) if an older response omits the field — never silently online.
+  event_format: event.eventFormat ?? 'offline',
   attendee_count: Number(event.attendeeCount ?? 0),
   guest_experts: [],
   price_in_cents: event.priceInCents ?? null,
@@ -125,6 +129,8 @@ export type CreateEventPayload = {
   imageUrl?: string | null;
   tags?: string[];
   eventType?: ApiEvent['eventType'];
+  eventFormat?: ApiEvent['eventFormat'];
+  eventFormatOverrideReason?: string;
   priceInCents?: number | null;
   isPublished?: boolean;
 };

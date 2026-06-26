@@ -99,10 +99,11 @@ export const useUpdateTrack = () => {
       queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', track.id] });
       queryClient.invalidateQueries({ queryKey: ['tracks'] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: 'Update failed',
-        description: 'Could not update track. Please try again.',
+        description:
+          error instanceof Error ? error.message : 'Could not update track. Please try again.',
         variant: 'destructive',
       });
     },

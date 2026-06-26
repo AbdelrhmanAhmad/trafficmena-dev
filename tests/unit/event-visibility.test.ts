@@ -106,17 +106,17 @@ describe('draft visibility route wiring', () => {
       'utf8',
     );
     const checkoutRoute = source.indexOf("app.post('/payments/checkout'");
-    const checkoutPrice = source.indexOf(
-      'calculatePrice(userId, itemType, itemId, promoCode, tx)',
-      checkoutRoute,
-    );
+    // Whitespace-tolerant: calculatePrice is now called with a trailing ticketType arg (multi-line).
+    const checkoutPrice = source.indexOf('await calculatePrice(', checkoutRoute);
     const previewRoute = source.indexOf("app.get('/payments/price-preview'");
-    const previewPrice = source.indexOf('calculatePrice(session.user.id', previewRoute);
+    const previewPrice = source.indexOf('await calculatePrice(', previewRoute);
 
     assert.ok(checkoutRoute >= 0);
     assert.ok(checkoutPrice > checkoutRoute);
     assert.ok(previewRoute > checkoutPrice);
     assert.ok(previewPrice > previewRoute);
+    // Preview still prices against the session user.
+    assert.ok(source.indexOf('session.user.id', previewPrice) > previewPrice);
   });
 
   it('keeps the publish-now toast in sync with React Hook Form state', async () => {

@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Loader2, Search, Users } from 'lucide-react';
 import { useId, useState } from 'react';
 import { ApiError } from '@/app/api/client';
+import type { TicketType } from '@/app/api/payments';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import {
@@ -25,7 +26,9 @@ import {
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useTrackAttendees } from '../hooks/useTrackAttendees';
 import { useRevokeTrackEnrollment } from '../hooks/useTrackEnrollmentManagement';
+import { ticketTypeLabel } from '../ticketTypes';
 import { formatAmountPaid } from '../utils/manualEnrollmentAmount';
+import { TicketTypeFilter } from './TicketTypeFilter';
 
 interface TrackAttendeesListProps {
   trackId: string;
@@ -40,6 +43,7 @@ function formatEnrollmentSource(source: 'paid' | 'free' | 'manual') {
 export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<TicketType | 'all'>('all');
   const revokeReasonId = useId();
   const [revokeDialog, setRevokeDialog] = useState<{
     userId: string;
@@ -50,6 +54,7 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
     trackId,
     20,
     search,
+    ticketTypeFilter === 'all' ? undefined : ticketTypeFilter,
   );
   const revokeMutation = useRevokeTrackEnrollment(trackId);
 
@@ -129,14 +134,17 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
               ) : null}
             </CardTitle>
           </div>
-          <div className="relative max-w-md">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Quick search by name, email, phone, invoice ID, invoice number, or reference"
-              className="pl-9"
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative max-w-md flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Quick search by name, email, phone, invoice ID, invoice number, or reference"
+                className="pl-9"
+              />
+            </div>
+            <TicketTypeFilter value={ticketTypeFilter} onChange={setTicketTypeFilter} />
           </div>
         </CardHeader>
         <CardContent>
@@ -159,6 +167,7 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
                     <TableHead>Timestamp</TableHead>
                     <TableHead>Invoice ID</TableHead>
                     <TableHead>Invoice Number</TableHead>
+                    <TableHead>Ticket Type</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Reference</TableHead>
                     <TableHead>Amount Paid</TableHead>
@@ -180,6 +189,7 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
                       </TableCell>
                       <TableCell>{attendee.invoiceId ?? '-'}</TableCell>
                       <TableCell>{attendee.invoiceNumber ?? '-'}</TableCell>
+                      <TableCell>{ticketTypeLabel(attendee.ticketType)}</TableCell>
                       <TableCell>{formatEnrollmentSource(attendee.source)}</TableCell>
                       <TableCell>{attendee.reference ?? '-'}</TableCell>
                       <TableCell>{formatAmountPaid(attendee.amountPaidCents)}</TableCell>

@@ -14,8 +14,16 @@ import {
 } from '@/shared/components/ui/card';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { useCreateManualTrackEnrollment } from '../hooks/useTrackEnrollmentManagement';
+import type { EnabledTicketType, TicketType } from '../ticketTypes';
 import {
   formatManualEnrollmentAmountEgp,
   parseManualEnrollmentAmountEgp,
@@ -25,22 +33,34 @@ type TrackManualEnrollmentManagerProps = {
   trackId: string;
   trackTitle: string;
   defaultAmountPaidCents: number | null;
+  enabledTicketTypes?: EnabledTicketType[];
 };
 
 export function TrackManualEnrollmentManager({
   trackId,
   trackTitle,
   defaultAmountPaidCents,
+  enabledTicketTypes = [],
 }: TrackManualEnrollmentManagerProps) {
   const { toast } = useToast();
+  const usesTicketTypes = enabledTicketTypes.length > 0;
   const [searchInput, setSearchInput] = useState('');
   const [committedSearch, setCommittedSearch] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [reason, setReason] = useState('Manual wallet transfer confirmed by ops');
   const [reference, setReference] = useState('');
+  const [selectedTicketType, setSelectedTicketType] = useState<TicketType | null>(null);
   const [amountInput, setAmountInput] = useState(
     formatManualEnrollmentAmountEgp(defaultAmountPaidCents),
   );
+
+  // Picking a ticket variant prefills its price as the default amount (the admin can still override).
+  const handleTicketTypeChange = (next: TicketType) => {
+    setSelectedTicketType(next);
+    const variant = enabledTicketTypes.find((option) => option.type === next);
+    if (variant) setAmountInput(formatManualEnrollmentAmountEgp(variant.priceCents));
+  };
+
   const memberSearchId = useId();
   const reasonId = useId();
   const referenceId = useId();
@@ -98,6 +118,15 @@ export function TrackManualEnrollmentManager({
       return;
     }
 
+    if (usesTicketTypes && !selectedTicketType) {
+      toast({
+        title: 'Select a ticket type',
+        description: 'This track sells ticket types, so a variant is required.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const normalizedAmount = amountInput.trim();
     const amountPaidCents =
       normalizedAmount.length > 0 ? parseManualEnrollmentAmountEgp(normalizedAmount) : null;
@@ -116,6 +145,7 @@ export function TrackManualEnrollmentManager({
         reason: trimmedReason,
         reference: trimmedReference,
         amountPaidCents,
+        ticketType: selectedTicketType ?? undefined,
       });
 
       toast({
@@ -127,6 +157,7 @@ export function TrackManualEnrollmentManager({
       setReference('');
       setCommittedSearch('');
       setSearchInput('');
+      setSelectedTicketType(null);
     } catch (error) {
       const message =
         error instanceof ApiError || error instanceof Error
@@ -243,6 +274,30 @@ export function TrackManualEnrollmentManager({
             />
           </div>
         </div>
+
+        {usesTicketTypes && (
+          <div className="space-y-2">
+            <Label>Ticket type</Label>
+            <Select
+              onValueChange={(next) => handleTicketTypeChange(next as TicketType)}
+              value={selectedTicketType ?? undefined}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a ticket type" />
+              </SelectTrigger>
+              <SelectContent>
+                {enabledTicketTypes.map((option) => (
+                  <SelectItem key={option.type} value={option.type}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Required — this track sells ticket types. The amount defaults to the variant price.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor={amountId}>Amount paid (EGP)</Label>

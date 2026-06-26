@@ -39,7 +39,7 @@ describe('attendee amount query shape', () => {
     assert.match(rendered, /amount_cents/);
   });
 
-  it('track attendee selection keeps every original field and appends amountPaidCents (regression guard)', () => {
+  it('track attendee selection keeps every original field and appends amountPaidCents + ticketType (regression guard)', () => {
     assert.deepEqual(Object.keys(trackAttendeeSelection), [
       'userId',
       'email',
@@ -53,6 +53,7 @@ describe('attendee amount query shape', () => {
       'source',
       'reference',
       'amountPaidCents',
+      'ticketType',
     ]);
   });
 });

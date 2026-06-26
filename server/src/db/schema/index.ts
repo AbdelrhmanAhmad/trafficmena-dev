@@ -18,6 +18,9 @@ import {
 export const userRoleEnum = pgEnum('user_role', ['owner', 'admin', 'manager', 'expert', 'user']);
 export const userTypeEnum = pgEnum('user_type', ['learner', 'expert']);
 export const eventTypeEnum = pgEnum('event_type', ['Event', 'Meetup', 'Mastermind', 'Retreat']);
+// Explicit delivery mode. Replaces the load-bearing `meetingLink && !location` inference; binary by
+// design (a hybrid day is modeled as separate online + offline sessions).
+export const eventFormatEnum = pgEnum('event_format', ['online', 'offline']);
 export const assetFileTypeEnum = pgEnum('asset_file_type', ['Document', 'Video', 'Presentation']);
 export const invitationStatusEnum = pgEnum('invitation_status', [
   'pending',
@@ -33,6 +36,13 @@ export const registrationStatusEnum = pgEnum('registration_status', [
   'refund_requested',
 ]);
 export const trackBookingSourceEnum = pgEnum('track_booking_source', ['paid', 'free', 'manual']);
+// Hybrid track ticket variants. Drives price, which sessions a buyer is registered for, and which
+// Zoom links / locations / recordings they can access. See server/src/routes/api/ticketAccess.ts.
+export const ticketTypeEnum = pgEnum('ticket_type', [
+  'online_only',
+  'online_offline',
+  'offline_only',
+]);
 
 // --- Core Tables ------------------------------------------------------------
 
@@ -79,6 +89,9 @@ export const events = pgTable(
     imageUrl: text('image_url'),
     tags: text('tags').array(),
     eventType: eventTypeEnum('event_type').default('Event').notNull(),
+    // Online vs offline delivery, explicit (not inferred from location text). Default 'offline' is the
+    // safe choice: a new event is paid-for-subscribers until an admin marks it online.
+    eventFormat: eventFormatEnum('event_format').default('offline').notNull(),
     guestExperts: jsonb('guest_experts'),
     priceInCents: integer('price_in_cents'),
     // Default true so existing events stay visible after the migration; the create route defaults
@@ -202,6 +215,11 @@ export const tracks = pgTable(
     allowIndividualBooking: boolean('allow_individual_booking').default(false).notNull(),
     maxTrackBookings: integer('max_track_bookings'),
     priceInCents: integer('price_in_cents'),
+    // Per-ticket-type prices. Non-null = that ticket type is offered. All three null = ticket types
+    // not configured -> legacy single-price (priceInCents) path, unchanged. Not auto-backfilled.
+    onlineOnlyPriceCents: integer('online_only_price_cents'),
+    onlineOfflinePriceCents: integer('online_offline_price_cents'),
+    offlineOnlyPriceCents: integer('offline_only_price_cents'),
     location: text('location'),
     locationUrl: text('location_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -250,6 +268,10 @@ export const trackBookings = pgTable(
     pricePaidCents: integer('price_paid_cents'),
     paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
     bookingSource: trackBookingSourceEnum('booking_source').notNull(),
+    // Durable record of the purchased ticket variant, read by every access check. Nullable: legacy
+    // bookings (and bookings on tracks without ticket types) have none. Existing rows backfill to
+    // 'online_offline' (they granted everything).
+    ticketType: ticketTypeEnum('ticket_type'),
     manualReference: text('manual_reference'),
     grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
     grantReason: text('grant_reason'),
@@ -591,6 +613,9 @@ export const payments = pgTable(
     currency: text('currency').default('EGP').notNull(),
     itemType: paymentItemTypeEnum('item_type').notNull(),
     itemId: uuid('item_id'),
+    // Purchased ticket variant for track payments. The single source fulfillment reads (paid + free
+    // paths both create/read the payment row). Null for non-track payments and legacy tracks.
+    ticketType: ticketTypeEnum('ticket_type'),
     promoCodeId: uuid('promo_code_id').references(() => promoCodes.id, { onDelete: 'set null' }),
     discountAppliedCents: integer('discount_applied_cents'),
     originalAmountCents: integer('original_amount_cents'),
@@ -615,6 +640,39 @@ export const payments = pgTable(
     uniquePendingSubscription: uniqueIndex('payments_unique_pending_subscription')
       .on(table.userId)
       .where(sql`status = 'pending' AND item_type = 'subscription'`),
+  }),
+);
+
+export const paymentFulfillmentFailures = pgTable(
+  'payment_fulfillment_failures',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    paymentId: uuid('payment_id')
+      .references(() => payments.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    paymentStatus: paymentStatusEnum('payment_status').notNull(),
+    itemType: paymentItemTypeEnum('item_type').notNull(),
+    itemId: uuid('item_id'),
+    ticketType: ticketTypeEnum('ticket_type'),
+    invoiceId: integer('invoice_id'),
+    amountCents: integer('amount_cents').notNull(),
+    confirmationSource: text('confirmation_source').notNull(),
+    errorCode: text('error_code'),
+    errorMessage: text('error_message').notNull(),
+    failureCount: integer('failure_count').default(1).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolutionNote: text('resolution_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    paymentIdx: index('payment_fulfillment_failures_payment_idx').on(table.paymentId),
+    unresolvedIdx: index('payment_fulfillment_failures_unresolved_idx').on(table.resolvedAt),
+    invoiceIdx: index('payment_fulfillment_failures_invoice_idx').on(table.invoiceId),
   }),
 );
 

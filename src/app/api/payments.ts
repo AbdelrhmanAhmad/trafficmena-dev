@@ -14,6 +14,8 @@ export type PaymentItemType = 'event' | 'track' | 'subscription';
 
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'expired';
 
+export type TicketType = 'online_only' | 'online_offline' | 'offline_only';
+
 export type CheckoutRequest = {
   itemType: PaymentItemType;
   itemId?: string;
@@ -21,6 +23,7 @@ export type CheckoutRequest = {
   forceNewCode?: boolean;
   idempotencyKey?: string;
   promoCode?: string;
+  ticketType?: TicketType;
 };
 
 export type CheckoutResponse = {
@@ -67,6 +70,7 @@ export type Payment = {
   currency: string;
   itemType: PaymentItemType;
   itemId: string | null;
+  ticketType?: TicketType | null;
   fawaterkInvoiceId?: number | null;
   fawryCode?: string | null;
   amanCode?: string | null;
@@ -127,6 +131,7 @@ export async function fetchPricePreview(
   itemId?: string,
   promoCode?: string,
   signal?: AbortSignal,
+  ticketType?: TicketType,
 ): Promise<PricePreview> {
   const params = new URLSearchParams({ itemType });
   if (itemId) {
@@ -134,6 +139,9 @@ export async function fetchPricePreview(
   }
   if (promoCode) {
     params.set('promoCode', promoCode);
+  }
+  if (ticketType) {
+    params.set('ticketType', ticketType);
   }
   const response = await fetchJson<{ data: PricePreview }>(
     `${API_BASE}/payments/price-preview?${params.toString()}`,
