@@ -36,6 +36,13 @@ export const registrationStatusEnum = pgEnum('registration_status', [
   'refund_requested',
 ]);
 export const trackBookingSourceEnum = pgEnum('track_booking_source', ['paid', 'free', 'manual']);
+// Hybrid track ticket variants. Drives price, which sessions a buyer is registered for, and which
+// Zoom links / locations / recordings they can access. See server/src/routes/api/ticketAccess.ts.
+export const ticketTypeEnum = pgEnum('ticket_type', [
+  'online_only',
+  'online_offline',
+  'offline_only',
+]);
 
 // --- Core Tables ------------------------------------------------------------
 
@@ -208,6 +215,11 @@ export const tracks = pgTable(
     allowIndividualBooking: boolean('allow_individual_booking').default(false).notNull(),
     maxTrackBookings: integer('max_track_bookings'),
     priceInCents: integer('price_in_cents'),
+    // Per-ticket-type prices. Non-null = that ticket type is offered. All three null = ticket types
+    // not configured -> legacy single-price (priceInCents) path, unchanged. Not auto-backfilled.
+    onlineOnlyPriceCents: integer('online_only_price_cents'),
+    onlineOfflinePriceCents: integer('online_offline_price_cents'),
+    offlineOnlyPriceCents: integer('offline_only_price_cents'),
     location: text('location'),
     locationUrl: text('location_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -256,6 +268,10 @@ export const trackBookings = pgTable(
     pricePaidCents: integer('price_paid_cents'),
     paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
     bookingSource: trackBookingSourceEnum('booking_source').notNull(),
+    // Durable record of the purchased ticket variant, read by every access check. Nullable: legacy
+    // bookings (and bookings on tracks without ticket types) have none. Existing rows backfill to
+    // 'online_offline' (they granted everything).
+    ticketType: ticketTypeEnum('ticket_type'),
     manualReference: text('manual_reference'),
     grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
     grantReason: text('grant_reason'),
@@ -597,6 +613,9 @@ export const payments = pgTable(
     currency: text('currency').default('EGP').notNull(),
     itemType: paymentItemTypeEnum('item_type').notNull(),
     itemId: uuid('item_id'),
+    // Purchased ticket variant for track payments. The single source fulfillment reads (paid + free
+    // paths both create/read the payment row). Null for non-track payments and legacy tracks.
+    ticketType: ticketTypeEnum('ticket_type'),
     promoCodeId: uuid('promo_code_id').references(() => promoCodes.id, { onDelete: 'set null' }),
     discountAppliedCents: integer('discount_applied_cents'),
     originalAmountCents: integer('original_amount_cents'),
