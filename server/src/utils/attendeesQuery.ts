@@ -42,6 +42,7 @@ export const trackAttendeeSelection = {
   source: trackBookingSource,
   reference: trackBookingReference,
   amountPaidCents: attendeeAmountCents(trackBookings.pricePaidCents),
+  ticketType: trackBookings.ticketType,
 };
 
 /**

@@ -848,6 +848,11 @@ export function registerTrackRoutes(app: Hono) {
     const normalizedSearch = search?.trim();
     const searchPattern = normalizedSearch ? `%${escapeLikePattern(normalizedSearch)}%` : null;
 
+    const ticketTypeParam = c.req.query('ticketType');
+    const ticketTypeFilter = (['online_only', 'online_offline', 'offline_only'] as const).find(
+      (value) => value === ticketTypeParam,
+    );
+
     // Verify track exists
     const [trackExists] = await db
       .select({ id: tracks.id })
@@ -861,6 +866,7 @@ export function registerTrackRoutes(app: Hono) {
 
     const attendeeFilter = activeTrackBookingWhere(
       eq(trackBookings.trackId, trackId),
+      ticketTypeFilter ? eq(trackBookings.ticketType, ticketTypeFilter) : undefined,
       searchPattern
         ? or(
             ilike(users.name, searchPattern),

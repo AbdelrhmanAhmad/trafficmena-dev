@@ -47,6 +47,21 @@ export const TICKET_TYPE_ORDER: readonly TicketType[] = [
   'offline_only',
 ];
 
+export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
+  online_only: 'Online Only',
+  online_offline: 'Online + Offline',
+  offline_only: 'Offline Only',
+};
+
+/** Display label for an enrolled-table row: the variant, "Manual grant", or "—" for legacy. */
+export function ticketTypeLabel(
+  ticketType: TicketType | null | undefined,
+  isManualGrant = false,
+): string {
+  if (ticketType) return TICKET_TYPE_LABELS[ticketType];
+  return isManualGrant ? 'Manual grant' : '—';
+}
+
 export type EnabledTicketType = {
   type: TicketType;
   label: string;

@@ -1,4 +1,5 @@
 import { API_BASE, fetchJson } from './client';
+import type { TicketType } from './payments';
 import type { PaginatedResult } from './types';
 
 // API response types (camelCase from server)
@@ -206,6 +207,8 @@ export interface SeriesAttendee {
   source: SeriesEnrollmentSource;
   reference: string | null;
   amountPaidCents: number | null;
+  // The track booking's ticket variant; null for manual grants.
+  ticketType: TicketType | null;
   // Present only for manual-grant rows (revoke is allowed there); null for track-buyer rows.
   grantId: string | null;
 }
@@ -215,12 +218,13 @@ export type SeriesAttendeesResult = PaginatedResult<SeriesAttendee> & { truncate
 
 export async function fetchSeriesAttendees(
   seriesId: string,
-  params: { page?: number; pageSize?: number; search?: string } = {},
+  params: { page?: number; pageSize?: number; search?: string; ticketType?: TicketType } = {},
 ): Promise<SeriesAttendeesResult> {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
   if (params.search?.trim()) query.set('search', params.search.trim());
+  if (params.ticketType) query.set('ticketType', params.ticketType);
 
   return fetchJson<SeriesAttendeesResult>(
     `${API_BASE}/series/${seriesId}/attendees${query.toString() ? `?${query.toString()}` : ''}`,

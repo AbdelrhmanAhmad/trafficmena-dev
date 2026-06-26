@@ -174,8 +174,20 @@ export function registerSeriesGrantsRoutes(app: Hono) {
     }
 
     const searchPattern = search ? `%${escapeLikePattern(search)}%` : null;
+
+    // Ticket-type filter applies to track-booking rows only; a specific type excludes manual grants.
+    const ticketTypeParam = c.req.query('ticketType');
+    const ticketTypeFilter = (['online_only', 'online_offline', 'offline_only'] as const).find(
+      (value) => value === ticketTypeParam,
+    );
+
     const bookingFilters = seriesRecord.trackId
-      ? [activeTrackBookingWhere(eq(trackBookings.trackId, seriesRecord.trackId))]
+      ? [
+          activeTrackBookingWhere(
+            eq(trackBookings.trackId, seriesRecord.trackId),
+            ticketTypeFilter ? eq(trackBookings.ticketType, ticketTypeFilter) : undefined,
+          ),
+        ]
       : [];
     const grantFilters = [
       eq(seriesAccessGrants.seriesId, seriesId),
@@ -219,29 +231,33 @@ export function registerSeriesGrantsRoutes(app: Hono) {
           .limit(MAX_MERGE_ROWS)
       : [];
 
-    const grantRows = await db
-      .select({
-        grantId: seriesAccessGrants.id,
-        userId: seriesAccessGrants.userId,
-        email: users.email,
-        name: users.name,
-        firstName: profiles.firstName,
-        lastName: profiles.lastName,
-        phoneNumber: profiles.phoneNumber,
-        grantedAt: seriesAccessGrants.grantedAt,
-        grantReason: seriesAccessGrants.grantReason,
-      })
-      .from(seriesAccessGrants)
-      .innerJoin(users, eq(users.id, seriesAccessGrants.userId))
-      .leftJoin(profiles, eq(profiles.id, users.id))
-      .where(and(...grantFilters))
-      .orderBy(desc(seriesAccessGrants.grantedAt))
-      .limit(MAX_MERGE_ROWS);
+    // A specific ticket-type filter excludes manual grants entirely, so skip fetching them.
+    const grantRows = ticketTypeFilter
+      ? []
+      : await db
+          .select({
+            grantId: seriesAccessGrants.id,
+            userId: seriesAccessGrants.userId,
+            email: users.email,
+            name: users.name,
+            firstName: profiles.firstName,
+            lastName: profiles.lastName,
+            phoneNumber: profiles.phoneNumber,
+            grantedAt: seriesAccessGrants.grantedAt,
+            grantReason: seriesAccessGrants.grantReason,
+          })
+          .from(seriesAccessGrants)
+          .innerJoin(users, eq(users.id, seriesAccessGrants.userId))
+          .leftJoin(profiles, eq(profiles.id, users.id))
+          .where(and(...grantFilters))
+          .orderBy(desc(seriesAccessGrants.grantedAt))
+          .limit(MAX_MERGE_ROWS);
 
     const { items, total } = mergeSeriesAttendees(bookingRows, grantRows, {
       search,
       page,
       pageSize,
+      ticketType: ticketTypeFilter,
     });
 
     // Staff-facing signal: the merged total is incomplete because a source hit the cap.

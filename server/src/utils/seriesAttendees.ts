@@ -14,6 +14,8 @@ export function isMergeTruncated(bookingCount: number, grantCount: number): bool
   return bookingCount >= MAX_MERGE_ROWS || grantCount >= MAX_MERGE_ROWS;
 }
 
+export type SeriesTicketType = 'online_only' | 'online_offline' | 'offline_only';
+
 export type SeriesAttendeeRow = {
   userId: string;
   email: string | null;
@@ -27,6 +29,8 @@ export type SeriesAttendeeRow = {
   source: 'paid' | 'free' | 'manual';
   reference: string | null;
   amountPaidCents: number | null;
+  // The track booking's ticket variant; null for manual grants (shown as "Manual grant").
+  ticketType: SeriesTicketType | null;
   // Discriminator for the UI: present only for manual-grant rows (revoke is allowed there).
   grantId: string | null;
 };
@@ -64,6 +68,7 @@ function grantToRow(grant: SeriesGrantAttendeeInput): SeriesAttendeeRow {
     source: 'manual',
     reference: grant.grantReason,
     amountPaidCents: null,
+    ticketType: null,
     grantId: grant.grantId,
   };
 }
@@ -93,19 +98,28 @@ function bookedAtMs(value: Date | string): number {
 export function mergeSeriesAttendees(
   bookingRows: SeriesBookingAttendeeInput[],
   grantRows: SeriesGrantAttendeeInput[],
-  options: { search?: string; page: number; pageSize: number },
+  options: { search?: string; page: number; pageSize: number; ticketType?: SeriesTicketType },
 ): { items: SeriesAttendeeRow[]; total: number } {
   const byUserId = new Map<string, SeriesAttendeeRow>();
 
+  // A specific ticket-type filter applies to booking rows only and excludes manual grants (which
+  // have no ticket type). Applied here, per-source, BEFORE pagination so counts stay correct.
+  const filteredBookings = options.ticketType
+    ? bookingRows.filter((booking) => booking.ticketType === options.ticketType)
+    : bookingRows;
+  const includeGrants = !options.ticketType;
+
   // Booking rows first so a user who both bought the track and holds a grant keeps the
   // booking row (richer: invoice + amount), and shows no revoke affordance.
-  for (const booking of bookingRows) {
+  for (const booking of filteredBookings) {
     if (!booking.userId) continue;
     byUserId.set(booking.userId, { ...booking, userId: booking.userId, grantId: null });
   }
-  for (const grant of grantRows) {
-    if (!grant.userId || byUserId.has(grant.userId)) continue;
-    byUserId.set(grant.userId, grantToRow(grant));
+  if (includeGrants) {
+    for (const grant of grantRows) {
+      if (!grant.userId || byUserId.has(grant.userId)) continue;
+      byUserId.set(grant.userId, grantToRow(grant));
+    }
   }
 
   let merged = [...byUserId.values()];
