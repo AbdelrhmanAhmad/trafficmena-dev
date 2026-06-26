@@ -10,6 +10,7 @@ import { formatMeetupDate } from '@/shared/utils/dateUtils';
 import { TrackAttendeesList } from '../components/TrackAttendeesList';
 import { TrackManualEnrollmentManager } from '../components/TrackManualEnrollmentManager';
 import { useTrack } from '../hooks/useTracks';
+import { getEnabledTicketTypes } from '../ticketTypes';
 
 const AdminTrackDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -98,6 +99,7 @@ const AdminTrackDetail = () => {
               trackId={track.id}
               trackTitle={track.title}
               defaultAmountPaidCents={track.price_in_cents}
+              enabledTicketTypes={getEnabledTicketTypes(track)}
             />
             <TrackAttendeesList key={`${track.id}-attendees`} trackId={track.id} />
           </div>

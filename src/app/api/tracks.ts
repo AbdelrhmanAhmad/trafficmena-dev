@@ -303,6 +303,7 @@ export async function createManualTrackEnrollment(
     reason: string;
     reference: string;
     amountPaidCents?: number | null;
+    ticketType?: TicketType;
   },
 ): Promise<{
   success: boolean;
