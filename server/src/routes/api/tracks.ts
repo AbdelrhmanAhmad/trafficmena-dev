@@ -20,7 +20,11 @@ import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere, hasTrackBookingRow } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { bookingGrantsLiveAttendance } from './ticketAccess.js';
+import {
+  bookingGrantsLiveAttendance,
+  hasTicketTypes,
+  ticketEventCoverageError,
+} from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
 import { isPaidTrack } from './trackPaidStatus.js';
 import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
@@ -67,6 +71,9 @@ const createTrackSchema = z.object({
   allowIndividualBooking: z.boolean().default(false),
   maxTrackBookings: z.number().int().positive().nullable().optional(),
   priceInCents: priceInCentsSchema,
+  onlineOnlyPriceCents: priceInCentsSchema,
+  onlineOfflinePriceCents: priceInCentsSchema,
+  offlineOnlyPriceCents: priceInCentsSchema,
   location: locationSchema,
   locationUrl: locationUrlSchema,
 });
@@ -85,6 +92,9 @@ const updateTrackSchema = z
     allowIndividualBooking: z.boolean().optional(),
     maxTrackBookings: z.number().int().positive().nullable().optional(),
     priceInCents: priceInCentsSchema,
+    onlineOnlyPriceCents: priceInCentsSchema,
+    onlineOfflinePriceCents: priceInCentsSchema,
+    offlineOnlyPriceCents: priceInCentsSchema,
     location: z.union([z.string().trim().max(255), z.null()]).optional(),
     locationUrl: z
       .union([
@@ -397,6 +407,9 @@ export function registerTrackRoutes(app: Hono) {
             allowIndividualBooking: tracks.allowIndividualBooking,
             maxTrackBookings: tracks.maxTrackBookings,
             priceInCents: tracks.priceInCents,
+            onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+            onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+            offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
             location: tracks.location,
             locationUrl: tracks.locationUrl,
           })
@@ -420,6 +433,7 @@ export function registerTrackRoutes(app: Hono) {
               date: events.date,
               location: events.location,
               eventType: events.eventType,
+              eventFormat: events.eventFormat,
               imageUrl: events.imageUrl,
               maxAttendees: events.maxAttendees,
             },
@@ -457,6 +471,7 @@ export function registerTrackRoutes(app: Hono) {
           date: te.event.date,
           location: te.event.location,
           eventType: te.event.eventType,
+          eventFormat: te.event.eventFormat,
           imageUrl: te.event.imageUrl,
           maxAttendees: te.event.maxAttendees,
           attendeeCount: attendeeCountsMap.get(te.eventId) ?? 0,
@@ -555,6 +570,9 @@ export function registerTrackRoutes(app: Hono) {
             pendingPaymentId,
             pendingInvoiceId,
             priceInCents: track.priceInCents,
+            onlineOnlyPriceCents: track.onlineOnlyPriceCents,
+            onlineOfflinePriceCents: track.onlineOfflinePriceCents,
+            offlineOnlyPriceCents: track.offlineOnlyPriceCents,
             location: track.location,
             // Track-level map URL is for the offline day: only offline-entitled buyers + staff see it.
             // The location text above stays public.
@@ -700,6 +718,9 @@ export function registerTrackRoutes(app: Hono) {
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
         priceInCents: tracks.priceInCents,
+        onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+        onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+        offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
         location: tracks.location,
         locationUrl: tracks.locationUrl,
       })
@@ -925,6 +946,9 @@ export function registerTrackRoutes(app: Hono) {
               allowIndividualBooking: payload.allowIndividualBooking ?? false,
               maxTrackBookings: payload.maxTrackBookings ?? null,
               priceInCents: payload.priceInCents ?? null,
+              onlineOnlyPriceCents: payload.onlineOnlyPriceCents ?? null,
+              onlineOfflinePriceCents: payload.onlineOfflinePriceCents ?? null,
+              offlineOnlyPriceCents: payload.offlineOnlyPriceCents ?? null,
               location: payload.location || null,
               locationUrl: payload.locationUrl || null,
             })
@@ -993,6 +1017,12 @@ export function registerTrackRoutes(app: Hono) {
           updateValues.maxTrackBookings = updates.maxTrackBookings ?? null;
         if (updates.priceInCents !== undefined)
           updateValues.priceInCents = updates.priceInCents ?? null;
+        if (updates.onlineOnlyPriceCents !== undefined)
+          updateValues.onlineOnlyPriceCents = updates.onlineOnlyPriceCents ?? null;
+        if (updates.onlineOfflinePriceCents !== undefined)
+          updateValues.onlineOfflinePriceCents = updates.onlineOfflinePriceCents ?? null;
+        if (updates.offlineOnlyPriceCents !== undefined)
+          updateValues.offlineOnlyPriceCents = updates.offlineOnlyPriceCents ?? null;
         if (updates.location !== undefined) updateValues.location = updates.location || null;
         if (updates.locationUrl !== undefined)
           updateValues.locationUrl = updates.locationUrl || null;
@@ -1030,6 +1060,36 @@ export function registerTrackRoutes(app: Hono) {
               'Published tracks must have track booking period and maxTrackBookings configured.',
               400,
             );
+          }
+
+          // Don't publish a track selling a ticket type whose sessions it doesn't contain.
+          const mergedTicketPrices = {
+            onlineOnlyPriceCents:
+              updates.onlineOnlyPriceCents !== undefined
+                ? (updates.onlineOnlyPriceCents ?? null)
+                : currentTrack.onlineOnlyPriceCents,
+            onlineOfflinePriceCents:
+              updates.onlineOfflinePriceCents !== undefined
+                ? (updates.onlineOfflinePriceCents ?? null)
+                : currentTrack.onlineOfflinePriceCents,
+            offlineOnlyPriceCents:
+              updates.offlineOnlyPriceCents !== undefined
+                ? (updates.offlineOnlyPriceCents ?? null)
+                : currentTrack.offlineOnlyPriceCents,
+          };
+          if (hasTicketTypes(mergedTicketPrices)) {
+            const formatRows = await db
+              .select({ eventFormat: events.eventFormat })
+              .from(trackEvents)
+              .innerJoin(events, eq(events.id, trackEvents.eventId))
+              .where(eq(trackEvents.trackId, id));
+            const coverageError = ticketEventCoverageError(mergedTicketPrices, {
+              hasOnlineEvent: formatRows.some((row) => row.eventFormat === 'online'),
+              hasOfflineEvent: formatRows.some((row) => row.eventFormat === 'offline'),
+            });
+            if (coverageError) {
+              throw new ApiError('TICKET_EVENT_COVERAGE', coverageError, 400);
+            }
           }
         }
 

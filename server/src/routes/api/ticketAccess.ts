@@ -137,6 +137,31 @@ export function enabledTicketTypes(track: TrackTicketPrices): TicketType[] {
   return TICKET_TYPES.filter((ticketType) => isTicketEnabled(track, ticketType));
 }
 
+/**
+ * Publish-time guard: an enabled ticket can only be sold if the track actually contains the sessions
+ * it promises. Returns a human message when coverage is missing, else null. (online_offline needs
+ * both formats; online_only needs an online session; offline_only needs an offline session.)
+ */
+export function ticketEventCoverageError(
+  track: TrackTicketPrices,
+  coverage: { hasOnlineEvent: boolean; hasOfflineEvent: boolean },
+): string | null {
+  const enabled = enabledTicketTypes(track);
+  const needsOnline = enabled.some((ticketType) =>
+    liveIncludedFormats(ticketType).includes('online'),
+  );
+  const needsOffline = enabled.some((ticketType) =>
+    liveIncludedFormats(ticketType).includes('offline'),
+  );
+  if (needsOnline && !coverage.hasOnlineEvent) {
+    return 'An online ticket is enabled but this track has no online session.';
+  }
+  if (needsOffline && !coverage.hasOfflineEvent) {
+    return 'An offline ticket is enabled but this track has no offline session.';
+  }
+  return null;
+}
+
 export type TrackBasePriceResult =
   | { ok: true; basePrice: number }
   | { ok: false; reason: 'ticket_type_required' | 'ticket_type_disabled' };

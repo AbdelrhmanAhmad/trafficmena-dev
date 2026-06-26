@@ -2,7 +2,10 @@ import { ArrowLeft, BookOpen, Calendar, Layers, Loader2, Plus, Trash2 } from 'lu
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TrackEventSelector from '@/features/tracks/components/TrackEventSelector';
-import TrackForm from '@/features/tracks/components/TrackForm';
+import TrackForm, {
+  mapTrackTicketPrices,
+  type TrackFormValues,
+} from '@/features/tracks/components/TrackForm';
 import {
   useAddEventsToTrack,
   useDeleteTrack,
@@ -66,18 +69,7 @@ function TrackDetailPage() {
     );
   }
 
-  const handleUpdateTrack = async (values: {
-    title: string;
-    description?: string;
-    imageUrl?: string;
-    isPublished: boolean;
-    maxTrackBookings?: number | null;
-    trackBookingStart?: string | null;
-    trackBookingEnd?: string | null;
-    singleBookingStart?: string | null;
-    singleBookingEnd?: string | null;
-    priceEgp?: string;
-  }) => {
+  const handleUpdateTrack = async (values: TrackFormValues) => {
     await updateMutation.mutateAsync({
       id: track.id,
       data: {
@@ -91,6 +83,7 @@ function TrackDetailPage() {
         singleBookingStart: values.singleBookingStart || null,
         singleBookingEnd: values.singleBookingEnd || null,
         priceInCents: values.priceEgp ? Math.round(Number(values.priceEgp) * 100) : null,
+        ...mapTrackTicketPrices(values),
       },
     });
   };

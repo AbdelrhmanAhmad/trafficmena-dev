@@ -23,6 +23,10 @@ export interface ApiTrack {
   trackBookingSpotsRemaining?: number | null;
   userHasBooked?: boolean;
   priceInCents?: number | null;
+  // Per-ticket-type prices (non-null = offered). All null = legacy single-price track.
+  onlineOnlyPriceCents?: number | null;
+  onlineOfflinePriceCents?: number | null;
+  offlineOnlyPriceCents?: number | null;
   // Location fields
   location?: string | null;
   locationUrl?: string | null;
@@ -64,6 +68,9 @@ export interface TrackRecord {
   track_booking_spots_remaining: number | null;
   user_has_booked: boolean;
   price_in_cents: number | null;
+  online_only_price_cents: number | null;
+  online_offline_price_cents: number | null;
+  offline_only_price_cents: number | null;
   // Location fields
   location: string | null;
   location_url: string | null;
@@ -113,6 +120,9 @@ const mapTrack = (api: ApiTrack): TrackRecord => ({
   track_booking_spots_remaining: api.trackBookingSpotsRemaining ?? null,
   user_has_booked: api.userHasBooked ?? false,
   price_in_cents: api.priceInCents ?? null,
+  online_only_price_cents: api.onlineOnlyPriceCents ?? null,
+  online_offline_price_cents: api.onlineOfflinePriceCents ?? null,
+  offline_only_price_cents: api.offlineOnlyPriceCents ?? null,
   location: api.location ?? null,
   location_url: api.locationUrl ?? null,
 });
@@ -153,6 +163,9 @@ export type CreateTrackPayload = {
   allowIndividualBooking?: boolean;
   maxTrackBookings?: number | null;
   priceInCents?: number | null;
+  onlineOnlyPriceCents?: number | null;
+  onlineOfflinePriceCents?: number | null;
+  offlineOnlyPriceCents?: number | null;
   location?: string | null;
   locationUrl?: string | null;
 };
