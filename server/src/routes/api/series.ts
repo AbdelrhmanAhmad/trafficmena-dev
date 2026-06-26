@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  events,
   libraryAssets,
   series,
   seriesAccessGrants,
@@ -190,11 +191,12 @@ export function registerSeriesRoutes(app: Hono) {
     const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
     let hasTrackBooking = false;
     let hasSeriesGrant = false;
+    let bookingTicketType: 'online_only' | 'online_offline' | 'offline_only' | null = null;
     if (!isStaff && !isSubscriber) {
       const [bookingRows, grantRows] = await Promise.all([
         seriesRecord.trackId
           ? db
-              .select({ id: trackBookings.id })
+              .select({ id: trackBookings.id, ticketType: trackBookings.ticketType })
               .from(trackBookings)
               .where(
                 activeTrackBookingWhere(
@@ -220,6 +222,7 @@ export function registerSeriesRoutes(app: Hono) {
       ]);
 
       hasTrackBooking = Boolean(bookingRows[0]);
+      bookingTicketType = bookingRows[0]?.ticketType ?? null;
       hasSeriesGrant = Boolean(grantRows[0]);
     }
 
@@ -251,12 +254,14 @@ export function registerSeriesRoutes(app: Hono) {
           viewCount: libraryAssets.viewCount,
           createdAt: libraryAssets.createdAt,
           eventId: libraryAssets.eventId,
+          eventFormat: events.eventFormat,
           isPublic: libraryAssets.isPublic,
           isPremium: libraryAssets.isPremium,
         },
       })
       .from(seriesAssets)
       .innerJoin(libraryAssets, eq(libraryAssets.id, seriesAssets.assetId))
+      .leftJoin(events, eq(events.id, libraryAssets.eventId))
       .where(eq(seriesAssets.seriesId, id))
       .orderBy(seriesAssets.sortOrder);
 
@@ -276,9 +281,11 @@ export function registerSeriesRoutes(app: Hono) {
     const assets = seriesAssetsList.map((sa) => {
       const hasAccess = resolveSeriesAssetAccess({
         ...accessContext,
+        bookingTicketType,
         assetIsPremium: sa.asset.isPremium,
         assetIsPublic: sa.asset.isPublic,
         assetEventId: sa.asset.eventId,
+        assetEventFormat: sa.asset.eventFormat ?? null,
         userEventIds,
       });
 

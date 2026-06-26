@@ -20,6 +20,7 @@ import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere, hasTrackBookingRow } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { bookingGrantsLiveAttendance } from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
 import { isPaidTrack } from './trackPaidStatus.js';
 import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
@@ -473,10 +474,11 @@ export function registerTrackRoutes(app: Hono) {
         let userHasPendingPayment = false;
         let pendingPaymentId: string | null = null;
         let pendingInvoiceId: number | null = null;
+        let bookingTicketType: 'online_only' | 'online_offline' | 'offline_only' | null = null;
         if (session?.user) {
           const [bookingRows, role, pendingPayment] = await Promise.all([
             db
-              .select({ id: trackBookings.id })
+              .select({ id: trackBookings.id, ticketType: trackBookings.ticketType })
               .from(trackBookings)
               .where(
                 activeTrackBookingWhere(
@@ -504,6 +506,7 @@ export function registerTrackRoutes(app: Hono) {
               .limit(1),
           ]);
           userHasBooked = hasTrackBookingRow(bookingRows);
+          bookingTicketType = bookingRows[0]?.ticketType ?? null;
           isStaff = role ? ['owner', 'admin', 'manager'].includes(role) : false;
 
           const [pending] = pendingPayment;
@@ -553,7 +556,13 @@ export function registerTrackRoutes(app: Hono) {
             pendingInvoiceId,
             priceInCents: track.priceInCents,
             location: track.location,
-            locationUrl: userHasBooked || isStaff ? track.locationUrl : null, // Only reveal URL to booked users or staff
+            // Track-level map URL is for the offline day: only offline-entitled buyers + staff see it.
+            // The location text above stays public.
+            locationUrl:
+              (userHasBooked && bookingGrantsLiveAttendance(bookingTicketType, 'offline')) ||
+              isStaff
+                ? track.locationUrl
+                : null,
           },
           events: trackEventsFormatted,
         });

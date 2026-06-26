@@ -65,6 +65,29 @@ export function canAttendLive(ticketType: TicketType, eventFormat: EventFormat):
   return resolveTicketAccess(ticketType, eventFormat).canAttendLive;
 }
 
+// --- Booking-level access (handles legacy bookings) ----------------------------------------------
+//
+// A booking with no ticketType is a legacy / non-ticket-typed-track booking that granted everything,
+// so it keeps full access. Otherwise the matrix applies. These are what access routes call.
+
+/** Whether an active track booking lets the viewer join an event's live session. */
+export function bookingGrantsLiveAttendance(
+  ticketType: TicketType | null | undefined,
+  eventFormat: EventFormat,
+): boolean {
+  if (!ticketType) return true;
+  return canAttendLive(ticketType, eventFormat);
+}
+
+/** Whether an active track booking lets the viewer open a recording (eventFormat null = general). */
+export function bookingGrantsRecording(
+  ticketType: TicketType | null | undefined,
+  eventFormat: EventFormat | null,
+): boolean {
+  if (!ticketType) return true;
+  return canAccessRecording(ticketType, eventFormat);
+}
+
 /**
  * Recording access including the null-event convention: a premium recording with no linked event is
  * general track content, so it follows the offline rule (visible to all three ticket types).

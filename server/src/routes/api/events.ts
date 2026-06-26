@@ -24,6 +24,7 @@ import {
   updateEventIsPublishedSchema,
 } from './eventPublishSchema.js';
 import { isEventHiddenFromNonStaff } from './eventVisibility.js';
+import { bookingGrantsLiveAttendance } from './ticketAccess.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -315,7 +316,11 @@ export function registerEventRoutes(app: Hono) {
             .where(and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.status, 'active'))),
           viewerId
             ? db
-                .select({ id: eventAttendees.id, status: eventAttendees.status })
+                .select({
+                  id: eventAttendees.id,
+                  status: eventAttendees.status,
+                  sourceTrackBookingId: eventAttendees.sourceTrackBookingId,
+                })
                 .from(eventAttendees)
                 .where(
                   and(eq(eventAttendees.eventId, eventId), eq(eventAttendees.userId, viewerId)),
@@ -339,11 +344,12 @@ export function registerEventRoutes(app: Hono) {
           return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
         }
 
-        // Check if user has booked the track (for track events)
+        // Check if user has booked the track (for track events) and which ticket variant they hold.
         let trackBooked = false;
+        let bookingTicketType: 'online_only' | 'online_offline' | 'offline_only' | null = null;
         if (trackInfo && viewerId) {
           const [booking] = await db
-            .select({ id: trackBookings.id })
+            .select({ id: trackBookings.id, ticketType: trackBookings.ticketType })
             .from(trackBookings)
             .where(
               activeTrackBookingWhere(
@@ -353,6 +359,7 @@ export function registerEventRoutes(app: Hono) {
             )
             .limit(1);
           trackBooked = Boolean(booking);
+          bookingTicketType = booking?.ticketType ?? null;
         }
 
         const attendeeCount = Number(attendeeCountResult?.[0]?.value ?? 0);
@@ -365,16 +372,31 @@ export function registerEventRoutes(app: Hono) {
           attending = existing.status === 'active';
         }
 
-        const canAccessMeetingLink = attending || trackBooked || isStaff;
-        const locationUrl = canAccessMeetingLink ? event.locationUrl : null;
+        // Split, ticket-aware access (resolution order: staff -> track booking ticket -> standalone
+        // direct attendee). Online events expose the Zoom link to live-online-entitled viewers;
+        // offline events expose the map URL to in-person-entitled viewers. The location *text* below
+        // stays public via the `...event` spread.
+        const directAttendee = attending && (existing?.sourceTrackBookingId ?? null) === null;
+        let canAttendLiveSession = false;
+        if (isStaff) {
+          canAttendLiveSession = true;
+        } else if (trackBooked) {
+          canAttendLiveSession = bookingGrantsLiveAttendance(bookingTicketType, event.eventFormat);
+        } else if (directAttendee) {
+          canAttendLiveSession = true;
+        }
+
+        const canAccessMeetingLink = event.eventFormat === 'online' && canAttendLiveSession;
+        const canAccessLocationUrl = event.eventFormat === 'offline' && canAttendLiveSession;
 
         return c.json({
           ...event,
           attendeeCount,
           attending,
           registrationStatus,
+          viewerTicketType: bookingTicketType,
           meetingLink: canAccessMeetingLink ? event.meetingLink : null,
-          locationUrl,
+          locationUrl: canAccessLocationUrl ? event.locationUrl : null,
           trackInfo: trackInfo
             ? {
                 id: trackInfo.id,
