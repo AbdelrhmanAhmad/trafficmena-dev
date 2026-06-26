@@ -17,10 +17,30 @@ Use this when finance/user support reports "paid in gateway, not reflected in da
    - `[payments/webhook] Confirmation processed`
    - `[payments/confirm] Recovered expired payment after paid gateway invoice`
    - `[payment-reconciliation] Recovered expired payment`
-4. Trigger `POST /api/payments/verify` as the owning user if needed.
-5. Confirm outcome:
+   - `[payments/fulfillment_failed_after_gateway_paid]`
+4. Check persisted fulfillment failures:
+   ```sql
+   select payment_id, user_id, item_type, item_id, ticket_type, invoice_id, amount_cents,
+          confirmation_source, error_code, error_message, failure_count, created_at, updated_at
+   from payment_fulfillment_failures
+   where resolved_at is null
+     and (invoice_id = :invoice_id or payment_id = :payment_id)
+   order by updated_at desc;
+   ```
+5. Trigger `POST /api/payments/verify` as the owning user if needed.
+6. Confirm outcome:
    - `payments.status = 'paid'`
    - fulfillment rows exist (`event_attendees` / `track_bookings` / `subscriptions`)
+7. After manual booking or refund is complete, mark the failure resolved:
+   ```sql
+   update payment_fulfillment_failures
+   set resolved_at = now(),
+       resolved_by = :admin_user_id,
+       resolution_note = :note,
+       updated_at = now()
+   where payment_id = :payment_id
+     and resolved_at is null;
+   ```
 
 ## 2. Webhook Outage Playbook
 
