@@ -70,6 +70,8 @@ export async function sendOtpEmail({ email, otp, ttlMinutes }: SendOtpEmailArgs)
         text: textBody,
         from: 'hello@trafficmena.com',
         name: 'TrafficMENA',
+        // Plunk's /v1/send defaults new contacts to unsubscribed — opt them into the list.
+        subscribed: true,
       }),
     });
 
@@ -150,6 +152,8 @@ export async function sendEmailChangeNotice({
         text: textBody,
         from: 'hello@trafficmena.com',
         name: 'TrafficMENA',
+        // Plunk's /v1/send defaults new contacts to unsubscribed — opt them into the list.
+        subscribed: true,
       }),
     });
 
@@ -240,6 +244,8 @@ export async function sendInvitationEmail({
         text: textBody,
         from: 'hello@trafficmena.com',
         name: 'TrafficMENA',
+        // Plunk's /v1/send defaults new contacts to unsubscribed — opt them into the list.
+        subscribed: true,
       }),
     });
 
