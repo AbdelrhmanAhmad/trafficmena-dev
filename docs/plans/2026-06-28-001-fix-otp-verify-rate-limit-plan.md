@@ -1,7 +1,7 @@
 ---
 title: "fix: OTP verify rate-limit lockout (too-narrow limits + resend trap)"
 type: fix
-status: active
+status: completed
 date: 2026-06-28
 depth: lightweight
 execution_posture: test-first
