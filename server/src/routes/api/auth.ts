@@ -6,6 +6,7 @@ import { db } from '../../db/client.js';
 import { authVerifications, invitations, platformSettings, users } from '../../db/schema/index.js';
 import { otpRateLimiter, otpVerificationRateLimiter } from '../../services/rateLimiter.js';
 import { isTurnstileEnabled, verifyTurnstileToken } from '../../services/turnstile.js';
+import { OTP_VERIFY_LIMIT, OTP_VERIFY_WINDOW_MS, otpVerifyKey } from './otpRateLimits.js';
 import { getRequestIp, normalizeEmail } from './utils.js';
 
 const OTP_SHORT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -266,6 +267,12 @@ export function registerAuthRoutes(app: Hono) {
         asResponse: true,
       });
 
+      // A freshly issued code grants a fresh verify budget, so the lockout message's "request a new
+      // code" advice actually unlocks the user. Bounded by the send limits enforced above.
+      if (response.ok) {
+        otpVerificationRateLimiter.reset(otpVerifyKey(email));
+      }
+
       return response;
     } catch (error) {
       console.error('[auth] OTP send failed', error);
@@ -348,9 +355,9 @@ export function registerAuthRoutes(app: Hono) {
         }
       }
 
-      const verificationWindow = otpVerificationRateLimiter.consume(`otp:verify:${email}`, {
-        limit: 5,
-        windowMs: 10 * 60 * 1000,
+      const verificationWindow = otpVerificationRateLimiter.consume(otpVerifyKey(email), {
+        limit: OTP_VERIFY_LIMIT,
+        windowMs: OTP_VERIFY_WINDOW_MS,
       });
 
       if (!verificationWindow.allowed) {
@@ -358,7 +365,8 @@ export function registerAuthRoutes(app: Hono) {
           {
             error: {
               code: 'OTP_VERIFY_RATE_LIMITED',
-              message: 'Too many verification attempts. Please request a new code.',
+              message:
+                'Too many incorrect attempts. Request a new code to get a fresh set of tries.',
             },
           },
           429,
@@ -376,7 +384,7 @@ export function registerAuthRoutes(app: Hono) {
       });
 
       if (response.ok) {
-        otpVerificationRateLimiter.reset(`otp:verify:${email}`);
+        otpVerificationRateLimiter.reset(otpVerifyKey(email));
       }
 
       return response;
