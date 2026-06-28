@@ -89,6 +89,7 @@ export default function PaymentSuccessPage() {
       } else {
         trackPurchase({
           transactionId: verifyData.paymentId,
+          eventId: verifyData.paymentId,
           currency: 'EGP',
           value,
           itemType,
@@ -97,6 +98,7 @@ export default function PaymentSuccessPage() {
           coupon: verifyData.promoCode ?? '',
           discount,
           originalValue,
+          ticketType: verifyData.ticketType ?? null,
           item: {
             item_id: verifyData.itemId ?? '',
             item_name: verifyData.itemName ?? '',

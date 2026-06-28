@@ -55,6 +55,7 @@ export type VerifyPaymentResponse = {
   itemCategory?: string;
   itemType?: PaymentItemType;
   itemId?: string | null;
+  ticketType?: TicketType | null;
   paymentType?: string;
   promoCode?: string;
   originalAmountCents?: number;

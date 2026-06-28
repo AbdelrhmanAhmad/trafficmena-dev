@@ -112,6 +112,7 @@ type ConfirmGatewayInvoiceResult = {
   paymentId: string;
   itemType: 'event' | 'track' | 'subscription';
   itemId: string | null;
+  ticketType?: TicketType | null;
   amountCents?: number;
   itemName?: string;
   paymentType?: string;
@@ -1145,6 +1146,7 @@ export async function confirmGatewayInvoicePayment(args: {
       paymentId: payment.id,
       itemType: payment.itemType,
       itemId: payment.itemId,
+      ticketType: payment.ticketType,
       amountCents: payment.amountCents,
       ...analytics,
       fawaterkPaid: true,
@@ -1253,6 +1255,7 @@ export async function confirmGatewayInvoicePayment(args: {
     paymentId: payment.id,
     itemType: payment.itemType,
     itemId: payment.itemId,
+    ticketType: payment.ticketType,
     amountCents: payment.amountCents,
     ...analytics,
     fawaterkPaid: true,
