@@ -11,3 +11,8 @@ export const OTP_VERIFY_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 // The resend reset (request handler) MUST build the same key as the verify consume, or the budget
 // never clears. Single source of truth for that key. Callers pass an already-normalized email.
 export const otpVerifyKey = (email: string) => `otp:verify:${email}`;
+
+// Codes are 6-digit numeric. Strip formatting (spaces, dashes) a non-web caller or a stale cached
+// bundle might submit, so a correct code isn't rejected and made to burn a verify attempt. The web
+// form sanitizes too (src/app/auth/signIn.ts); the server is the real boundary for every client.
+export const normalizeOtp = (value: string) => String(value ?? '').replace(/\D/g, '');

@@ -6,7 +6,12 @@ import { db } from '../../db/client.js';
 import { authVerifications, invitations, platformSettings, users } from '../../db/schema/index.js';
 import { otpRateLimiter, otpVerificationRateLimiter } from '../../services/rateLimiter.js';
 import { isTurnstileEnabled, verifyTurnstileToken } from '../../services/turnstile.js';
-import { OTP_VERIFY_LIMIT, OTP_VERIFY_WINDOW_MS, otpVerifyKey } from './otpRateLimits.js';
+import {
+  normalizeOtp,
+  OTP_VERIFY_LIMIT,
+  OTP_VERIFY_WINDOW_MS,
+  otpVerifyKey,
+} from './otpRateLimits.js';
 import { getRequestIp, normalizeEmail } from './utils.js';
 
 const OTP_SHORT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -376,7 +381,7 @@ export function registerAuthRoutes(app: Hono) {
       const response = await auth.api.signInEmailOTP({
         body: {
           email,
-          otp: body.data.otp,
+          otp: normalizeOtp(body.data.otp),
         },
         request: c.req.raw,
         headers: c.req.raw.headers,

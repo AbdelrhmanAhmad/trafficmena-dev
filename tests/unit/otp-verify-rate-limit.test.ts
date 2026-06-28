@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 import {
+  normalizeOtp,
   OTP_VERIFY_LIMIT,
   OTP_VERIFY_WINDOW_MS,
   otpVerifyKey,
@@ -42,6 +43,19 @@ describe('OTP verify limiter mechanics', () => {
   });
 });
 
+describe('server-side OTP normalization', () => {
+  it('strips spaces and dashes a non-web client (or a stale cached bundle) might submit', () => {
+    assert.equal(normalizeOtp('4 4 5 4 6 3'), '445463');
+    assert.equal(normalizeOtp('445-463'), '445463');
+  });
+
+  it('leaves a clean numeric code unchanged', () => {
+    assert.equal(normalizeOtp('445463'), '445463');
+  });
+});
+
+// No HTTP+DB+Better-Auth harness exists here (see email-change-rate-limits.test.ts), so the route
+// wiring is asserted against source text; the behaviors it wires to are covered above.
 describe('OTP verify limiter wiring (source assertions)', () => {
   it('request handler resets the verify budget on the send success path', async () => {
     const src = await readSource('../../server/src/routes/api/auth.ts');
