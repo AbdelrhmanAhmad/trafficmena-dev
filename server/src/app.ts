@@ -12,10 +12,7 @@ export function createApp() {
   const app = new Hono();
   const allowedOrigins = env.CORS_ALLOWLIST;
   // CSP is also defined in index.html (meta tag) — browsers intersect both, so keep host lists in sync.
-  const connectSources = new Set<string>([
-    "'self'",
-    'https://challenges.cloudflare.com',
-  ]);
+  const connectSources = new Set<string>(["'self'", 'https://challenges.cloudflare.com']);
   for (const origin of allowedOrigins) {
     connectSources.add(origin);
   }
