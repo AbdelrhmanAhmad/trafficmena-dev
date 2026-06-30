@@ -103,9 +103,12 @@ async function sendTransactionalEmail({ to, subject, html, text }: Transactional
 
   if (error) {
     // Redacted: log/throw only the Resend error name + statusCode, never error.message (which can
-    // carry the recipient address).
-    console.error(`[resend] send failed: ${error.name} (status ${error.statusCode ?? 'n/a'})`);
-    throw new EmailDeliveryError(error.name, error.statusCode);
+    // carry the recipient address). Some Resend errors omit `name` (e.g. a 403 when the key isn't
+    // authorized for the sender domain), so fall back to a non-empty code to keep logs and bulk
+    // failure reasons meaningful.
+    const code = error.name ?? 'unknown_error';
+    console.error(`[resend] send failed: ${code} (status ${error.statusCode ?? 'n/a'})`);
+    throw new EmailDeliveryError(code, error.statusCode ?? null);
   }
 
   if (!isProduction) {

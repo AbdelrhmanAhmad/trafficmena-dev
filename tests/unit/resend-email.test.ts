@@ -173,6 +173,32 @@ describe('Resend transactional sends', () => {
     }
   });
 
+  it('still produces a usable code when the Resend error omits `name` (e.g. 403 unauthorized domain)', async () => {
+    const handler = (call) =>
+      call.url === EMAILS_URL
+        ? jsonResponse(403, {
+            message: 'This API key is not authorized to send emails from example.com',
+            statusCode: 403,
+          })
+        : null;
+    const { restore } = installFetch(handler);
+    try {
+      await assert.rejects(
+        () => sendOtpEmail({ email: 'leak@example.com', otp: '654321', ttlMinutes: 10 }),
+        (err) => {
+          assert.equal(err.name, 'EmailDeliveryError');
+          assert.equal(typeof err.code, 'string');
+          assert.ok(err.code.length > 0, 'code must be a non-empty string even without error.name');
+          assert.equal(err.statusCode, 403);
+          assert.doesNotMatch(`${err.message} ${JSON.stringify(err)}`, /leak@example\.com/);
+          return true;
+        },
+      );
+    } finally {
+      restore();
+    }
+  });
+
   it('simulates (no Resend call) when RESEND_API_KEY is missing', async () => {
     const original = env.RESEND_API_KEY;
     const { calls, restore } = installFetch();
