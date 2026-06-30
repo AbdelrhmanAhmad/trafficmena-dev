@@ -22,8 +22,10 @@ type SendEmailChangeNoticeArgs = {
   maskedNewEmail: string;
 };
 
-// Display-name format replaces Plunk's separate from + name fields. Domain is verified in Resend.
-const FROM_ADDRESS = 'TrafficMENA <hello@trafficmena.com>';
+// Sender MUST be on a Resend-verified domain. The apex trafficmena.com is not verified — only the
+// updates.trafficmena.com subdomain — so the default uses it. Override via RESEND_FROM. The
+// display-name format ("Name <addr>") replaces Plunk's separate from + name fields.
+const FROM_ADDRESS = env.RESEND_FROM ?? 'TrafficMENA <hello@updates.trafficmena.com>';
 
 // Thrown when Resend rejects a transactional send. Carries only the Resend error name (as `code`)
 // and HTTP statusCode — never the raw SDK error or message, which can leak the recipient address.

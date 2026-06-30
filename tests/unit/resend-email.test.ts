@@ -61,7 +61,7 @@ describe('Resend transactional sends', () => {
     const send = calls.find((c) => c.url === EMAILS_URL);
     assert.ok(send, 'expected a POST to the Resend /emails endpoint');
     assert.equal(send.method, 'POST');
-    assert.equal(send.body.from, 'TrafficMENA <hello@trafficmena.com>');
+    assert.match(send.body.from, /^TrafficMENA <[^>]+@updates\.trafficmena\.com>$/);
     assert.equal(send.body.to, 'signup@example.com');
     assert.match(send.body.subject, /verification code/i);
     assert.ok(send.body.html?.length > 0 && send.body.text?.length > 0, 'expected html + text');

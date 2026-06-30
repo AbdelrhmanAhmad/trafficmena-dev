@@ -17,6 +17,7 @@ const envSchema = z.object({
     .transform((value) => value === 'true'),
   CORS_ORIGIN: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM: z.string().optional(),
   BETTER_AUTH_SECRET: z
     .string({
       required_error: 'BETTER_AUTH_SECRET is required',
