@@ -16,7 +16,6 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === 'true'),
   CORS_ORIGIN: z.string().optional(),
-  PLUNK_API_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   BETTER_AUTH_SECRET: z
     .string({
@@ -93,7 +92,9 @@ if (
   parsed.data.NODE_ENV === 'production' &&
   (!parsed.data.RESEND_API_KEY || !parsed.data.RESEND_API_KEY.startsWith('re_'))
 ) {
-  throw new Error('RESEND_API_KEY (re_-prefixed) is required in production for transactional email.');
+  throw new Error(
+    'RESEND_API_KEY (re_-prefixed) is required in production for transactional email.',
+  );
 }
 
 data.CORS_ORIGIN = corsAllowlist[0];
