@@ -11,7 +11,7 @@ This directory contains a minimal Hono server scaffold to support the migration 
 ## Endpoints
 
 - `GET /health` → `{ ok: true }`
-- `POST /api/mailer/send-invitation` → 501 Not Implemented (server-side Plunk integration to be added)
+- `POST /api/mailer/send-invitation` → 501 Not Implemented (server-side Resend integration to be added)
 - `POST /api/mailer/create-contact` → 501 Not Implemented
 
 ## Database setup
@@ -41,7 +41,7 @@ psql "$DATABASE_URL" -f migrations/001_init.sql
 
 ## Next steps
 
-- Implement server-side Plunk integration using environment variables (server-only).
+- Implement server-side Resend integration using environment variables (server-only).
 - Add Better Auth (email OTP) handlers for:
   - `POST /auth/otp/request`
   - `POST /auth/otp/verify`

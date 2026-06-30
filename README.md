@@ -22,7 +22,7 @@ Connect with practitioners—not professors—through expert-led events, structu
 | Database | PostgreSQL 17, Drizzle ORM |
 | Auth | Better Auth (OTP-based) |
 | Storage | BunnyCDN |
-| Email | Plunk |
+| Email | Resend |
 | Tooling | Ultracite (Biome), path aliases (`@/`) |
 
 ## Install
@@ -47,7 +47,7 @@ cp server/.env.example server/.env
 ```sh
 DATABASE_URL=postgresql://user:pass@localhost:5433/trafficmena_dev
 BETTER_AUTH_SECRET=your-secret-min-32-chars
-PLUNK_API_KEY=your-plunk-key
+RESEND_API_KEY=your-resend-key
 BUNNY_STORAGE_ZONE=your-zone
 BUNNY_STORAGE_ACCESS_KEY=your-key
 BUNNY_STORAGE_CDN_URL=https://your-cdn.b-cdn.net
