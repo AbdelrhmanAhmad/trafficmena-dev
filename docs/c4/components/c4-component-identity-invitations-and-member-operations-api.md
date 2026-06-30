@@ -5,7 +5,7 @@
 - **Name**: Identity, Invitations, and Member Operations API
 - **Description**: Backend routes and services responsible for authentication, user/session state, invitation onboarding, skills, and member administration.
 - **Type**: Service
-- **Technology**: Node.js 20, Hono, Better Auth, Zod, Drizzle ORM, Plunk, Cloudflare Turnstile
+- **Technology**: Node.js 20, Hono, Better Auth, Zod, Drizzle ORM, Resend, Cloudflare Turnstile
 
 ## Purpose
 
@@ -63,7 +63,7 @@ This component contains the following code-level elements:
 
 ### External Systems
 
-- Plunk email delivery: Sends OTP and invitation emails.
+- Resend email delivery: Sends OTP and invitation emails.
 - Cloudflare Turnstile: Validates high-risk OTP request flows.
 
 ## Component Diagram
@@ -77,11 +77,11 @@ C4Component
         Component(runtime, "API Runtime and Platform Security", "Hono app shell", "Middleware, health, and route mounting")
         Component(persistence, "Persistence and Background Operations", "Data access layer", "Database connectivity and schema access")
     }
-    System_Ext(plunk, "Plunk", "Email delivery service")
+    System_Ext(resend, "Resend", "Email delivery service")
     System_Ext(turnstile, "Cloudflare Turnstile", "Bot verification service")
 
     Rel(runtime, identity, "Mounts and protects")
     Rel(identity, persistence, "Reads and writes user, session, skill, and invitation data through")
-    Rel(identity, plunk, "Sends OTP and invitation emails via", "HTTPS API")
+    Rel(identity, resend, "Sends OTP and invitation emails via", "HTTPS API")
     Rel(identity, turnstile, "Validates challenge responses with", "HTTPS API")
 ```

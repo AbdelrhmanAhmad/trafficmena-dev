@@ -17,7 +17,7 @@ The stack is deliberately minimal:
 | Browser SPA | React 18, Vite 7, React Router 6, TanStack Query 5, Tailwind 3, shadcn/ui, Radix, TipTap 3 |
 | API service | Node.js 20, Hono 4, Better Auth 1, Drizzle ORM, Zod |
 | Database | PostgreSQL 17 (UUID primary keys, Drizzle-managed migrations) |
-| External services | Fawaterk, Plunk, BunnyCDN, Cloudflare Turnstile, Google Tag Manager |
+| External services | Fawaterk, Resend, BunnyCDN, Cloudflare Turnstile, Google Tag Manager |
 
 Top-level documents to read alongside this file: [c4-context.md](./c4/c4-context.md), [c4-container.md](./c4/c4-container.md), [c4-component.md](./c4/c4-component.md).
 
@@ -35,7 +35,7 @@ Top-level documents to read alongside this file: [c4-context.md](./c4/c4-context
 | **Administrator** | Human (staff) | Everything Content Manager can do, plus user management, invitation campaigns, dashboard metrics, cancellation approvals, platform settings, subscription and series grants. |
 | **Platform Owner** | Human (staff) | Full system control including owner-level accounts. |
 | **Fawaterk** | Programmatic | Posts HMAC-verified webhooks when invoice state changes. |
-| **Plunk** | Programmatic | Receives API calls to deliver OTP and invitation emails. |
+| **Resend** | Programmatic | Receives API calls to deliver OTP and invitation emails. |
 | **BunnyCDN** | Programmatic | Receives uploaded files and serves media directly to browsers. |
 | **Google Tag Manager** | Programmatic | Receives `dataLayer` pushes from the SPA; no server-side coupling. |
 
@@ -43,7 +43,7 @@ Top-level documents to read alongside this file: [c4-context.md](./c4/c4-context
 
 - **PostgreSQL** — single source of truth for all platform state (users, content, commerce, operations). Accessed only by the API service via Drizzle ORM.
 - **Fawaterk** — payment gateway for invoice creation, status polling, and inbound HMAC-verified webhooks. Supports five payment methods; configurable between `staging` and `live`.
-- **Plunk** — transactional email for OTP codes and invitation messages.
+- **Resend** — transactional email for OTP codes and invitation messages.
 - **BunnyCDN** — object storage plus CDN. API uploads files (max 20 MB), browsers load media directly from CDN URLs returned in API responses.
 - **Cloudflare Turnstile** — optional bot-protection CAPTCHA used on OTP request endpoints during high-traffic windows; browser issues a token, server validates server-side.
 - **Google Tag Manager** — container ID `GTM-5DMGVFZS`, bootstrapped by the self-hosted `public/gtm-bootstrap.js`. All analytics events leave the platform only through the learner's browser; the server never calls GTM or third-party analytics providers.
@@ -80,7 +80,7 @@ The system is a three-container topology with no Docker or IaC in-repo — deplo
        GTM (dataLayer)                  (managed in prod, local in dev)
                                              │
                                              ├─► Fawaterk (invoice + HMAC webhook)
-                                             ├─► Plunk     (OTP + invitation emails)
+                                             ├─► Resend    (OTP + invitation emails)
                                              ├─► BunnyCDN  (file upload)
                                              └─► Turnstile (CAPTCHA validation)
 ```
@@ -100,7 +100,7 @@ All API traffic flows through `src/app/api/client.ts::fetchJson()`, which auto-a
 Long-running Hono process. Compiled with `npm --prefix server run build` → `server/dist/`, started with `node dist/index.js`, listens on `3001`. Zod validates the environment at startup. Responsibilities:
 
 - **Security envelope** — CSP (with GTM hardening), HSTS (prod only), CORS allowlist, CSRF middleware on every `/api/*` route, 20 MB request cap, request timing, structured error envelope.
-- **Authentication** — Better Auth with OTP plugin + invite-session plugin. OTP delivery via Plunk. Rate limits: normal 3/10 min and 10/day; event mode 15/10 min and 50/day. Turnstile optional.
+- **Authentication** — Better Auth with OTP plugin + invite-session plugin. OTP delivery via Resend. Rate limits: normal 3/10 min and 10/day; event mode 15/10 min and 50/day. Turnstile optional.
 - **Authorization** — five-level RBAC, enforced per-endpoint via `requireAdmin()` and `requireManager()` helpers (`server/src/routes/api/utils.ts`).
 - **Domain APIs** — events, tracks, series, library, uploads, settings, admin metrics, payments, promo codes, subscriptions, subscription/series grants, manual track enrollments, skills, invitations.
 - **Background jobs** — payment expiration and reconciliation, started at boot.
@@ -180,7 +180,7 @@ Endpoint groups:
 | Skills | `GET /api/skills`, `POST /api/skills` (admin), `GET/POST/DELETE /api/user/skills[/:skillId]` |
 | Invitations | `GET /api/invitations`, `GET /api/invitations/stats`, `POST /api/invitations/single`, `POST /api/invitations/bulk` (daily limit `INVITATION_DAILY_LIMIT`), `POST /api/invitations/accept`, `POST /api/invitations/activate` |
 
-External dependencies: Plunk (OTP + invitations), Cloudflare Turnstile (CAPTCHA validation).
+External dependencies: Resend (OTP + invitations), Cloudflare Turnstile (CAPTCHA validation).
 
 ### 5.3 Learning Content and Delivery API
 
@@ -302,7 +302,7 @@ Three grant surfaces complement paid flows for cases where staff need to provisi
 ### 8.1 Authentication
 
 - Better Auth 1.x with the OTP plugin and a custom `inviteSession` plugin (`server/src/auth/plugins/`).
-- OTP delivery via Plunk. Session cookies are set on `POST /api/auth/otp/verify`, valid 7 days, updated every 24 hours.
+- OTP delivery via Resend. Session cookies are set on `POST /api/auth/otp/verify`, valid 7 days, updated every 24 hours.
 - Rate limits:
   - Normal mode: 3 OTPs/10 min, 10 OTPs/day per email or IP.
   - Event mode: 15 OTPs/10 min, 50 OTPs/day — toggled via `platformSettings`.
@@ -335,7 +335,7 @@ Role is stored on `profiles.role`, normalized to lowercase. The frontend mirrors
 - **Payload limits** — 20 MB cap enforced by `MAX_JSON_PAYLOAD_BYTES` and the uploads route.
 - **Validation** — Zod at every API boundary.
 - **Sanitization** — DOMPurify for user-generated HTML stored for later rendering.
-- **Secrets** — `BETTER_AUTH_SECRET` (≥32 chars), `INVITE_SESSION_SECRET` (≥16 chars in production), `FAWATERK_API_KEY`, `PLUNK_API_KEY`, `BUNNY_STORAGE_ACCESS_KEY`, `TURNSTILE_SECRET_KEY` — all server-side only, Zod-validated on startup.
+- **Secrets** — `BETTER_AUTH_SECRET` (≥32 chars), `INVITE_SESSION_SECRET` (≥16 chars in production), `FAWATERK_API_KEY`, `RESEND_API_KEY`, `BUNNY_STORAGE_ACCESS_KEY`, `TURNSTILE_SECRET_KEY` — all server-side only, Zod-validated on startup.
 - **Rate limiting** — `server/src/services/rateLimiter.ts` is in-memory. Per-endpoint limits include OTP, payment checkout, public subscription info (60/min per IP), and manual track enrollment (40/min per actor). The store is instance-local — multi-instance production deployments would require a shared store.
 
 ---
@@ -378,7 +378,7 @@ Server `.env` is validated by Zod on startup. Required variables (see `server/.e
 | `DB_SSL` | Enable SSL (prod) |
 | `BETTER_AUTH_SECRET`, `BETTER_AUTH_ISSUER` | Session signing + issuer URL (must be HTTPS in prod) |
 | `APP_BASE_URL`, `CORS_ORIGIN` | Frontend origin(s) |
-| `PLUNK_API_KEY` | OTP + invitations |
+| `RESEND_API_KEY` | OTP + invitations |
 | `BUNNY_STORAGE_ZONE`, `BUNNY_STORAGE_ACCESS_KEY`, `BUNNY_STORAGE_CDN_URL` | Upload + CDN |
 | `FAWATERK_API_KEY`, `FAWATERK_ENV` | Payment gateway |
 | `API_BASE_URL` | Webhook callback URL (optional) |

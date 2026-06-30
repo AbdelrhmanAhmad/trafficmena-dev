@@ -60,7 +60,7 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 - **Goals**: Notify the platform that a payment has been confirmed, failed, or expired so that bookings, subscriptions, and reservations can be fulfilled or released.
 - **Key Features Used**: Payment webhook endpoints (`POST /api/payments/webhook`, `POST /api/payments/webhook_json`), invoice verification, atomic checkout fulfillment.
 
-### Plunk Email Service
+### Resend Email Service
 
 - **Type**: Programmatic User
 - **Description**: The transactional email provider that receives API requests from the platform and delivers OTP codes and invitation emails to end users.
@@ -184,7 +184,7 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 
 1. A visitor navigates to `/signin` and enters their email address.
 2. The frontend submits an OTP request to `POST /api/auth/otp/request`, optionally with a Turnstile token.
-3. The backend rate-limits the request and dispatches a one-time code via Plunk.
+3. The backend rate-limits the request and dispatches a one-time code via Resend.
 4. The visitor enters the OTP code on the verification screen.
 5. The backend verifies the code, creates or resumes the session, and returns the authenticated session state.
 6. The user proceeds to the dashboard.
@@ -286,7 +286,7 @@ The admin workspace covers the complete content lifecycle: creating and publishi
 - **Integration Type**: HTTPS API (outbound invoice creation) and HTTPS webhooks (inbound payment confirmations)
 - **Purpose**: Enables paid registration for events, track bookings, and annual subscriptions.
 
-### Plunk
+### Resend
 
 - **Type**: Transactional Email Service
 - **Description**: Receives API requests from the backend and delivers OTP authentication codes and invitation emails to end users.
@@ -330,7 +330,7 @@ C4Context
 
     System_Ext(postgres, "PostgreSQL", "Transactional data store for all platform state")
     System_Ext(fawaterk, "Fawaterk", "Payment gateway - invoice creation and webhook callbacks")
-    System_Ext(plunk, "Plunk", "Transactional email - OTP codes and invitation delivery")
+    System_Ext(resend, "Resend", "Transactional email - OTP codes and invitation delivery")
     System_Ext(bunny, "BunnyCDN", "Object storage and CDN for media assets")
     System_Ext(turnstile, "Cloudflare Turnstile", "Bot-protection CAPTCHA for auth flows")
     System_Ext(gtm, "Google Tag Manager", "Client-side tag orchestration for analytics and conversion tracking")
@@ -342,7 +342,7 @@ C4Context
     Rel(owner, system, "Controls all platform operations and owner-level accounts")
     Rel(system, postgres, "Reads and writes all platform data")
     Rel(system, fawaterk, "Creates payment invoices and receives webhook callbacks")
-    Rel(system, plunk, "Sends OTP and invitation emails")
+    Rel(system, resend, "Sends OTP and invitation emails")
     Rel(system, bunny, "Uploads files and serves media assets")
     Rel(system, turnstile, "Validates bot-protection challenge tokens")
     Rel(system, gtm, "Loads container script in the browser and pushes dataLayer events")

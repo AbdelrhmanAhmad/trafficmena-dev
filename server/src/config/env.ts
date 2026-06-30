@@ -16,7 +16,8 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === 'true'),
   CORS_ORIGIN: z.string().optional(),
-  PLUNK_API_KEY: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM: z.string().optional(),
   BETTER_AUTH_SECRET: z
     .string({
       required_error: 'BETTER_AUTH_SECRET is required',
@@ -84,6 +85,17 @@ if (
 // SECURITY: Fawaterk API key is required for payment processing in production
 if (parsed.data.NODE_ENV === 'production' && !parsed.data.FAWATERK_API_KEY) {
   throw new Error('FAWATERK_API_KEY is required in production for payment processing.');
+}
+
+// SECURITY: Resend key (re_-prefixed, Full access) is required for transactional email in
+// production. Without it, sends silently simulate and OTP login breaks — fail fast instead.
+if (
+  parsed.data.NODE_ENV === 'production' &&
+  (!parsed.data.RESEND_API_KEY || !parsed.data.RESEND_API_KEY.startsWith('re_'))
+) {
+  throw new Error(
+    'RESEND_API_KEY (re_-prefixed) is required in production for transactional email.',
+  );
 }
 
 data.CORS_ORIGIN = corsAllowlist[0];

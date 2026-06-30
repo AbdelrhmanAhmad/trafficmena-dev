@@ -12,18 +12,13 @@ export function createApp() {
   const app = new Hono();
   const allowedOrigins = env.CORS_ALLOWLIST;
   // CSP is also defined in index.html (meta tag) — browsers intersect both, so keep host lists in sync.
-  const connectSources = new Set<string>([
-    "'self'",
-    'https://next-api.useplunk.com',
-    'https://challenges.cloudflare.com',
-  ]);
+  const connectSources = new Set<string>(["'self'", 'https://challenges.cloudflare.com']);
   for (const origin of allowedOrigins) {
     connectSources.add(origin);
   }
   connectSources.add('http://localhost:3001');
   connectSources.add('https://cdn.jsdelivr.net');
   connectSources.add('https://unpkg.com');
-  connectSources.add('https://*.useplunk.com');
   connectSources.add('https://www.googletagmanager.com');
   connectSources.add('https://www.google-analytics.com');
   connectSources.add('https://analytics.google.com');
