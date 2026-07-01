@@ -118,7 +118,7 @@ const UserProfileDropdown: React.FC = () => {
         <DropdownMenuItem asChild>
           <Link to="/dashboard/library" className="flex cursor-pointer items-center">
             <Library className="mr-2 h-4 w-4" />
-            <span>Content Library</span>
+            <span>Recording Library</span>
           </Link>
         </DropdownMenuItem>
 

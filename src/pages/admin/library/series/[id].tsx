@@ -76,7 +76,7 @@ function SeriesDetailPage() {
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-lg text-muted-foreground">Series not found</p>
             <Button variant="outline" onClick={() => navigate('/admin/library')} className="mt-4">
-              Back to Library
+              Back to Recordings
             </Button>
           </div>
         </AppLayout>
@@ -195,7 +195,7 @@ function SeriesDetailPage() {
                   <div>
                     <CardTitle className="text-lg text-neutral-900">Assets in Series</CardTitle>
                     <CardDescription className="text-neutral-600">
-                      Library assets included in this series. Displayed to members in the order
+                      Recording assets included in this series. Displayed to members in the order
                       shown below.
                     </CardDescription>
                   </div>

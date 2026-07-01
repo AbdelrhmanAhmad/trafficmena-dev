@@ -112,7 +112,7 @@ const DashboardTrackDetail: React.FC = () => {
               onClick={() => navigate('/dashboard/library')}
               className="mt-4"
             >
-              Back to Library
+              Back to Recordings
             </Button>
           </div>
         </AppLayout>
@@ -133,7 +133,7 @@ const DashboardTrackDetail: React.FC = () => {
               className="mb-4"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Library
+              Back to Recordings
             </Button>
 
             <div className="relative overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">

@@ -107,7 +107,7 @@ const AdminDashboard: React.FC = () => {
 
   const managerQuickLinks = [
     {
-      label: 'Content Library',
+      label: 'Recording Library',
       description: 'Manage resources, tracks, and series.',
       href: '/admin/library',
       icon: BookOpen,

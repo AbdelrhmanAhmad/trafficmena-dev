@@ -155,7 +155,7 @@ const AdminLibraryItemDetail: React.FC = () => {
           </p>
           <Button onClick={() => navigate('/admin/library')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Library Management
+            Back to Recordings   Management
           </Button>
         </div>
       </AppLayout>
@@ -170,7 +170,7 @@ const AdminLibraryItemDetail: React.FC = () => {
           <p className="text-gray-600 mb-4">The requested library item could not be found.</p>
           <Button onClick={() => navigate('/admin/library')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Library Management
+            Back to Recordings Management
           </Button>
         </div>
       </AppLayout>
@@ -188,7 +188,7 @@ const AdminLibraryItemDetail: React.FC = () => {
             className="-ml-2 hover:bg-gray-100"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Library Management
+            Back to Recordings Management
           </Button>
 
           <div className="flex gap-2">

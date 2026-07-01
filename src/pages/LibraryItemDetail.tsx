@@ -175,7 +175,7 @@ const LibraryItemDetail: React.FC = () => {
             </p>
             <Button onClick={backToLibrary}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {seriesContext.seriesId ? 'Back to Series' : 'Back to Library'}
+              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
             </Button>
           </div>
         </AppLayout>
@@ -192,7 +192,7 @@ const LibraryItemDetail: React.FC = () => {
             <p className="text-gray-600 mb-4">The requested library item could not be found.</p>
             <Button onClick={backToLibrary}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {seriesContext.seriesId ? 'Back to Series' : 'Back to Library'}
+              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
             </Button>
           </div>
         </AppLayout>
@@ -222,7 +222,7 @@ const LibraryItemDetail: React.FC = () => {
               className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {seriesContext.seriesId ? 'Back to Series' : 'Back to Library'}
+              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
             </Button>
 
             <Card className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
@@ -282,7 +282,7 @@ const LibraryItemDetail: React.FC = () => {
             className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            {seriesContext.seriesId ? 'Back to Series' : 'Back to Library'}
+              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
           </Button>
 
           <Card className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">

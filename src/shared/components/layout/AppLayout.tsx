@@ -64,7 +64,7 @@ const memberMenuItems = [
     icon: Calendar,
   },
   {
-    title: 'Library',
+    title: 'Recordings',
     url: '/dashboard/library',
     icon: Library,
   },
@@ -141,7 +141,7 @@ const adminMenuItems = [
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
-    title: 'Content Library',
+    title: 'Content Recordings',
     url: '/admin/library',
     icon: BookOpen,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
@@ -341,7 +341,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ variant, children }) => {
         case '/dashboard/meetups':
           return 'Events & Tracks';
         case '/dashboard/library':
-          return 'Library';
+          return 'Recordings';
         case '/dashboard/digital-products':
           return 'Digital Products';
         case '/dashboard/masterclasses':

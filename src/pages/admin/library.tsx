@@ -113,7 +113,7 @@ function LibraryManagement() {
     if (!canDeleteContent) {
       toast({
         title: 'Insufficient permissions',
-        description: 'Only owners and admins can delete library assets.',
+        description: 'Only owners and admins can delete recording assets.',
         variant: 'destructive',
       });
       return;
@@ -204,7 +204,7 @@ function LibraryManagement() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d5ffe9]/40 to-[#f4fff9]/20">
                   <BookOpen className="h-5 w-5 text-[#05ef62]" />
                 </div>
-                <h1 className="text-3xl font-bold text-neutral-900">Library Management</h1>
+                <h1 className="text-3xl font-bold text-neutral-900">Recording Management</h1>
               </div>
               <p className="text-neutral-600 ml-[52px]">
                 Publish recordings, templates, and resources so members can revisit every session.
