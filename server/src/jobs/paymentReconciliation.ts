@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, gte, inArray, isNotNull, or } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { payments } from '../db/schema/index.js';
-import { confirmGatewayInvoicePayment } from '../routes/api/payments.js';
+import { confirmGatewayTransactionPayment } from '../routes/api/payments.js';
 import { ApiError } from '../utils/errors.js';
 
 const RECONCILIATION_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
@@ -34,7 +34,7 @@ async function fetchReconciliationCandidatesPage(
 ) {
   const baseWhere = and(
     inArray(payments.status, ['pending', 'expired']),
-    isNotNull(payments.fawaterkInvoiceId),
+    isNotNull(payments.fawaterkIntentKey),
     gte(payments.createdAt, lookbackThreshold),
   );
 
@@ -52,7 +52,6 @@ async function fetchReconciliationCandidatesPage(
   return db
     .select({
       paymentId: payments.id,
-      invoiceId: payments.fawaterkInvoiceId,
       createdAt: payments.createdAt,
     })
     .from(payments)
@@ -92,13 +91,12 @@ export async function reconcileRecentAtRiskPayments(): Promise<ReconciliationSum
     summary.pagesProcessed += 1;
     summary.scanned += candidates.length;
 
-    const withInvoice = candidates.filter(
-      (candidate): candidate is { paymentId: string; invoiceId: number; createdAt: Date } =>
-        candidate.invoiceId !== null,
-    );
-    const reconciliationTasks = withInvoice.map(async (candidate) => {
-      const result = await confirmGatewayInvoicePayment({
-        invoiceId: candidate.invoiceId,
+    const reconciliationTasks = candidates.map(async (candidate) => {
+      // A string-message 422 ("unpaid/expired") returns a non-paid result (counted as stillPending),
+      // not a throw — routine abandoned checkouts don't flood the error logs. An object-message 422
+      // (request drift) throws and surfaces in `errors` (see getTransactionData / R14).
+      const result = await confirmGatewayTransactionPayment({
+        paymentId: candidate.paymentId,
         source: 'reconcile',
       });
       return { candidate, result };
@@ -134,7 +132,6 @@ export async function reconcileRecentAtRiskPayments(): Promise<ReconciliationSum
       if (confirmation.recoveredFromExpired) {
         summary.recoveredFromExpired += 1;
         console.info('[payment-reconciliation] Recovered expired payment', {
-          invoiceId: candidate.invoiceId,
           paymentId: candidate.paymentId,
         });
       }

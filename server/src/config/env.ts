@@ -39,6 +39,9 @@ const envSchema = z.object({
   // Fawaterk Payment Gateway
   FAWATERK_API_KEY: z.string().optional(),
   FAWATERK_ENV: z.enum(['staging', 'live']).optional().default('staging'),
+  // v3 OAuth client credentials (client_credentials grant). Required in production.
+  FAWATERK_CLIENT_ID: z.string().optional(),
+  FAWATERK_CLIENT_SECRET: z.string().optional(),
   // Optional API base URL for webhook callbacks (dashboard configuration preferred)
   API_BASE_URL: z.string().url().optional(),
   // Cloudflare Turnstile CAPTCHA
@@ -82,9 +85,29 @@ if (
   );
 }
 
-// SECURITY: Fawaterk API key is required for payment processing in production
+// SECURITY: Fawaterk API key is required for payment processing in production. Under v3 it is no
+// longer used to authenticate API calls (OAuth does that), but it remains the HMAC secret that
+// signs every webhook — removing it would make webhooks unverifiable.
 if (parsed.data.NODE_ENV === 'production' && !parsed.data.FAWATERK_API_KEY) {
-  throw new Error('FAWATERK_API_KEY is required in production for payment processing.');
+  throw new Error('FAWATERK_API_KEY is required in production for payment webhook verification.');
+}
+
+// SECURITY: v3 authenticates API calls with OAuth client credentials. Both are required in
+// production; without them the gateway client cannot obtain a bearer token and every payment call
+// fails. client_id is a UUID per the v3 spec — validate its shape; the secret is opaque, so fail
+// closed on presence + minimum length.
+if (parsed.data.NODE_ENV === 'production') {
+  const clientId = parsed.data.FAWATERK_CLIENT_ID;
+  const clientSecret = parsed.data.FAWATERK_CLIENT_SECRET;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!clientId || !uuidPattern.test(clientId)) {
+    throw new Error('FAWATERK_CLIENT_ID (UUID) is required in production for payment OAuth.');
+  }
+  if (!clientSecret || clientSecret.length < 16) {
+    throw new Error(
+      'FAWATERK_CLIENT_SECRET (>=16 chars) is required in production for payment OAuth.',
+    );
+  }
 }
 
 // SECURITY: Resend key (re_-prefixed, Full access) is required for transactional email in

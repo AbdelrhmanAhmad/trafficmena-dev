@@ -38,6 +38,7 @@ export const trackAttendeeSelection = {
   phoneNumber: profiles.phoneNumber,
   bookedAt: trackBookings.bookedAt,
   invoiceId: payments.fawaterkInvoiceId,
+  transactionId: payments.fawaterkTransactionId,
   invoiceNumber: payments.fawaterkInvoiceKey,
   source: trackBookingSource,
   reference: trackBookingReference,

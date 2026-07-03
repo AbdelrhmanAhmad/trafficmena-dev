@@ -21,7 +21,7 @@ import { useAuth } from '@/shared/context/AuthContext';
 
 export default function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
-  const invoiceId = searchParams.get('invoice_id');
+  const paymentId = searchParams.get('payment_id');
   const { user } = useAuth();
   const verifyPayment = useVerifyPayment();
   const [verificationAttempted, setVerificationAttempted] = useState(false);
@@ -29,14 +29,14 @@ export default function PaymentSuccessPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (invoiceId && user && !verificationAttempted) {
+    if (paymentId && user && !verificationAttempted) {
       setVerificationAttempted(true);
-      verifyPayment.mutate({ invoiceId: Number(invoiceId) });
+      verifyPayment.mutate({ paymentId });
     }
-  }, [invoiceId, user, verificationAttempted, verifyPayment]);
+  }, [paymentId, user, verificationAttempted, verifyPayment]);
 
   useEffect(() => {
-    if (!invoiceId) {
+    if (!paymentId) {
       return;
     }
 
@@ -55,11 +55,11 @@ export default function PaymentSuccessPage() {
 
     analyticsRetryCountRef.current += 1;
     const retryTimer = window.setTimeout(() => {
-      verifyPayment.mutate({ invoiceId: Number(invoiceId) });
+      verifyPayment.mutate({ paymentId });
     }, 500);
 
     return () => window.clearTimeout(retryTimer);
-  }, [invoiceId, verifyPayment, verifyPayment.data]);
+  }, [paymentId, verifyPayment, verifyPayment.data]);
 
   // Fire purchase analytics THEN navigate — single effect to avoid race conditions.
   useEffect(() => {
@@ -124,8 +124,8 @@ export default function PaymentSuccessPage() {
   }, [verifyPayment.data, navigate]);
 
   const isVerifying = verifyPayment.isPending;
-  const hasInvoice = Boolean(invoiceId);
-  const canVerify = Boolean(user && invoiceId);
+  const hasPaymentId = Boolean(paymentId);
+  const canVerify = Boolean(user && paymentId);
   const isSuccess = verifyPayment.data?.status === 'paid';
   const isError = canVerify
     ? verifyPayment.isError || (verifyPayment.data && verifyPayment.data.status !== 'paid')
@@ -173,7 +173,7 @@ export default function PaymentSuccessPage() {
               </>
             )}
 
-            {hasInvoice && !canVerify && (
+            {hasPaymentId && !canVerify && (
               <>
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
                   <CheckCircle2 className="h-10 w-10 text-amber-600" />
@@ -183,13 +183,16 @@ export default function PaymentSuccessPage() {
               </>
             )}
 
-            {!hasInvoice && !isVerifying && (
+            {!hasPaymentId && !isVerifying && (
               <>
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                  <CheckCircle2 className="h-10 w-10 text-green-600" />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                  <CheckCircle2 className="h-10 w-10 text-amber-600" />
                 </div>
-                <CardTitle className="text-2xl text-green-700">Thank You!</CardTitle>
-                <CardDescription>Your transaction has been received.</CardDescription>
+                <CardTitle className="text-2xl text-amber-700">Payment Processing</CardTitle>
+                <CardDescription>
+                  Confirming your payment — this can take a moment. Check your dashboard for the
+                  latest status.
+                </CardDescription>
               </>
             )}
           </CardHeader>

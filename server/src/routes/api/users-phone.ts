@@ -21,8 +21,9 @@ export function isEgyptianMobileE164(value: string): boolean {
 }
 
 // Fawaterk (Egypt) wallet/cash methods expect a local MSISDN (01XXXXXXXXX) and reject E.164 +20
-// (verified: invoiceInitPay returns HTTP 422). We store canonical E.164 and convert only here, at
-// the gateway boundary. Non-+20 numbers (card/Fawry paths only) pass through unchanged.
+// (empirically observed on v2; assumed to hold for v3 createTransaction until AE7 confirms). We
+// store canonical E.164 and convert only here, at the gateway boundary. Non-+20 numbers (card/Fawry
+// paths only) pass through unchanged.
 export function toFawaterkLocalPhone(value: string): string {
   return value.startsWith(EGYPT_E164_PREFIX) ? `0${value.slice(EGYPT_E164_PREFIX.length)}` : value;
 }

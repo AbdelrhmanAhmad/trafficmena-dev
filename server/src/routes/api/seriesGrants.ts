@@ -203,6 +203,7 @@ export function registerSeriesGrantsRoutes(app: Hono) {
         ilike(sql`COALESCE(${trackBookings.manualReference}, '')`, searchPattern),
         ilike(sql`COALESCE(${payments.fawaterkInvoiceKey}, '')`, searchPattern),
         sql`CAST(${payments.fawaterkInvoiceId} AS TEXT) ILIKE ${searchPattern}`,
+        sql`CAST(${payments.fawaterkTransactionId} AS TEXT) ILIKE ${searchPattern}`,
       );
       if (bookingSearchFilter) {
         bookingFilters.push(bookingSearchFilter);

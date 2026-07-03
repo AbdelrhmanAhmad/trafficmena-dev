@@ -28,7 +28,7 @@ describe('paid fulfillment failure remediation', () => {
         '} catch (error) {',
         paymentSource.indexOf('async function processSuccessfulPayment'),
       ),
-      paymentSource.indexOf('export async function confirmGatewayInvoicePayment'),
+      paymentSource.indexOf('export async function confirmGatewayTransactionPayment'),
     );
 
     assert.ok(catchBlock.includes('reportPaidFulfillmentFailure(paymentId, error'));
