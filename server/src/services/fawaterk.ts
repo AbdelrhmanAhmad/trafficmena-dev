@@ -334,15 +334,18 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
     }
 
     const result = await response.json();
-    // Normalize the v3 field rename (payment_method_id -> paymentId) so the SPA contract and both
-    // method heuristics (server requiresPhone, SPA keyword matching) keep working unchanged.
+    // Normalize the method id so the SPA contract and both heuristics (server requiresPhone, SPA
+    // keyword matching) keep working. The live v3 getTrPaymentmethods returns `paymentId` (verified
+    // against staging 2026-07-03); accept `payment_method_id` too in case the live tenant differs.
     const normalized = Array.isArray(result?.data)
       ? result.data.map((method: Record<string, unknown>) => ({
-          paymentId: method.payment_method_id,
+          paymentId: method.paymentId ?? method.payment_method_id,
           name_en: method.name_en,
           name_ar: method.name_ar,
           redirect: method.redirect,
-          logo: method.logo,
+          // Coerce an explicit null logo to undefined: z.string().optional() rejects null, and one
+          // null-logo method would otherwise fail the whole-array parse and blank the method list.
+          logo: method.logo ?? undefined,
         }))
       : result?.data;
     const parsed = z.array(paymentMethodSchema).safeParse(normalized);
@@ -400,8 +403,18 @@ export async function createTransaction(args: CreateTransactionArgs): Promise<{
   }
 
   const result = await response.json();
-  const paymentDataSummary = summarizePaymentData(result?.data?.payment_data);
-  const parsed = createTransactionDataSchema.safeParse(result?.data);
+  // v3 nests the intent under `data` for redirect (card) and Meeza/wallet direct-dispatch, but some
+  // direct-dispatch methods (Fawry) return a FLAT top-level body — intent_key and the reference code
+  // are siblings with no `data` wrapper (verified against staging 2026-07-03). Accept both envelopes.
+  const container =
+    result && typeof result.data === 'object' && result.data !== null ? result.data : result;
+  // payment_data is nested under `payment_data` for the wrapped variants; for a flat body the codes
+  // sit at the top level, so fall back to the container itself.
+  const nestedPaymentData = container?.payment_data;
+  const rawPaymentData =
+    nestedPaymentData && typeof nestedPaymentData === 'object' ? nestedPaymentData : container;
+  const paymentDataSummary = summarizePaymentData(rawPaymentData);
+  const parsed = createTransactionDataSchema.safeParse(container);
   if (!parsed.success) {
     console.error('[fawaterk] Invalid createTransaction response:', parsed.error.format(), {
       paymentDataSummary,
@@ -412,7 +425,6 @@ export async function createTransaction(args: CreateTransactionArgs): Promise<{
   // Lenient on payment_data (KTD-4): once intent_key exists the intent is live at the gateway, so a
   // parsing surprise must degrade UX (pending page + webhook/verify), never fail the payment.
   let paymentData: NormalizedPaymentData = {};
-  const rawPaymentData = parsed.data.payment_data;
   if (rawPaymentData && typeof rawPaymentData === 'object') {
     const parsedPaymentData = paymentDataSchema.safeParse(rawPaymentData);
     if (parsedPaymentData.success) {
@@ -423,8 +435,20 @@ export async function createTransaction(args: CreateTransactionArgs): Promise<{
       });
     }
   }
+  // A present-but-primitive payment_data (e.g. a double-encoded JSON string from an undocumented
+  // method) carries a code the schema can't reach; surface it for the staging parser-extension loop
+  // instead of degrading silently.
+  if (
+    nestedPaymentData !== undefined &&
+    nestedPaymentData !== null &&
+    typeof nestedPaymentData !== 'object'
+  ) {
+    console.warn('[fawaterk] createTransaction payment_data was a primitive, not an object', {
+      paymentDataSummary: summarizePaymentData(nestedPaymentData),
+    });
+  }
 
-  const redirectUrl = paymentData.redirectTo ?? parsed.data.url;
+  const redirectUrl = paymentData.redirectTo ?? parsed.data.url ?? container?.url;
   return { intentKey: parsed.data.intent_key, redirectUrl, paymentData };
 }
 

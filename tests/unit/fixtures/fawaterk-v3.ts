@@ -27,22 +27,23 @@ export const oauthTokenError = {
 };
 
 // --- GET /api/v3/getTrPaymentmethods ---
-// Field rename vs v2: payment_method_id (was paymentId). `redirect` stays the string "true"/"false".
-// The list is dynamic per vendor; this fixture spans redirect + direct-dispatch methods so the
-// paymentId normalization and the fawry|meeza|aman|masary|mobilewallet heuristics stay exercised.
+// The LIVE staging API returns the id as `paymentId` (probed 2026-07-03) — the spec's claimed
+// `payment_method_id` rename did NOT happen. This fixture deliberately MIXES both keys: the first two
+// items use the real `paymentId`, the rest use `payment_method_id`, so the client's `paymentId ??
+// payment_method_id` normalization is exercised on both. `redirect` stays the string "true"/"false".
 export const trPaymentMethodsResponse = {
   status: 'success',
   vendorSettingsData: { custome_iframe_title: null },
   data: [
     {
-      payment_method_id: 2,
+      paymentId: 2,
       name_en: 'Visa-Mastercard',
       name_ar: 'فيزا-ماستركارد',
       redirect: 'true',
       logo: 'https://cdn.fawaterk.com/visa.png',
     },
     {
-      payment_method_id: 3,
+      paymentId: 3,
       name_en: 'Fawry',
       name_ar: 'فوري',
       redirect: 'false',
@@ -112,6 +113,20 @@ export const createTransactionFawry = {
     expires_in: 259_200,
     payment_data: { fawryCode: '9284736', expireDate: '2026-07-06 12:00:00' },
   },
+};
+
+// Direct payment — Fawry as the LIVE staging gateway actually returns it (probed 2026-07-03): a FLAT
+// top-level body with NO `data` wrapper — intent_key and fawryCode are siblings. The spec/docs
+// describe the nested data.payment_data shape (createTransactionFawry above); the live API does not
+// follow it for Fawry, so the client must accept both envelopes or Fawry checkout throws.
+export const createTransactionFawryFlat = {
+  status: 'pending',
+  referenceNumber: '783380810',
+  expirationTime: '07 Jul 2026, 04:30 AM',
+  expireDate: '07 Jul 2026, 04:30 AM',
+  fawryCode: '783380810',
+  reference: 'TR-1620',
+  intent_key: INTENT_KEY,
 };
 
 // Direct payment — mobile wallet (Meeza): meezaReference arrives as an INTEGER in v3; QR string.

@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   createTransactionCard,
   createTransactionFawry,
+  createTransactionFawryFlat,
   createTransactionHosted,
   createTransactionMeeza,
   createTransactionNoIntentKey,
@@ -89,7 +90,7 @@ const cartArgs = {
 };
 
 describe('fawaterk v3 — getPaymentMethods', () => {
-  it('normalizes payment_method_id -> paymentId and preserves name/redirect/logo', async () => {
+  it('reads live `paymentId` and falls back to `payment_method_id`, preserving name/redirect/logo', async () => {
     await withFetch(
       (call) =>
         call.url.includes('/api/v3/getTrPaymentmethods')
@@ -98,10 +99,14 @@ describe('fawaterk v3 — getPaymentMethods', () => {
       async () => {
         const methods = await getPaymentMethods();
         assert.ok(Array.isArray(methods) && methods.length === 6);
+        // Visa is provided with the live `paymentId` field.
         const visa = methods.find((m) => m.name_en === 'Visa-Mastercard');
         assert.equal(visa.paymentId, 2);
         assert.equal(visa.redirect, 'true');
         assert.equal(visa.name_ar, 'فيزا-ماستركارد');
+        // Meeza is provided with the legacy `payment_method_id` — the fallback must still resolve it.
+        const meeza = methods.find((m) => m.name_en === 'Meeza');
+        assert.equal(meeza.paymentId, 4);
         // No raw v2 field leaks through.
         assert.equal('payment_method_id' in visa, false);
       },
@@ -171,6 +176,22 @@ describe('fawaterk v3 — createTransaction', () => {
         const res = await createTransaction(cartArgs);
         assert.equal(res.intentKey, INTENT_KEY);
         assert.equal(res.paymentData.fawryCode, '9284736');
+        assert.equal(res.redirectUrl, undefined);
+      },
+    );
+  });
+
+  it('direct fawry FLAT top-level body (live staging shape) → intentKey + fawryCode captured', async () => {
+    // The live gateway returns Fawry with no `data` wrapper; the client must still parse it.
+    await withFetch(
+      (call) =>
+        call.url.includes('/api/v3/createTransaction')
+          ? jsonResponse(200, createTransactionFawryFlat)
+          : null,
+      async () => {
+        const res = await createTransaction(cartArgs);
+        assert.equal(res.intentKey, INTENT_KEY);
+        assert.equal(res.paymentData.fawryCode, '783380810');
         assert.equal(res.redirectUrl, undefined);
       },
     );
