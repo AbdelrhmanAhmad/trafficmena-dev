@@ -1,9 +1,16 @@
 # Payment Gateway MVP - Compound Knowledge Base
 
+> **Note (2026-07-03):** Sections 1–8 below describe the original **Fawaterk API v2** MVP (invoice
+> model). The gateway was migrated to **API v3** (OAuth + transaction intents) — see
+> **[v3 Migration](#v3-migration-api-v2--v3-2026-07-03)** immediately below. The v2 sections remain
+> valid for the reservation/fulfillment/security patterns that carried over unchanged; where they
+> reference invoice endpoints or the `InvoiceId=…` HMAC, the v3 section supersedes them.
+
 ---
 category: payment-gateway
-tags: [payments, fawaterk, reservations, security, mvp]
+tags: [payments, fawaterk, reservations, security, mvp, v3, oauth, migration]
 created: 2025-01-18
+updated: 2026-07-03
 status: production-ready
 ---
 
@@ -15,6 +22,83 @@ This document captures all learnings from the payment gateway MVP implementation
 - Similar integrations in other projects
 
 **Key Achievement**: Implemented a reservation-based payment system with capacity holds, integrated with the Fawaterk payment gateway. The live payment methods depend on the Fawaterk account configuration — current accounts expose **Card (Visa/Mastercard), Fawry, and MobileWallets**; the code also handles Aman/Masary/Meeza reference codes when those are enabled.
+
+---
+
+## v3 Migration (API v2 → v3, 2026-07-03)
+
+Hard cutover from Fawaterk v2 (invoice model) to v3 (OAuth + transaction-intent model). Plan:
+`docs/plans/2026-07-03-001-fix-fawaterk-v3-migration-plan.md`.
+
+### v3 contract summary
+
+- **Auth:** `POST /oauth/token` (grant_type `client_credentials`, `client_id`/`client_secret` from
+  Dashboard → Integrations). Bearer token cached in memory, single-flight refresh, 401 → refresh →
+  retry-once. Base hosts: staging `staging.fawaterk.com`, live `app.fawaterk.com`.
+- **Methods:** `GET /api/v3/getTrPaymentmethods` — field rename `payment_method_id` (was `paymentId`),
+  normalized server-side so the SPA contract is unchanged.
+- **Create:** `POST /api/v3/createTransaction` → `{ intent_key (uuid), url? , payment_data? }`. No
+  `invoice_id`/`invoice_key`. We send `payment_method_id` (direct mode for every method),
+  `pay_load:{paymentId}`, per-tx `_json` webhook URL, `due_date`, `mobileWalletNumber` for wallets.
+- **Read:** `POST /api/v3/getTransactionData {intent_key}` → `{ paid, total, currency, payment_method,
+  transaction_id, paid_at }`. A **string-message 422** = invalid/expired/not-found intent (treat as
+  "not paid, possibly expired"); an **object-message 422** = our request is malformed (throw — must
+  never masquerade as pending).
+- **Webhooks** (all HMAC-SHA256 with the vendor API key = `FAWATERK_API_KEY`):
+  paid/pending TR `transactionHashKey` over `TransactionId=…&TransactionKey=…&PaymentMethod=…`;
+  failed `hashKey` (same TR shape); cancel `hashKey` over `referenceId=…&PaymentMethod=…`;
+  refund `hashKey` over `transactionId=…&amount=…&currency=…`. `transaction_key` == our stored
+  `fawaterk_intent_key`.
+
+### Key decisions (carried into code)
+
+- **`paymentId` (our UUID) is the sole flow key** — it exists from checkout, so every UX path works
+  even in gateway crash windows. Gateway ids (`intent_key`, `transaction_id`) are internal
+  correlation data. (Was the most expensive bug class in v2: SPA/server id contract drift.)
+- **Direct-dispatch for every method, codes rendered in-app.** v3 forced-link responses carry no
+  `payment_data`, so v2's `redirectOption` force-redirect could not carry over — reference codes now
+  render on our own `/payment/pending` page.
+- **Strict on `intent_key`, lenient on `payment_data`.** Once the intent exists the payment is live;
+  an unrecognized `payment_data` shape degrades UX (pending page + webhook/verify), never marks the
+  payment failed. Only a non-2xx / missing-`intent_key` createTransaction failure releases holds.
+- **Webhook is a trigger, not a source of truth.** Every paid webhook re-verifies via
+  `getTransactionData` and re-checks amount + currency before fulfilling (v2 security posture kept).
+- **Due-date/TTL alignment (outcome):** `createTransaction.due_date` is passed the checkout's
+  `expiresAt` (= `reservedAt + RESERVATION_TTL_MS`, 72h) — a single source, so gateway reference
+  lifetime matches our pending window (v3 default is only +2 days, which would render dead codes as
+  payable). Wire format sent: `Y-m-d H:i:s` in **UTC** (`formatFawaterkDueDate`) — **verify format +
+  timezone on staging (AE8)**; the fallback is lowering both TTL constants (`RESERVATION_TTL_MS` +
+  `PENDING_PAYMENT_EXPIRY_MS`) together to the gateway window.
+- **Hard cutover, void status = `failed`.** No kill switch. `void-v2-pending-payments.ts` sets
+  still-pending v2 rows (`fawaterk_invoice_id` set, `fawaterk_intent_key` null) to `failed`
+  (deliberately outside every recovery scan — never resurrected) and releases reservations. Rollback
+  is clean only before the void + first organic v3 checkout.
+- **Cancel/failed/refund webhooks are verify-and-log-only in v1** (KTD-7): a `pending → failed`
+  transition is unrecoverable by every scan and would strand money on retry-then-pay; cancel's early
+  capacity release is a new gateway-driven mutation (Phase 7 evidence-gated upgrade); refunds stay
+  manual. All three verify the signature unconditionally (401 on missing/invalid).
+- **`FAWATERK_API_KEY` stays permanently** — under v3 it no longer authenticates API calls but is the
+  HMAC secret for every webhook.
+
+### Staging/live findings — **TBD (fill from U15/U16)**
+
+These could not be captured at implementation time (no staging creds); record them here after the
+staging gate and canary:
+
+- **Webhook correlation (AE5):** confirm `transaction_key === fawaterk_intent_key` in a real webhook.
+  _If it fails_, the `pay_load`→`paymentId` fallback (plan U10 T6) must be implemented — currently
+  NOT in the code. **Result: TBD.**
+- **Webhook hash format/length (AE6):** the verifier uses a general hex + length-equality guard (not
+  hard-coded 64-hex). Record the observed format. **Result: TBD.**
+- **`due_date` acceptance (AE8):** format + wall-clock/timezone as reflected by `getTransactionData`.
+  **Result: TBD.**
+- **Wallet phone (AE7):** whether v3 still 422s on E.164 vs the converted `01…` local format.
+  **Result: TBD.**
+- **Per-method `payment_data` shapes:** Apple Pay (live-only), Aman, Masary — undocumented in the
+  spec, parsed leniently. Record actual field names to extend the parser. **Result: TBD.**
+- **Fawaterk webhook retry policy** on a 404 (paid + unknown `transaction_key`) — KTD-6 assumes a
+  retry bridges the persist race; if it does not, the 15-min reconciliation job is the only bridge.
+  **Result: TBD.**
 
 ---
 

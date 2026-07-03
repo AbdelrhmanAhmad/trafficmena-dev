@@ -29,7 +29,7 @@ TrafficMENA Hub is a production digital marketing education platform for the MEN
 *   **Validation:** Zod for payload validation.
 *   **Sanitization:** DOMPurify for user content.
 *   **CSRF:** Token-based CSRF protection on all API routes.
-*   **Payments:** HMAC-verified Fawaterk webhooks. Fawaterk API key required in production.
+*   **Payments:** Fawaterk **API v3** (OAuth client-credentials auth + transaction-intent model). HMAC-verified webhooks (the vendor API key is the HMAC secret). OAuth client id/secret + API key required in production.
 
 ## Key Files for Reference
 *   `AGENTS.md`: Detailed "AI Coder" instructions and status reports.
@@ -233,8 +233,11 @@ POST /api/payments/checkout            # Create payment invoice (rate limited)
 POST /api/payments/verify              # Poll for payment confirmation
 GET  /api/payments/price-preview       # Preview price with discounts
 GET  /api/payments/:id                 # Payment status
-POST /api/payments/webhook             # Fawaterk webhook (HMAC verified)
-POST /api/payments/webhook_json        # Alternative webhook
+POST /api/payments/webhook             # Fawaterk paid/pending TR webhook (HMAC verified)
+POST /api/payments/webhook_json        # Same handler, JSON delivery (dashboard-registered URL)
+POST /api/payments/webhook_cancel      # Cancel webhook (verify + log only)
+POST /api/payments/webhook_failed_json # Failed webhook (verify + log only)
+POST /api/payments/webhook_refund      # Refund webhook (verify + log only)
 
 # Subscriptions
 GET  /api/subscriptions/current        # User's active subscription
@@ -285,9 +288,11 @@ RESEND_API_KEY=...                 # Email delivery
 BUNNY_STORAGE_ZONE=...           # CDN storage
 BUNNY_STORAGE_ACCESS_KEY=...
 BUNNY_STORAGE_CDN_URL=https://trafficmena.b-cdn.net
-FAWATERK_API_KEY=...              # Payment gateway (required in production)
+FAWATERK_API_KEY=...              # v3 webhook HMAC secret (required in production)
 FAWATERK_ENV=staging              # staging or live
-API_BASE_URL=...                  # For webhook callbacks (optional)
+FAWATERK_CLIENT_ID=...            # v3 OAuth client id (UUID; required in production)
+FAWATERK_CLIENT_SECRET=...        # v3 OAuth client secret (required in production)
+API_BASE_URL=...                  # Webhook callback base; PROD must be https://www.trafficmena.com
 TURNSTILE_SECRET_KEY=...          # Cloudflare CAPTCHA (optional)
 INVITE_SESSION_SECRET=...         # >=16 chars in production
 INVITATION_DAILY_LIMIT=1000       # Max invitations per admin per day
@@ -325,7 +330,7 @@ INVITATION_DAILY_LIMIT=1000       # Max invitations per admin per day
 
 5. **Security Headers** - CSP, HSTS (production), secure headers configured in `server/src/app.ts`.
 
-6. **Payment Flow** - Calculate price -> Create payment + reservation -> Fawaterk invoice -> Verify -> Atomic fulfillment -> Mark paid.
+6. **Payment Flow** - Calculate price -> Create payment + reservation -> Fawaterk v3 transaction intent (`fawaterk_intent_key`) -> Verify/webhook -> Atomic fulfillment -> Mark paid. `paymentId` (our UUID) is the sole SPA flow key.
 
 7. **Reservation System** - 72-hour TTL capacity holds for events and tracks. Background job cleans expired payments.
 

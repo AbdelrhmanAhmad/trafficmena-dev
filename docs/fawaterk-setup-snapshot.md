@@ -1,8 +1,15 @@
 # Fawaterk Payment Gateway Setup Snapshot
 
+> ⚠️ **HISTORICAL (v2) — superseded by API v3 (2026-07-03).** This records the original v2 setup
+> (invoice model, `getPaymentmethods`, `InvoiceId=…` HMAC). The gateway migrated to **API v3**
+> (OAuth client-credentials, transaction-intent model, `TransactionId=…` HMAC). For current setup
+> use `docs/DEPLOYMENT_CHECKLIST_PAYMENT_GATEWAY.md` and the migration plan
+> `docs/plans/2026-07-03-001-fix-fawaterk-v3-migration-plan.md`. Kept for audit only — do not follow
+> the steps below.
+
 **Date:** 2026-01-04
 **Environment:** Staging (`staging.fawaterk.com`)
-**Status:** ✅ Ready for Implementation
+**Status:** ✅ Ready for Implementation (v2 — historical)
 
 ---
 
