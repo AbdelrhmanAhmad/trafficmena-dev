@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   index,
   inet,
@@ -621,6 +622,10 @@ export const payments = pgTable(
     originalAmountCents: integer('original_amount_cents'),
     fawaterkInvoiceId: integer('fawaterk_invoice_id'),
     fawaterkInvoiceKey: text('fawaterk_invoice_key'),
+    // v3 transaction-intent identifiers (additive; the invoice_* columns above stay as historical
+    // financial audit data on pre-cutover rows).
+    fawaterkIntentKey: text('fawaterk_intent_key'),
+    fawaterkTransactionId: bigint('fawaterk_transaction_id', { mode: 'number' }),
     fawryCode: text('fawry_code'),
     amanCode: text('aman_code'),
     masaryCode: text('masary_code'),
@@ -633,6 +638,8 @@ export const payments = pgTable(
     userIdx: index('payments_user_idx').on(table.userId),
     statusIdx: index('payments_status_idx').on(table.status),
     invoiceIdx: index('payments_fawaterk_invoice_idx').on(table.fawaterkInvoiceId),
+    intentKeyIdx: uniqueIndex('payments_fawaterk_intent_key_idx').on(table.fawaterkIntentKey),
+    transactionIdIdx: index('payments_fawaterk_transaction_id_idx').on(table.fawaterkTransactionId),
     promoCodeIdx: index('payments_promo_code_idx').on(table.promoCodeId),
     uniquePendingPayment: uniqueIndex('payments_unique_pending')
       .on(table.userId, table.itemType, table.itemId)
