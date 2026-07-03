@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, inArray, isNull, lt, ne, type SQL, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -20,10 +20,12 @@ import {
   users,
 } from '../../db/schema/index.js';
 import {
-  getInvoiceData,
+  createTransaction,
   getPaymentMethods,
-  invoiceInitPay,
-  verifyFawaterkWebhook,
+  getTransactionData,
+  verifyCancelWebhook,
+  verifyRefundWebhook,
+  verifyTransactionWebhook,
 } from '../../services/fawaterk.js';
 import { validatePromoCode } from '../../services/promoCodes.js';
 import { paymentRateLimiter } from '../../services/rateLimiter.js';
@@ -66,15 +68,56 @@ const checkoutSchema = z.object({
 });
 
 const verifySchema = z.object({
-  invoiceId: z.number().int().positive(),
+  paymentId: z.string().uuid(),
 });
 
-const webhookSchema = z.object({
-  invoice_id: z.number().int().positive(),
-  invoice_key: z.string().min(1).max(255),
-  payment_method: z.string().min(1).max(100),
-  hashKey: z.string().regex(/^[a-f0-9]{64}$/i, 'Invalid HMAC signature format'),
-});
+// v3 TR paid/pending webhook. transaction_key == the createTransaction intent_key. The hash is a
+// non-empty string (not hard-assumed 64-hex — AE6); the verifier applies the hex/length hygiene.
+const trWebhookSchema = z
+  .object({
+    transaction_key: z.string().min(1).max(255),
+    transaction_id: z.union([z.number(), z.string()]),
+    status: z.string().min(1).max(50),
+    payment_method: z.string().min(1).max(100),
+    transactionHashKey: z.string().min(1).max(512),
+    pay_load: z.unknown().optional(),
+  })
+  .passthrough();
+
+// Legacy v2 invoice webhook shape — post-cutover this only feeds the log-only tripwire.
+const legacyWebhookSchema = z
+  .object({
+    invoice_id: z.number().int().positive(),
+  })
+  .passthrough();
+
+const cancelWebhookSchema = z
+  .object({
+    referenceId: z.union([z.number(), z.string()]),
+    paymentMethod: z.string().min(1).max(100),
+    status: z.string().max(50).optional(),
+    transactionKey: z.string().max(255).optional(),
+    hashKey: z.string().min(1).max(512),
+  })
+  .passthrough();
+
+const failedWebhookSchema = z
+  .object({
+    transaction_id: z.union([z.number(), z.string()]),
+    transaction_key: z.string().min(1).max(255),
+    payment_method: z.string().min(1).max(100),
+    hashKey: z.string().min(1).max(512),
+  })
+  .passthrough();
+
+const refundWebhookSchema = z
+  .object({
+    transactionId: z.union([z.number(), z.string()]),
+    amount: z.union([z.number(), z.string()]),
+    currency: z.string().min(1).max(10),
+    hashKey: z.string().min(1).max(512),
+  })
+  .passthrough();
 
 // --- Types ---
 
@@ -94,7 +137,6 @@ type PriceResult = {
 type CheckoutSuccessPayload = {
   paymentId: string;
   free?: boolean;
-  invoiceId?: number;
   redirectUrl?: string;
   fawryCode?: string;
   meezaReference?: string;
@@ -342,7 +384,10 @@ async function recordPaymentFulfillmentFailure(
       itemId: payments.itemId,
       ticketType: payments.ticketType,
       amountCents: payments.amountCents,
+      // invoiceId is null on v3 rows; the gateway transaction id (when confirmed) is the v3
+      // correlation key for dead-letter triage — surfaced in the failure log below.
       invoiceId: payments.fawaterkInvoiceId,
+      transactionId: payments.fawaterkTransactionId,
       createdAt: payments.createdAt,
     })
     .from(payments)
@@ -1096,41 +1141,88 @@ async function processSuccessfulPayment(
   }
 }
 
-export async function confirmGatewayInvoicePayment(args: {
-  invoiceId: number;
+// Pure decision helper — gateway vs local amount + currency equality. Returns the matched cents on
+// success, or the ApiError code to throw on mismatch. Extracted so the equality rules are unit-
+// testable without a database (U9 T6).
+export function evaluateGatewayAmountCurrency(input: {
+  gatewayTotal: number;
+  gatewayCurrency: string | null | undefined;
+  localAmountCents: number;
+  localCurrency: string | null | undefined;
+}):
+  | { ok: true; amountCents: number }
+  | {
+      ok: false;
+      code: 'INVALID_GATEWAY_AMOUNT' | 'INVOICE_AMOUNT_MISMATCH' | 'INVOICE_CURRENCY_MISMATCH';
+    } {
+  if (!Number.isFinite(input.gatewayTotal) || input.gatewayTotal < 0) {
+    return { ok: false, code: 'INVALID_GATEWAY_AMOUNT' };
+  }
+  const gatewayAmountCents = Math.round(input.gatewayTotal * 100);
+  if (gatewayAmountCents !== input.localAmountCents) {
+    return { ok: false, code: 'INVOICE_AMOUNT_MISMATCH' };
+  }
+  const gatewayCurrency = String(input.gatewayCurrency ?? '')
+    .trim()
+    .toUpperCase();
+  const localCurrency = String(input.localCurrency ?? '')
+    .trim()
+    .toUpperCase();
+  if (!gatewayCurrency || gatewayCurrency !== localCurrency) {
+    return { ok: false, code: 'INVOICE_CURRENCY_MISMATCH' };
+  }
+  return { ok: true, amountCents: gatewayAmountCents };
+}
+
+// Single confirmation chokepoint. Keyed on our payment row (webhook matches by intent key;
+// verify/reconcile by payment id). Preserves every v2 fulfillment safety property: the conditional
+// userId ownership scoping (IDOR guard — payment ids travel in redirect URLs and are not secret),
+// the already-paid short-circuit, amount+currency equality, expired-row recovery, and the
+// FOR-UPDATE compare-and-swap + inside-transaction failure write inside processSuccessfulPayment.
+// The webhook data alone never fulfills — we always re-verify via getTransactionData (KTD-5).
+export async function confirmGatewayTransactionPayment(args: {
+  paymentId?: string;
+  intentKey?: string;
   source: ConfirmationSource;
   userId?: string;
-  expectedInvoiceKey?: string;
 }): Promise<ConfirmGatewayInvoiceResult> {
+  let identifierClause: SQL;
+  if (args.paymentId) {
+    identifierClause = eq(payments.id, args.paymentId);
+  } else if (args.intentKey) {
+    identifierClause = eq(payments.fawaterkIntentKey, args.intentKey);
+  } else {
+    throw new ApiError('PAYMENT_NOT_FOUND', 'Payment not found', 404);
+  }
   const whereClause = args.userId
-    ? and(eq(payments.fawaterkInvoiceId, args.invoiceId), eq(payments.userId, args.userId))
-    : eq(payments.fawaterkInvoiceId, args.invoiceId);
+    ? and(identifierClause, eq(payments.userId, args.userId))
+    : identifierClause;
 
   const [payment] = await db.select().from(payments).where(whereClause).limit(1);
   if (!payment) {
     throw new ApiError('PAYMENT_NOT_FOUND', 'Payment not found', 404);
   }
 
-  if (args.expectedInvoiceKey && payment.fawaterkInvoiceKey !== args.expectedInvoiceKey) {
-    throw new ApiError('INVALID_INVOICE_KEY', 'Invalid invoice key', 401);
-  }
+  const intentKey = payment.fawaterkIntentKey;
 
   if (payment.status === 'paid') {
+    // Idempotent short-circuit. Enrich the payment-method label best-effort, only when there is an
+    // intent to consult (free/legacy paid rows have none).
     let paymentMethod: string | undefined;
-    try {
-      const invoiceData = await getInvoiceData(args.invoiceId);
-      paymentMethod = invoiceData.payment_method;
-    } catch (error) {
-      console.warn('[payments/confirm] Unable to enrich paid payment from gateway invoice', {
-        source: args.source,
-        invoiceId: args.invoiceId,
-        paymentId: payment.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
+    if (intentKey) {
+      try {
+        const gatewayTx = await getTransactionData(intentKey);
+        paymentMethod = gatewayTx.paymentMethod;
+      } catch (error) {
+        console.warn('[payments/confirm] Unable to enrich paid payment from gateway', {
+          source: args.source,
+          paymentId: payment.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
-    // Analytics enrichment is best-effort — payment verification must succeed
-    // even if enrichment queries fail (DB hiccup, timeout, etc.)
+    // Analytics enrichment is best-effort — payment verification must succeed even if it fails.
     let analytics = {};
     try {
       analytics = await loadVerifiedPaymentAnalytics(payment, paymentMethod);
@@ -1149,14 +1241,27 @@ export async function confirmGatewayInvoicePayment(args: {
       ticketType: payment.ticketType,
       amountCents: payment.amountCents,
       ...analytics,
-      fawaterkPaid: true,
+      fawaterkPaid: Boolean(intentKey),
       alreadyProcessed: true,
       confirmationSource: args.source,
     };
   }
 
-  const invoiceData = await getInvoiceData(args.invoiceId);
-  const fawaterkPaid = isInvoicePaid(invoiceData);
+  // Intent-less rows (crash window before the intent persisted, voided v2, free rows): no gateway to
+  // consult → return the local status and make no gateway call (R9).
+  if (!intentKey) {
+    return {
+      status: payment.status,
+      paymentId: payment.id,
+      itemType: payment.itemType,
+      itemId: payment.itemId,
+      fawaterkPaid: false,
+      confirmationSource: args.source,
+    };
+  }
+
+  const gatewayTx = await getTransactionData(intentKey);
+  const fawaterkPaid = isInvoicePaid({ paid: gatewayTx.paid, paid_at: gatewayTx.paidAt ?? null });
 
   if (!fawaterkPaid) {
     return {
@@ -1169,46 +1274,45 @@ export async function confirmGatewayInvoicePayment(args: {
     };
   }
 
-  const gatewayTotal = Number(invoiceData.total);
-  if (!Number.isFinite(gatewayTotal) || gatewayTotal < 0) {
-    throw new ApiError('INVALID_GATEWAY_AMOUNT', 'Gateway invoice amount is invalid.', 502);
-  }
-
-  const gatewayAmountCents = Math.round(gatewayTotal * 100);
-  if (gatewayAmountCents !== payment.amountCents) {
-    console.error('[payments/confirm] Gateway amount mismatch', {
+  const amountCheck = evaluateGatewayAmountCurrency({
+    gatewayTotal: Number(gatewayTx.total),
+    gatewayCurrency: gatewayTx.currency,
+    localAmountCents: payment.amountCents,
+    localCurrency: payment.currency,
+  });
+  if (!amountCheck.ok) {
+    console.error('[payments/confirm] Gateway amount/currency check failed', {
       source: args.source,
-      invoiceId: args.invoiceId,
       paymentId: payment.id,
-      gatewayAmountCents,
+      code: amountCheck.code,
+      gatewayTotal: gatewayTx.total,
+      gatewayCurrency: gatewayTx.currency,
       localAmountCents: payment.amountCents,
+      localCurrency: payment.currency,
     });
-    throw new ApiError(
-      'INVOICE_AMOUNT_MISMATCH',
-      'Invoice amount does not match payment record.',
-      409,
-    );
-  }
-
-  const gatewayCurrency = String(invoiceData.currency ?? '')
-    .trim()
-    .toUpperCase();
-  const localCurrency = String(payment.currency ?? '')
-    .trim()
-    .toUpperCase();
-  if (!gatewayCurrency || gatewayCurrency !== localCurrency) {
-    console.error('[payments/confirm] Gateway currency mismatch', {
-      source: args.source,
-      invoiceId: args.invoiceId,
-      paymentId: payment.id,
-      gatewayCurrency,
-      localCurrency,
-    });
+    if (amountCheck.code === 'INVALID_GATEWAY_AMOUNT') {
+      throw new ApiError('INVALID_GATEWAY_AMOUNT', 'Gateway transaction amount is invalid.', 502);
+    }
+    if (amountCheck.code === 'INVOICE_AMOUNT_MISMATCH') {
+      throw new ApiError(
+        'INVOICE_AMOUNT_MISMATCH',
+        'Invoice amount does not match payment record.',
+        409,
+      );
+    }
     throw new ApiError(
       'INVOICE_CURRENCY_MISMATCH',
       'Invoice currency does not match payment record.',
       409,
     );
+  }
+
+  // Persist the gateway transaction id the first time we see it (admin/triage correlation data).
+  if (gatewayTx.transactionId && payment.fawaterkTransactionId == null) {
+    await db
+      .update(payments)
+      .set({ fawaterkTransactionId: gatewayTx.transactionId })
+      .where(eq(payments.id, payment.id));
   }
 
   const initialStatus: 'pending' | 'paid' | 'failed' | 'expired' = payment.status;
@@ -1232,17 +1336,16 @@ export async function confirmGatewayInvoicePayment(args: {
   const recoveredFromExpired = initialStatus === 'expired' && processStatus === 'paid';
 
   if (recoveredFromExpired) {
-    console.info('[payments/confirm] Recovered expired payment after paid gateway invoice', {
+    console.info('[payments/confirm] Recovered expired payment after paid gateway transaction', {
       source: args.source,
-      invoiceId: args.invoiceId,
       paymentId: payment.id,
     });
   }
 
-  // Analytics enrichment is best-effort — never block payment confirmation
+  // Analytics enrichment is best-effort — never block payment confirmation.
   let analytics = {};
   try {
-    analytics = await loadVerifiedPaymentAnalytics(payment, invoiceData.payment_method);
+    analytics = await loadVerifiedPaymentAnalytics(payment, gatewayTx.paymentMethod);
   } catch (error) {
     console.warn('[payments/confirm] Analytics enrichment failed after payment processing', {
       paymentId: payment.id,
@@ -1468,7 +1571,7 @@ export function registerPaymentRoutes(app: Hono) {
       let replacedPendingPaymentIds: string[] = [];
 
       if (existingPending) {
-        const hasInvoice = Boolean(existingPending.fawaterkInvoiceId);
+        const hasIntent = Boolean(existingPending.fawaterkIntentKey);
         if (!forceNewCode) {
           return c.json(
             {
@@ -1476,7 +1579,6 @@ export function registerPaymentRoutes(app: Hono) {
                 code: 'PENDING_PAYMENT',
                 message: 'A pending payment already exists.',
                 paymentId: existingPending.id,
-                invoiceId: existingPending.fawaterkInvoiceId,
                 fawryCode: existingPending.fawryCode,
                 amanCode: existingPending.amanCode,
                 masaryCode: existingPending.masaryCode,
@@ -1492,8 +1594,8 @@ export function registerPaymentRoutes(app: Hono) {
           );
         }
 
-        if (!hasInvoice) {
-          console.info('[payments/checkout] Replacing pending payment without gateway invoice', {
+        if (!hasIntent) {
+          console.info('[payments/checkout] Replacing pending payment without gateway intent', {
             paymentId: existingPending.id,
             itemType,
             itemId: itemId ?? null,
@@ -1530,13 +1632,6 @@ export function registerPaymentRoutes(app: Hono) {
       const methodName = (selectedMethod.name_en ?? '').toLowerCase();
       const normalizedMethodName = methodName.replace(/[^a-z0-9]/g, '');
       const methodRedirect = String(selectedMethod.redirect ?? '').toLowerCase() === 'true';
-      const forceRedirect =
-        !methodRedirect &&
-        (normalizedMethodName.includes('fawry') ||
-          normalizedMethodName.includes('meeza') ||
-          normalizedMethodName.includes('aman') ||
-          normalizedMethodName.includes('masary') ||
-          normalizedMethodName.includes('mobilewallet'));
       const requiresPhone = normalizedMethodName.includes('mobilewallet');
       const phoneNumber = user.phoneNumber?.trim();
       if (requiresPhone) {
@@ -2029,20 +2124,11 @@ export function registerPaymentRoutes(app: Hono) {
       const webhookBaseUrl = (env.API_BASE_URL ?? env.BETTER_AUTH_ISSUER ?? '').replace(/\/+$/, '');
       const webhookUrl = webhookBaseUrl ? `${webhookBaseUrl}/api/payments/webhook_json` : undefined;
 
-      let invoiceResult: Awaited<ReturnType<typeof invoiceInitPay>>;
+      let transactionResult: Awaited<ReturnType<typeof createTransaction>>;
       try {
-        console.info('[payments/checkout] Initiating payment', {
-          paymentId,
+        transactionResult = await createTransaction({
           paymentMethodId,
-          methodName: selectedMethod.name_en ?? null,
-          methodRedirect,
-          forceRedirect,
-          itemType,
-        });
-        invoiceResult = await invoiceInitPay({
-          paymentMethodId,
-          invoiceNumber: paymentId,
-          cartTotal: amountCents / 100, // Convert cents to EGP
+          cartTotal: amountCents / 100, // EGP (numeric under v3)
           currency: 'EGP',
           customer: {
             first_name: firstName,
@@ -2055,34 +2141,49 @@ export function registerPaymentRoutes(app: Hono) {
           cartItems: [
             {
               name: itemName,
-              price: (amountCents / 100).toFixed(2),
-              quantity: '1',
+              price: Number((amountCents / 100).toFixed(2)),
+              quantity: 1,
             },
           ],
           redirectionUrls: {
-            successUrl: `${env.APP_BASE_URL}/payment/success`,
-            failUrl: `${env.APP_BASE_URL}/payment/failed`,
+            // Bake our own identifier onto the return URLs — v3 does not document what it appends
+            // (AE4). The _json suffix on the webhook URL selects JSON delivery.
+            successUrl: `${env.APP_BASE_URL}/payment/success?payment_id=${paymentId}`,
+            failUrl: `${env.APP_BASE_URL}/payment/failed?payment_id=${paymentId}`,
             pendingUrl,
             webhookUrl,
           },
-          redirectOption: forceRedirect ? true : undefined,
           payload: { paymentId },
+          // Align the gateway reference lifetime to our 72h pending window (RESERVATION_TTL_MS) —
+          // v3's own default is only +2 days, which would render dead codes as payable.
+          dueDate: expiresAt,
+          mobileWalletNumber:
+            requiresPhone && phoneNumber ? toFawaterkLocalPhone(phoneNumber) : undefined,
         });
 
-        // Persist the Fawaterk invoice details. The replaced hold was already released inside the
-        // checkout transaction above, so there is nothing left to clean up on the success path.
+        // Persist the intent key + reference codes before responding. Once createTransaction
+        // succeeds the intent is live at the gateway, so a payment_data parsing surprise must NOT
+        // mark the row failed — only a createTransaction failure does (handled in catch).
         await db
           .update(payments)
           .set({
-            fawaterkInvoiceId: invoiceResult.invoiceId,
-            fawaterkInvoiceKey: invoiceResult.invoiceKey,
-            fawryCode: invoiceResult.paymentData.fawryCode ?? null,
-            amanCode: invoiceResult.paymentData.amanCode ?? null,
-            masaryCode: invoiceResult.paymentData.masaryCode ?? null,
-            meezaReference: invoiceResult.paymentData.meezaReference ?? null,
-            meezaQrCode: invoiceResult.paymentData.meezaQrCode ?? null,
+            fawaterkIntentKey: transactionResult.intentKey,
+            fawryCode: transactionResult.paymentData.fawryCode ?? null,
+            amanCode: transactionResult.paymentData.amanCode ?? null,
+            masaryCode: transactionResult.paymentData.masaryCode ?? null,
+            meezaReference: transactionResult.paymentData.meezaReference ?? null,
+            meezaQrCode: transactionResult.paymentData.meezaQrCode ?? null,
           })
           .where(eq(payments.id, paymentId));
+
+        console.info('[payments/checkout] Initiating payment', {
+          paymentId,
+          paymentMethodId,
+          methodName: selectedMethod.name_en ?? null,
+          methodRedirect,
+          itemType,
+          intentKey: transactionResult.intentKey,
+        });
       } catch (error) {
         await db.update(payments).set({ status: 'failed' }).where(eq(payments.id, paymentId));
         await db.delete(eventReservations).where(eq(eventReservations.paymentId, paymentId));
@@ -2093,13 +2194,12 @@ export function registerPaymentRoutes(app: Hono) {
 
       return respondCheckoutSuccess({
         paymentId,
-        invoiceId: invoiceResult.invoiceId,
-        redirectUrl: invoiceResult.paymentData.redirectTo,
-        fawryCode: invoiceResult.paymentData.fawryCode,
-        meezaReference: invoiceResult.paymentData.meezaReference,
-        meezaQrCode: invoiceResult.paymentData.meezaQrCode,
-        amanCode: invoiceResult.paymentData.amanCode,
-        masaryCode: invoiceResult.paymentData.masaryCode,
+        redirectUrl: transactionResult.redirectUrl,
+        fawryCode: transactionResult.paymentData.fawryCode,
+        meezaReference: transactionResult.paymentData.meezaReference,
+        meezaQrCode: transactionResult.paymentData.meezaQrCode,
+        amanCode: transactionResult.paymentData.amanCode,
+        masaryCode: transactionResult.paymentData.masaryCode,
       });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -2123,7 +2223,6 @@ export function registerPaymentRoutes(app: Hono) {
                 code: 'PENDING_PAYMENT',
                 message: 'A pending payment already exists.',
                 paymentId: pendingPayment.id,
-                invoiceId: pendingPayment.fawaterkInvoiceId,
                 fawryCode: pendingPayment.fawryCode,
                 amanCode: pendingPayment.amanCode,
                 masaryCode: pendingPayment.masaryCode,
@@ -2187,11 +2286,12 @@ export function registerPaymentRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: result.error.message } }, 400);
     }
 
-    const { invoiceId } = result.data;
+    const { paymentId } = result.data;
 
     try {
-      const processResult = await confirmGatewayInvoicePayment({
-        invoiceId,
+      // Session-scoped: userId scoping in confirm enforces the payment belongs to the caller.
+      const processResult = await confirmGatewayTransactionPayment({
+        paymentId,
         source: 'verify',
         userId: session.user.id,
       });
@@ -2335,6 +2435,7 @@ export function registerPaymentRoutes(app: Hono) {
         itemId: payment.itemId,
         ticketType: payment.ticketType,
         fawaterkInvoiceId: payment.fawaterkInvoiceId,
+        fawaterkTransactionId: payment.fawaterkTransactionId,
         fawryCode: payment.fawryCode,
         amanCode: payment.amanCode,
         masaryCode: payment.masaryCode,
@@ -2346,10 +2447,9 @@ export function registerPaymentRoutes(app: Hono) {
     });
   });
 
-  // POST /payments/webhook(_json) - Fawaterk webhook for server-to-server payment confirmation
-  // This endpoint is NOT authenticated via session - uses HMAC signature verification
-  const handleWebhook = async (c: Context) => {
-    // IP-based rate limiting to prevent DoS attacks
+  // Shared per-IP webhook throttle. All four webhook routes are unauthenticated public POSTs, so
+  // none may ship unthrottled. Returns a 429 response to short-circuit, or null to proceed.
+  const enforceWebhookRateLimit = (c: Context): Response | null => {
     const clientIp =
       c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
       c.req.header('x-real-ip') ||
@@ -2362,62 +2462,185 @@ export function registerPaymentRoutes(app: Hono) {
       c.header('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
       return c.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, 429);
     }
-
-    const body = await c.req.json();
-    const result = webhookSchema.safeParse(body);
-    if (!result.success) {
-      console.error('[payments/webhook] Invalid payload:', result.error.message);
-      return c.json({ error: { code: 'INVALID_PAYLOAD' } }, 400);
-    }
-
-    const webhookData = result.data;
-
-    // SECURITY: Verify HMAC signature using timing-safe comparison
-    if (!verifyFawaterkWebhook(webhookData)) {
-      console.error('[payments/webhook] Invalid signature');
-      return c.json({ error: { code: 'INVALID_SIGNATURE' } }, 401);
-    }
-
-    try {
-      const processResult = await confirmGatewayInvoicePayment({
-        invoiceId: webhookData.invoice_id,
-        expectedInvoiceKey: webhookData.invoice_key,
-        source: 'webhook',
-      });
-
-      console.info('[payments/webhook] Confirmation processed', {
-        invoiceId: webhookData.invoice_id,
-        paymentId: processResult.paymentId,
-        status: processResult.status,
-        fawaterkPaid: processResult.fawaterkPaid,
-        recoveredFromExpired: processResult.recoveredFromExpired ?? false,
-      });
-
-      return c.json({ data: processResult });
-    } catch (error) {
-      if (error instanceof ApiError) {
-        if (error.code === 'PAYMENT_NOT_FOUND') {
-          console.error(
-            '[payments/webhook] Payment not found for invoice:',
-            webhookData.invoice_id,
-          );
-          return c.json({ error: { code: 'PAYMENT_NOT_FOUND' } }, 404);
-        }
-        if (error.code === 'INVALID_INVOICE_KEY') {
-          console.error('[payments/webhook] Invoice key mismatch');
-          return c.json({ error: { code: 'INVALID_INVOICE_KEY' } }, 401);
-        }
-        console.error('[payments/webhook] Processing error:', error.code, error.message);
-        return c.json(
-          { error: { code: error.code, message: error.message } },
-          error.status as ContentfulStatusCode,
-        );
-      }
-      console.error('[payments/webhook] Processing failed:', error);
-      return c.json({ error: { code: 'PROCESSING_FAILED' } }, 500);
-    }
+    return null;
   };
 
-  app.post('/payments/webhook', handleWebhook);
-  app.post('/payments/webhook_json', handleWebhook);
+  // POST /payments/webhook(_json) - Fawaterk paid/pending TR webhook (server-to-server confirmation).
+  // NOT session-authenticated — HMAC signature verification only. Three-case semantics (KTD-6):
+  // paid+matched → confirm result; paid+unknown transaction_key → 404 (prompts gateway retry, bridges
+  // the checkout-persist race); pending → 200 ack (no DB write); legacy shape → log-only tripwire.
+  const handlePaidWebhook = async (c: Context) => {
+    const limited = enforceWebhookRateLimit(c);
+    if (limited) {
+      return limited;
+    }
+
+    const body = await c.req.json().catch(() => null);
+
+    const tr = trWebhookSchema.safeParse(body);
+    if (tr.success) {
+      const data = tr.data;
+      // SECURITY: verify the transaction HMAC before any lookup or state change.
+      const verified = verifyTransactionWebhook({
+        transaction_id: data.transaction_id,
+        transaction_key: data.transaction_key,
+        payment_method: data.payment_method,
+        hash: data.transactionHashKey,
+      });
+      if (!verified) {
+        console.error('[payments/webhook] Invalid TR signature');
+        return c.json({ error: { code: 'INVALID_SIGNATURE' } }, 401);
+      }
+
+      // Async references (Fawry/Aman/Masary) fire status:"pending" — acknowledge, no fulfillment.
+      if (data.status.toLowerCase() === 'pending') {
+        console.info('[payments/webhook] Pending acknowledgement', {
+          transactionKey: data.transaction_key,
+          paymentMethod: data.payment_method,
+        });
+        return c.json({ data: { status: 'pending' } });
+      }
+
+      try {
+        // Match by intent key. confirm re-verifies via getTransactionData — webhook never fulfills
+        // on its own (KTD-5).
+        const processResult = await confirmGatewayTransactionPayment({
+          intentKey: data.transaction_key,
+          source: 'webhook',
+        });
+        console.info('[payments/webhook] Confirmation processed', {
+          transactionKey: data.transaction_key,
+          paymentId: processResult.paymentId,
+          status: processResult.status,
+          fawaterkPaid: processResult.fawaterkPaid,
+          recoveredFromExpired: processResult.recoveredFromExpired ?? false,
+        });
+        return c.json({ data: processResult });
+      } catch (error) {
+        if (error instanceof ApiError && error.code === 'PAYMENT_NOT_FOUND') {
+          console.error('[payments/webhook] No payment for transaction_key', data.transaction_key);
+          return c.json({ error: { code: 'PAYMENT_NOT_FOUND' } }, 404);
+        }
+        if (error instanceof ApiError) {
+          console.error('[payments/webhook] Processing error:', error.code, error.message);
+          return c.json(
+            { error: { code: error.code, message: error.message } },
+            error.status as ContentfulStatusCode,
+          );
+        }
+        console.error('[payments/webhook] Processing failed:', error);
+        return c.json({ error: { code: 'PROCESSING_FAILED' } }, 500);
+      }
+    }
+
+    // Legacy v2 invoice payload → log-only tripwire (no verification, no DB write), 200. Feeds the
+    // support protocol; removed after two silent weeks.
+    const legacy = legacyWebhookSchema.safeParse(body);
+    if (legacy.success) {
+      console.warn(
+        `[payments/webhook] post-cutover legacy webhook, invoice_id=${legacy.data.invoice_id} — manual review`,
+      );
+      return c.json({ data: { status: 'legacy_acknowledged' } });
+    }
+
+    console.error('[payments/webhook] Invalid payload');
+    return c.json({ error: { code: 'INVALID_PAYLOAD' } }, 400);
+  };
+
+  // Cancel/failed/refund webhooks: verify the signature UNCONDITIONALLY (the contract signs every
+  // delivery), then log-only — no DB writes in v1 (KTD-7). "Verify when present" would let any
+  // unauthenticated caller inject forged entries into the triage logs.
+  const handleCancelWebhook = async (c: Context) => {
+    const limited = enforceWebhookRateLimit(c);
+    if (limited) {
+      return limited;
+    }
+    const parsed = cancelWebhookSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json({ error: { code: 'INVALID_PAYLOAD' } }, 400);
+    }
+    const data = parsed.data;
+    const verified = verifyCancelWebhook({
+      referenceId: data.referenceId,
+      paymentMethod: data.paymentMethod,
+      hash: data.hashKey,
+    });
+    if (!verified) {
+      console.error('[payments/webhook_cancel] Invalid signature');
+      return c.json({ error: { code: 'INVALID_SIGNATURE' } }, 401);
+    }
+    // Log-only: the 72h TTL job remains the sole capacity-release mechanism (v2 parity). Captures
+    // volume evidence for the Phase 7 pending→expired upgrade decision.
+    console.info('[payments/webhook_cancel] Cancel webhook', {
+      referenceId: data.referenceId,
+      transactionKey: data.transactionKey ?? null,
+      status: data.status ?? null,
+      paymentMethod: data.paymentMethod,
+    });
+    return c.json({ data: { status: 'acknowledged' } });
+  };
+
+  const handleFailedWebhook = async (c: Context) => {
+    const limited = enforceWebhookRateLimit(c);
+    if (limited) {
+      return limited;
+    }
+    const parsed = failedWebhookSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json({ error: { code: 'INVALID_PAYLOAD' } }, 400);
+    }
+    const data = parsed.data;
+    const verified = verifyTransactionWebhook({
+      transaction_id: data.transaction_id,
+      transaction_key: data.transaction_key,
+      payment_method: data.payment_method,
+      hash: data.hashKey,
+    });
+    if (!verified) {
+      console.error('[payments/webhook_failed] Invalid signature');
+      return c.json({ error: { code: 'INVALID_SIGNATURE' } }, 401);
+    }
+    // Log-only: a pending → failed transition is unrecoverable by every confirm/reconcile scan and
+    // would strand money when a user retries an intent and pays.
+    console.info('[payments/webhook_failed] Failed webhook', {
+      transactionKey: data.transaction_key,
+      paymentMethod: data.payment_method,
+    });
+    return c.json({ data: { status: 'acknowledged' } });
+  };
+
+  const handleRefundWebhook = async (c: Context) => {
+    const limited = enforceWebhookRateLimit(c);
+    if (limited) {
+      return limited;
+    }
+    const parsed = refundWebhookSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) {
+      return c.json({ error: { code: 'INVALID_PAYLOAD' } }, 400);
+    }
+    const data = parsed.data;
+    const verified = verifyRefundWebhook({
+      transactionId: data.transactionId,
+      amount: data.amount,
+      currency: data.currency,
+      hash: data.hashKey,
+    });
+    if (!verified) {
+      console.error('[payments/webhook_refund] Invalid signature');
+      return c.json({ error: { code: 'INVALID_SIGNATURE' } }, 401);
+    }
+    // Log-only: refunds stay manual via the dashboard + R31 support protocol.
+    console.info('[payments/webhook_refund] Refund webhook', {
+      transactionId: data.transactionId,
+      amount: data.amount,
+      currency: data.currency,
+    });
+    return c.json({ data: { status: 'acknowledged' } });
+  };
+
+  app.post('/payments/webhook', handlePaidWebhook);
+  app.post('/payments/webhook_json', handlePaidWebhook);
+  app.post('/payments/webhook_cancel', handleCancelWebhook);
+  app.post('/payments/webhook_failed_json', handleFailedWebhook);
+  app.post('/payments/webhook_refund', handleRefundWebhook);
 }
