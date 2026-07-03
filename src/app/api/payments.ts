@@ -24,6 +24,8 @@ export type CheckoutRequest = {
   idempotencyKey?: string;
   promoCode?: string;
   ticketType?: TicketType;
+  // Mobile-wallet payer number (E.164), sent only for wallet methods; may differ from profile phone.
+  walletPhone?: string;
 };
 
 export type CheckoutResponse = {

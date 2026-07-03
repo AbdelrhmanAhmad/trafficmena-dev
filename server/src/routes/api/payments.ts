@@ -43,7 +43,7 @@ import {
   type TicketType,
 } from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
-import { isEgyptianMobileE164, toFawaterkLocalPhone } from './users-phone.js';
+import { isEgyptianMobileE164, normalizePhoneNumber, toFawaterkLocalPhone } from './users-phone.js';
 import { getOptionalUserRole, isKnownDatabaseConflict } from './utils.js';
 
 // --- Rate Limit Rules ---
@@ -65,6 +65,8 @@ const checkoutSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(128).optional(),
   promoCode: z.string().optional(),
   ticketType: z.enum(TICKET_TYPES).optional(),
+  // Mobile-wallet payer number entered at checkout (may differ from the profile phone). E.164.
+  walletPhone: z.string().trim().max(20).optional(),
 });
 
 const verifySchema = z.object({
@@ -1435,6 +1437,7 @@ export function registerPaymentRoutes(app: Hono) {
     const { itemType, itemId, paymentMethodId, forceNewCode, idempotencyKey, ticketType } =
       result.data;
     const promoCode = result.data.promoCode?.trim() || undefined;
+    const walletPhoneInput = result.data.walletPhone?.trim() || undefined;
 
     // Validate subscription doesn't need itemId
     if (itemType === 'subscription' && itemId) {
@@ -1633,25 +1636,33 @@ export function registerPaymentRoutes(app: Hono) {
       const normalizedMethodName = methodName.replace(/[^a-z0-9]/g, '');
       const methodRedirect = String(selectedMethod.redirect ?? '').toLowerCase() === 'true';
       const requiresPhone = normalizedMethodName.includes('mobilewallet');
-      const phoneNumber = user.phoneNumber?.trim();
+      const profilePhone = user.phoneNumber?.trim() || undefined;
+      // Wallet methods charge the number the user entered at checkout (their wallet may be on a
+      // different number than their profile); fall back to the profile phone for older clients.
+      // Non-wallet methods keep using the profile phone as the customer contact number.
+      const walletNumber = requiresPhone
+        ? normalizePhoneNumber(walletPhoneInput || profilePhone || '')
+        : undefined;
       if (requiresPhone) {
-        if (!phoneNumber) {
+        if (!walletNumber) {
           throw new ApiError(
             'PHONE_REQUIRED',
-            'Phone number is required for mobile wallet payments. Please update your profile.',
+            'Enter the mobile number your wallet is registered on.',
             400,
           );
         }
         // Fawaterk mobile wallet only works for Egyptian (+20) numbers. Reject others up front
         // instead of sending the user into a gateway flow that can't fulfill the charge.
-        if (!isEgyptianMobileE164(phoneNumber)) {
+        if (!isEgyptianMobileE164(walletNumber)) {
           throw new ApiError(
             'PHONE_NOT_EGYPTIAN',
-            'Mobile wallet payments require an Egyptian (+20) mobile number. Please update your profile or choose another payment method.',
+            'Mobile wallet payments require an Egyptian (+20) mobile number.',
             400,
           );
         }
       }
+      // Contact phone sent to the gateway: the wallet number for wallet payments, else the profile.
+      const contactPhone = requiresPhone ? walletNumber : profilePhone;
 
       // If free, process immediately without payment
       if (calculatedPriceResult.amountCents === 0) {
@@ -2136,7 +2147,7 @@ export function registerPaymentRoutes(app: Hono) {
             email: user.email,
             // Convert canonical E.164 (+20...) to the local MSISDN (01...) Fawaterk expects.
             // Non-+20 numbers pass through unchanged; wallet is already guarded to +20 above.
-            phone: phoneNumber ? toFawaterkLocalPhone(phoneNumber) : undefined,
+            phone: contactPhone ? toFawaterkLocalPhone(contactPhone) : undefined,
           },
           cartItems: [
             {
@@ -2158,7 +2169,7 @@ export function registerPaymentRoutes(app: Hono) {
           // v3's own default is only +2 days, which would render dead codes as payable.
           dueDate: expiresAt,
           mobileWalletNumber:
-            requiresPhone && phoneNumber ? toFawaterkLocalPhone(phoneNumber) : undefined,
+            requiresPhone && walletNumber ? toFawaterkLocalPhone(walletNumber) : undefined,
         });
 
         // Persist the intent key + reference codes before responding. Once createTransaction

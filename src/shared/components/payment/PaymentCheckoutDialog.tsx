@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import type { PaymentItemType, TicketType } from '@/app/api/payments';
+import { useCurrentUser } from '@/app/hooks/useCurrentUser';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { trackBeginCheckout, trackSelectPaymentMethod } from '@/lib/analytics/events';
 import { centsToUnits } from '@/lib/analytics/helpers';
@@ -25,6 +26,7 @@ import {
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
+import { isWalletMethod, WalletNumberField } from './WalletNumberField';
 
 interface PaymentCheckoutDialogProps {
   open: boolean;
@@ -63,7 +65,9 @@ export function PaymentCheckoutDialog({
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { data: currentUser } = useCurrentUser();
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
+  const [walletPhone, setWalletPhone] = useState<string | null>(null);
   const [checkoutStuck, setCheckoutStuck] = useState(false);
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const checkoutRequestLockRef = useRef(false);
@@ -75,6 +79,7 @@ export function PaymentCheckoutDialog({
   useEffect(() => {
     if (!open) {
       setSelectedMethodId(null);
+      setWalletPhone(null);
       beginCheckoutFiredRef.current = false;
     }
   }, [open]);
@@ -99,9 +104,13 @@ export function PaymentCheckoutDialog({
   );
   const { data: methods } = usePaymentMethods({ enabled: shouldFetchPricing });
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
+  const walletRequired = isWalletMethod(selectedMethod?.name_en);
   const hasPromoApplied =
     Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !pricePreview.isFree;
-  const canSubmitCheckout = Boolean(selectedMethodId) && !createCheckout.isPending;
+  const canSubmitCheckout =
+    Boolean(selectedMethodId) &&
+    !createCheckout.isPending &&
+    (!walletRequired || Boolean(walletPhone));
   const analyticsItemId = getAnalyticsItemId(itemType, itemId);
   const fallbackAmountFormatted =
     basePriceCents && basePriceCents > 0 ? `${centsToUnits(basePriceCents).toFixed(2)} EGP` : '';
@@ -205,6 +214,7 @@ export function PaymentCheckoutDialog({
         promoCode: appliedPromoCode,
         ticketType,
         forceNewCode,
+        walletPhone: walletRequired ? (walletPhone ?? undefined) : undefined,
       });
 
       if (result.free) {
@@ -299,6 +309,15 @@ export function PaymentCheckoutDialog({
             disabled={createCheckout.isPending}
             enabled={shouldFetchPricing}
           />
+          {walletRequired && (
+            <div className="mt-4">
+              <WalletNumberField
+                disabled={createCheckout.isPending}
+                onChange={setWalletPhone}
+                profilePhone={currentUser?.profile?.phone_number}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>

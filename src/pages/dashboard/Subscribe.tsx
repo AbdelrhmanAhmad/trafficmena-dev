@@ -3,6 +3,7 @@ import { Check, Crown, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
+import { useCurrentUser } from '@/app/hooks/useCurrentUser';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { useCurrentSubscription, useSubscriptionInfo } from '@/app/hooks/useSubscriptions';
 import {
@@ -26,7 +27,11 @@ import {
   shouldTrackStandaloneCheckoutEntry,
 } from '@/lib/analytics/paymentFlow';
 import AppLayout from '@/shared/components/layout/AppLayout';
-import { PaymentMethodSelector } from '@/shared/components/payment';
+import {
+  isWalletMethod,
+  PaymentMethodSelector,
+  WalletNumberField,
+} from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -96,6 +101,10 @@ function HeroSection({
   onSubscribe,
   isPending,
   isLoaded,
+  walletRequired,
+  profilePhone,
+  onWalletPhoneChange,
+  canSubmit,
 }: {
   subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
   pricePreview: { amountFormatted?: string } | undefined;
@@ -104,6 +113,10 @@ function HeroSection({
   onSubscribe: () => void;
   isPending: boolean;
   isLoaded: boolean;
+  walletRequired: boolean;
+  profilePhone?: string | null;
+  onWalletPhoneChange: (e164: string | null) => void;
+  canSubmit: boolean;
 }) {
   return (
     <section
@@ -180,11 +193,20 @@ function HeroSection({
                   onChange={setSelectedMethodId}
                   disabled={isPending}
                 />
+                {walletRequired && (
+                  <div className="mt-4">
+                    <WalletNumberField
+                      disabled={isPending}
+                      onChange={onWalletPhoneChange}
+                      profilePhone={profilePhone}
+                    />
+                  </div>
+                )}
               </div>
 
               <Button
                 onClick={onSubscribe}
-                disabled={!selectedMethodId || isPending}
+                disabled={!canSubmit || isPending}
                 className="group w-full transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0"
               >
                 {isPending ? (
@@ -214,12 +236,12 @@ function HeroSection({
 // Final CTA Section with Payment
 function FinalCTASection({
   subscriptionInfo,
-  selectedMethodId,
+  canSubmit,
   onSubscribe,
   isPending,
 }: {
   subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
-  selectedMethodId: number | null;
+  canSubmit: boolean;
   onSubscribe: () => void;
   isPending: boolean;
 }) {
@@ -245,7 +267,7 @@ function FinalCTASection({
         <div className="mt-8">
           <Button
             onClick={onSubscribe}
-            disabled={!selectedMethodId || isPending}
+            disabled={!canSubmit || isPending}
             className="group inline-flex max-w-full transform items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0 whitespace-normal text-center"
           >
             {isPending ? (
@@ -260,9 +282,9 @@ function FinalCTASection({
               </>
             )}
           </Button>
-          {!selectedMethodId && (
+          {!canSubmit && (
             <p className="mt-3 text-sm text-white/50">
-              Please select a payment method above to continue
+              Complete the payment details above to continue
             </p>
           )}
         </div>
@@ -288,15 +310,19 @@ function SubscribePaymentView() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
+  const [walletPhone, setWalletPhone] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const checkoutRequestLockRef = useRef(false);
   const beginCheckoutFiredRef = useRef(false);
 
   const { data: subscriptionInfo } = useSubscriptionInfo();
   const { data: pricePreview } = usePricePreview('subscription', undefined, undefined);
+  const { data: currentUser } = useCurrentUser();
   const createCheckout = useCreateCheckout();
   const { data: methods } = usePaymentMethods();
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
+  const walletRequired = isWalletMethod(selectedMethod?.name_en);
+  const canSubmit = Boolean(selectedMethodId) && (!walletRequired || Boolean(walletPhone));
   const analyticsItemId = getAnalyticsItemId('subscription');
   const subscriptionBasePriceCents = getAmountCentsFromUnits(subscriptionInfo?.priceEgp);
 
@@ -389,6 +415,7 @@ function SubscribePaymentView() {
         idempotencyKey: createCheckoutIdempotencyKey(
           `subscription:${analyticsItemId}:${selectedMethodId}`,
         ),
+        walletPhone: walletRequired ? (walletPhone ?? undefined) : undefined,
       });
 
       if (result.free) {
@@ -450,6 +477,10 @@ function SubscribePaymentView() {
           onSubscribe={handleSubscribe}
           isPending={createCheckout.isPending}
           isLoaded={isLoaded}
+          walletRequired={walletRequired}
+          profilePhone={currentUser?.profile?.phone_number}
+          onWalletPhoneChange={setWalletPhone}
+          canSubmit={canSubmit}
         />
 
         {/* Section 2: Social Proof */}
@@ -476,7 +507,7 @@ function SubscribePaymentView() {
         {/* Section 9: Final CTA with Payment */}
         <FinalCTASection
           subscriptionInfo={subscriptionInfo}
-          selectedMethodId={selectedMethodId}
+          canSubmit={canSubmit}
           onSubscribe={handleSubscribe}
           isPending={createCheckout.isPending}
         />

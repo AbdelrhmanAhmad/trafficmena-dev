@@ -83,15 +83,15 @@ export default function PaymentPendingPage() {
     },
     {
       key: 'meeza',
-      label: 'Meeza reference',
+      label: 'Wallet Reference',
       code: meezaReference,
-      instructions: 'Use this reference in Meeza payment channels to complete your payment.',
+      instructions: 'Use this reference in your wallet app to complete your payment.',
     },
     {
       key: 'meeza-qr',
-      label: 'Meeza QR payload',
+      label: 'Wallet QR code',
       code: meezaQrCode,
-      instructions: 'Scan this payload with your Meeza wallet to complete your payment.',
+      instructions: 'Scan this code with your wallet app to complete your payment.',
     },
   ];
 
@@ -244,7 +244,7 @@ export default function PaymentPendingPage() {
             {entry.key === 'meeza-qr' && meezaQrDataUrl && (
               <img
                 src={meezaQrDataUrl}
-                alt="Meeza QR code"
+                alt="Wallet QR code"
                 className="mx-auto mt-3 h-40 w-40 rounded-md border border-primary/20 bg-white p-2"
               />
             )}
@@ -262,7 +262,7 @@ export default function PaymentPendingPage() {
         ))}
         {isMeezaQrTooLarge && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            Meeza QR payload is too large to render. Please request a new code.
+            Wallet QR code is too large to render. Please request a new code.
           </div>
         )}
       </div>
