@@ -35,11 +35,20 @@ Hard cutover from Fawaterk v2 (invoice model) to v3 (OAuth + transaction-intent 
 - **Auth:** `POST /oauth/token` (grant_type `client_credentials`, `client_id`/`client_secret` from
   Dashboard → Integrations). Bearer token cached in memory, single-flight refresh, 401 → refresh →
   retry-once. Base hosts: staging `staging.fawaterk.com`, live `app.fawaterk.com`.
-- **Methods:** `GET /api/v3/getTrPaymentmethods` — field rename `payment_method_id` (was `paymentId`),
-  normalized server-side so the SPA contract is unchanged.
-- **Create:** `POST /api/v3/createTransaction` → `{ intent_key (uuid), url? , payment_data? }`. No
-  `invoice_id`/`invoice_key`. We send `payment_method_id` (direct mode for every method),
-  `pay_load:{paymentId}`, per-tx `_json` webhook URL, `due_date`, `mobileWalletNumber` for wallets.
+- **Methods:** `GET /api/v3/getTrPaymentmethods` — the live API returns the id as **`paymentId`**; the
+  spec's claimed `payment_method_id` rename did NOT happen (verified against staging 2026-07-03). The
+  client reads `paymentId` with a `payment_method_id` fallback and normalizes server-side so the SPA
+  contract is unchanged. A null `logo` is coerced to `undefined` so one bad method can't fail the whole
+  array parse. (Building to the spec's field name instead of the live one 500'd the methods endpoint in
+  production — always verify shapes against the real API, not the spec.)
+- **Create:** `POST /api/v3/createTransaction`. **The response envelope is NOT uniform** (verified on
+  staging 2026-07-03): card/wallet nest under `data` (`{ data: { intent_key, url?, payment_data? } }`),
+  but **Fawry returns a FLAT top-level body** — `intent_key`, `fawryCode`, `status:"pending"` as
+  siblings with no `data` wrapper. The client accepts both envelopes (reading `result.data ?? result`,
+  and `payment_data ?? container`); assuming the nested shape marked Fawry payments `failed`. `intent_key`
+  is a short alphanumeric string, **not** a uuid. No `invoice_id`/`invoice_key`. We send
+  `payment_method_id` (direct mode for every method), `pay_load:{paymentId}`, per-tx `_json` webhook URL,
+  `due_date`, `mobileWalletNumber` for wallets.
 - **Read:** `POST /api/v3/getTransactionData {intent_key}` → `{ paid, total, currency, payment_method,
   transaction_id, paid_at }`. A **string-message 422** = invalid/expired/not-found intent (treat as
   "not paid, possibly expired"); an **object-message 422** = our request is malformed (throw — must
@@ -80,25 +89,37 @@ Hard cutover from Fawaterk v2 (invoice model) to v3 (OAuth + transaction-intent 
 - **`FAWATERK_API_KEY` stays permanently** — under v3 it no longer authenticates API calls but is the
   HMAC secret for every webhook.
 
-### Staging/live findings — **TBD (fill from U15/U16)**
+### Staging/live findings
 
-These could not be captured at implementation time (no staging creds); record them here after the
-staging gate and canary:
+**Captured against staging 2026-07-03** (createTransaction + getTransactionData probed directly with
+real OAuth creds):
+
+- **Per-method `payment_data` shapes (createTransaction):**
+  - Card (redirect): `{ data: { intent_key, payment_data: { redirectTo } } }`.
+  - Fawry (direct): **flat** `{ status:"pending", intent_key, fawryCode, referenceNumber, reference,
+    expireDate }` — no `data`, no `payment_data`; the code sits at the top level.
+  - Mobile wallet / Meeza (direct): `{ data: { intent_key, payment_data: { meezaReference (integer),
+    meezaQrCode, isoQr, systemReference, logId, pendingUrl } } }`.
+  - Apple Pay (live-only), Aman, Masary — still unobserved (not enabled on staging); parsed leniently.
+- **Wallet phone (AE7):** the converted local `01…` format is accepted by `createTransaction` (returns
+  a Meeza reference). E.164 rejection not re-tested; keep the `toFawaterkLocalPhone` conversion.
+- **Meeza staging is a STUB:** `meezaReference` is the fixed value `403181` on every call (identical
+  QR). Real reference/RTP-push behavior only shows on the live account — needs a live canary.
+- **getTransactionData (unpaid intent):** returns `{ paid:0, total, currency, payment_method,
+  transaction_id }`; `transaction_id` is `0` while cache-only.
+
+Still **TBD** — webhook-dependent, not verifiable without a real delivery (dashboard URLs were
+registered 2026-07-03, but no webhook has been captured/verified yet):
 
 - **Webhook correlation (AE5):** confirm `transaction_key === fawaterk_intent_key` in a real webhook.
-  _If it fails_, the `pay_load`→`paymentId` fallback (plan U10 T6) must be implemented — currently
-  NOT in the code. **Result: TBD.**
+  _If it fails_, the `pay_load`→`paymentId` fallback (plan U10 T6) must be implemented — currently NOT
+  in the code.
 - **Webhook hash format/length (AE6):** the verifier uses a general hex + length-equality guard (not
-  hard-coded 64-hex). Record the observed format. **Result: TBD.**
-- **`due_date` acceptance (AE8):** format + wall-clock/timezone as reflected by `getTransactionData`.
-  **Result: TBD.**
-- **Wallet phone (AE7):** whether v3 still 422s on E.164 vs the converted `01…` local format.
-  **Result: TBD.**
-- **Per-method `payment_data` shapes:** Apple Pay (live-only), Aman, Masary — undocumented in the
-  spec, parsed leniently. Record actual field names to extend the parser. **Result: TBD.**
-- **Fawaterk webhook retry policy** on a 404 (paid + unknown `transaction_key`) — KTD-6 assumes a
-  retry bridges the persist race; if it does not, the 15-min reconciliation job is the only bridge.
-  **Result: TBD.**
+  hard-coded 64-hex). Record the observed format.
+- **Fawaterk webhook retry policy** on a 404 (paid + unknown `transaction_key`) — KTD-6 assumes a retry
+  bridges the persist race; if it does not, the 15-min reconciliation job is the only bridge.
+- **`due_date` acceptance (AE8):** we send `Y-m-d H:i:s` UTC; confirm wall-clock/timezone as reflected
+  by `getTransactionData`.
 
 ---
 
@@ -390,17 +411,17 @@ if ('error' in result) throw result.error;
 
 **Problem**: Frontend only handled `redirectUrl`, ignoring the reference codes (`fawryCode`, `amanCode`, `masaryCode`, `meezaReference`/`meezaQrCode`) cash methods return.
 
-**Fix**: The backend returns every code field; the frontend routes the user to `/payment/pending`, whose page renders whichever code/QR is present. Offline methods (Fawry/Aman/Masary/Meeza/MobileWallet) are additionally *force-redirected* — checkout sets `redirectOption: true` (`forceRedirect`) so Fawaterk returns a hosted `redirectTo` and the SPA does `window.location = redirectUrl`.
+**Fix (v3)**: The backend returns every code field; the frontend routes the user to `/payment/pending`, whose page renders whichever code/QR is present. **v3 uses direct-dispatch for every method** (send `payment_method_id`, no `redirectOption`), so reference methods return their codes synchronously and render in-app. The v2 `redirectOption:true`/`forceRedirect` hosted-page hop was **removed** in the migration — v3 forced-link responses carry no `payment_data`, so codes would never return.
 
 ```typescript
 // Backend returns every possible instrument; the pending page shows the relevant one
 return c.json({ data: {
-  redirectUrl: invoiceResult.paymentData.redirectTo,
+  redirectUrl, // card/Apple Pay: payment_data.redirectTo ?? data.url
   fawryCode, amanCode, masaryCode, meezaReference, meezaQrCode,
 } });
 ```
 
-**Mobile Wallet (Fawaterk `paymentId 4`, `redirect:false`)** requires an **Egyptian phone in local `01…` format**. Fawaterk's wallet endpoint rejects E.164 `+20…` (verified HTTP 422 on staging). Profiles store canonical E.164, so checkout converts at the gateway boundary via `toFawaterkLocalPhone()` and rejects non-`+20` numbers for wallet (`PHONE_NOT_EGYPTIAN`) — see `server/src/routes/api/users-phone.ts`. Caveat: forcing `redirectOption` masks Fawaterk's own 422 validation; the native (non-redirect) wallet flow returns `meezaReference`/QR directly.
+**Mobile Wallet** requires an **Egyptian number in local `01…` format** (Fawaterk rejects E.164 `+20…`; `toFawaterkLocalPhone()` converts at the gateway boundary — see `server/src/routes/api/users-phone.ts`). The wallet number is **entered at checkout** via a dedicated required field (`WalletNumberField`, prefilled from the profile phone but editable) and sent as `checkout.walletPhone` → `mobileWalletNumber`, because a user's wallet is often on a different number than the one they registered with. The server validates it (`PHONE_REQUIRED` / `PHONE_NOT_EGYPTIAN`) and falls back to the profile phone for older clients. Pending-page labels for this method read "Wallet" (not "Meeza") to avoid confusing users.
 
 ### 5.3 Subscription Query on Public Pages
 
@@ -460,7 +481,7 @@ if (existingPending && forceNewCode) {
 
 ## 7. First Principles Applied
 
-The irreducible core of a payment system is four steps: **Initiate** (capture intent → `POST /payments/checkout`) → **Execute** (collect money → Fawaterk) → **Confirm** (verify receipt → webhook + `getInvoiceData()` polling) → **Fulfill** (deliver value → atomic fulfillment). The principles below protect those four steps.
+The irreducible core of a payment system is four steps: **Initiate** (capture intent → `POST /payments/checkout`) → **Execute** (collect money → Fawaterk) → **Confirm** (verify receipt → webhook + `getTransactionData()` polling) → **Fulfill** (deliver value → atomic fulfillment). The principles below protect those four steps.
 
 | Principle | Implementation |
 |-----------|----------------|
@@ -524,7 +545,7 @@ await redis.set('fawaterk:circuit', 'open', 'EX', 30);
 | UNAUTHORIZED | 401 | No session or invalid session |
 | INVALID_SIGNATURE | 401 | HMAC webhook verification failed |
 | PAYMENT_REQUIRED | 402 | Paid item requires the checkout flow |
-| PHONE_REQUIRED | 400 | Mobile wallet needs a phone on the profile |
+| PHONE_REQUIRED | 400 | Mobile wallet needs a wallet number (entered at checkout) |
 | PHONE_NOT_EGYPTIAN | 400 | Mobile wallet requires an Egyptian (+20) number |
 | NOT_FOUND | 404 | Item or payment not found |
 | ALREADY_REGISTERED | 400 | Already registered for event |
@@ -564,3 +585,4 @@ await redis.set('fawaterk:circuit', 'open', 'EX', 30);
 - Covers: Security, Data Integrity, Performance, Architecture patterns
 - Source: feat/payment-gateway-mvp branch
 - **2026-06-27**: Consolidated the payment-gateway learnings — absorbed `payment-gateway-lessons-learned.md` (implementation checklist, fuller error-code table) and `payment-gateway-mvp-compound-analysis.md` (irreducible-core framing) into this canonical doc; refreshed the non-redirect → `/payment/pending` flow and documented the Mobile Wallet (Fawaterk) `01…` phone-format requirement.
+- **2026-07-03**: Migrated to Fawaterk **API v3** (OAuth + transaction intents) — added the v3 Migration section. Compound-refresh same day: corrected the methods id field to `paymentId` (the live API, not the spec's `payment_method_id` — the spec-drift 500'd the endpoint in production), documented the **flat Fawry `createTransaction` envelope**, filled the staging findings (per-method `payment_data` shapes, wallet local-format, Meeza stub) from direct probes, and updated §5.2 for v3 direct-dispatch plus the editable checkout **wallet-number field** and the "Wallet" pending-page relabel.
