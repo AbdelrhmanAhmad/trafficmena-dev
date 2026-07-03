@@ -87,7 +87,7 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Timestamp</TableHead>
-                  <TableHead>Invoice ID</TableHead>
+                  <TableHead>Payment Ref</TableHead>
                   <TableHead>Invoice Number</TableHead>
                   <TableHead>Amount Paid</TableHead>
                 </TableRow>
@@ -103,7 +103,7 @@ export const EventAttendeesList = ({ eventId }: EventAttendeesListProps) => {
                     <TableCell>
                       {format(new Date(attendee.registered_at), 'MMM d, yyyy h:mm a')}
                     </TableCell>
-                    <TableCell>{attendee.invoice_id ?? '-'}</TableCell>
+                    <TableCell>{attendee.transaction_id ?? attendee.invoice_id ?? '-'}</TableCell>
                     <TableCell>{attendee.invoice_number ?? '-'}</TableCell>
                     <TableCell>{formatAmountPaid(attendee.amount_paid_cents)}</TableCell>
                   </TableRow>

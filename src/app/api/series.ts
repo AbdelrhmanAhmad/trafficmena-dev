@@ -203,6 +203,7 @@ export interface SeriesAttendee {
   phoneNumber: string | null;
   bookedAt: string;
   invoiceId: number | null;
+  transactionId: number | null;
   invoiceNumber: string | null;
   source: SeriesEnrollmentSource;
   reference: string | null;

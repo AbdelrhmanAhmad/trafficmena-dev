@@ -640,6 +640,7 @@ export function registerEventRoutes(app: Hono) {
                 ilike(sql`COALESCE(${profiles.phoneNumber}, '')`, searchPattern),
                 ilike(sql`COALESCE(${payments.fawaterkInvoiceKey}, '')`, searchPattern),
                 sql`CAST(${payments.fawaterkInvoiceId} AS TEXT) ILIKE ${searchPattern}`,
+                sql`CAST(${payments.fawaterkTransactionId} AS TEXT) ILIKE ${searchPattern}`,
               )
             : undefined,
         );
@@ -663,6 +664,7 @@ export function registerEventRoutes(app: Hono) {
             registeredAt: eventAttendees.registeredAt,
             status: eventAttendees.status,
             invoiceId: payments.fawaterkInvoiceId,
+            transactionId: payments.fawaterkTransactionId,
             invoiceNumber: payments.fawaterkInvoiceKey,
             amountPaidCents: attendeeAmountCents(eventAttendees.pricePaidCents),
           })

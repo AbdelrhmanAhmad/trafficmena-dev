@@ -165,7 +165,7 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Timestamp</TableHead>
-                    <TableHead>Invoice ID</TableHead>
+                    <TableHead>Payment Ref</TableHead>
                     <TableHead>Invoice Number</TableHead>
                     <TableHead>Ticket Type</TableHead>
                     <TableHead>Source</TableHead>
@@ -187,7 +187,7 @@ export const TrackAttendeesList = ({ trackId }: TrackAttendeesListProps) => {
                       <TableCell>
                         {format(new Date(attendee.bookedAt), 'MMM d, yyyy h:mm a')}
                       </TableCell>
-                      <TableCell>{attendee.invoiceId ?? '-'}</TableCell>
+                      <TableCell>{attendee.transactionId ?? attendee.invoiceId ?? '-'}</TableCell>
                       <TableCell>{attendee.invoiceNumber ?? '-'}</TableCell>
                       <TableCell>{ticketTypeLabel(attendee.ticketType)}</TableCell>
                       <TableCell>{formatEnrollmentSource(attendee.source)}</TableCell>

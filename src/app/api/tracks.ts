@@ -272,6 +272,7 @@ export interface TrackAttendee {
   phoneNumber: string | null;
   bookedAt: string;
   invoiceId: number | null;
+  transactionId: number | null;
   invoiceNumber: string | null;
   source: TrackEnrollmentSource;
   reference: string | null;

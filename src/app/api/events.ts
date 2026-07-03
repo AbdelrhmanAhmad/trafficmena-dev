@@ -241,6 +241,7 @@ type ApiEventAttendee = {
   registeredAt: string;
   status: 'active' | 'cancelled' | 'refund_requested';
   invoiceId: number | null;
+  transactionId: number | null;
   invoiceNumber: string | null;
   amountPaidCents: number | null;
 };
@@ -255,6 +256,7 @@ export type EventAttendeeRecord = {
   registered_at: string;
   status: 'active' | 'cancelled' | 'refund_requested';
   invoice_id: number | null;
+  transaction_id: number | null;
   invoice_number: string | null;
   amount_paid_cents: number | null;
 };
@@ -286,6 +288,7 @@ export async function fetchEventAttendees(
       registered_at: item.registeredAt,
       status: item.status,
       invoice_id: item.invoiceId,
+      transaction_id: item.transactionId,
       invoice_number: item.invoiceNumber,
       amount_paid_cents: item.amountPaidCents,
     })),

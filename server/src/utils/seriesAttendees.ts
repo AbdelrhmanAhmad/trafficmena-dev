@@ -25,6 +25,7 @@ export type SeriesAttendeeRow = {
   phoneNumber: string | null;
   bookedAt: Date | string;
   invoiceId: number | null;
+  transactionId: number | null;
   invoiceNumber: string | null;
   source: 'paid' | 'free' | 'manual';
   reference: string | null;
@@ -64,6 +65,7 @@ function grantToRow(grant: SeriesGrantAttendeeInput): SeriesAttendeeRow {
     phoneNumber: grant.phoneNumber,
     bookedAt: grant.grantedAt,
     invoiceId: null,
+    transactionId: null,
     invoiceNumber: null,
     source: 'manual',
     reference: grant.grantReason,
@@ -82,6 +84,7 @@ function matchesSearch(row: SeriesAttendeeRow, search: string): boolean {
     row.phoneNumber,
     row.invoiceNumber,
     row.invoiceId == null ? null : String(row.invoiceId),
+    row.transactionId == null ? null : String(row.transactionId),
     row.reference,
   ]
     .filter(Boolean)

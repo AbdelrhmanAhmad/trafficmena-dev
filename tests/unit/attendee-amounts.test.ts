@@ -49,6 +49,7 @@ describe('attendee amount query shape', () => {
       'phoneNumber',
       'bookedAt',
       'invoiceId',
+      'transactionId',
       'invoiceNumber',
       'source',
       'reference',

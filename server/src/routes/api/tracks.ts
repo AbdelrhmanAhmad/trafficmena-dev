@@ -931,6 +931,7 @@ export function registerTrackRoutes(app: Hono) {
             ilike(sql`COALESCE(${payments.fawaterkInvoiceKey}, '')`, searchPattern),
             ilike(sql`COALESCE(${trackBookings.manualReference}, '')`, searchPattern),
             sql`CAST(${payments.fawaterkInvoiceId} AS TEXT) ILIKE ${searchPattern}`,
+            sql`CAST(${payments.fawaterkTransactionId} AS TEXT) ILIKE ${searchPattern}`,
           )
         : undefined,
     );
