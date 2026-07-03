@@ -236,15 +236,12 @@ const TrackDetail: React.FC = () => {
     const params = new URLSearchParams();
     params.set('item_type', 'track');
     params.set('item_id', id);
-    if (track.pending_invoice_id) {
-      params.set('invoice_id', String(track.pending_invoice_id));
-    }
     if (track.pending_payment_id) {
       params.set('payment_id', track.pending_payment_id);
     }
     const query = params.toString();
     return query ? `/payment/pending?${query}` : '/payment/pending';
-  }, [id, track?.pending_invoice_id, track?.pending_payment_id, track?.user_has_pending_payment]);
+  }, [id, track?.pending_payment_id, track?.user_has_pending_payment]);
 
   const showLocationUrl = useLocationVisibility(
     track?.location_url,

@@ -28,7 +28,6 @@ export type CheckoutRequest = {
 
 export type CheckoutResponse = {
   paymentId: string;
-  invoiceId?: number;
   redirectUrl?: string;
   fawryCode?: string;
   meezaReference?: string;
@@ -39,7 +38,7 @@ export type CheckoutResponse = {
 };
 
 export type VerifyPaymentRequest = {
-  invoiceId: number;
+  paymentId: string;
 };
 
 export type VerifyPaymentResponse = {
@@ -72,7 +71,10 @@ export type Payment = {
   itemType: PaymentItemType;
   itemId: string | null;
   ticketType?: TicketType | null;
+  // Historical (v2) — read-only display on pre-cutover rows.
   fawaterkInvoiceId?: number | null;
+  // v3 gateway transaction id, populated once a payment is confirmed.
+  fawaterkTransactionId?: number | null;
   fawryCode?: string | null;
   amanCode?: string | null;
   masaryCode?: string | null;

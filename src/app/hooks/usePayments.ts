@@ -51,7 +51,11 @@ export function useVerifyPayment() {
 
   return useMutation<VerifyPaymentResponse, Error, VerifyPaymentRequest>({
     mutationFn: verifyPayment,
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      // Always refresh the payment row so status transitions (expired/failed as well as paid) surface
+      // immediately — usePayment has no refetch interval and refetchOnWindowFocus is globally off, so
+      // without this the pending page shows a stale, apparently-redeemable code forever.
+      queryClient.invalidateQueries({ queryKey: [...PAYMENT_KEY, variables.paymentId] });
       if (data.status === 'paid') {
         // Invalidate all related queries on successful payment
         queryClient.invalidateQueries({ queryKey: ['subscription-info'] });

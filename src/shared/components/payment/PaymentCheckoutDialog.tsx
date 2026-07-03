@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
-import { fetchPayment, type PaymentItemType, type TicketType } from '@/app/api/payments';
+import type { PaymentItemType, TicketType } from '@/app/api/payments';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { trackBeginCheckout, trackSelectPaymentMethod } from '@/lib/analytics/events';
 import { centsToUnits } from '@/lib/analytics/helpers';
@@ -24,7 +24,6 @@ import {
 } from '@/shared/components/ui/dialog';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
-import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 
 interface PaymentCheckoutDialogProps {
@@ -100,7 +99,6 @@ export function PaymentCheckoutDialog({
   );
   const { data: methods } = usePaymentMethods({ enabled: shouldFetchPricing });
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
-  const shouldRedirect = shouldRedirectToGateway(selectedMethod);
   const hasPromoApplied =
     Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !pricePreview.isFree;
   const canSubmitCheckout = Boolean(selectedMethodId) && !createCheckout.isPending;
@@ -144,13 +142,8 @@ export function PaymentCheckoutDialog({
     });
   }, [open, pricePreview, itemType, itemId, itemName, itemCategory]);
 
-  const goToPending = (payload: {
-    invoiceId?: number;
-    paymentMethodId?: number | null;
-    paymentId?: string;
-  }) => {
+  const goToPending = (payload: { paymentMethodId?: number | null; paymentId?: string }) => {
     const params = new URLSearchParams();
-    if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
     params.set('item_type', itemType);
     if (itemId) params.set('item_id', itemId);
     if (payload.paymentMethodId) {
@@ -229,60 +222,18 @@ export function PaymentCheckoutDialog({
         return;
       }
 
-      if (shouldRedirect) {
-        goToPending({
-          invoiceId: result.invoiceId,
-          paymentMethodId: selectedMethodId,
-          paymentId: result.paymentId,
-        });
-        return;
-      }
-
-      if (
-        result.invoiceId ||
-        result.fawryCode ||
-        result.meezaReference ||
-        result.meezaQrCode ||
-        result.amanCode ||
-        result.masaryCode
-      ) {
-        goToPending({
-          invoiceId: result.invoiceId,
-          paymentMethodId: selectedMethodId,
-          paymentId: result.paymentId,
-        });
-      }
+      // Direct-dispatch method (reference codes) or an undocumented method shape with neither a
+      // redirect nor codes → route to the pending page unconditionally. Webhook/verify complete the
+      // flow; the pending page renders codes when present and an action-prompting state when not.
+      goToPending({
+        paymentMethodId: selectedMethodId,
+        paymentId: result.paymentId,
+      });
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
-        const invoiceId = error.extra?.invoiceId as number | undefined;
-        const fawryCode = error.extra?.fawryCode as string | undefined;
-        const meezaReference = error.extra?.meezaReference as string | undefined;
-        const meezaQrCode = error.extra?.meezaQrCode as string | undefined;
-        const amanCode = error.extra?.amanCode as string | undefined;
-        const masaryCode = error.extra?.masaryCode as string | undefined;
         const pendingPaymentId = error.extra?.paymentId as string | undefined;
-        let resolvedInvoiceId = invoiceId;
-
-        if (!resolvedInvoiceId && pendingPaymentId) {
-          try {
-            const pendingPayment = await fetchPayment(pendingPaymentId);
-            resolvedInvoiceId = pendingPayment.fawaterkInvoiceId ?? undefined;
-          } catch {
-            // Fallback to payment_id-only pending flow; pending page will keep polling for invoice_id.
-          }
-        }
-
-        if (
-          resolvedInvoiceId ||
-          pendingPaymentId ||
-          fawryCode ||
-          meezaReference ||
-          meezaQrCode ||
-          amanCode ||
-          masaryCode
-        ) {
+        if (pendingPaymentId) {
           goToPending({
-            invoiceId: resolvedInvoiceId,
             paymentMethodId: selectedMethodId,
             paymentId: pendingPaymentId,
           });

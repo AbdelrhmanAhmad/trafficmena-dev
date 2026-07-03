@@ -3,7 +3,6 @@ import { Check, Crown, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
-import { fetchPayment } from '@/app/api/payments';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { useCurrentSubscription, useSubscriptionInfo } from '@/app/hooks/useSubscriptions';
 import {
@@ -38,7 +37,6 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
-import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
 
 function createCheckoutIdempotencyKey(scope: string): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -299,7 +297,6 @@ function SubscribePaymentView() {
   const createCheckout = useCreateCheckout();
   const { data: methods } = usePaymentMethods();
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
-  const shouldRedirect = shouldRedirectToGateway(selectedMethod);
   const analyticsItemId = getAnalyticsItemId('subscription');
   const subscriptionBasePriceCents = getAmountCentsFromUnits(subscriptionInfo?.priceEgp);
 
@@ -337,13 +334,8 @@ function SubscribePaymentView() {
     });
   }, [pricePreview, selectedMethodId, subscriptionBasePriceCents]);
 
-  const goToPending = (payload: {
-    invoiceId?: number;
-    paymentMethodId?: number | null;
-    paymentId?: string;
-  }) => {
+  const goToPending = (payload: { paymentMethodId?: number | null; paymentId?: string }) => {
     const params = new URLSearchParams();
-    if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
     params.set('item_type', 'subscription');
     if (payload.paymentMethodId) {
       params.set('method_id', String(payload.paymentMethodId));
@@ -409,60 +401,18 @@ function SubscribePaymentView() {
         return;
       }
 
-      if (shouldRedirect) {
-        goToPending({
-          invoiceId: result.invoiceId,
-          paymentMethodId: selectedMethodId,
-          paymentId: result.paymentId,
-        });
-        return;
-      }
-
-      if (
-        result.invoiceId ||
-        result.fawryCode ||
-        result.meezaReference ||
-        result.meezaQrCode ||
-        result.amanCode ||
-        result.masaryCode
-      ) {
-        goToPending({
-          invoiceId: result.invoiceId,
-          paymentMethodId: selectedMethodId,
-          paymentId: result.paymentId,
-        });
-      }
+      // Reference codes or an undocumented method shape with neither redirect nor codes → route to
+      // the pending page unconditionally (subscription is the highest-value transaction; it must
+      // never fall through silently). Webhook/verify complete the flow.
+      goToPending({
+        paymentMethodId: selectedMethodId,
+        paymentId: result.paymentId,
+      });
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
-        const invoiceId = error.extra?.invoiceId as number | undefined;
-        const fawryCode = error.extra?.fawryCode as string | undefined;
-        const meezaReference = error.extra?.meezaReference as string | undefined;
-        const meezaQrCode = error.extra?.meezaQrCode as string | undefined;
-        const amanCode = error.extra?.amanCode as string | undefined;
-        const masaryCode = error.extra?.masaryCode as string | undefined;
         const pendingPaymentId = error.extra?.paymentId as string | undefined;
-        let resolvedInvoiceId = invoiceId;
-
-        if (!resolvedInvoiceId && pendingPaymentId) {
-          try {
-            const pendingPayment = await fetchPayment(pendingPaymentId);
-            resolvedInvoiceId = pendingPayment.fawaterkInvoiceId ?? undefined;
-          } catch {
-            // Fallback to payment_id-only pending flow; pending page will keep polling for invoice_id.
-          }
-        }
-
-        if (
-          resolvedInvoiceId ||
-          pendingPaymentId ||
-          fawryCode ||
-          meezaReference ||
-          meezaQrCode ||
-          amanCode ||
-          masaryCode
-        ) {
+        if (pendingPaymentId) {
           goToPending({
-            invoiceId: resolvedInvoiceId,
             paymentMethodId: selectedMethodId,
             paymentId: pendingPaymentId,
           });
