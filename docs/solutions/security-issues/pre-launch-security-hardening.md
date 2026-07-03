@@ -115,9 +115,10 @@ export async function csrfMiddleware(c: Context, next: Next) {
     return c.json({ error: { code: 'CSRF_INVALID', message: 'Invalid CSRF token.' } }, 403);
   }
 
-  // Also validate Origin header
-  const origin = c.req.header('origin');
-  if (origin && !isOriginAllowed(origin)) {
+  // Also validate the request origin — REQUIRED. Current code rejects when the Referer/Origin is
+  // missing OR not allowlisted (stronger than the earlier "check only when present").
+  const origin = c.req.header('origin') ?? c.req.header('referer');
+  if (!origin || !isOriginAllowed(origin)) {
     return c.json({ error: { code: 'CSRF_ORIGIN', message: 'Invalid request origin.' } }, 403);
   }
 
@@ -157,9 +158,12 @@ setCookie(c, CSRF_COOKIE_NAME, token, {
 });
 ```
 
-**Exempt Paths:**
-- `/api/payments/webhook` - HMAC-verified instead
-- `/api/payments/webhook_json` - HMAC-verified instead
+**Exempt Paths** (all HMAC-verified instead of CSRF; the v3 migration added the cancel/failed/refund webhook routes):
+- `/api/payments/webhook`
+- `/api/payments/webhook_json`
+- `/api/payments/webhook_cancel`
+- `/api/payments/webhook_failed_json`
+- `/api/payments/webhook_refund`
 
 ---
 
@@ -194,23 +198,20 @@ const sanitizedReason = reason
   : undefined;
 ```
 
-**Shared Component for Rendering:**
+**Sanitize-then-render pattern** (used **inline** at each render site — there is no shared `src/shared/components/SanitizedHtml.tsx` component; it is duplicated in `EventDetail.tsx`, `AdminEventForm.tsx`, `LibraryItemDetail.tsx`, and others):
 ```typescript
-// src/shared/components/SanitizedHtml.tsx
-export function SanitizedHtml({ html, className }: Props) {
-  const sanitized = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-  });
+// Inline DOMPurify at each render site (no shared component):
+const sanitized = DOMPurify.sanitize(html, {
+  ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a'],
+  ALLOWED_ATTR: ['href', 'target', 'rel'],
+});
 
-  return (
-    <div
-      className={className}
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized
-      dangerouslySetInnerHTML={{ __html: sanitized }}
-    />
-  );
-}
+return (
+  <div
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized above
+    dangerouslySetInnerHTML={{ __html: sanitized }}
+  />
+);
 ```
 
 ---

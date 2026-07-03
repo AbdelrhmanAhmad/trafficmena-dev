@@ -17,7 +17,7 @@ symptoms:
   - Inconsistent search behavior across the application
 root_cause: User-supplied search strings were interpolated directly into SQL LIKE patterns without escaping special characters (%, _, \)
 related:
-  - ./database-issues/drizzle-transaction-atomicity.md
+  - ../database-issues/drizzle-transaction-atomicity.md
 ---
 
 # SQL LIKE Pattern Injection Prevention
@@ -69,6 +69,15 @@ if (search) {
 }
 ```
 
+> **Numeric columns cast to text still need escaping.** Admin attendee search matches an integer id via `CAST(<col> AS TEXT) ILIKE ${pattern}` (e.g. the Fawaterk transaction id added in the v3 migration). Because the match is `ILIKE %…%`, unescaped `%`/`_` in the search term act as wildcards — build the pattern with `escapeLikePattern` exactly as for text columns:
+> ```typescript
+> const searchPattern = `%${escapeLikePattern(normalizedSearch)}%`;
+> or(
+>   ilike(users.name, searchPattern),
+>   sql`CAST(${payments.fawaterkTransactionId} AS TEXT) ILIKE ${searchPattern}`,
+> );
+> ```
+
 ## Files Changed
 
 | File | Line | Change |
@@ -104,26 +113,20 @@ rg "ilike\([^,]+,\s*\`" server/src --type ts | grep -v escapeLikePattern
 
 ## Test Cases
 
+`escapeLikePattern` is a pure function — unit-test it directly with the repo's `node --test` runner (`tests/unit/*.test.ts`):
+
 ```typescript
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import { escapeLikePattern } from '../../server/src/routes/api/utils.ts';
+
 describe('escapeLikePattern', () => {
-  it('escapes percent sign', () => {
-    expect(escapeLikePattern('100%')).toBe('100\\%');
-  });
-
-  it('escapes underscore', () => {
-    expect(escapeLikePattern('test_user')).toBe('test\\_user');
-  });
-
-  it('escapes backslash', () => {
-    expect(escapeLikePattern('path\\file')).toBe('path\\\\file');
-  });
-
-  it('handles multiple special chars', () => {
-    expect(escapeLikePattern('%_\\')).toBe('\\%\\_\\\\');
-  });
-
-  it('leaves normal text unchanged', () => {
-    expect(escapeLikePattern('normal search')).toBe('normal search');
+  it('escapes %, _, and \\; leaves normal text unchanged', () => {
+    assert.equal(escapeLikePattern('100%'), '100\\%');
+    assert.equal(escapeLikePattern('test_user'), 'test\\_user');
+    assert.equal(escapeLikePattern('path\\file'), 'path\\\\file');
+    assert.equal(escapeLikePattern('%_\\'), '\\%\\_\\\\');
+    assert.equal(escapeLikePattern('normal search'), 'normal search');
   });
 });
 ```

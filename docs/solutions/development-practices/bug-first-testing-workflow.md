@@ -48,47 +48,42 @@ When bugs are reported, the natural instinct is to immediately start fixing them
 
 ### Example
 
-**Bug report:** "Calculator shows NaN when user clears the input"
+**Bug report:** "AOV calculator returns NaN when the revenue input is cleared"
 
-**Step 1: Write failing test**
+**Step 1: Write a failing test.** The suite is Node's built-in runner (`node --test`) over pure logic/helpers — assert on the calculator's compute function directly, not a rendered component (there is no React Testing Library / jsdom here). See `tests/unit/*.test.ts` for the real pattern.
+
 ```typescript
-// tests/calculators/aov-calculator.test.ts
-describe('AOVCalculator', () => {
-  it('should handle empty inputs without showing NaN', () => {
-    render(<AOVCalculator />);
+// tests/unit/aov-calculator.test.ts
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import { calculateAov } from '../../src/features/calculators/lib/aov'; // illustrative: the pure compute fn
 
-    const revenueInput = screen.getByLabelText(/revenue/i);
-    const ordersInput = screen.getByLabelText(/orders/i);
-
-    // User enters values then clears them
-    fireEvent.change(revenueInput, { target: { value: '1000' } });
-    fireEvent.change(ordersInput, { target: { value: '10' } });
-    fireEvent.change(revenueInput, { target: { value: '' } });
-
-    // Should not display NaN
-    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+describe('calculateAov', () => {
+  it('returns null for empty/invalid inputs instead of NaN', () => {
+    assert.equal(calculateAov({ revenue: '', orders: '10' }), null);
+    assert.equal(calculateAov({ revenue: '1000', orders: '' }), null);
   });
 });
 ```
 
-**Step 2: Verify test fails**
+**Step 2: Verify the test fails**
 ```bash
-npm test -- aov-calculator
-# FAIL: expected NaN not to be in document
+npm run test:unit
+# not ok - calculateAov returned NaN, expected null
 ```
 
-**Step 3: Implement fix**
+**Step 3: Implement the fix**
 ```typescript
-// Handle empty or invalid inputs
-if (!revenue || !orders || Number.isNaN(parseFloat(revenue))) {
+// Guard empty/invalid inputs before dividing
+if (!revenue || !orders || Number.isNaN(Number(revenue)) || Number.isNaN(Number(orders))) {
   return null; // Don't calculate
 }
 ```
 
-**Step 4: Verify test passes**
+**Step 4: Verify the test passes**
 ```bash
-npm test -- aov-calculator
-# PASS
+npm run test:unit
+# ok
 ```
 
 ### Benefits

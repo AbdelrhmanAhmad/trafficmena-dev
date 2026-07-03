@@ -26,57 +26,32 @@ Users saw a generic server error instead of a helpful validation message.
 
 ## Solution
 
-Created a reusable parameter parser that validates UUID format:
+Validate the UUID with **Zod** before the database query, and raise the project's `ApiError` (which serializes to the standard `{ error: { code, message } }` envelope) so the caller gets a 400 instead of a Postgres 500. The house convention is a small per-route helper wrapping `z.string().uuid().safeParse`:
 
 ```typescript
-// In server/src/routes/api/events.ts
+// server/src/routes/api/events.ts
+const uuidParamSchema = z.string().uuid();
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function parseEventIdParam(id: string): string {
-  if (!UUID_REGEX.test(id)) {
-    throw new HTTPException(400, {
-      message: 'Invalid event ID format. Expected UUID.'
-    });
+function parseEventIdParam(eventId: string): string {
+  const parsed = uuidParamSchema.safeParse(eventId);
+  if (!parsed.success) {
+    throw new ApiError('INVALID_PARAM', 'Event ID must be a valid UUID.', 400);
   }
-  return id;
+  return parsed.data;
 }
 
 // Usage in route handlers
 app.get('/events/:id', async (c) => {
   const eventId = parseEventIdParam(c.req.param('id'));
-
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId)
-  });
-
+  const [event] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
   if (!event) {
-    throw new HTTPException(404, { message: 'Event not found' });
+    throw new ApiError('NOT_FOUND', 'Event not found', 404);
   }
-
-  return c.json(event);
+  return c.json({ data: event });
 });
 ```
 
-## Alternative: Zod Validation
-
-For more complex validation, use Zod:
-
-```typescript
-import { z } from 'zod';
-
-const eventIdSchema = z.string().uuid('Invalid event ID format');
-
-function parseEventIdParam(id: string): string {
-  const result = eventIdSchema.safeParse(id);
-  if (!result.success) {
-    throw new HTTPException(400, {
-      message: result.error.issues[0].message
-    });
-  }
-  return result.data;
-}
-```
+> Do **not** hand-roll a `UUID_REGEX` + Hono `HTTPException` — that shape appears nowhere in this codebase. Every route validates with `z.string().uuid()` and raises `ApiError`.
 
 ## Error Response Format
 
@@ -85,35 +60,33 @@ Consistent error format for validation failures:
 ```json
 {
   "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid event ID format. Expected UUID."
+    "code": "INVALID_PARAM",
+    "message": "Event ID must be a valid UUID."
   }
 }
 ```
 
+The code varies by route: `INVALID_PARAM` (events), `INVALID_ID` (tracks), `INVALID_INPUT` (payments) — all through `ApiError`. `VALIDATION_ERROR` is not used for this.
+
 ## Files Changed
 
-- `server/src/routes/api/events.ts` - Added `parseEventIdParam()` helper
-- Applied to all route handlers that accept `id` parameter
+- `server/src/routes/api/events.ts` - `parseEventIdParam()` helper (`z.string().uuid()` + `ApiError`)
+- Applied per route file that accepts an `id` parameter
 
 ## Apply to Other Routes
 
-Same pattern for tracks, library, series:
+The guard is repeated **per route file**, not centralized in `utils.ts` — each declares its own `z.string().uuid()` schema/helper. Two shapes are in use:
 
 ```typescript
-// Generic helper (could move to utils.ts)
-function parseUuidParam(value: string, paramName: string): string {
-  if (!UUID_REGEX.test(value)) {
-    throw new HTTPException(400, {
-      message: `Invalid ${paramName} format. Expected UUID.`
-    });
-  }
-  return value;
+// tracks.ts — a validator that RETURNS a result (doesn't throw); the caller decides:
+const idValidation = validateUuid(c.req.param('id'), 'track ID');
+if (!idValidation.ok) {
+  return c.json({ error: { code: 'INVALID_ID', message: idValidation.message } }, 400);
 }
 
-// Usage
-const trackId = parseUuidParam(c.req.param('id'), 'track ID');
-const assetId = parseUuidParam(c.req.param('assetId'), 'asset ID');
+// payments.ts / promoCodes.ts — inline at the call site:
+const parsed = z.string().uuid().safeParse(id);
+if (!parsed.success) throw new ApiError('INVALID_INPUT', 'Invalid id', 400);
 ```
 
 ## Prevention
@@ -128,7 +101,7 @@ const assetId = parseUuidParam(c.req.param('assetId'), 'asset ID');
 ```bash
 # Invalid UUID should return 400
 curl -i http://localhost:3001/api/events/not-a-uuid
-# HTTP 400: {"error": {"message": "Invalid event ID format. Expected UUID."}}
+# HTTP 400: {"error": {"code": "INVALID_PARAM", "message": "Event ID must be a valid UUID."}}
 
 # Non-existent but valid UUID should return 404
 curl -i http://localhost:3001/api/events/00000000-0000-0000-0000-000000000000
