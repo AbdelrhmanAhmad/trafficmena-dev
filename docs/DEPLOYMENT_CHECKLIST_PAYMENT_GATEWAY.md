@@ -99,6 +99,44 @@ senders do not reliably re-POST across a 301 — dropping delivery. Fix **before
         -H 'Content-Type: application/json' -d '{}'
       ```
 
+### Apex `/api` exemption — the applied Caddy block (durable record)
+
+> **VPS-only artifact.** `/etc/caddy/Caddyfile` is not in the repo, so this block **is** the record.
+> Applying it is an owner ops action (SSH); an agent cannot reach the VPS. Update this block verbatim
+> whenever the apex vhost changes.
+
+The apex vhost was a blanket `redir …{uri} permanent`, so `POST /api/*` 301'd to `www` and
+webhook senders dropped delivery. **Matcher scoping is mandatory:** a bare `redir` + `reverse_proxy`
+in one block lets `redir` win by directive order and the failure is silent. Use explicit `handle`
+blocks so `/api*` proxies and everything else redirects:
+
+```caddy
+trafficmena.com {
+	# /api* reaches the API so apex-addressed webhooks are never dropped by the apex→www 301.
+	handle /api* {
+		reverse_proxy 127.0.0.1:3001   # match the www vhost's upstream exactly
+	}
+	# Everything else still permanently redirects to www.
+	handle {
+		redir https://www.trafficmena.com{uri} permanent
+	}
+}
+```
+
+Apply sequence (never `restart` — a graceful `reload` keeps in-flight webhooks alive):
+
+```bash
+caddy validate --config /etc/caddy/Caddyfile     # must pass before reload
+systemctl reload caddy
+# Probe pair — /api reaches the handler (400), everything else still 301s to www:
+curl -s -o /dev/null -w "api=%{http_code}\n" -X POST \
+  https://trafficmena.com/api/payments/webhook_json \
+  -H 'Content-Type: application/json' -d '{}'          # expect 400 (INVALID_PAYLOAD)
+curl -s -o /dev/null -w "apex=%{http_code}\n" https://trafficmena.com/    # expect 301 → www
+```
+
+- [ ] Applied on live: ____-__-__ by ______ (probe pair captured: `api=400`, `apex=301`).
+
 ### v3 webhook endpoints & signatures
 
 | Webhook | Path (registered when) | Signature field | StringToSign |
@@ -111,6 +149,21 @@ senders do not reliably re-POST across a 301 — dropping delivery. Fix **before
 All four are HMAC-SHA256 keyed with `FAWATERK_API_KEY`, CSRF-exempt, and share the 100/min/IP
 throttle. Paid drives fulfillment (re-verified via `getTransactionData`); cancel/failed/refund are
 **verify-and-log-only** in v1 (they reject 401 on a missing/invalid signature).
+
+### Dashboard webhook registration status (post-cutover, all four now deployed)
+
+Owner ops (Fawaterk dashboard access is the owner's — an agent cannot register these). All URLs use
+the **www** host; register on live and mirror on staging (`https://staging.trafficmena.com/...`).
+
+| Type | Live URL | Registered | Verified (a real/staging delivery logged) |
+|---|---|---|---|
+| Paid/pending | `https://www.trafficmena.com/api/payments/webhook_json` | ☐ | ☐ |
+| Failed | `https://www.trafficmena.com/api/payments/webhook_failed_json` | ☐ | ☐ |
+| Cancel | `https://www.trafficmena.com/api/payments/webhook_cancel` | ☐ | ☐ |
+| Refund | `https://www.trafficmena.com/api/payments/webhook_refund` | ☐ | ☐ |
+
+Verification = a `[payments/webhook] …` log line for that type (trigger a staging cancel/failed/refund
+if none has occurred organically), not merely that the URL is saved in the dashboard.
 
 ---
 
@@ -165,6 +218,12 @@ action-prompt copy.
       Store the table output with the deploy record. Voided rows become `status=failed` (never
       resurrected) and their reservations are released. **From here, rollback needs manual
       reconciliation, not just revert.**
+      **Execution record (owner ops — pipe both runs to a file as the audit trail):** the 2026-07-06
+      investigation counted **391** stranded rows (`status IN ('pending','expired') AND
+      fawaterk_invoice_id IS NOT NULL AND fawaterk_intent_key IS NULL`); expect ≈391 on the dry-run
+      and investigate any drift before `--apply`. After apply, record: date ____-__-__, rows voided
+      ____, watch-list bucket count ____, stdout captured to ____. Then start the 72h watch window
+      (runbook §5).
 - [ ] **T5 — Canary.** One card payment end-to-end (webhook + fulfillment + purchase event) and one
       Apple Pay payment from an Apple device; then one canary per re-enabled direct-dispatch method
       staging could not verify (enable → canary → keep on only if it passes). Refund all canaries via
