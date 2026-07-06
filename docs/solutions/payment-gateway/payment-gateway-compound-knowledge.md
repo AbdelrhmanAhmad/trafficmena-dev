@@ -308,31 +308,22 @@ uniquePendingPayment: uniqueIndex('payments_unique_pending')
 
 **Why partial**: Only pending payments need uniqueness; completed payments should allow rebooking.
 
-### 3.3 Atomic CTE for Multi-Event Booking
+### 3.3 Atomic Multi-Event Track Booking
 
-```sql
-WITH locked_events AS (
-  SELECT e.id, e.max_attendees
-  FROM track_events te
-  JOIN events e ON e.id = te.event_id
-  WHERE te.track_id = $trackId
-  FOR UPDATE  -- Lock ALL events in track
-),
-inserted_attendees AS (
-  INSERT INTO event_attendees (...)
-  SELECT ... FROM to_insert
-  RETURNING event_id
-),
-inserted_booking AS (
-  INSERT INTO track_bookings (...)
-  WHERE /* all conditions pass */
-  ON CONFLICT DO UPDATE  -- Idempotent upsert
-  RETURNING id
-)
-SELECT ...  -- Return diagnostic counts
+Paid track booking registers the buyer for **every** event in the track atomically. The original MVP used a hand-written multi-CTE raw SQL query; it is now a **Drizzle `db.transaction`** that row-locks the track and its events with `.for('update')` before inserting attendees + the track booking (`payments.ts:1871`), so a capacity check can't race an insert:
+
+```typescript
+await db.transaction(async (tx) => {
+  // Lock the track and all its events for the duration of the booking
+  await tx.select().from(tracks).where(eq(tracks.id, trackId)).for('update');
+  await tx.select().from(trackEvents).where(eq(trackEvents.trackId, trackId)).for('update');
+
+  // Capacity check + insert event_attendees for each event + insert the track_booking,
+  // all inside the same transaction (rolls back together on any failure).
+});
 ```
 
-**Why CTE**: Single atomic query prevents race conditions between capacity check and insert.
+**Why a locked transaction**: locking the track + events before the capacity check prevents two concurrent bookings from both passing the "seats remaining" check and overselling.
 
 ### 3.4 Reservation Lifecycle
 

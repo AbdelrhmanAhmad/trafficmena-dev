@@ -15,7 +15,7 @@ components:
   - "frontend: src/features/tracks/hooks/useTrackAttendees.ts"
   - "backend: server/src/routes/api/tracks.ts"
   - "routing: src/App.tsx"
-created: 2025-01-02
+created: 2026-01-02
 related:
   - docs/rbac-decision.md
   - docs/solutions/feature-implementations/learning-tracks-and-series-separation.md
@@ -61,16 +61,17 @@ app.get('/tracks/:id/attendees', async (c) => {
   const staff = await requireManager(c);
   if ('response' in staff) return staff.response;
 
-  // Validate trackId is a valid UUID
-  const trackIdParam = c.req.param('id');
-  const trackIdResult = z.string().uuid('Invalid track ID format').safeParse(trackIdParam);
-  if (!trackIdResult.success) {
-    return c.json({ error: { code: 'INVALID_ID', message: 'Invalid track ID format.' } }, 400);
+  // Validate trackId via the shared validateUuid() helper (tracks.ts:267) — it returns a
+  // result object rather than throwing.
+  const idValidation = validateUuid(c.req.param('id'), 'track ID');
+  if (!idValidation.valid) {
+    return c.json({ error: idValidation.error }, 400); // { code: 'INVALID_ID', ... }
   }
-  const trackId = trackIdResult.data;
+  const trackId = idValidation.value;
 
-  // Query trackBookings joined with users/profiles
-  // Returns paginated list: userId, email, name, firstName, lastName, bookedAt
+  // Query trackBookings joined with users/profiles. Also supports ?search= (name / email /
+  // phone / invoice / transaction id) and a ?ticketType= filter, and returns 404 when the track
+  // doesn't exist. Paginated list: userId, email, name, firstName, lastName, bookedAt.
 });
 ```
 
@@ -102,13 +103,14 @@ app.get('/tracks/:id/attendees', async (c) => {
 
 **Problem:** `trackId` parameter was used directly in database queries without format validation. Invalid UUIDs caused database errors.
 
-**Fix:** Added Zod UUID validation before any database operations:
+**Fix:** Added UUID validation before any database operations. (This inline check was later refactored into the shared `validateUuid()` helper — see the Backend Endpoint example above.)
 
 ```typescript
-const trackIdResult = z.string().uuid('Invalid track ID format').safeParse(trackIdParam);
-if (!trackIdResult.success) {
-  return c.json({ error: { code: 'INVALID_ID', message: 'Invalid track ID format.' } }, 400);
+const idValidation = validateUuid(c.req.param('id'), 'track ID');
+if (!idValidation.valid) {
+  return c.json({ error: idValidation.error }, 400);
 }
+const trackId = idValidation.value;
 ```
 
 ## Patterns Used
@@ -162,13 +164,14 @@ When creating admin routes, always explicitly set `allowedRoles` rather than rel
 
 ### 2. Validate Route Parameters
 
-Always validate UUID parameters before database queries:
+Always validate UUID parameters before database queries. `tracks.ts` uses the shared `validateUuid()` helper (returns a result, doesn't throw):
 
 ```typescript
-const idResult = z.string().uuid().safeParse(c.req.param('id'));
-if (!idResult.success) {
-  return c.json({ error: { code: 'INVALID_ID', message: '...' } }, 400);
+const idValidation = validateUuid(c.req.param('id'), 'track ID');
+if (!idValidation.valid) {
+  return c.json({ error: idValidation.error }, 400);
 }
+const trackId = idValidation.value;
 ```
 
 ### 3. Mirror Existing Patterns

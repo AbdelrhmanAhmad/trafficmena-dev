@@ -42,40 +42,44 @@ interface Track {
 
 ## Solution
 
-Add explicit field mapping in the API client:
+Map the camelCase API response to the snake_case frontend model with an **explicit per-entity mapper** in the API client. This is the deliberate house convention: the API client keeps paired `ApiTrack` (camelCase, wire) / `TrackRecord` (snake_case, model) types with dedicated `mapTrack`/`mapTrackDetail`/`mapTrackEvent` functions. Note `fetchPublicTrackById` returns a `{ track, events }` **wrapper**, not a flat track:
 
 ```typescript
 // src/app/api/tracks.ts
-export async function fetchPublicTrackById(id: string): Promise<Track> {
-  const response = await fetchJson<ApiTrackResponse>(`/api/tracks/${id}/public`);
+export async function fetchPublicTrackById(id: string): Promise<{
+  track: PublicTrackDetailRecord;
+  events: PublicTrackEventRecord[];
+}> {
+  const data = await fetchJson<{
+    track: ApiPublicTrackDetail;
+    events: ApiPublicTrackEvent[];
+  }>(`${API_BASE}/tracks/${id}/public`);
 
-  // Map camelCase API response to snake_case frontend interface
   return {
-    id: response.id,
-    title: response.title,
-    description: response.description,
-    image_url: response.imageUrl,
-    starts_at: response.startsAt,
-    ends_at: response.endsAt,
-    location: response.location,
-    location_url: response.locationUrl,
-    max_track_bookings: response.maxTrackBookings,
-    price_in_cents: response.priceInCents,
-    track_booking_start: response.trackBookingStart,
-    track_booking_end: response.trackBookingEnd,
-    is_published: response.isPublished,
-    events: response.events?.map(e => ({
-      id: e.id,
-      title: e.title,
-      starts_at: e.startsAt,
-      ends_at: e.endsAt,
-      // ... map all event fields
+    track: {
+      id: data.track.id,
+      title: data.track.title,
+      image_url: data.track.imageUrl,
+      track_booking_start: data.track.trackBookingStart
+        ? new Date(data.track.trackBookingStart)
+        : null,
+      max_track_bookings: data.track.maxTrackBookings,
+      price_in_cents: data.track.priceInCents,
+      // ...map remaining track fields
+    },
+    events: data.events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      image_url: event.imageUrl,
+      // ...map remaining event fields
     })),
   };
 }
 ```
 
 ## Alternative Approaches
+
+> This project deliberately standardized on explicit per-entity mappers (the Solution above). The alternatives below are recorded for context — they are **not** the adopted convention here.
 
 ### 1. Transform at API Level (Recommended for new projects)
 Configure the API to return snake_case:
@@ -116,4 +120,5 @@ When fields appear as `undefined`:
 1. **Establish casing convention early** - Decide on camelCase or snake_case for entire stack
 2. **Type the API response** - Create separate types for API response vs frontend model
 3. **Use mapping layer** - Keep mapping logic in API client, not components
-4. **Test with real API** - Don't mock API responses in different format
+4. **Test with real API** - Don't mock API responses in a different format
+5. **Verify field names against the live response, not a written spec** - The same class bites server-side vendor integrations too: a spec can claim a field name the live endpoint doesn't use (e.g. a payment gateway spec said `payment_method_id` while the live API returned `paymentId`), so parse the actual response before coding to it

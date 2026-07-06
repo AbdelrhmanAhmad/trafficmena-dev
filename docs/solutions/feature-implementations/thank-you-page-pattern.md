@@ -29,9 +29,10 @@ Created `src/pages/ThankYouTrack.tsx` as the pattern:
 
 ```tsx
 export default function ThankYouTrack() {
+  // Illustrative sketch; the real page (~500 LOC) uses usePublicTrack / useBookTrack
+  // from @/features/tracks/hooks/useTracks (there is no `useTrackById`).
   const { id } = useParams<{ id: string }>();
-  const { data: track } = useTrackById(id);
-  const { data: booking } = useTrackBooking(id);
+  const { data: track } = usePublicTrack(id);
 
   return (
     <div className="container max-w-2xl py-8">
@@ -164,11 +165,15 @@ Add route in `App.tsx`:
 
 Redirect from payment success:
 ```tsx
-// In payment success handler
-if (metadata.type === 'track') {
-  navigate(`/thank-you-track/${metadata.trackId}`);
-} else if (metadata.type === 'event') {
-  navigate(`/thank-you-event/${metadata.eventId}`);
+// In src/pages/payment/success.tsx, after useVerifyPayment({ paymentId }) resolves.
+// paymentId is the sole flow key under v3; the verify response carries itemType/itemId
+// (no pre-v3 `metadata.type`/`metadata.trackId`).
+if (verifyData.itemType === 'event') {
+  navigate(`/thank-you-event/${verifyData.itemId}?paid=1`, { replace: true });
+} else if (verifyData.itemType === 'track') {
+  navigate(`/thank-you-track/${verifyData.itemId}?paid=1`, { replace: true });
+} else if (verifyData.itemType === 'subscription') {
+  navigate('/dashboard?subscribed=1', { replace: true });
 }
 ```
 
