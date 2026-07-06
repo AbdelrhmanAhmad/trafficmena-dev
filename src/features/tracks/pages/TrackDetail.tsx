@@ -42,6 +42,7 @@ import {
   type TicketType,
 } from '../ticketTypes';
 import { getTrackBookingState } from '../utils/trackBookingState';
+import { getTrackPricePreviewGate } from '../utils/trackPricePreviewGate';
 
 type SanitizedHtmlProps = {
   className?: string;
@@ -159,15 +160,24 @@ const TrackDetail: React.FC = () => {
   // For ticket-typed tracks a variant must be picked before pricing/booking is meaningful.
   const ticketSelectionReady = !usesTicketTypes || Boolean(selectedTicketType);
 
-  // Get price preview for logged-in users (gated until a ticket type is chosen on ticketed tracks).
+  // Gate the price preview until the track has loaded and the user can actually buy — a permissive
+  // gate fires before `track` resolves (with no ticketType) and 400-storms the endpoint.
+  const previewGate = getTrackPricePreviewGate({
+    signedIn: Boolean(user),
+    hasItemId: Boolean(id),
+    trackLoaded: Boolean(track),
+    userHasBooked: Boolean(track?.user_has_booked),
+    usesTicketTypes,
+    selectedTicketType,
+  });
   const { data: pricePreview, isLoading: pricePreviewLoading } = usePricePreview(
     user && id ? 'track' : undefined,
     id,
     appliedPromoCode ?? undefined,
     {
       requestKey: promoAttemptKey,
-      enabled: Boolean(user && id) && ticketSelectionReady,
-      ticketType: selectedTicketType ?? undefined,
+      enabled: previewGate.enabled,
+      ticketType: previewGate.ticketType,
     },
   );
 

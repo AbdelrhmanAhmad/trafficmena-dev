@@ -40,6 +40,7 @@ import {
 import { CancellationConfirmDialog } from '../components/CancellationConfirmDialog';
 import { useEventBooking } from '../hooks/useEventBooking';
 import { useEvent } from '../hooks/useEvents';
+import { getEventPricePreviewGate } from '../utils/eventPricePreviewGate';
 
 const trustedMeetingDomains = [
   'zoom.us',
@@ -105,10 +106,16 @@ const EventDetail: React.FC = () => {
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [promoAttemptKey, setPromoAttemptKey] = useState(0);
 
-  // Get price preview for logged-in users
-  // Skip for track events where individual booking is not allowed (avoids 400 errors)
-  const canFetchPricePreview =
-    user && id && (!event?.trackInfo || event?.trackInfo?.singleBookingStart);
+  // Gate the price preview until the event has loaded and the user can register — firing before
+  // `event` resolves misreads a track event as standalone and 400s INDIVIDUAL_BOOKING_DISABLED.
+  const canFetchPricePreview = getEventPricePreviewGate({
+    signedIn: Boolean(user),
+    hasItemId: Boolean(id),
+    eventLoaded: Boolean(event),
+    attending: Boolean(event?.attending),
+    isTrackEvent: Boolean(event?.trackInfo),
+    hasSingleBookingStart: Boolean(event?.trackInfo?.singleBookingStart),
+  });
   const { data: pricePreview, isLoading: pricePreviewLoading } = usePricePreview(
     canFetchPricePreview ? 'event' : undefined,
     id,
