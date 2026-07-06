@@ -30,6 +30,13 @@ This document captures all learnings from the payment gateway MVP implementation
 Hard cutover from Fawaterk v2 (invoice model) to v3 (OAuth + transaction-intent model). Plan:
 `docs/plans/2026-07-03-001-fix-fawaterk-v3-migration-plan.md`.
 
+**Root cause of the outage that triggered this — an int4 overflow, not a dead v2 API.** Production
+threw PG `22003: value "2304130044" is out of range for type integer`: Fawaterk's invoice counter
+had crossed the int32 max (2,147,483,647) and `payments.fawaterk_invoice_id` was `integer`, so every
+new payment insert rolled back while the v2 API was still healthy. v3 cured it incidentally
+(`fawaterk_intent_key` text, `fawaterk_transaction_id` bigint). Canonical lesson:
+[`database-issues/external-id-column-sizing.md`](../database-issues/external-id-column-sizing.md).
+
 ### v3 contract summary
 
 - **Auth:** `POST /oauth/token` (grant_type `client_credentials`, `client_id`/`client_secret` from
@@ -81,7 +88,8 @@ Hard cutover from Fawaterk v2 (invoice model) to v3 (OAuth + transaction-intent 
 - **Hard cutover, void status = `failed`.** No kill switch. `void-v2-pending-payments.ts` sets
   still-pending v2 rows (`fawaterk_invoice_id` set, `fawaterk_intent_key` null) to `failed`
   (deliberately outside every recovery scan — never resurrected) and releases reservations. Rollback
-  is clean only before the void + first organic v3 checkout.
+  is clean only before the void + first organic v3 checkout. (2026-07-06: **391** such rows counted
+  stranded, pending the void.)
 - **Cancel/failed/refund webhooks are verify-and-log-only in v1** (KTD-7): a `pending → failed`
   transition is unrecoverable by every scan and would strand money on retry-then-pay; cancel's early
   capacity release is a new gateway-driven mutation (Phase 7 evidence-gated upgrade); refunds stay
@@ -108,18 +116,19 @@ real OAuth creds):
 - **getTransactionData (unpaid intent):** returns `{ paid:0, total, currency, payment_method,
   transaction_id }`; `transaction_id` is `0` while cache-only.
 
-Still **TBD** — webhook-dependent, not verifiable without a real delivery (dashboard URLs were
-registered 2026-07-03, but no webhook has been captured/verified yet):
+**Webhook correlation (AE5) — production-confirmed (2026-07-06).** Paid webhooks have been confirming
+in production since 2026-07-03, matching our stored `fawaterk_intent_key` against the webhook
+`transaction_key`. The `pay_load`→`paymentId` fallback (plan U10 T6) is therefore **not needed** and
+stays unimplemented.
 
-- **Webhook correlation (AE5):** confirm `transaction_key === fawaterk_intent_key` in a real webhook.
-  _If it fails_, the `pay_load`→`paymentId` fallback (plan U10 T6) must be implemented — currently NOT
-  in the code.
+Recorded as observed-in-production (no longer blocking):
+
 - **Webhook hash format/length (AE6):** the verifier uses a general hex + length-equality guard (not
-  hard-coded 64-hex). Record the observed format.
-- **Fawaterk webhook retry policy** on a 404 (paid + unknown `transaction_key`) — KTD-6 assumes a retry
-  bridges the persist race; if it does not, the 15-min reconciliation job is the only bridge.
-- **`due_date` acceptance (AE8):** we send `Y-m-d H:i:s` UTC; confirm wall-clock/timezone as reflected
-  by `getTransactionData`.
+  hard-coded 64-hex); production webhooks verify against it.
+- **Fawaterk webhook retry policy** on a 404 (paid + unknown `transaction_key`): the 15-min
+  reconciliation job (production-verified `errors: 0`) is the standing bridge for the persist race.
+- **`due_date` acceptance (AE8):** we send `Y-m-d H:i:s` UTC; pending reference lifetimes match the
+  intended 72h window with no drift observed to date — keep monitoring.
 
 ---
 
@@ -577,3 +586,4 @@ await redis.set('fawaterk:circuit', 'open', 'EX', 30);
 - Source: feat/payment-gateway-mvp branch
 - **2026-06-27**: Consolidated the payment-gateway learnings — absorbed `payment-gateway-lessons-learned.md` (implementation checklist, fuller error-code table) and `payment-gateway-mvp-compound-analysis.md` (irreducible-core framing) into this canonical doc; refreshed the non-redirect → `/payment/pending` flow and documented the Mobile Wallet (Fawaterk) `01…` phone-format requirement.
 - **2026-07-03**: Migrated to Fawaterk **API v3** (OAuth + transaction intents) — added the v3 Migration section. Compound-refresh same day: corrected the methods id field to `paymentId` (the live API, not the spec's `payment_method_id` — the spec-drift 500'd the endpoint in production), documented the **flat Fawry `createTransaction` envelope**, filled the staging findings (per-method `payment_data` shapes, wallet local-format, Meeza stub) from direct probes, and updated §5.2 for v3 direct-dispatch plus the editable checkout **wallet-number field** and the "Wallet" pending-page relabel.
+- **2026-07-06**: Recorded the true outage root cause — an **int4 overflow** on `fawaterk_invoice_id` (PG `22003`), not a dead v2 API (canonical: `database-issues/external-id-column-sizing.md`). Closed **AE5** (webhook correlation production-confirmed since 2026-07-03; `pay_load` fallback not needed) and downgraded AE6/AE8 to observed-in-production. Recorded **391** stranded v2 rows pending the void. Companion SPA fix: gated the price-preview query and suppressed deterministic-4xx retries (`runtime-errors/tanstack-query-enabled-gating-race.md`).

@@ -125,8 +125,35 @@ Background safety net runs every 15 minutes and scans recent `pending|expired` r
 3. For any mismatch: isolate transactions missing in local `paid` (match by `fawaterk_transaction_id`),
    and verify whether reconciliation/webhook/verify logs processed them.
 4. Escalate if mismatch remains after one reconciliation cycle.
+5. **Aman/Masary organic canary** (owner decision 2026-07-06: both stay enabled, monitor-only — no
+   confirmed paid row for either method since cutover). Run these two checks until each method fires
+   once; the first paid row is the canary passing, and a paid-at-gateway-but-stuck-pending row is
+   triage per §1.
+   - Log grep — webhook confirmations for either method since yesterday (match your log transport;
+     pm2: `pm2 logs --lines 5000`, systemd: `journalctl -u <api-unit> --since '1 day ago'`):
+     ```bash
+     ... | grep -iE '\[payments/webhook\].*(aman|masary)'
+     ```
+   - SQL — payments by method (the `aman_code` / `masary_code` columns are the discriminator):
+     ```sql
+     select
+       count(*) filter (where aman_code is not null)                     as aman_rows,
+       count(*) filter (where aman_code is not null and status='paid')   as aman_paid,
+       count(*) filter (where masary_code is not null)                   as masary_rows,
+       count(*) filter (where masary_code is not null and status='paid') as masary_paid
+     from payments
+     where created_at >= now() - interval '1 day';
+     ```
 
 ## 5. Post-cutover v2 stragglers & legacy tripwire
+
+### Post-void 72h watch window (owner + window)
+
+**Owner:** the operator who runs `void-v2-pending-payments.ts --apply` owns the watch for **72h after
+apply** (the gateway due window — after it, any watch-list code has expired at the kiosk too). Only
+rows in the DRY-RUN's `WATCH-LIST (within gateway due window)` bucket can still be paid post-void;
+watch the tripwire log line below and fulfil manually per R31 (below) on any hit. Zero tripwire hits
+to date (2026-07-06) — the watch list is expected to be small or empty.
 
 A pre-cutover kiosk code (Fawry/Aman/Masary) paid **after** the v3 deploy hits a voided row the
 shipped code can't verify. Signals:

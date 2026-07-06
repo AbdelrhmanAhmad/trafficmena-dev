@@ -17,6 +17,7 @@ import {
   fetchPricePreview,
   verifyPayment,
 } from '@/app/api/payments';
+import { shouldRetryPricePreview } from '@/app/api/pricePreviewRetry';
 import { currentUserQueryKey } from '@/app/queryKeys';
 
 const PAYMENT_METHODS_KEY = ['payment-methods'];
@@ -102,5 +103,7 @@ export function usePricePreview(
     },
     enabled: (options?.enabled ?? true) && !!itemType,
     staleTime: 60 * 1000, // 1 minute - depends on subscription status
+    // Deterministic 4xx (premature/invalid preview) costs exactly one request, at every call site.
+    retry: shouldRetryPricePreview,
   });
 }

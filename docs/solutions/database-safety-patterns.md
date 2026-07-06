@@ -10,3 +10,6 @@
 > - **SQL LIKE pattern injection / search-input escaping** →
 >   [`security-issues/like-pattern-sql-injection.md`](./security-issues/like-pattern-sql-injection.md)
 >   (`escapeLikePattern`, the numeric-`CAST … ILIKE` case, escape tests)
+> - **External numeric ID column sizing (int4 overflow)** →
+>   [`database-issues/external-id-column-sizing.md`](./database-issues/external-id-column-sizing.md)
+>   (external ids are `bigint`/`text`, never `int4`; the 2026-07-03 `22003` payments outage)
