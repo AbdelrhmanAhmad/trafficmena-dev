@@ -208,7 +208,7 @@ PUT  /api/tracks/:id                   # Update track (manager+)
 DELETE /api/tracks/:id                 # Delete track (admin+)
 GET  /api/tracks/:id/events            # List events in track
 POST /api/tracks/:id/events            # Add event to track (manager+)
-DELETE /api/tracks/:id/events/:eventId # Remove event from track (manager+)
+DELETE /api/tracks/:id/events/:eventId # Remove event from track (manager+; on a track with active bookings, admin+ only, requires {reason}, atomically cancels buyers' sessions + unlinks series assets)
 POST /api/tracks/:id/book              # Book entire track
 
 # Series (Content Collections)

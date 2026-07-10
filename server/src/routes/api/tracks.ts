@@ -20,6 +20,7 @@ import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere, hasTrackBookingRow } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { extractJsonPayload } from './jsonPayload.js';
 import {
   bookingGrantsLiveAttendance,
   hasTicketTypes,
@@ -28,6 +29,7 @@ import {
   ticketEventCoverageError,
 } from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
+import { evaluateTrackEventRemoval } from './trackEventRemoval.js';
 import { isPaidTrack, isPaidTrackOffering } from './trackPaidStatus.js';
 import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
@@ -1311,11 +1313,11 @@ export function registerTrackRoutes(app: Hono) {
         const [{ count: bookingCount }] = await db
           .select({ count: count(trackBookings.id) })
           .from(trackBookings)
-          .where(eq(trackBookings.trackId, trackId));
+          .where(activeTrackBookingWhere(eq(trackBookings.trackId, trackId)));
         if (Number(bookingCount) > 0) {
           throw new ApiError(
             'TRACK_HAS_BOOKINGS',
-            `Cannot modify events on track with ${bookingCount} bookings.`,
+            `Cannot modify events on track with ${bookingCount} active bookings.`,
             400,
           );
         }
@@ -1451,56 +1453,151 @@ export function registerTrackRoutes(app: Hono) {
         }
         const eventId = eventIdValidation.value;
 
-        const [{ count: bookingCount }] = await db
-          .select({ count: count(trackBookings.id) })
-          .from(trackBookings)
-          .where(eq(trackBookings.trackId, trackId));
-        if (Number(bookingCount) > 0) {
-          throw new ApiError(
-            'TRACK_HAS_BOOKINGS',
-            `Cannot modify events on track with ${bookingCount} bookings.`,
-            400,
-          );
-        }
-
-        const [track] = await db
-          .select({
-            isPublished: tracks.isPublished,
-            onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
-            onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
-            offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
-          })
-          .from(tracks)
-          .where(eq(tracks.id, trackId))
-          .limit(1);
-
-        if (track?.isPublished && hasTicketTypes(track)) {
-          const remainingFormats = await db
-            .select({ eventFormat: events.eventFormat })
-            .from(trackEvents)
-            .innerJoin(events, eq(events.id, trackEvents.eventId))
-            .where(
-              and(eq(trackEvents.trackId, trackId), sql`${trackEvents.eventId} <> ${eventId}`),
-            );
-          const coverageError = ticketEventCoverageError(track, {
-            hasOnlineEvent: remainingFormats.some((row) => row.eventFormat === 'online'),
-            hasOfflineEvent: remainingFormats.some((row) => row.eventFormat === 'offline'),
-          });
-          if (coverageError) {
-            throw new ApiError('TICKET_EVENT_COVERAGE', coverageError, 400);
+        // Optional reason body, parsed best-effort (KTD1). fetchJson tags every request as
+        // application/json, so a body-less DELETE arrives as empty JSON and extractJsonPayload
+        // returns INVALID_JSON — that must resolve to "no reason", never surface as a parse error.
+        let reason: string | undefined;
+        const bodyResult = await extractJsonPayload(c);
+        if (bodyResult.ok && bodyResult.data && typeof bodyResult.data === 'object') {
+          const rawReason = (bodyResult.data as { reason?: unknown }).reason;
+          if (typeof rawReason === 'string') {
+            reason = rawReason;
           }
         }
 
-        const deleted = await db
-          .delete(trackEvents)
-          .where(and(eq(trackEvents.trackId, trackId), eq(trackEvents.eventId, eventId)))
-          .returning({ id: trackEvents.id });
+        const now = new Date();
 
-        if (deleted.length === 0) {
-          throw new ApiError('NOT_FOUND', 'Event not found in track.', 404);
-        }
+        const result = await db.transaction(async (tx) => {
+          // Lock the track row first so an in-flight booking fulfillment (which also locks this row
+          // first) is serialized against the guard count — mirrors executeTrackBookingWrite (KTD4).
+          const [track] = await tx
+            .select({
+              isPublished: tracks.isPublished,
+              onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+              onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+              offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
+            })
+            .from(tracks)
+            .where(eq(tracks.id, trackId))
+            .for('update')
+            .limit(1);
 
-        return c.json({ success: true });
+          if (!track) {
+            throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
+          }
+
+          // All bookings of the track: the active (non-revoked) count gates the removal, and every
+          // booking id — even revoked ones — is a safe cancellation-join target (KTD3/KTD5).
+          const bookingRows = await tx
+            .select({ id: trackBookings.id, revokedAt: trackBookings.revokedAt })
+            .from(trackBookings)
+            .where(eq(trackBookings.trackId, trackId));
+          const bookingIds = bookingRows.map((row) => row.id);
+          const activeBookingCount = bookingRows.filter((row) => row.revokedAt === null).length;
+
+          const decision = evaluateTrackEventRemoval({
+            role: staff.role,
+            activeBookingCount,
+            reason,
+          });
+          if (!decision.allowed) {
+            throw new ApiError(decision.code, decision.message, 400);
+          }
+
+          // Coverage stays hard for every role and path (R7).
+          if (track.isPublished && hasTicketTypes(track)) {
+            const remainingFormats = await tx
+              .select({ eventFormat: events.eventFormat })
+              .from(trackEvents)
+              .innerJoin(events, eq(events.id, trackEvents.eventId))
+              .where(
+                and(eq(trackEvents.trackId, trackId), sql`${trackEvents.eventId} <> ${eventId}`),
+              );
+            const coverageError = ticketEventCoverageError(track, {
+              hasOnlineEvent: remainingFormats.some((row) => row.eventFormat === 'online'),
+              hasOfflineEvent: remainingFormats.some((row) => row.eventFormat === 'offline'),
+            });
+            if (coverageError) {
+              throw new ApiError('TICKET_EVENT_COVERAGE', coverageError, 400);
+            }
+          }
+
+          const deleted = await tx
+            .delete(trackEvents)
+            .where(and(eq(trackEvents.trackId, trackId), eq(trackEvents.eventId, eventId)))
+            .returning({ id: trackEvents.id });
+          if (deleted.length === 0) {
+            throw new ApiError('NOT_FOUND', 'Event not found in track.', 404);
+          }
+
+          let cancelledRegistrations = 0;
+          let pendingRefundsUntouched = 0;
+
+          if (bookingIds.length > 0) {
+            // Cancel only active registrations sourced from this track's bookings; refund_requested
+            // rows stay in the review queue and standalone (null-source) rows are untouched (R5).
+            const cancelled = await tx
+              .update(eventAttendees)
+              .set({
+                status: 'cancelled' as const,
+                cancelledAt: now,
+                refundRequestedAt: null,
+                adminNote: decision.reason
+                  ? `Event removed from track by ${staff.userId}: ${decision.reason}`
+                  : `Event removed from track by ${staff.userId}`,
+              })
+              .where(
+                and(
+                  eq(eventAttendees.eventId, eventId),
+                  eq(eventAttendees.status, 'active'),
+                  inArray(eventAttendees.sourceTrackBookingId, bookingIds),
+                ),
+              )
+              .returning({ id: eventAttendees.id });
+            cancelledRegistrations = cancelled.length;
+
+            const [pendingRefunds] = await tx
+              .select({ count: count(eventAttendees.id) })
+              .from(eventAttendees)
+              .where(
+                and(
+                  eq(eventAttendees.eventId, eventId),
+                  eq(eventAttendees.status, 'refund_requested'),
+                  inArray(eventAttendees.sourceTrackBookingId, bookingIds),
+                ),
+              );
+            pendingRefundsUntouched = Number(pendingRefunds?.count ?? 0);
+          }
+
+          // Reverse of the add path: unlink the removed session's assets from the track's series;
+          // isPremium curation stays manual (KTD7).
+          const [trackSeries] = await tx
+            .select({ id: series.id })
+            .from(series)
+            .where(eq(series.trackId, trackId))
+            .limit(1);
+          if (trackSeries) {
+            const eventAssets = await tx
+              .select({ id: libraryAssets.id })
+              .from(libraryAssets)
+              .where(eq(libraryAssets.eventId, eventId));
+            if (eventAssets.length > 0) {
+              await tx.delete(seriesAssets).where(
+                and(
+                  eq(seriesAssets.seriesId, trackSeries.id),
+                  inArray(
+                    seriesAssets.assetId,
+                    eventAssets.map((asset) => asset.id),
+                  ),
+                ),
+              );
+            }
+          }
+
+          return { cancelledRegistrations, pendingRefundsUntouched };
+        });
+
+        return c.json({ success: true, ...result });
       },
       'REMOVE_EVENT_FAILED',
       'Unable to remove event from track.',

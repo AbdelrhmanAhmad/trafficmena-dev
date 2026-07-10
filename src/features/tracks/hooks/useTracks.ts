@@ -17,6 +17,7 @@ import {
 } from '@/app/api/tracks';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { trackSuccessfulTrackBooking } from '../trackBookingAnalytics';
+import { invalidateTrackAccessQueries } from './useTrackEnrollmentManagement';
 
 export const useTracks = (page = 1, pageSize = 12, filters?: { search?: string }) => {
   const safePageSize = Math.min(pageSize, 50);
@@ -167,14 +168,37 @@ export const useRemoveEventFromTrack = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ trackId, eventId }: { trackId: string; eventId: string }) =>
-      removeEventFromTrack(trackId, eventId),
-    onSuccess: (_, { trackId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', trackId] });
-      queryClient.invalidateQueries({ queryKey: ['tracks'] });
+    mutationFn: ({
+      trackId,
+      eventId,
+      reason,
+    }: {
+      trackId: string;
+      eventId: string;
+      reason?: string;
+    }) => removeEventFromTrack(trackId, eventId, reason),
+    onSuccess: (result, { trackId }) => {
+      // A removal can cancel members' materialized sessions, so refresh the full access surface.
+      invalidateTrackAccessQueries(queryClient, trackId);
+
+      const cancelled = result.cancelledRegistrations ?? 0;
+      if (cancelled === 0) {
+        toast({
+          title: 'Event removed',
+          description: 'The event was removed from the track.',
+        });
+        return;
+      }
+
+      const pending = result.pendingRefundsUntouched ?? 0;
+      const cancelledLabel = `${cancelled} registration${cancelled === 1 ? '' : 's'} cancelled`;
+      const pendingLabel =
+        pending > 0
+          ? `, ${pending} pending refund request${pending === 1 ? '' : 's'} left in the review queue`
+          : '';
       toast({
-        title: 'Event removed',
-        description: 'The event was removed from the track.',
+        title: 'Session removed',
+        description: `Session removed. ${cancelledLabel}${pendingLabel}.`,
       });
     },
     onError: (error) => {

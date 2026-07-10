@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TicketType } from '@/app/api/payments';
 import { createManualTrackEnrollment, revokeTrackEnrollment } from '@/app/api/tracks';
 
-function invalidateTrackAccessQueries(
+export function invalidateTrackAccessQueries(
   queryClient: ReturnType<typeof useQueryClient>,
   trackId: string,
 ) {

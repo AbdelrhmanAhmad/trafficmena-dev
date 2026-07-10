@@ -241,10 +241,21 @@ export async function addEventsToTrack(
   return { addedCount: data.addedCount };
 }
 
-export async function removeEventFromTrack(trackId: string, eventId: string): Promise<void> {
-  await fetchJson<{ success: boolean }>(`${API_BASE}/tracks/${trackId}/events/${eventId}`, {
-    method: 'DELETE',
-  });
+export interface RemoveEventFromTrackResult {
+  success: boolean;
+  cancelledRegistrations: number;
+  pendingRefundsUntouched: number;
+}
+
+export async function removeEventFromTrack(
+  trackId: string,
+  eventId: string,
+  reason?: string,
+): Promise<RemoveEventFromTrackResult> {
+  return fetchJson<RemoveEventFromTrackResult>(
+    `${API_BASE}/tracks/${trackId}/events/${eventId}`,
+    reason ? { method: 'DELETE', body: JSON.stringify({ reason }) } : { method: 'DELETE' },
+  );
 }
 
 export async function reorderTrackEvents(trackId: string, eventIds: string[]): Promise<void> {

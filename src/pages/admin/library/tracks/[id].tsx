@@ -1,6 +1,7 @@
 import { ArrowLeft, BookOpen, Calendar, Layers, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { RemoveTrackEventDialog } from '@/features/tracks/components/RemoveTrackEventDialog';
 import TrackEventSelector from '@/features/tracks/components/TrackEventSelector';
 import TrackForm, {
   mapTrackTicketPrices,
@@ -13,6 +14,7 @@ import {
   useTrack,
   useUpdateTrack,
 } from '@/features/tracks/hooks/useTracks';
+import { resolveRemoveEventFlow } from '@/features/tracks/utils/removeEventGate';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -32,6 +34,10 @@ function TrackDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showEventSelector, setShowEventSelector] = useState(false);
+  const [removeDialog, setRemoveDialog] = useState<{
+    eventId: string;
+    eventTitle: string;
+  } | null>(null);
   const { canDeleteContent } = useRolePermissions();
 
   const { data: track, isLoading, isError } = useTrack(id || '');
@@ -115,10 +121,38 @@ function TrackDetailPage() {
     );
   };
 
-  const handleRemoveEvent = (eventId: string) => {
+  const handleRemoveEvent = (event: { id: string; title: string }) => {
+    const flow = resolveRemoveEventFlow({
+      canDeleteContent,
+      activeBookingsCount: track.bookings_count,
+    });
+
+    if (flow === 'blocked') {
+      toast({
+        title: 'Removal blocked',
+        description:
+          'This track has active bookings. Only owners and admins can remove a session from a booked track.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (flow === 'override-dialog') {
+      setRemoveDialog({ eventId: event.id, eventTitle: event.title });
+      return;
+    }
+
     const confirmed = window.confirm('Remove this event from the track?');
     if (!confirmed) return;
-    removeEventMutation.mutate({ trackId: track.id, eventId });
+    removeEventMutation.mutate({ trackId: track.id, eventId: event.id });
+  };
+
+  const handleConfirmRemoveWithReason = (reason: string) => {
+    if (!removeDialog) return;
+    removeEventMutation.mutate(
+      { trackId: track.id, eventId: removeDialog.eventId, reason },
+      { onSuccess: () => setRemoveDialog(null) },
+    );
   };
 
   return (
@@ -267,7 +301,7 @@ function TrackDetailPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleRemoveEvent(event.id)}
+                          onClick={() => handleRemoveEvent(event)}
                           disabled={removeEventMutation.isPending}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -288,6 +322,15 @@ function TrackDetailPage() {
           existingEventIds={track.events.map((e) => e.id)}
           onSelect={handleAddEvents}
           isLoading={addEventsMutation.isPending}
+        />
+
+        <RemoveTrackEventDialog
+          open={Boolean(removeDialog)}
+          eventTitle={removeDialog?.eventTitle ?? ''}
+          activeBookingsCount={track.bookings_count}
+          isPending={removeEventMutation.isPending}
+          onOpenChange={(open) => (open ? null : setRemoveDialog(null))}
+          onConfirm={handleConfirmRemoveWithReason}
         />
       </AppLayout>
     </AdminProtectedRoute>
