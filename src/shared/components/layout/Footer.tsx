@@ -152,6 +152,14 @@ const Footer = () => {
                   About Us
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className="text-gray-300 transition-colors duration-200 hover:text-primary-green"
+                >
+                  Contact Us
+                </Link>
+              </li>
             </ul>
           </div>
 

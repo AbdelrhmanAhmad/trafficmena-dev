@@ -34,6 +34,7 @@ const queryClient = new QueryClient({
 });
 
 const AboutPage = lazy(() => import('./pages/About'));
+const ContactPage = lazy(() => import('./pages/Contact'));
 const CommunityComingSoon = lazy(() => import('./pages/Community'));
 const InviteOnlyPage = lazy(() => import('./pages/InviteOnly'));
 const LibraryComingSoon = lazy(() => import('./pages/Library'));
@@ -135,6 +136,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <AboutPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/contact"
+                    element={
+                      <ErrorBoundary>
+                        <ContactPage />
                       </ErrorBoundary>
                     }
                   />
