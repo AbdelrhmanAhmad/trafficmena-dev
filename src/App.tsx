@@ -6,6 +6,7 @@ import Meetups from '@/features/events/pages/Meetups';
 import PublicTrackDetail from '@/features/tracks/pages/TrackDetail';
 import { usePageTracking } from '@/lib/analytics/usePageTracking';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
+import FloatingWhatsApp from '@/shared/components/FloatingWhatsApp';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
@@ -122,6 +123,7 @@ const App = () => {
           <BrowserRouter>
             <AuthProvider>
               <PageTracker />
+              <FloatingWhatsApp />
               <Suspense fallback={routeFallback}>
                 <Routes>
                   <Route
