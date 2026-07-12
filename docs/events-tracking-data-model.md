@@ -81,6 +81,7 @@ Parameters marked with 🔒 below are PII — include in dataLayer but block fro
 | `"homepage"` | `/` |
 | `"about"` | `/about` |
 | `"contact"` | `/contact` |
+| `"refund_policy"` | `/refund-policy` |
 | `"event_list"` | `/meetups` |
 | `"event_detail"` | `/meetups/:id` |
 | `"track_detail"` | `/tracks/:id` |

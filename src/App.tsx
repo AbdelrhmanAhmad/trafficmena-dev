@@ -43,6 +43,7 @@ const ThankYou = lazy(() => import('./pages/ThankYou'));
 const ThankYouEvent = lazy(() => import('./pages/ThankYouEvent'));
 const ThankYouTrack = lazy(() => import('./pages/ThankYouTrack'));
 const PrivacyPolicy = lazy(() => import('./pages/Privacy'));
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
 const TermsOfService = lazy(() => import('./pages/Terms'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const InvitationAcceptancePage = lazy(() => import('./pages/invitation/[token]'));
@@ -588,6 +589,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <PrivacyPolicy />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/refund-policy"
+                    element={
+                      <ErrorBoundary>
+                        <RefundPolicy />
                       </ErrorBoundary>
                     }
                   />
