@@ -35,6 +35,10 @@ describe('GTM bootstrap CSP hardening', () => {
     assert.notEqual(cspPosition, -1);
     assert.notEqual(firstResourcePosition, -1);
     assert.ok(cspPosition < firstResourcePosition);
+    assert.match(
+      html,
+      /<meta name="viewport"[^>]*\/?>\s*(?:<!--[\s\S]*?-->\s*)*<meta\s+http-equiv="Content-Security-Policy"/,
+    );
   });
 
   it('keeps the server CSP script-src free of unsafe-inline', async () => {
