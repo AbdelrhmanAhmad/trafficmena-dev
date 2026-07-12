@@ -77,6 +77,8 @@ const PAGE_TYPE_MAP: Array<[RegExp, string]> = [
   [/^\/thank-you-track\/[^/]+$/, 'thank_you_track'],
   [/^\/privacy$/, 'privacy'],
   [/^\/terms$/, 'terms'],
+  [/^\/contact\/?$/, 'contact'],
+  [/^\/refund-policy\/?$/, 'refund_policy'],
 ];
 
 export function getPageType(pathname: string): string {

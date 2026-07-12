@@ -11,7 +11,8 @@ import { registerHealthRoutes } from './routes/health.js';
 export function createApp() {
   const app = new Hono();
   const allowedOrigins = env.CORS_ALLOWLIST;
-  // CSP is also defined in index.html (meta tag) — browsers intersect both, so keep host lists in sync.
+  // This policy governs Hono API responses; the meta policy governs the SPA document.
+  // Keep shared hosts synchronized for defense-in-depth and CI coverage.
   const connectSources = new Set<string>(["'self'", 'https://challenges.cloudflare.com']);
   for (const origin of allowedOrigins) {
     connectSources.add(origin);
@@ -38,6 +39,8 @@ export function createApp() {
   connectSources.add('https://analytics.tiktok.com');
   connectSources.add('https://analytics-ipv6.tiktokw.us');
   connectSources.add('https://ads.tiktok.com');
+  connectSources.add('https://*.clarity.ms');
+  connectSources.add('https://c.bing.com');
 
   const scriptSrc = [
     "'self'",
@@ -58,6 +61,8 @@ export function createApp() {
     'https://analytics.tiktok.com',
     'https://analytics-ipv6.tiktokw.us',
     'https://ads.tiktok.com',
+    'https://www.clarity.ms',
+    'https://*.clarity.ms',
   ];
 
   if (!isProduction) {
@@ -109,11 +114,13 @@ export function createApp() {
           'https://video.bunnycdn.com',
           'https://stream.bunnycdn.com',
           'https://www.googletagmanager.com',
+          'https://www.clarity.ms',
           // TikTok Pixel deep-link schemes (per TikTok official docs)
           'bytedance:',
           'sslocal:',
         ],
         frameAncestors: ["'self'"],
+        workerSrc: ["'self'", 'blob:', 'https://www.clarity.ms'],
         connectSrc: Array.from(connectSources),
         formAction: ["'self'"],
       },
