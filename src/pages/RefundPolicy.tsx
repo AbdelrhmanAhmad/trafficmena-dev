@@ -29,8 +29,8 @@ const RefundPolicy = () => {
           <section>
             <h2 className="text-xl font-semibold text-neutral-900">2. Track bookings</h2>
             <p className="mt-3 leading-relaxed">
-              The same full-refund guarantee applies to a track booking when you request a refund
-              at least 7 days before the track&apos;s first event. Track refunds do not have a
+              The same full-refund guarantee applies to a track booking when you request a refund at
+              least 7 days before the track&apos;s first event. Track refunds do not have a
               self-service cancellation option, so please contact us by email or WhatsApp.
             </p>
           </section>
@@ -40,8 +40,8 @@ const RefundPolicy = () => {
               3. Event-specific refund terms
             </h2>
             <p className="mt-3 leading-relaxed">
-              Refund terms shown on a specific event take precedence over this general policy. If
-              an event does not state separate refund terms, this policy applies.
+              Refund terms shown on a specific event take precedence over this general policy. If an
+              event does not state separate refund terms, this policy applies.
             </p>
           </section>
 
@@ -62,17 +62,17 @@ const RefundPolicy = () => {
               5. Requests made under 7 days
             </h2>
             <p className="mt-3 leading-relaxed">
-              Requests made fewer than 7 days before the relevant event start date fall outside
-              the guarantee. They are handled according to the event-specific terms, when present,
-              or reviewed case by case.
+              Requests made fewer than 7 days before the relevant event start date fall outside the
+              guarantee. They are handled according to the event-specific terms, when present, or
+              reviewed case by case.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-neutral-900">6. Subscriptions</h2>
             <p className="mt-3 leading-relaxed">
-              You may cancel your subscription at any time. Your access continues through the end
-              of your current subscription period.
+              You may cancel your subscription at any time. Your access continues through the end of
+              your current subscription period.
             </p>
           </section>
 

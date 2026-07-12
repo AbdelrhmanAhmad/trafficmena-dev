@@ -1,6 +1,6 @@
 import { Mail, Phone, Sparkles } from 'lucide-react';
-import Layout from '@/shared/components/layout/Layout';
 import { WhatsAppIcon } from '@/shared/components/icons/WhatsAppIcon';
+import Layout from '@/shared/components/layout/Layout';
 import {
   CONTACT_EMAIL,
   CONTACT_PHONE_DISPLAY,
@@ -15,6 +15,8 @@ const actions = [
     value: CONTACT_EMAIL,
     href: `mailto:${CONTACT_EMAIL}`,
     icon: Mail,
+    external: false,
+    iconClassName: 'text-[#05ef62]',
   },
   {
     title: 'Phone',
@@ -22,6 +24,17 @@ const actions = [
     value: CONTACT_PHONE_DISPLAY,
     href: `tel:${CONTACT_PHONE_E164}`,
     icon: Phone,
+    external: false,
+    iconClassName: 'text-[#05ef62]',
+  },
+  {
+    title: 'WhatsApp',
+    description: 'Chat with us for a quick and convenient response.',
+    value: CONTACT_PHONE_DISPLAY,
+    href: WHATSAPP_URL,
+    icon: WhatsAppIcon,
+    external: true,
+    iconClassName: 'text-[#25D366]',
   },
 ] as const;
 
@@ -47,38 +60,24 @@ const ContactPage = () => {
             </p>
 
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {actions.map(({ title, description, value, href, icon: Icon }) => (
-                <a
-                  key={title}
-                  href={href}
-                  className="rounded-2xl border border-neutral-200 bg-white/90 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#05ef62] focus-visible:ring-offset-2"
-                >
-                  <Icon className="h-6 w-6 text-[#05ef62]" />
-                  <h2 className="mt-4 text-base font-medium tracking-tight text-neutral-900">
-                    {title}
-                  </h2>
-                  <p className="mt-2 text-sm leading-relaxed text-neutral-600">{description}</p>
-                  <p className="mt-4 break-words text-sm font-medium text-neutral-900">{value}</p>
-                </a>
-              ))}
-
-              <a
-                href={WHATSAPP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-2xl border border-neutral-200 bg-white/90 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#05ef62] focus-visible:ring-offset-2"
-              >
-                <WhatsAppIcon className="h-6 w-6 text-[#25D366]" aria-hidden="true" />
-                <h2 className="mt-4 text-base font-medium tracking-tight text-neutral-900">
-                  WhatsApp
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                  Chat with us for a quick and convenient response.
-                </p>
-                <p className="mt-4 text-sm font-medium text-neutral-900">
-                  {CONTACT_PHONE_DISPLAY}
-                </p>
-              </a>
+              {actions.map(
+                ({ title, description, value, href, icon: Icon, external, iconClassName }) => (
+                  <a
+                    key={title}
+                    href={href}
+                    target={external ? '_blank' : undefined}
+                    rel={external ? 'noopener noreferrer' : undefined}
+                    className="rounded-2xl border border-neutral-200 bg-white/90 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#05ef62] focus-visible:ring-offset-2"
+                  >
+                    <Icon className={`h-6 w-6 ${iconClassName}`} aria-hidden="true" />
+                    <h2 className="mt-4 text-base font-medium tracking-tight text-neutral-900">
+                      {title}
+                    </h2>
+                    <p className="mt-2 text-sm leading-relaxed text-neutral-600">{description}</p>
+                    <p className="mt-4 break-words text-sm font-medium text-neutral-900">{value}</p>
+                  </a>
+                ),
+              )}
             </div>
           </section>
         </div>
