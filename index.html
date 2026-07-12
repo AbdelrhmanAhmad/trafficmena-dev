@@ -3,6 +3,72 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Enhanced Content Security Policy for Secure Iframe Embedding -->
+    <!-- This meta policy governs the SPA document; Hono's policy governs API responses. Keep shared hosts synced for defense-in-depth and CI. -->
+      <meta
+        http-equiv="Content-Security-Policy"
+        content="default-src 'self'; 
+                 script-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://challenges.cloudflare.com https://www.googletagmanager.com https://tagmanager.google.com https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://connect.facebook.net https://capi-automation.s3.us-east-2.amazonaws.com https://analytics.tiktok.com https://analytics-ipv6.tiktokw.us https://ads.tiktok.com https://www.clarity.ms https://*.clarity.ms;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; 
+                 font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; 
+                 img-src 'self' data: blob: https:; 
+                 media-src 'self' blob: https:;
+                 object-src 'none';
+               base-uri 'self';
+               form-action 'self';
+               frame-ancestors 'self';
+                 frame-src 'self' 
+                         https://challenges.cloudflare.com
+                         https://www.youtube.com 
+                         https://www.youtube-nocookie.com 
+                         https://player.vimeo.com 
+                         https://vimeo.com
+                         https://docs.google.com 
+                         https://drive.google.com
+                         https://canva.com 
+                         https://*.canva.com
+                         https://gamma.app 
+                         https://*.gamma.app
+                         https://bunnycdn.com 
+                         https://*.bunnycdn.com
+                         https://iframe.videodelivery.net
+                         https://iframe.mediadelivery.net
+                         https://*.mediadelivery.net
+                         https://video.bunnycdn.com
+                         https://stream.bunnycdn.com
+                         https://www.googletagmanager.com
+                         https://www.clarity.ms
+                         bytedance:
+                         sslocal:;
+                 connect-src 'self'
+                            https://challenges.cloudflare.com
+                            https://api.trafficmena.com
+                            http://localhost:3001
+                            https://api.github.com
+                            https://cdn.jsdelivr.net
+                            https://www.googletagmanager.com
+                            https://www.google-analytics.com
+                            https://analytics.google.com
+                            https://*.google-analytics.com
+                            https://*.analytics.google.com
+                            https://www.google.com
+                            https://pagead2.googlesyndication.com
+                            https://www.googleadservices.com
+                            https://*.g.doubleclick.net
+                            https://ad.doubleclick.net
+                            https://www.facebook.com
+                            https://connect.facebook.net
+                            https://analytics.tiktok.com
+                            https://analytics-ipv6.tiktokw.us
+                            https://ads.tiktok.com
+                            https://*.clarity.ms
+                            https://c.bing.com;
+                 worker-src 'self' blob: https://www.clarity.ms;
+                 manifest-src 'self';
+                 upgrade-insecure-requests;"
+      />
+
     <title>TrafficMENA - Marketing Excellence in MENA</title>
 
     <!-- Google Tag Manager -->
@@ -36,68 +102,6 @@
     />
     <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin" />
     <meta http-equiv="Cross-Origin-Resource-Policy" content="same-origin" />
-    
-    <!-- Enhanced Content Security Policy for Secure Iframe Embedding -->
-    <!-- CSP is also defined in server/src/app.ts (secureHeaders) — browsers intersect both, so keep host lists in sync. -->
-      <meta
-        http-equiv="Content-Security-Policy"
-        content="default-src 'self'; 
-                 script-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://challenges.cloudflare.com https://www.googletagmanager.com https://tagmanager.google.com https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://connect.facebook.net https://capi-automation.s3.us-east-2.amazonaws.com https://analytics.tiktok.com https://analytics-ipv6.tiktokw.us https://ads.tiktok.com;
-                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; 
-                 font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; 
-                 img-src 'self' data: blob: https:; 
-                 media-src 'self' blob: https:;
-                 object-src 'none';
-               base-uri 'self';
-               form-action 'self';
-               frame-ancestors 'self';
-                 frame-src 'self' 
-                         https://challenges.cloudflare.com
-                         https://www.youtube.com 
-                         https://www.youtube-nocookie.com 
-                         https://player.vimeo.com 
-                         https://vimeo.com
-                         https://docs.google.com 
-                         https://drive.google.com
-                         https://canva.com 
-                         https://*.canva.com
-                         https://gamma.app 
-                         https://*.gamma.app
-                         https://bunnycdn.com 
-                         https://*.bunnycdn.com
-                         https://iframe.videodelivery.net
-                         https://iframe.mediadelivery.net
-                         https://*.mediadelivery.net
-                         https://video.bunnycdn.com
-                         https://stream.bunnycdn.com
-                         https://www.googletagmanager.com
-                         bytedance:
-                         sslocal:;
-                 connect-src 'self'
-                            https://challenges.cloudflare.com
-                            https://api.trafficmena.com
-                            http://localhost:3001
-                            https://api.github.com
-                            https://cdn.jsdelivr.net
-                            https://www.googletagmanager.com
-                            https://www.google-analytics.com
-                            https://analytics.google.com
-                            https://*.google-analytics.com
-                            https://*.analytics.google.com
-                            https://www.google.com
-                            https://pagead2.googlesyndication.com
-                            https://www.googleadservices.com
-                            https://*.g.doubleclick.net
-                            https://ad.doubleclick.net
-                            https://www.facebook.com
-                            https://connect.facebook.net
-                            https://analytics.tiktok.com
-                            https://analytics-ipv6.tiktokw.us
-                            https://ads.tiktok.com;
-                 worker-src 'self' blob:;
-                 manifest-src 'self';
-                 upgrade-insecure-requests;"
-      />
 
     <meta
       property="og:title"
