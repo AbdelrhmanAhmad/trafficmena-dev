@@ -18,6 +18,16 @@ import { resolveRemoveEventFlow } from '@/features/tracks/utils/removeEventGate'
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/components/ui/alert-dialog';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -34,6 +44,7 @@ function TrackDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showEventSelector, setShowEventSelector] = useState(false);
+  const [pendingEventIds, setPendingEventIds] = useState<string[] | null>(null);
   const [removeDialog, setRemoveDialog] = useState<{
     eventId: string;
     eventTitle: string;
@@ -114,20 +125,28 @@ function TrackDetailPage() {
     });
   };
 
-  const handleAddEvents = (eventIds: string[]) => {
-    if (
-      track.bookings_count > 0 &&
-      !window.confirm(
-        'Add these sessions to the booked track? Current buyers whose tickets include each session will be registered automatically.',
-      )
-    ) {
-      return;
-    }
-
+  const addEventsToTrack = (eventIds: string[]) => {
     addEventsMutation.mutate(
       { trackId: track.id, eventIds },
       { onSuccess: () => setShowEventSelector(false) },
     );
+  };
+
+  const handleAddEvents = (eventIds: string[]) => {
+    if (track.bookings_count > 0) {
+      setPendingEventIds(eventIds);
+      return;
+    }
+
+    addEventsToTrack(eventIds);
+  };
+
+  const handleConfirmAddEvents = () => {
+    if (!pendingEventIds) return;
+
+    const eventIds = pendingEventIds;
+    setPendingEventIds(null);
+    addEventsToTrack(eventIds);
   };
 
   const handleRemoveEvent = (event: { id: string; title: string }) => {
@@ -332,6 +351,24 @@ function TrackDetailPage() {
           onSelect={handleAddEvents}
           isLoading={addEventsMutation.isPending}
         />
+
+        <AlertDialog
+          open={pendingEventIds !== null}
+          onOpenChange={(open) => (open ? null : setPendingEventIds(null))}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Add sessions to this booked track?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Current buyers whose tickets include each session will be registered automatically.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmAddEvents}>Add sessions</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <RemoveTrackEventDialog
           open={Boolean(removeDialog)}

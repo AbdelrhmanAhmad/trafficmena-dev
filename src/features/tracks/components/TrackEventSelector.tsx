@@ -1,6 +1,6 @@
 import { Calendar, Check, Search } from 'lucide-react';
 import type React from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useEvents } from '@/features/events/hooks/useEvents';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -32,6 +32,13 @@ const TrackEventSelector: React.FC<TrackEventSelectorProps> = ({
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  useEffect(() => {
+    if (!open) {
+      setSelectedIds(new Set());
+      setSearch('');
+    }
+  }, [open]);
+
   // Fetch events (max 50 per API limit)
   const { data: eventsData, isLoading: eventsLoading } = useEvents(1, 50, {});
 
@@ -61,8 +68,6 @@ const TrackEventSelector: React.FC<TrackEventSelectorProps> = ({
 
   const handleConfirm = () => {
     onSelect(Array.from(selectedIds));
-    setSelectedIds(new Set());
-    setSearch('');
   };
 
   const handleCancel = () => {
