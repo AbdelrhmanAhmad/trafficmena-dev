@@ -72,6 +72,9 @@ Registration Status Flow:
 - `refund_requested` → `cancelled` (admin approves refund)
 - `refund_requested` → `active` (admin rejects, registration restored)
 - `cancelled` → `active` (user re-registers)
+- `active` → `cancelled` (admin removes an event from a booked track — Late-Added Session removal,
+  `tracks.ts`; bypasses `refund_requested`, targets only attendee rows sourced from track bookings,
+  and records the reason in `adminNote`)
 
 ### Database Schema Changes
 

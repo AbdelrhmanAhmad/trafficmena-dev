@@ -13,6 +13,7 @@ tags:
   - react-query
 components:
   - server/src/routes/api/tracks.ts
+  - server/src/routes/api/trackEnrollments.ts
   - server/src/routes/api/series.ts
   - server/src/db/schema/index.ts
   - src/features/tracks/
@@ -90,7 +91,9 @@ CREATE TABLE "track_bookings" (
 );
 ```
 
-> **Evolution (ticket-types):** `tracks` now also carries per-ticket pricing (`price_in_cents`, `online_only_price_cents`, `online_offline_price_cents`, `offline_only_price_cents`), `location`/`location_url`, and `allow_individual_booking`. `track_bookings` now carries `ticket_type`, `booking_source`, `payment_id`, and `revoked_at` (active state = `revoked_at IS NULL`, queried via `activeTrackBookingWhere`). Paid/ticketed tracks are no longer booked inline: `POST /tracks/:id/book` rejects them with `PAYMENT_REQUIRED` (402) and booking writes go through `executeTrackBookingWrite()`.
+> **Evolution (ticket-types):** `tracks` now also carries per-ticket pricing (`price_in_cents`, `online_only_price_cents`, `online_offline_price_cents`, `offline_only_price_cents`), `location`/`location_url`, and `allow_individual_booking`. `track_bookings` now carries `ticket_type`, `booking_source`, `payment_id`, and `revoked_at` (active state = `revoked_at IS NULL`, queried via `activeTrackBookingWhere`). Paid/ticketed tracks are no longer booked inline: `POST /tracks/:id/book` rejects them with `PAYMENT_REQUIRED` (402) and booking writes go through `executeTrackBookingWrite()`. Ticket-scoped access rules live in [`ticket-aware-access-control.md`](./ticket-aware-access-control.md).
+>
+> **Evolution (Late-Added Session, PR #28):** track membership is no longer fixed at booking time. Adding an event to a track with active bookings backfills entitled buyers per their ticket type (`classifyTrackEventBackfill` + reservation-aware capacity holds in `trackEventAddition.ts`); removing an event from a booked track is admin+ only, requires a `{reason}`, and atomically cancels buyers' backfilled sessions (`trackEventRemoval.ts`). See the **Late-Added Session** entry in `CONCEPTS.md`.
 
 ### 2. Booking Window Logic
 
@@ -121,6 +124,8 @@ import { inArray } from 'drizzle-orm';
 ```
 
 ### 4. Atomic Track Booking
+
+> **Historical snippet.** This inline handler shows the original free-booking flow. Today `POST /tracks/:id/book` rejects paid/ticketed tracks with `PAYMENT_REQUIRED` (402) and all booking writes go through `executeTrackBookingWrite()` — but the atomic lock → validate → check capacity → register-all → record-booking sequence below is still exactly what that helper does inside its transaction.
 
 The track booking endpoint uses a database transaction to atomically:
 1. Lock track events with `FOR UPDATE`
@@ -232,15 +237,18 @@ export const useBookTrack = () => useMutation({
 | POST | `/tracks` | manager+ | Create track |
 | PUT | `/tracks/:id` | manager+ | Update track |
 | DELETE | `/tracks/:id` | admin+ | Delete track |
-| POST | `/tracks/:id/events` | manager+ | Add events |
-| DELETE | `/tracks/:id/events/:eventId` | manager+ | Remove event |
+| POST | `/tracks/:id/events` | manager+ | Add events; booked tracks backfill entitled buyers |
+| DELETE | `/tracks/:id/events/:eventId` | manager+ | Remove event; on a booked track admin+ only, requires `{reason}`, cancels buyers' sessions |
 | PUT | `/tracks/:id/events/reorder` | manager+ | Reorder events |
-| POST | `/tracks/:id/book` | user+ | Book track |
+| POST | `/tracks/:id/book` | user+ | Book track (free/legacy only; paid → 402 `PAYMENT_REQUIRED`) |
+| GET | `/tracks/:id/attendees` | manager+ | List attendees (search + ticketType filter) |
+| POST | `/tracks/:id/manual-enrollments` | manager+ | Manually enroll a user (`trackEnrollments.ts`) |
+| POST | `/tracks/:id/enrollments/:userId/revoke` | manager+ | Revoke an enrollment (`trackEnrollments.ts`) |
 
 ## Files Changed
 
 ### Backend
-- `server/src/routes/api/tracks.ts` (new - 1108 lines)
+- `server/src/routes/api/tracks.ts` (new; track logic has since grown and split into `trackEnrollments.ts` plus helper modules: `trackBookingShared.ts`, `trackEventAddition.ts`, `trackEventRemoval.ts`, `ticketAccess.ts`, `trackPaidStatus.ts`, `trackSeriesPublishing.ts`)
 - `server/src/routes/api/series.ts` (new)
 - `server/src/utils/errors.ts` (new - ApiError utility)
 - `server/src/db/schema/index.ts` (tracks, trackEvents, trackBookings, series, seriesAssets)
@@ -249,7 +257,7 @@ export const useBookTrack = () => useMutation({
 ### Frontend
 - `src/features/tracks/` (new module - 11 files)
 - `src/features/series/` (new module - 7 files)
-- `src/app/api/tracks.ts` (new - 360 lines)
+- `src/app/api/tracks.ts` (new)
 - `src/features/events/pages/DashboardMeetups.tsx` (tracks section)
 - `src/features/events/pages/Meetups.tsx` (public tracks section)
 - `src/features/events/pages/EventDetail.tsx` (booking logic for track events)

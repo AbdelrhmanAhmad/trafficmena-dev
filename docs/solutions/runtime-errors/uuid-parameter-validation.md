@@ -80,9 +80,10 @@ The guard is repeated **per route file**, not centralized in `utils.ts` — each
 ```typescript
 // tracks.ts — a validator that RETURNS a result (doesn't throw); the caller decides:
 const idValidation = validateUuid(c.req.param('id'), 'track ID');
-if (!idValidation.ok) {
-  return c.json({ error: { code: 'INVALID_ID', message: idValidation.message } }, 400);
+if (!idValidation.valid) {
+  return c.json({ error: idValidation.error }, 400); // error is { code: 'INVALID_ID', message }
 }
+const id = idValidation.value;
 
 // payments.ts / promoCodes.ts — inline at the call site:
 const parsed = z.string().uuid().safeParse(id);

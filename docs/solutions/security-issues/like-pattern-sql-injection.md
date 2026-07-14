@@ -84,9 +84,12 @@ if (search) {
 |------|------|--------|
 | `server/src/routes/api/utils.ts` | 187-189 | Added `escapeLikePattern()` function |
 | `server/src/routes/api/events.ts` | 375 | Applied to event search |
-| `server/src/routes/api/tracks.ts` | 644 | Applied to track search |
+| `server/src/routes/api/tracks.ts` | 681 | Applied to track search |
 | `server/src/routes/api/library.ts` | 173 | Applied to library search |
 | `server/src/routes/api/series.ts` | 82 | Applied to series search |
+
+Since the original fix, `escapeLikePattern()` has also been adopted by newer search sites:
+`users.ts`, `seriesGrants.ts`, and `invitations.ts`.
 
 ## What Escaping Prevents
 

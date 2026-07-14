@@ -35,6 +35,11 @@ Access is asymmetric: offline-session recordings are available to every Ticket T
 A user's purchase of an entire Track; it stays active until revoked and grants Ticket-Type-scoped access to the Track's Events and recordings.
 *Avoid:* enrollment (when the distinction matters)
 
+### Booking Window
+The bounded time span during which a Track accepts bookings; outside it, booking is closed regardless of remaining capacity.
+
+A Track carries two independent windows: one governing booking the whole Track, and — only when individual-session booking is enabled — a separate one governing booking single Events out of the Track. Each window is a start/end pair set together; the two pairs do not constrain each other.
+
 ### Reservation
 A temporary capacity hold placed at checkout, before payment settles, that counts against an Event's or Track's capacity and expires after a fixed window — so two buyers cannot both pay for the last seat.
 *Avoid:* hold

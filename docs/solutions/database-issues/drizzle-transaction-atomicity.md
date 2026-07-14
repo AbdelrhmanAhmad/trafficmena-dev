@@ -129,8 +129,8 @@ rg "await db\.(insert|update|delete)" server/src/routes --type ts -A 5 | grep -B
 The codebase correctly uses transactions in:
 
 - `events.ts:983` - Event registration with row locking (`FOR UPDATE` at `:996`)
-- `tracks.ts:1571` - Track event-reorder transaction
-- `payments.ts:1871` - Paid track booking (atomic multi-event registration; `FOR UPDATE` on tracks + trackEvents). The direct `/book` route transaction is at `tracks.ts:1602`
+- `tracks.ts:2021` - Track event-reorder transaction (route at `:1962`)
+- `payments.ts:1871` - Paid track booking (atomic multi-event registration; `FOR UPDATE` on tracks + trackEvents). The direct `/book` route transaction is at `tracks.ts:2052`
 - `series.ts:556` - Series asset reordering
 
 ## Test Cases

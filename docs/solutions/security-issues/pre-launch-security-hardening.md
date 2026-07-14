@@ -11,10 +11,10 @@ tags:
   - race-conditions
 severity: high
 components:
-  - server/routes/api/events.ts
-  - server/routes/api/library.ts
-  - server/routes/api/series.ts
-  - server/utils/csrf.ts
+  - server/src/routes/api/events.ts
+  - server/src/routes/api/library.ts
+  - server/src/routes/api/series.ts
+  - server/src/utils/csrf.ts
   - src/app/api/client.ts
   - src/features/library/components/LibraryAssetForm.tsx
 symptoms:
@@ -50,40 +50,18 @@ Before launch, a comprehensive security review identified several patterns that 
 
 ### 1. UUID Validation Pattern
 
-**Schema Definition:**
-```typescript
-// server/src/routes/api/utils.ts or inline in route file
-import { z } from 'zod';
+Validate route `:id` params with `z.string().uuid()` before any database query, raising the standard
+`{ error: { code, message } }` envelope as a 400 instead of letting Postgres 500. The guard is declared
+**per route file** (e.g. `parseEventIdParam()` in events.ts, `validateUuid()` in tracks.ts) — there is no
+centralized helper in `utils.ts`.
 
-const uuidParamSchema = z.string().uuid();
-```
+**Canonical doc:** [`../runtime-errors/uuid-parameter-validation.md`](../runtime-errors/uuid-parameter-validation.md)
+(current helper shapes, per-route error codes, testing).
 
-**Usage Pattern:**
-```typescript
-app.get('/events/:id', async (c) => {
-  const idParam = c.req.param('id');
-  const idParsed = uuidParamSchema.safeParse(idParam);
-  if (!idParsed.success) {
-    return c.json({
-      error: { code: 'INVALID_PARAM', message: 'Event ID must be a valid UUID.' }
-    }, 400);
-  }
-  const id = idParsed.data;
-
-  // Safe to use in database queries
-  const [event] = await db.select().from(events).where(eq(events.id, id));
-});
-```
-
-**Files Updated:**
+**Files updated in this pre-launch pass:**
 - `server/src/routes/api/series.ts` - 7 endpoints
 - `server/src/routes/api/library.ts` - 3 endpoints
 - `server/src/routes/api/events.ts` - Multiple endpoints
-
-**Why This Matters:**
-- Prevents malformed UUIDs from reaching database
-- Returns clear 400 error instead of cryptic database errors
-- Defense in depth against potential injection vectors
 
 ---
 
@@ -265,6 +243,10 @@ const result = await db.transaction(async (tx) => {
 - Status transitions (pending -> active)
 - Financial operations
 - Any read-then-write pattern
+
+For the complementary atomicity case — multi-table parent+child writes that must commit or roll back
+together (orphan prevention) — see
+[`../database-issues/drizzle-transaction-atomicity.md`](../database-issues/drizzle-transaction-atomicity.md).
 
 ---
 
