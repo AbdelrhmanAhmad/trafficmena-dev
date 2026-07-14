@@ -1,9 +1,10 @@
-import { and, count, desc, eq, gt, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  eventReservations,
   events,
   libraryAssets,
   payments,
@@ -29,10 +30,22 @@ import {
   ticketEventCoverageError,
 } from './ticketAccess.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
+import {
+  classifyTrackEventBackfill,
+  evaluateTrackEventAdditionCapacity,
+  planTrackEventReservationHolds,
+} from './trackEventAddition.js';
 import { evaluateTrackEventRemoval } from './trackEventRemoval.js';
 import { isPaidTrack, isPaidTrackOffering } from './trackPaidStatus.js';
 import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
-import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
+import {
+  DATABASE_ERROR_CODES,
+  escapeLikePattern,
+  extractDatabaseErrorCode,
+  getOptionalUserRole,
+  requireAdmin,
+  requireManager,
+} from './utils.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -244,6 +257,28 @@ function validateBookingWindows(
 const addEventsSchema = z.object({
   eventIds: z.array(z.string().uuid()).min(1, 'Provide at least one event.'),
 });
+
+const TRACK_EVENT_ADDITION_MAX_ATTEMPTS = 3;
+
+async function withTrackEventAdditionRetry<T>(
+  operation: () => Promise<T>,
+  attempt = 1,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (extractDatabaseErrorCode(error) !== DATABASE_ERROR_CODES.LOCK_NOT_AVAILABLE) throw error;
+    if (attempt >= TRACK_EVENT_ADDITION_MAX_ATTEMPTS) {
+      throw new ApiError(
+        'TRACK_BUSY',
+        'The track is processing payments right now. Try again in a moment.',
+        409,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, attempt * 25));
+    return withTrackEventAdditionRetry(operation, attempt + 1);
+  }
+}
 
 const reorderEventsSchema = z.object({
   eventIds: z.array(z.string().uuid()),
@@ -1292,92 +1327,400 @@ export function registerTrackRoutes(app: Hono) {
           throw new ApiError('INVALID_REQUEST', parsed.error.message, 400);
         }
 
-        // Verify track exists
-        const [track] = await db
-          .select({
-            id: tracks.id,
-            maxTrackBookings: tracks.maxTrackBookings,
-            priceInCents: tracks.priceInCents,
-            onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
-            onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
-            offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
-          })
-          .from(tracks)
-          .where(eq(tracks.id, trackId));
-        if (!track) {
-          throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
-        }
+        const result = await withTrackEventAdditionRetry(() =>
+          db.transaction(async (tx) => {
+            const referenceTime = new Date();
+            const [track] = await tx
+              .select({
+                id: tracks.id,
+                maxTrackBookings: tracks.maxTrackBookings,
+                priceInCents: tracks.priceInCents,
+                onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+                onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+                offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
+              })
+              .from(tracks)
+              .where(eq(tracks.id, trackId))
+              .for('update')
+              .limit(1);
+            if (!track) {
+              throw new ApiError('TRACK_NOT_FOUND', 'Track not found.', 404);
+            }
 
-        const trackIsPaid = isPaidTrackOffering(track);
+            const existing = await tx
+              .select({ eventId: trackEvents.eventId })
+              .from(trackEvents)
+              .where(eq(trackEvents.trackId, trackId));
+            const existingIds = new Set(existing.map((row) => row.eventId));
+            const newEventIds = parsed.data.eventIds.filter((id) => !existingIds.has(id));
+            if (newEventIds.length === 0) {
+              return { success: true, addedCount: 0 };
+            }
 
-        const [{ count: bookingCount }] = await db
-          .select({ count: count(trackBookings.id) })
-          .from(trackBookings)
-          .where(activeTrackBookingWhere(eq(trackBookings.trackId, trackId)));
-        if (Number(bookingCount) > 0) {
-          throw new ApiError(
-            'TRACK_HAS_BOOKINGS',
-            `Cannot modify events on track with ${bookingCount} active bookings.`,
-            400,
-          );
-        }
+            const [maxSort] = await tx
+              .select({ maxOrder: sql<number>`COALESCE(MAX(${trackEvents.sortOrder}), -1)` })
+              .from(trackEvents)
+              .where(eq(trackEvents.trackId, trackId));
+            let sortOrder = (maxSort?.maxOrder ?? -1) + 1;
 
-        // Get current max sort order
-        const [maxSort] = await db
-          .select({ maxOrder: sql<number>`COALESCE(MAX(${trackEvents.sortOrder}), -1)` })
-          .from(trackEvents)
-          .where(eq(trackEvents.trackId, trackId));
+            const initialBooking = await tx
+              .select({ id: trackBookings.id })
+              .from(trackBookings)
+              .where(activeTrackBookingWhere(eq(trackBookings.trackId, trackId)))
+              .limit(1);
+            const initialTrackReservations = await tx
+              .select({
+                userId: trackReservations.userId,
+                paymentId: trackReservations.paymentId,
+                expiresAt: trackReservations.expiresAt,
+              })
+              .from(trackReservations)
+              .where(
+                and(
+                  eq(trackReservations.trackId, trackId),
+                  gt(trackReservations.expiresAt, referenceTime),
+                ),
+              );
+            const quietPath = initialBooking.length === 0 && initialTrackReservations.length === 0;
 
-        let sortOrder = (maxSort?.maxOrder ?? -1) + 1;
+            if (quietPath) {
+              // Preserve the historical zero-booking/zero-reservation path, including its >= guard
+              // and exact response shape.
+              const eventCapacities = await tx
+                .select({ id: events.id, title: events.title, maxAttendees: events.maxAttendees })
+                .from(events)
+                .where(inArray(events.id, newEventIds));
+              for (const event of eventCapacities) {
+                if (event.maxAttendees === null) {
+                  throw new ApiError(
+                    'CAPACITY_REQUIRED',
+                    `Event "${event.title}" must have maxAttendees set.`,
+                    400,
+                  );
+                }
+                if (
+                  track.maxTrackBookings !== null &&
+                  event.maxAttendees < track.maxTrackBookings
+                ) {
+                  throw new ApiError(
+                    'CAPACITY_TOO_LOW',
+                    `Event "${event.title}" capacity (${event.maxAttendees}) < track maxTrackBookings (${track.maxTrackBookings}).`,
+                    400,
+                  );
+                }
+              }
 
-        // Get existing event IDs to avoid duplicates
-        const existing = await db
-          .select({ eventId: trackEvents.eventId })
-          .from(trackEvents)
-          .where(eq(trackEvents.trackId, trackId));
+              const validIds = new Set(eventCapacities.map((event) => event.id));
+              const toInsert = newEventIds.filter((id) => validIds.has(id));
+              if (toInsert.length > 0) {
+                await tx
+                  .insert(trackEvents)
+                  .values(
+                    toInsert.map((eventId) => ({ trackId, eventId, sortOrder: sortOrder++ })),
+                  );
 
-        const existingIds = new Set(existing.map((e) => e.eventId));
-        const newEventIds = parsed.data.eventIds.filter((id) => !existingIds.has(id));
+                // Link event assets to track's Series
+                const [trackSeries] = await tx
+                  .select({ id: series.id })
+                  .from(series)
+                  .where(eq(series.trackId, trackId))
+                  .limit(1);
+                if (trackSeries) {
+                  const eventAssets = await tx
+                    .select({ id: libraryAssets.id })
+                    .from(libraryAssets)
+                    .where(inArray(libraryAssets.eventId, toInsert));
+                  if (eventAssets.length > 0) {
+                    const [maxSeriesSort] = await tx
+                      .select({
+                        maxOrder: sql<number>`COALESCE(MAX(${seriesAssets.sortOrder}), -1)`,
+                      })
+                      .from(seriesAssets)
+                      .where(eq(seriesAssets.seriesId, trackSeries.id));
+                    let assetSortOrder = (maxSeriesSort?.maxOrder ?? -1) + 1;
+                    await tx.insert(seriesAssets).values(
+                      eventAssets.map((asset) => ({
+                        seriesId: trackSeries.id,
+                        assetId: asset.id,
+                        sortOrder: assetSortOrder++,
+                      })),
+                    );
+                    if (isPaidTrackOffering(track)) {
+                      await tx
+                        .update(libraryAssets)
+                        .set({ isPremium: true, updatedAt: referenceTime })
+                        .where(
+                          inArray(
+                            libraryAssets.id,
+                            eventAssets.map((asset) => asset.id),
+                          ),
+                        );
+                    }
+                  }
+                }
+              }
+              return { success: true, addedCount: toInsert.length };
+            }
 
-        if (newEventIds.length === 0) {
-          return c.json({ success: true, addedCount: 0 });
-        }
+            const addedEvents = await tx
+              .select({
+                id: events.id,
+                title: events.title,
+                eventFormat: events.eventFormat,
+                maxAttendees: events.maxAttendees,
+              })
+              .from(events)
+              .where(inArray(events.id, newEventIds))
+              .orderBy(asc(events.id))
+              .for('update');
+            if (addedEvents.length === 0) {
+              return { success: true, addedCount: 0 };
+            }
+            const validIds = new Set(addedEvents.map((event) => event.id));
+            const toInsert = newEventIds.filter((id) => validIds.has(id));
 
-        // Verify events exist and check capacities
-        const eventCapacities = await db
-          .select({ id: events.id, title: events.title, maxAttendees: events.maxAttendees })
-          .from(events)
-          .where(inArray(events.id, newEventIds));
+            const standalonePayments = await tx
+              .select({
+                eventId: payments.itemId,
+                status: payments.status,
+                fawaterkIntentKey: payments.fawaterkIntentKey,
+              })
+              .from(payments)
+              .where(
+                and(
+                  eq(payments.itemType, 'event'),
+                  inArray(
+                    payments.itemId,
+                    addedEvents.map((event) => event.id),
+                  ),
+                  or(
+                    eq(payments.status, 'pending'),
+                    and(eq(payments.status, 'expired'), isNotNull(payments.fawaterkIntentKey)),
+                  ),
+                ),
+              )
+              .orderBy(asc(payments.itemId))
+              .limit(1);
 
-        for (const event of eventCapacities) {
-          if (event.maxAttendees === null) {
-            throw new ApiError(
-              'CAPACITY_REQUIRED',
-              `Event "${event.title}" must have maxAttendees set.`,
-              400,
+            const existingReservationRows = await tx
+              .select({
+                id: eventReservations.id,
+                eventId: eventReservations.eventId,
+                userId: eventReservations.userId,
+                paymentId: eventReservations.paymentId,
+                expiresAt: eventReservations.expiresAt,
+                owningPaymentStatus: payments.status,
+                owningPaymentItemType: payments.itemType,
+              })
+              .from(eventReservations)
+              .innerJoin(payments, eq(payments.id, eventReservations.paymentId))
+              .where(
+                inArray(
+                  eventReservations.eventId,
+                  addedEvents.map((event) => event.id),
+                ),
+              );
+
+            const candidatePaymentIds = [
+              ...new Set(initialTrackReservations.map((row) => row.paymentId)),
+            ].sort();
+            const lockedPayments =
+              candidatePaymentIds.length > 0
+                ? await tx
+                    .select({
+                      id: payments.id,
+                      userId: payments.userId,
+                      status: payments.status,
+                      itemType: payments.itemType,
+                      itemId: payments.itemId,
+                      ticketType: payments.ticketType,
+                    })
+                    .from(payments)
+                    .where(inArray(payments.id, candidatePaymentIds))
+                    .orderBy(asc(payments.id))
+                    .for('update', { noWait: true })
+                : [];
+            const pendingTrackPayments = new Map(
+              lockedPayments
+                .filter(
+                  (payment) =>
+                    payment.status === 'pending' &&
+                    payment.itemType === 'track' &&
+                    payment.itemId === trackId,
+                )
+                .map((payment) => [payment.id, payment]),
             );
-          }
-          if (track.maxTrackBookings !== null && event.maxAttendees < track.maxTrackBookings) {
-            throw new ApiError(
-              'CAPACITY_TOO_LOW',
-              `Event "${event.title}" capacity (${event.maxAttendees}) < track maxTrackBookings (${track.maxTrackBookings}).`,
-              400,
-            );
-          }
-        }
+            const verifiedTrackReservations =
+              candidatePaymentIds.length > 0
+                ? (
+                    await tx
+                      .select({
+                        userId: trackReservations.userId,
+                        paymentId: trackReservations.paymentId,
+                        expiresAt: trackReservations.expiresAt,
+                      })
+                      .from(trackReservations)
+                      .where(
+                        and(
+                          eq(trackReservations.trackId, trackId),
+                          inArray(trackReservations.paymentId, candidatePaymentIds),
+                          gt(trackReservations.expiresAt, referenceTime),
+                        ),
+                      )
+                  ).filter((row) => pendingTrackPayments.has(row.paymentId))
+                : [];
 
-        const validIds = new Set(eventCapacities.map((e) => e.id));
-        const toInsert = newEventIds.filter((id) => validIds.has(id));
+            const bookingRows = await tx
+              .select({
+                id: trackBookings.id,
+                userId: trackBookings.userId,
+                ticketType: trackBookings.ticketType,
+                paidAt: trackBookings.paidAt,
+                pricePaidCents: trackBookings.pricePaidCents,
+                paymentId: trackBookings.paymentId,
+              })
+              .from(trackBookings)
+              .where(activeTrackBookingWhere(eq(trackBookings.trackId, trackId)))
+              .for('update');
 
-        if (toInsert.length > 0) {
-          await db.transaction(async (tx) => {
-            await tx.insert(trackEvents).values(
-              toInsert.map((eventId) => ({
-                trackId,
-                eventId,
-                sortOrder: sortOrder++,
+            const existingAttendeeRows = await tx
+              .select({
+                id: eventAttendees.id,
+                eventId: eventAttendees.eventId,
+                userId: eventAttendees.userId,
+                status: eventAttendees.status,
+              })
+              .from(eventAttendees)
+              .where(
+                inArray(
+                  eventAttendees.eventId,
+                  addedEvents.map((event) => event.id),
+                ),
+              )
+              .for('update');
+
+            const backfillPlans = classifyTrackEventBackfill({
+              bookings: bookingRows,
+              events: addedEvents,
+              existingAttendees: existingAttendeeRows,
+              registeredAt: referenceTime,
+            });
+            const holdPlan = planTrackEventReservationHolds({
+              trackReservations: verifiedTrackReservations.map((reservation) => ({
+                ...reservation,
+                ticketType: pendingTrackPayments.get(reservation.paymentId)?.ticketType ?? null,
               })),
+              events: addedEvents,
+              existingAttendees: existingAttendeeRows,
+              existingReservations: existingReservationRows,
+              unresolvedStandalonePayments: standalonePayments.flatMap((payment) =>
+                payment.eventId
+                  ? [
+                      {
+                        eventId: payment.eventId,
+                        status: payment.status,
+                        hasGatewayIntent: payment.fawaterkIntentKey !== null,
+                      },
+                    ]
+                  : [],
+              ),
+              referenceTime,
+            });
+            if (holdPlan.blocked) {
+              throw new ApiError(holdPlan.code, holdPlan.message, 409);
+            }
+
+            const backfillByEventId = new Map(backfillPlans.map((plan) => [plan.eventId, plan]));
+            const occupiedCountByEventId = new Map<string, number>();
+            for (const row of existingAttendeeRows) {
+              if (row.status === 'active' || row.status === 'refund_requested') {
+                occupiedCountByEventId.set(
+                  row.eventId,
+                  (occupiedCountByEventId.get(row.eventId) ?? 0) + 1,
+                );
+              }
+            }
+            const unexpiredReservationCountByEventId = new Map<string, number>();
+            for (const row of existingReservationRows) {
+              if (row.expiresAt > referenceTime) {
+                unexpiredReservationCountByEventId.set(
+                  row.eventId,
+                  (unexpiredReservationCountByEventId.get(row.eventId) ?? 0) + 1,
+                );
+              }
+            }
+            const capacityDecision = evaluateTrackEventAdditionCapacity({
+              maxTrackBookings: track.maxTrackBookings,
+              mode: bookingRows.length > 0 ? 'booked' : 'reservation-only',
+              events: addedEvents.map((event) => {
+                const backfill = backfillByEventId.get(event.id);
+                return {
+                  ...event,
+                  occupiedRows: occupiedCountByEventId.get(event.id) ?? 0,
+                  unexpiredReservations: unexpiredReservationCountByEventId.get(event.id) ?? 0,
+                  newHolds: holdPlan.newHoldCountsByEvent[event.id] ?? 0,
+                  netNewRows:
+                    (backfill?.toInsert.length ?? 0) + (backfill?.toReactivate.length ?? 0),
+                };
+              }),
+            });
+            if (!capacityDecision.allowed) {
+              throw new ApiError(
+                capacityDecision.code,
+                capacityDecision.message,
+                capacityDecision.status,
+              );
+            }
+
+            if (toInsert.length > 0) {
+              await tx
+                .insert(trackEvents)
+                .values(toInsert.map((eventId) => ({ trackId, eventId, sortOrder: sortOrder++ })));
+            }
+
+            const attendeeInserts = backfillPlans.flatMap((plan) => plan.toInsert);
+            if (attendeeInserts.length > 0) {
+              await tx.insert(eventAttendees).values(
+                attendeeInserts.map((row) => ({
+                  eventId: row.eventId,
+                  userId: row.userId,
+                  registeredAt: row.registeredAt,
+                  paidAt: row.paidAt,
+                  pricePaidCents: row.pricePaidCents,
+                  paymentId: row.paymentId,
+                  sourceTrackBookingId: row.sourceTrackBookingId,
+                })),
+              );
+            }
+
+            const reactivations = backfillPlans.flatMap((plan) => plan.toReactivate);
+            await Promise.all(
+              reactivations.map((row) =>
+                tx
+                  .update(eventAttendees)
+                  .set({
+                    registeredAt: row.registeredAt,
+                    paidAt: row.paidAt,
+                    pricePaidCents: row.pricePaidCents,
+                    paymentId: row.paymentId,
+                    sourceTrackBookingId: row.sourceTrackBookingId,
+                    status: 'active',
+                    cancelledAt: null,
+                    refundRequestedAt: null,
+                    adminNote: null,
+                  })
+                  .where(eq(eventAttendees.id, row.attendeeId)),
+              ),
             );
+
+            if (holdPlan.staleRowsToDelete.length > 0) {
+              await tx
+                .delete(eventReservations)
+                .where(inArray(eventReservations.id, holdPlan.staleRowsToDelete));
+            }
+            if (holdPlan.holdsToInsert.length > 0) {
+              await tx.insert(eventReservations).values(holdPlan.holdsToInsert);
+            }
 
             // Link event assets to track's Series
             const [trackSeries] = await tx
@@ -1385,21 +1728,19 @@ export function registerTrackRoutes(app: Hono) {
               .from(series)
               .where(eq(series.trackId, trackId))
               .limit(1);
-
-            if (trackSeries) {
+            if (trackSeries && toInsert.length > 0) {
               const eventAssets = await tx
                 .select({ id: libraryAssets.id })
                 .from(libraryAssets)
                 .where(inArray(libraryAssets.eventId, toInsert));
-
               if (eventAssets.length > 0) {
                 const [maxSeriesSort] = await tx
-                  .select({ maxOrder: sql<number>`COALESCE(MAX(${seriesAssets.sortOrder}), -1)` })
+                  .select({
+                    maxOrder: sql<number>`COALESCE(MAX(${seriesAssets.sortOrder}), -1)`,
+                  })
                   .from(seriesAssets)
                   .where(eq(seriesAssets.seriesId, trackSeries.id));
-
                 let assetSortOrder = (maxSeriesSort?.maxOrder ?? -1) + 1;
-
                 await tx.insert(seriesAssets).values(
                   eventAssets.map((asset) => ({
                     seriesId: trackSeries.id,
@@ -1407,12 +1748,10 @@ export function registerTrackRoutes(app: Hono) {
                     sortOrder: assetSortOrder++,
                   })),
                 );
-
-                if (trackIsPaid) {
-                  const updatedAt = new Date();
+                if (isPaidTrackOffering(track)) {
                   await tx
                     .update(libraryAssets)
-                    .set({ isPremium: true, updatedAt })
+                    .set({ isPremium: true, updatedAt: referenceTime })
                     .where(
                       inArray(
                         libraryAssets.id,
@@ -1422,10 +1761,24 @@ export function registerTrackRoutes(app: Hono) {
                 }
               }
             }
-          });
-        }
 
-        return c.json({ success: true, addedCount: toInsert.length });
+            if (bookingRows.length === 0) {
+              return { success: true, addedCount: toInsert.length };
+            }
+            return {
+              success: true,
+              addedCount: toInsert.length,
+              backfilledCount: attendeeInserts.length,
+              reactivatedCount: reactivations.length,
+              skippedExistingCount: backfillPlans.reduce(
+                (total, plan) => total + plan.toSkip.length,
+                0,
+              ),
+            };
+          }),
+        );
+
+        return c.json(result);
       },
       'ADD_EVENTS_FAILED',
       'Unable to add events to track.',

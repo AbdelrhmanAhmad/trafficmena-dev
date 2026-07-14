@@ -1,8 +1,20 @@
 import { CalendarPlus, FolderOpen } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import type { CreateEventPayload } from '@/app/api/events';
 import { useAddEventsToTrack, useTrack } from '@/features/tracks/hooks/useTracks';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { AdminEventForm } from '../../components/AdminEventForm';
@@ -16,13 +28,14 @@ const AdminMeetupsNew = () => {
 
   const createEventMutation = useCreateEvent();
   const addToTrackMutation = useAddEventsToTrack();
+  const [pendingPayload, setPendingPayload] = useState<CreateEventPayload | null>(null);
 
   // Fetch track info if creating event for a track
   const { data: track } = useTrack(trackId || '');
 
   const isSubmitting = createEventMutation.isPending || addToTrackMutation.isPending;
 
-  const handleSubmit = async (payload: Parameters<typeof createEventMutation.mutateAsync>[0]) => {
+  const createAndAddEvent = async (payload: CreateEventPayload) => {
     // Step 1: Create the event
     const newEvent = await createEventMutation.mutateAsync(payload);
 
@@ -49,6 +62,25 @@ const AdminMeetupsNew = () => {
       // Navigate to event detail (existing behavior)
       navigate(`/admin/events/${newEvent.id}`);
     }
+  };
+
+  const handleSubmit = async (payload: CreateEventPayload) => {
+    if (trackId && track?.bookings_count > 0) {
+      setPendingPayload(payload);
+      return;
+    }
+
+    await createAndAddEvent(payload);
+  };
+
+  const handleConfirmBookedAdd = () => {
+    if (!pendingPayload) return;
+
+    const payload = pendingPayload;
+    setPendingPayload(null);
+    createAndAddEvent(payload).catch(() => {
+      // Toast surfaced via mutation hook
+    });
   };
 
   return (
@@ -110,6 +142,24 @@ const AdminMeetupsNew = () => {
             </CardContent>
           </Card>
         </div>
+
+        <AlertDialog
+          open={pendingPayload !== null}
+          onOpenChange={(open) => (open ? null : setPendingPayload(null))}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Add sessions to this booked track?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Current buyers whose tickets include each session will be registered automatically.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmBookedAdd}>Add sessions</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </AppLayout>
     </AdminProtectedRoute>
   );

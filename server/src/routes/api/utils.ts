@@ -332,6 +332,7 @@ export function extractDatabaseErrorCode(error: unknown, depth = 0): string | nu
 export const DATABASE_ERROR_CODES = {
   UNIQUE_VIOLATION: '23505',
   FOREIGN_KEY_VIOLATION: '23503',
+  LOCK_NOT_AVAILABLE: '55P03',
 } as const;
 
 export function isKnownDatabaseConflict(error: unknown): 'unique' | 'fk' | null {

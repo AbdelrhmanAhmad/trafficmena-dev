@@ -42,6 +42,9 @@ A temporary capacity hold placed at checkout, before payment settles, that count
 ### Payment
 A record of a purchase attempt for an item (Event, Track, or Subscription) that moves through a lifecycle from pending to paid, or to failed/expired. Fulfillment — granting the purchased access — happens atomically only after the payment is confirmed; a Payment is never marked paid before the buyer's access is delivered.
 
+### Late-Added Session
+An Event added to a Track after booking opened (a late-confirmed or replacement speaker, or a meetup scheduled once the cohort exists). Active Track Bookings are backfilled per their Ticket Type exactly as if the session had existed at booking time, so purchase timing never changes a buyer's entitlement.
+
 ### Subscription
 An annual membership that grants premium Library access and a configurable discount on paid Events and Tracks.
 

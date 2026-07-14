@@ -227,18 +227,30 @@ export async function deleteTrack(id: string): Promise<void> {
   });
 }
 
+export interface AddEventsToTrackResult {
+  addedCount: number;
+  backfilledCount?: number;
+  reactivatedCount?: number;
+  skippedExistingCount?: number;
+}
+
 export async function addEventsToTrack(
   trackId: string,
   eventIds: string[],
-): Promise<{ addedCount: number }> {
-  const data = await fetchJson<{ success: boolean; addedCount: number }>(
+): Promise<AddEventsToTrackResult> {
+  const data = await fetchJson<AddEventsToTrackResult & { success: boolean }>(
     `${API_BASE}/tracks/${trackId}/events`,
     {
       method: 'POST',
       body: JSON.stringify({ eventIds }),
     },
   );
-  return { addedCount: data.addedCount };
+  return {
+    addedCount: data.addedCount,
+    backfilledCount: data.backfilledCount,
+    reactivatedCount: data.reactivatedCount,
+    skippedExistingCount: data.skippedExistingCount,
+  };
 }
 
 export interface RemoveEventFromTrackResult {
