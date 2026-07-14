@@ -17,7 +17,10 @@ import {
 } from '@/app/api/tracks';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { trackSuccessfulTrackBooking } from '../trackBookingAnalytics';
+import { formatAddEventsDescription } from '../utils/formatAddEventsDescription';
 import { invalidateTrackAccessQueries } from './useTrackEnrollmentManagement';
+
+export { formatAddEventsDescription };
 
 export const useTracks = (page = 1, pageSize = 12, filters?: { search?: string }) => {
   const safePageSize = Math.min(pageSize, 50);
@@ -144,12 +147,11 @@ export const useAddEventsToTrack = () => {
     mutationFn: ({ trackId, eventIds }: { trackId: string; eventIds: string[] }) =>
       addEventsToTrack(trackId, eventIds),
     onSuccess: (result, { trackId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', trackId] });
-      queryClient.invalidateQueries({ queryKey: ['tracks'] });
+      invalidateTrackAccessQueries(queryClient, trackId);
       if (result.addedCount > 0) {
         toast({
           title: 'Events added',
-          description: `Added ${result.addedCount} event${result.addedCount > 1 ? 's' : ''} to the track.`,
+          description: formatAddEventsDescription(result),
         });
       }
     },

@@ -23,6 +23,16 @@ const AdminMeetupsNew = () => {
   const isSubmitting = createEventMutation.isPending || addToTrackMutation.isPending;
 
   const handleSubmit = async (payload: Parameters<typeof createEventMutation.mutateAsync>[0]) => {
+    if (
+      trackId &&
+      track?.bookings_count > 0 &&
+      !window.confirm(
+        'Add these sessions to the booked track? Current buyers whose tickets include each session will be registered automatically.',
+      )
+    ) {
+      return;
+    }
+
     // Step 1: Create the event
     const newEvent = await createEventMutation.mutateAsync(payload);
 

@@ -115,6 +115,15 @@ function TrackDetailPage() {
   };
 
   const handleAddEvents = (eventIds: string[]) => {
+    if (
+      track.bookings_count > 0 &&
+      !window.confirm(
+        'Add these sessions to the booked track? Current buyers whose tickets include each session will be registered automatically.',
+      )
+    ) {
+      return;
+    }
+
     addEventsMutation.mutate(
       { trackId: track.id, eventIds },
       { onSuccess: () => setShowEventSelector(false) },
