@@ -361,6 +361,7 @@ export interface PublicTrackDetailRecord {
   price_in_cents: number | null;
   location: string | null;
   location_url: string | null;
+  recordings_series_id: string | null;
 }
 
 export interface PublicTrackEventRecord {
@@ -449,6 +450,7 @@ export async function fetchPublicTrackById(
     priceInCents: number | null;
     location: string | null;
     locationUrl: string | null;
+    recordingsSeriesId?: string | null;
   };
 
   type ApiPublicTrackEvent = {
@@ -497,6 +499,7 @@ export async function fetchPublicTrackById(
       price_in_cents: data.track.priceInCents,
       location: data.track.location,
       location_url: data.track.locationUrl,
+      recordings_series_id: data.track.recordingsSeriesId ?? null,
     },
     events: data.events.map((event) => ({
       id: event.id,

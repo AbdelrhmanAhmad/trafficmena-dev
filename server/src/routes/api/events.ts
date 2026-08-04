@@ -9,6 +9,7 @@ import {
   libraryAssets,
   payments,
   profiles,
+  series,
   subscriptions,
   trackBookings,
   trackEvents,
@@ -319,18 +320,34 @@ export function registerEventRoutes(app: Hono) {
 
         // Check if user has booked the track (for track events)
         let trackBooked = false;
-        if (trackInfo && viewerId) {
-          const [booking] = await db
-            .select({ id: trackBookings.id })
-            .from(trackBookings)
-            .where(
-              activeTrackBookingWhere(
-                eq(trackBookings.trackId, trackInfo.id),
-                eq(trackBookings.userId, viewerId),
-              ),
-            )
+        let recordingsSeriesId: string | null = null;
+        if (trackInfo) {
+          const seriesLookup = db
+            .select({ id: series.id })
+            .from(series)
+            .where(eq(series.trackId, trackInfo.id))
             .limit(1);
-          trackBooked = Boolean(booking);
+
+          if (viewerId) {
+            const [booking, trackSeries] = await Promise.all([
+              db
+                .select({ id: trackBookings.id })
+                .from(trackBookings)
+                .where(
+                  activeTrackBookingWhere(
+                    eq(trackBookings.trackId, trackInfo.id),
+                    eq(trackBookings.userId, viewerId),
+                  ),
+                )
+                .limit(1),
+              seriesLookup,
+            ]);
+            trackBooked = Boolean(booking[0]);
+            recordingsSeriesId = trackSeries[0]?.id ?? null;
+          } else {
+            const [trackSeries] = await seriesLookup;
+            recordingsSeriesId = trackSeries?.id ?? null;
+          }
         }
 
         const attendeeCount = Number(attendeeCountResult?.[0]?.value ?? 0);
@@ -353,6 +370,7 @@ export function registerEventRoutes(app: Hono) {
           registrationStatus,
           meetingLink: canAccessMeetingLink ? event.meetingLink : null,
           locationUrl,
+          recordingsSeriesId,
           trackInfo: trackInfo
             ? {
                 id: trackInfo.id,
@@ -362,6 +380,7 @@ export function registerEventRoutes(app: Hono) {
                 singleBookingStart: trackInfo.singleBookingStart,
                 singleBookingEnd: trackInfo.singleBookingEnd,
                 booked: trackBooked,
+                recordingsSeriesId,
               }
             : null,
         });

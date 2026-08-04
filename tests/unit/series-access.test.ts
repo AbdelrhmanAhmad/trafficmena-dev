@@ -11,6 +11,20 @@ describe('series access', () => {
       isStaff: false,
       isSubscriber: false,
       hasTrackBooking: true,
+      hasTrackEventAttendance: false,
+      hasSeriesGrant: false,
+      seriesIsPremium: true,
+    });
+
+    assert.equal(hasAccess, true);
+  });
+
+  it('grants premium series access when user attended a track event', () => {
+    const hasAccess = resolveSeriesAccess({
+      isStaff: false,
+      isSubscriber: false,
+      hasTrackBooking: false,
+      hasTrackEventAttendance: true,
       hasSeriesGrant: false,
       seriesIsPremium: true,
     });
@@ -23,6 +37,24 @@ describe('series access', () => {
       isStaff: false,
       isSubscriber: false,
       hasTrackBooking: true,
+      hasTrackEventAttendance: false,
+      hasSeriesGrant: false,
+      seriesIsPremium: true,
+      assetIsPremium: true,
+      assetIsPublic: false,
+      assetEventId: 'event-1',
+      userEventIds: new Set(),
+    });
+
+    assert.equal(hasAccess, true);
+  });
+
+  it('grants premium asset access when user attended a track event', () => {
+    const hasAccess = resolveSeriesAssetAccess({
+      isStaff: false,
+      isSubscriber: false,
+      hasTrackBooking: false,
+      hasTrackEventAttendance: true,
       hasSeriesGrant: false,
       seriesIsPremium: true,
       assetIsPremium: true,
@@ -39,6 +71,7 @@ describe('series access', () => {
       isStaff: false,
       isSubscriber: false,
       hasTrackBooking: false,
+      hasTrackEventAttendance: false,
       hasSeriesGrant: false,
       seriesIsPremium: false,
       assetIsPremium: false,
@@ -55,6 +88,7 @@ describe('series access', () => {
       isStaff: false,
       isSubscriber: false,
       hasTrackBooking: false,
+      hasTrackEventAttendance: false,
       hasSeriesGrant: true,
       seriesIsPremium: true,
     });
@@ -67,6 +101,7 @@ describe('series access', () => {
       isStaff: false,
       isSubscriber: false,
       hasTrackBooking: false,
+      hasTrackEventAttendance: false,
       hasSeriesGrant: true,
       seriesIsPremium: true,
       assetIsPremium: true,
@@ -76,5 +111,18 @@ describe('series access', () => {
     });
 
     assert.equal(hasAccess, true);
+  });
+
+  it('denies premium series when user has no booking, attendance, or grant', () => {
+    const hasAccess = resolveSeriesAccess({
+      isStaff: false,
+      isSubscriber: false,
+      hasTrackBooking: false,
+      hasTrackEventAttendance: false,
+      hasSeriesGrant: false,
+      seriesIsPremium: true,
+    });
+
+    assert.equal(hasAccess, false);
   });
 });
