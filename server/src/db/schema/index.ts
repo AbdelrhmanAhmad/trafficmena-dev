@@ -448,6 +448,8 @@ export const platformSettings = pgTable('platform_settings', {
   id: uuid('id').primaryKey().defaultRandom(),
   inviteOnlySignup: boolean('invite_only_signup').notNull().default(false),
   eventMode: boolean('event_mode').notNull().default(false),
+  masterclassesEnabled: boolean('masterclasses_enabled').notNull().default(true),
+  digitalProductsEnabled: boolean('digital_products_enabled').notNull().default(true),
   annualSubscriptionPriceCents: integer('annual_subscription_price_cents'),
   subscriberDiscountPercent: integer('subscriber_discount_percent').default(20),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

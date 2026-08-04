@@ -17,6 +17,7 @@ import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import { Button } from '@/shared/components/ui/button';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/shared/components/ui/drawer';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -27,6 +28,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  module?: 'digitalProducts' | 'masterclasses';
 };
 
 const NAVIGATION_ITEMS: NavItem[] = [
@@ -34,7 +36,7 @@ const NAVIGATION_ITEMS: NavItem[] = [
   { href: '/meetups', label: 'Events', icon: Calendar },
   // { href: '/library', label: 'Library', icon: Library },
   { href: '/recordings', label: 'Recordings', icon: FolderOpen },
-  { href: '/digital-products', label: 'Digital Products', icon: FileStack },
+  { href: '/digital-products', label: 'Digital Products', icon: FileStack, module: 'digitalProducts' },
   // { href: '/community', label: 'Community', icon: MessageSquare },
   { href: '/about', label: 'About Us', icon: Info },
 ];
@@ -45,6 +47,7 @@ const Header: React.FC = () => {
   const { canAccessAdmin, canAccessSubscriptionPages, isOwner, isAdmin, isManager } =
     useRolePermissions();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
+  const { digitalProductsEnabled } = useModuleFlags();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
@@ -52,6 +55,11 @@ const Header: React.FC = () => {
   // Check if user has an active subscription
   const hasActiveSubscription = subscription?.status === 'active';
   const showSubscriptionEntry = canAccessSubscriptionPages && !hasActiveSubscription;
+
+  const visibleNavItems = NAVIGATION_ITEMS.filter((item) => {
+    if (item.module === 'digitalProducts') return digitalProductsEnabled;
+    return true;
+  });
 
   const isRouteActive = (href: string) => {
     if (href === '/') {
@@ -92,7 +100,7 @@ const Header: React.FC = () => {
 
           {/* Desktop Navigation - Only show on large screens */}
           <nav className="hidden items-center gap-6 md:flex">
-            {NAVIGATION_ITEMS.map((item) => {
+            {visibleNavItems.map((item) => {
               const isActive = isRouteActive(item.href);
               return (
                 <Link
@@ -178,7 +186,7 @@ const Header: React.FC = () => {
 
                 {/* Mobile/Tablet Navigation Links */}
                 <nav className="space-y-1 px-4 py-4">
-                  {NAVIGATION_ITEMS.map((item) => {
+                  {visibleNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = isRouteActive(item.href);
                     return (

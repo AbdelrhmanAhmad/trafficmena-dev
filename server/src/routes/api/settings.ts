@@ -9,6 +9,8 @@ type SettingsRecord = {
   id: string;
   inviteOnlySignup: boolean;
   eventMode: boolean;
+  masterclassesEnabled: boolean;
+  digitalProductsEnabled: boolean;
   updatedAt: Date | null;
   updatedBy: string | null;
 };
@@ -19,6 +21,8 @@ async function fetchSettings(): Promise<SettingsRecord | null> {
       id: platformSettings.id,
       inviteOnlySignup: platformSettings.inviteOnlySignup,
       eventMode: platformSettings.eventMode,
+      masterclassesEnabled: platformSettings.masterclassesEnabled,
+      digitalProductsEnabled: platformSettings.digitalProductsEnabled,
       updatedAt: platformSettings.updatedAt,
       updatedBy: platformSettings.updatedBy,
     })
@@ -32,16 +36,36 @@ async function fetchSettings(): Promise<SettingsRecord | null> {
   return record;
 }
 
+function toAdminPayload(record: SettingsRecord | null, fallbacks?: Partial<SettingsRecord>) {
+  return {
+    inviteOnly: record?.inviteOnlySignup ?? fallbacks?.inviteOnlySignup ?? false,
+    eventMode: record?.eventMode ?? fallbacks?.eventMode ?? false,
+    masterclassesEnabled: record?.masterclassesEnabled ?? fallbacks?.masterclassesEnabled ?? true,
+    digitalProductsEnabled:
+      record?.digitalProductsEnabled ?? fallbacks?.digitalProductsEnabled ?? true,
+    updatedAt: record?.updatedAt ?? null,
+    updatedBy: record?.updatedBy ?? null,
+  };
+}
+
 export function registerSettingsRoutes(app: Hono) {
   app.get('/settings/public', async (c) => {
     try {
       const record = await fetchSettings();
-      c.header('Cache-Control', 'public, max-age=30');
-      return c.json({ inviteOnly: record?.inviteOnlySignup ?? false });
+      c.header('Cache-Control', 'no-store');
+      return c.json({
+        inviteOnly: record?.inviteOnlySignup ?? false,
+        masterclassesEnabled: record?.masterclassesEnabled ?? true,
+        digitalProductsEnabled: record?.digitalProductsEnabled ?? true,
+      });
     } catch (error) {
       console.error('[settings] public fetch failed', error);
-      c.header('Cache-Control', 'public, max-age=30');
-      return c.json({ inviteOnly: false });
+      c.header('Cache-Control', 'no-store');
+      return c.json({
+        inviteOnly: false,
+        masterclassesEnabled: true,
+        digitalProductsEnabled: true,
+      });
     }
   });
 
@@ -53,23 +77,10 @@ export function registerSettingsRoutes(app: Hono) {
 
     try {
       const record = await fetchSettings();
-      return c.json({
-        inviteOnly: record?.inviteOnlySignup ?? false,
-        eventMode: record?.eventMode ?? false,
-        updatedAt: record?.updatedAt ?? null,
-        updatedBy: record?.updatedBy ?? null,
-      });
+      return c.json(toAdminPayload(record));
     } catch (error) {
       console.error('[settings] admin fetch failed', error);
-      return c.json(
-        {
-          inviteOnly: false,
-          eventMode: false,
-          updatedAt: null,
-          updatedBy: null,
-        },
-        200,
-      );
+      return c.json(toAdminPayload(null), 200);
     }
   });
 
@@ -83,9 +94,15 @@ export function registerSettingsRoutes(app: Hono) {
       .object({
         inviteOnly: z.boolean().optional(),
         eventMode: z.boolean().optional(),
+        masterclassesEnabled: z.boolean().optional(),
+        digitalProductsEnabled: z.boolean().optional(),
       })
       .refine(
-        (data) => data.inviteOnly !== undefined || data.eventMode !== undefined,
+        (data) =>
+          data.inviteOnly !== undefined ||
+          data.eventMode !== undefined ||
+          data.masterclassesEnabled !== undefined ||
+          data.digitalProductsEnabled !== undefined,
         'At least one setting must be provided.',
       );
 
@@ -96,7 +113,12 @@ export function registerSettingsRoutes(app: Hono) {
 
     if (!bodyResult.success) {
       return c.json(
-        { error: { code: 'INVALID_REQUEST', message: 'Provide inviteOnly or eventMode.' } },
+        {
+          error: {
+            code: 'INVALID_REQUEST',
+            message: 'Provide at least one setting to update.',
+          },
+        },
         400,
       );
     }
@@ -108,23 +130,33 @@ export function registerSettingsRoutes(app: Hono) {
       const existing = await fetchSettings();
       const nextInviteOnly = validatedData.inviteOnly ?? existing?.inviteOnlySignup ?? false;
       const nextEventMode = validatedData.eventMode ?? existing?.eventMode ?? false;
+      const nextMasterclassesEnabled =
+        validatedData.masterclassesEnabled ?? existing?.masterclassesEnabled ?? true;
+      const nextDigitalProductsEnabled =
+        validatedData.digitalProductsEnabled ?? existing?.digitalProductsEnabled ?? true;
+
+      const values = {
+        inviteOnlySignup: nextInviteOnly,
+        eventMode: nextEventMode,
+        masterclassesEnabled: nextMasterclassesEnabled,
+        digitalProductsEnabled: nextDigitalProductsEnabled,
+        updatedAt: now,
+        updatedBy: result.userId,
+      };
 
       let updated: SettingsRecord | null = null;
 
       if (existing) {
         const [row] = await db
           .update(platformSettings)
-          .set({
-            inviteOnlySignup: nextInviteOnly,
-            eventMode: nextEventMode,
-            updatedAt: now,
-            updatedBy: result.userId,
-          })
+          .set(values)
           .where(eq(platformSettings.id, existing.id))
           .returning({
             id: platformSettings.id,
             inviteOnlySignup: platformSettings.inviteOnlySignup,
             eventMode: platformSettings.eventMode,
+            masterclassesEnabled: platformSettings.masterclassesEnabled,
+            digitalProductsEnabled: platformSettings.digitalProductsEnabled,
             updatedAt: platformSettings.updatedAt,
             updatedBy: platformSettings.updatedBy,
           });
@@ -132,28 +164,27 @@ export function registerSettingsRoutes(app: Hono) {
       } else {
         const [row] = await db
           .insert(platformSettings)
-          .values({
-            inviteOnlySignup: nextInviteOnly,
-            eventMode: nextEventMode,
-            updatedAt: now,
-            updatedBy: result.userId,
-          })
+          .values(values)
           .returning({
             id: platformSettings.id,
             inviteOnlySignup: platformSettings.inviteOnlySignup,
             eventMode: platformSettings.eventMode,
+            masterclassesEnabled: platformSettings.masterclassesEnabled,
+            digitalProductsEnabled: platformSettings.digitalProductsEnabled,
             updatedAt: platformSettings.updatedAt,
             updatedBy: platformSettings.updatedBy,
           });
         updated = row ?? null;
       }
 
-      return c.json({
-        inviteOnly: updated?.inviteOnlySignup ?? nextInviteOnly,
-        eventMode: updated?.eventMode ?? nextEventMode,
-        updatedAt: updated?.updatedAt ?? now,
-        updatedBy: updated?.updatedBy ?? result.userId,
-      });
+      return c.json(
+        toAdminPayload(updated, {
+          inviteOnlySignup: nextInviteOnly,
+          eventMode: nextEventMode,
+          masterclassesEnabled: nextMasterclassesEnabled,
+          digitalProductsEnabled: nextDigitalProductsEnabled,
+        }),
+      );
     } catch (error) {
       console.error('[settings] admin update failed', error);
       return c.json(

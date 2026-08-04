@@ -2,6 +2,7 @@ import {
   Award,
   BarChart3,
   BookOpen,
+  Boxes,
   Calculator,
   Calendar,
   Crown,
@@ -22,6 +23,7 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import { PhoneCompletionBanner } from '@/shared/components/PhoneCompletionBanner';
 import {
   Sidebar,
@@ -72,6 +74,7 @@ const memberMenuItems = [
     title: 'Digital Products',
     url: '/dashboard/digital-products',
     icon: FileStack,
+    module: 'digitalProducts' as const,
   },
   {
     title: 'My Orders',
@@ -82,6 +85,7 @@ const memberMenuItems = [
     title: 'Masterclasses',
     url: '/dashboard/masterclasses',
     icon: GraduationCap,
+    module: 'masterclasses' as const,
   },
   {
     title: 'Calculators',
@@ -102,6 +106,12 @@ const adminMenuItems = [
     title: 'General Settings',
     url: '/admin/settings',
     icon: Settings,
+    roles: ['owner', 'admin'] as UserRole[],
+  },
+  {
+    title: 'Module Settings',
+    url: '/admin/settings/modules',
+    icon: Boxes,
     roles: ['owner', 'admin'] as UserRole[],
   },
   {
@@ -151,12 +161,14 @@ const adminMenuItems = [
     url: '/admin/digital-products',
     icon: FileStack,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
+    module: 'digitalProducts' as const,
   },
   {
     title: 'Masterclasses',
     url: '/admin/masterclasses',
     icon: GraduationCap,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
+    module: 'masterclasses' as const,
   },
 ];
 
@@ -174,18 +186,29 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
   const { loading, rank, isOwner, isAdmin, isManager, canAccessSubscriptionPages } =
     useRolePermissions();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
+  const { masterclassesEnabled, digitalProductsEnabled } = useModuleFlags();
   const hasActiveSubscription = subscription?.status === 'active';
 
-  // Filter admin menu items based on user's role rank
+  const isModuleVisible = (module?: 'masterclasses' | 'digitalProducts') => {
+    if (!module) return true;
+    if (module === 'masterclasses') return masterclassesEnabled;
+    return digitalProductsEnabled;
+  };
+
+  // Filter admin menu items based on user's role rank and module flags
   const filteredAdminMenuItems = useMemo(() => {
     return adminMenuItems.filter((item) => {
       const minRank = Math.min(...item.roles.map((r) => getRolePriority(r)));
-      return rank >= minRank;
+      return rank >= minRank && isModuleVisible(item.module);
     });
-  }, [rank]);
+  }, [rank, masterclassesEnabled, digitalProductsEnabled]);
+
+  const filteredMemberMenuItems = useMemo(() => {
+    return memberMenuItems.filter((item) => isModuleVisible(item.module));
+  }, [masterclassesEnabled, digitalProductsEnabled]);
 
   // Select menu items based on variant
-  const menuItems = variant === 'admin' ? filteredAdminMenuItems : memberMenuItems;
+  const menuItems = variant === 'admin' ? filteredAdminMenuItems : filteredMemberMenuItems;
 
   // Role badge label - always show actual role
   const badgeLabel = loading
