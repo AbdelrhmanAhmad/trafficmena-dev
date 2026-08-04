@@ -786,6 +786,27 @@ export function registerTrackRoutes(app: Hono) {
       userHasBooked = Boolean(booking);
     }
 
+    const [trackSeries] = await db
+      .select({
+        id: series.id,
+        title: series.title,
+        isPublished: series.isPublished,
+        salesEnabled: series.salesEnabled,
+        priceInCents: series.priceInCents,
+      })
+      .from(series)
+      .where(eq(series.trackId, id))
+      .limit(1);
+
+    let recordingsAssetCount = 0;
+    if (trackSeries) {
+      const [assetCountRow] = await db
+        .select({ value: count(seriesAssets.assetId) })
+        .from(seriesAssets)
+        .where(eq(seriesAssets.seriesId, trackSeries.id));
+      recordingsAssetCount = Number(assetCountRow?.value ?? 0);
+    }
+
     return c.json({
       ...track,
       eventCount: eventsWithAssets.length,
@@ -796,6 +817,16 @@ export function registerTrackRoutes(app: Hono) {
           ? track.maxTrackBookings - Number(bookingStats?.value ?? 0)
           : null,
       userHasBooked,
+      recordingsSeries: trackSeries
+        ? {
+            id: trackSeries.id,
+            title: trackSeries.title,
+            isPublished: trackSeries.isPublished,
+            salesEnabled: trackSeries.salesEnabled,
+            priceInCents: trackSeries.priceInCents,
+            assetCount: recordingsAssetCount,
+          }
+        : null,
     });
   });
 

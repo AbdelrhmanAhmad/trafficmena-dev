@@ -41,6 +41,14 @@ type ApiTrackEvent = {
 
 type ApiTrackDetail = ApiTrack & {
   events: ApiTrackEvent[];
+  recordingsSeries?: {
+    id: string;
+    title: string;
+    isPublished: boolean;
+    salesEnabled: boolean;
+    priceInCents: number | null;
+    assetCount: number;
+  } | null;
 };
 
 // Frontend types (snake_case for consistency)
@@ -91,6 +99,16 @@ export type TrackEventRecord = {
 export type TrackDetailRecord = TrackRecord & {
   updated_at: string;
   events: TrackEventRecord[];
+  recordings_series: TrackRecordingsSeriesRecord | null;
+};
+
+export type TrackRecordingsSeriesRecord = {
+  id: string;
+  title: string;
+  is_published: boolean;
+  sales_enabled: boolean;
+  price_in_cents: number | null;
+  asset_count: number;
 };
 
 // Mappers
@@ -132,6 +150,16 @@ const mapTrackDetail = (track: ApiTrackDetail): TrackDetailRecord => ({
   ...mapTrack(track),
   updated_at: track.updatedAt ?? track.createdAt,
   events: (track.events ?? []).map(mapTrackEvent),
+  recordings_series: track.recordingsSeries
+    ? {
+        id: track.recordingsSeries.id,
+        title: track.recordingsSeries.title,
+        is_published: track.recordingsSeries.isPublished,
+        sales_enabled: track.recordingsSeries.salesEnabled,
+        price_in_cents: track.recordingsSeries.priceInCents,
+        asset_count: track.recordingsSeries.assetCount,
+      }
+    : null,
 });
 
 // Params and payloads
