@@ -46,7 +46,7 @@ npm --prefix server run db:migrate
 
 | Endpoint | Change |
 |----------|--------|
-| `GET /api/settings/public` | Returns `masterclassesEnabled`, `digitalProductsEnabled` (default `true`) |
+| `GET /api/settings/public` | Returns `masterclassesEnabled`, `digitalProductsEnabled` (default `true`); `Cache-Control: no-store` |
 | `GET /api/admin/settings/general` | Same fields |
 | `PATCH /api/admin/settings/general` | Accepts optional `masterclassesEnabled`, `digitalProductsEnabled` |
 
@@ -55,7 +55,7 @@ npm --prefix server run db:migrate
 | Surface | Behaviour when off |
 |---------|-------------------|
 | `Header.tsx` | Removes Digital Products nav item |
-| `AppLayout` member/admin menus | Filters Masterclasses / Digital Products items |
+| `AppLayout` member/admin menus | Filters Masterclasses / Digital Products items via `useModuleFlags()` |
 | Routes (public / member / admin) | Wrapped in `ModuleGate` |
 
 Key files:
@@ -63,7 +63,18 @@ Key files:
 - `src/pages/admin/module-settings.tsx`
 - `src/pages/admin/components/ModuleSettingsCard.tsx`
 - `src/shared/components/ModuleGate.tsx`
-- `src/app/hooks/useSettings.ts` — `usePublicSettings()`
+- `src/app/hooks/useSettings.ts` — `usePublicSettings()`, `useModuleFlags()`, optimistic public-cache update on toggle
+
+## Cache / sync fix (member nav)
+
+Browser was caching `GET /settings/public` (`max-age=30`), so the **member** sidebar could keep showing modules after disable while **admin** already hid them (React Query updated locally).
+
+Fix:
+
+1. Public settings response uses `Cache-Control: no-store`
+2. Toggle optimistically updates **both** admin + public React Query caches
+3. `refetchOnMount: 'always'` on public settings
+4. While public settings are loading with no cache, module nav items stay hidden (avoid flash)
 
 ## Notes
 
