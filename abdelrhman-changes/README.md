@@ -36,6 +36,7 @@ npm --prefix server run db:migrate
 
 ## آخر تحديث
 
+- **2026-08-10** — تراجع عن شغل إعادة بيع/Publish التسجيلات بعد انتهاء الأيفنت (revert إلى ما بعد Module Settings)
 - **2026-08-04** — Module Settings + إصلاح كاش العضو (`no-store` / optimistic public cache)
 - **2026-06-23** — Public Recordings/Digital Products، Video URL system، Thank you order page، Masterclass enrollment phone + purchase price
 - **2026-06-17** — Orders pages + English UI (`f767461`)
