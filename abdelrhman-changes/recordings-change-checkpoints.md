@@ -6,7 +6,7 @@
 |--------|--------|--------|----------------|
 | **#1** | فصل `/meetups` (Events فقط) + صفحة `/tracks` + إخفاء/تعطيل مؤقت لـ `/recordings` | `b93ce08` | `277f722` |
 | **#2** | نشر التسجيلات بعد انتهاء Track/Event (سياسة وصول + زر Available recordings) | `dd37934` | `b93ce08` |
-| **#3** | إخفاء Series التراك من `/dashboard/library` حتى Publish for sale | *(pending)* | `dd37934` |
+| **#3** | إخفاء Series التراك من `/dashboard/library` حتى Publish for sale | `a9f1351` | `dd37934` |
 
 ## كيف تتراجع لنقطة؟
 
