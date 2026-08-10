@@ -14,7 +14,6 @@
 | [public-store-pages.md](./public-store-pages.md) | **صفحات الزوار:** Recordings + Digital Products + Sign-in modal |
 | [thank-you-order-page.md](./thank-you-order-page.md) | **Thank you for your order** بعد شراء السلة |
 | [module-settings.md](./module-settings.md) | **إعدادات الموديولات:** إخفاء/إظهار Masterclasses و Digital Products |
-| [event-track-recordings-access.md](./event-track-recordings-access.md) | **Recordings داخل Event/Track** (مع الإبقاء على `/recordings`) |
 | [masterclass-enrollment-display.md](./masterclass-enrollment-display.md) | أدمن Masterclass: هاتف الطالب + بادج سعر الشراء |
 | [masterclasses-system.md](./masterclasses-system.md) | Masterclasses: كورسات، enrollment، دفع مباشر، progress |
 | [masterclass-certificates.md](./masterclass-certificates.md) | Certificates: PDF، إصدار تلقائي/يدوي، رابط مشاركة |
@@ -37,7 +36,6 @@ npm --prefix server run db:migrate
 
 ## آخر تحديث
 
-- **2026-08-04** — Checkpoint: Recordings داخل Event/Track (الإبقاء على `/recordings`)
 - **2026-08-04** — Module Settings + إصلاح كاش العضو (`no-store` / optimistic public cache)
 - **2026-06-23** — Public Recordings/Digital Products، Video URL system، Thank you order page، Masterclass enrollment phone + purchase price
 - **2026-06-17** — Orders pages + English UI (`f767461`)
