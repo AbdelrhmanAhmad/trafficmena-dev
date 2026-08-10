@@ -578,6 +578,18 @@ const EventDetail: React.FC = () => {
                         </div>
                       )}
 
+                      {!isUpcoming &&
+                      event.recordings_series?.is_sellable &&
+                      (event.recordings_series.event_asset_count ?? 0) > 0 ? (
+                        <Button
+                          type="button"
+                          className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                          onClick={() => navigate(`/meetups/${id}/recordings`)}
+                        >
+                          Available recordings
+                        </Button>
+                      ) : null}
+
                       {event.meeting_link && (
                         <div className="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
                           <div className="flex items-center gap-2 text-neutral-900">

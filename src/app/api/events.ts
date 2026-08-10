@@ -1,5 +1,9 @@
 import { API_BASE, fetchJson } from './client';
 import type { PaginatedResult } from './types';
+import {
+  mapRecordingsSeriesSummary,
+  type RecordingsSeriesSummaryRecord,
+} from './tracks';
 
 type ApiEvent = {
   id: string;
@@ -28,6 +32,17 @@ type ApiEventDetail = ApiEvent & {
     singleBookingStart: string | null;
     singleBookingEnd: string | null;
     booked?: boolean;
+  } | null;
+  recordingsSeries?: {
+    id: string;
+    title: string;
+    isPublished: boolean;
+    salesEnabled: boolean;
+    priceInCents: number | null;
+    recordingsAccessPolicy: 'free_for_prior_buyers' | 'everyone_pays';
+    assetCount: number;
+    eventAssetCount: number | null;
+    isSellable: boolean;
   } | null;
 };
 
@@ -62,6 +77,7 @@ export interface EventDetailRecord extends EventRecord {
     singleBookingEnd: Date | null;
     booked: boolean;
   } | null;
+  recordings_series: RecordingsSeriesSummaryRecord | null;
 }
 
 const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
@@ -107,6 +123,7 @@ export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecor
           booked: api.trackInfo.booked ?? false,
         }
       : null,
+    recordings_series: mapRecordingsSeriesSummary(api.recordingsSeries),
   };
 }
 

@@ -9,6 +9,7 @@ import {
   seriesAccessGrants,
   seriesAssets,
   trackBookings,
+  trackEvents,
 } from '../../db/schema/index.js';
 import {
   getActiveSeriesGrantIds,
@@ -18,7 +19,11 @@ import {
 } from '../../services/seriesSales.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { resolveSeriesAccess, resolveSeriesAssetAccess } from './seriesAccess.js';
+import {
+  normalizeRecordingsAccessPolicy,
+  resolveSeriesAccess,
+  resolveSeriesAssetAccess,
+} from './seriesAccess.js';
 import { hasActiveSubscription } from './subscriptionShared.js';
 import { escapeLikePattern, getOptionalUserRole } from './utils.js';
 
@@ -155,11 +160,12 @@ export function registerSeriesStoreRoutes(app: Hono) {
     const isSubscriber = userId && !isStaff ? await hasActiveSubscription(userId) : false;
 
     let hasTrackBooking = false;
+    let hasTrackEventAttendance = false;
     let hasSeriesGrant = false;
     let hasPurchased = false;
 
     if (userId && !isStaff) {
-      const [bookingRows, grantRows, purchasedSet] = await Promise.all([
+      const [bookingRows, attendanceRows, grantRows, purchasedSet] = await Promise.all([
         seriesRecord.trackId
           ? db
               .select({ id: trackBookings.id })
@@ -168,6 +174,20 @@ export function registerSeriesStoreRoutes(app: Hono) {
                 activeTrackBookingWhere(
                   eq(trackBookings.trackId, seriesRecord.trackId),
                   eq(trackBookings.userId, userId),
+                ),
+              )
+              .limit(1)
+          : Promise.resolve([]),
+        seriesRecord.trackId
+          ? db
+              .select({ id: eventAttendees.id })
+              .from(eventAttendees)
+              .innerJoin(trackEvents, eq(trackEvents.eventId, eventAttendees.eventId))
+              .where(
+                and(
+                  eq(trackEvents.trackId, seriesRecord.trackId),
+                  eq(eventAttendees.userId, userId),
+                  eq(eventAttendees.status, 'active'),
                 ),
               )
               .limit(1)
@@ -187,16 +207,22 @@ export function registerSeriesStoreRoutes(app: Hono) {
       ]);
 
       hasTrackBooking = Boolean(bookingRows[0]);
+      hasTrackEventAttendance = Boolean(attendanceRows[0]);
       hasSeriesGrant = Boolean(grantRows[0]);
       hasPurchased = purchasedSet.has(seriesRecord.id);
     }
 
+    const recordingsAccessPolicy = normalizeRecordingsAccessPolicy(
+      seriesRecord.recordingsAccessPolicy,
+    );
     const accessContext = {
       isStaff,
       isSubscriber,
       hasTrackBooking,
+      hasTrackEventAttendance,
       hasSeriesGrant,
       seriesIsPremium: seriesRecord.isPremium,
+      recordingsAccessPolicy,
     };
     const hasAccess = resolveSeriesAccess(accessContext);
 

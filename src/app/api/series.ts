@@ -12,6 +12,7 @@ export interface ApiSeries {
   isPremium: boolean;
   priceInCents: number | null;
   salesEnabled: boolean;
+  recordingsAccessPolicy?: 'free_for_prior_buyers' | 'everyone_pays';
   createdAt: string;
   updatedAt?: string;
   assetCount: number;
@@ -62,6 +63,7 @@ export interface SeriesRecord {
   is_premium: boolean;
   price_in_cents: number | null;
   sales_enabled: boolean;
+  recordings_access_policy: 'free_for_prior_buyers' | 'everyone_pays';
   asset_count: number;
   is_sellable?: boolean;
   has_purchased?: boolean;
@@ -112,6 +114,7 @@ const mapSeries = (api: ApiSeries): SeriesRecord => ({
   is_premium: api.isPremium ?? false,
   price_in_cents: api.priceInCents ?? null,
   sales_enabled: api.salesEnabled ?? false,
+  recordings_access_policy: api.recordingsAccessPolicy ?? 'free_for_prior_buyers',
   asset_count: api.assetCount ?? 0,
   is_sellable: api.isSellable,
   has_purchased: api.hasPurchased,
@@ -168,6 +171,7 @@ export type CreateSeriesPayload = {
   isPremium?: boolean;
   priceInCents?: number | null;
   salesEnabled?: boolean;
+  recordingsAccessPolicy?: 'free_for_prior_buyers' | 'everyone_pays';
 };
 
 export type UpdateSeriesPayload = Partial<CreateSeriesPayload> & {

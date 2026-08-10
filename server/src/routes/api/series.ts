@@ -9,6 +9,7 @@ import {
   seriesAccessGrants,
   seriesAssets,
   trackBookings,
+  trackEvents,
 } from '../../db/schema/index.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { getSessionFromRequest } from '../../utils/session.js';
@@ -17,7 +18,12 @@ import {
   getPurchasedSeriesIds,
   isSeriesSellable,
 } from '../../services/seriesSales.js';
-import { resolveSeriesAccess, resolveSeriesAssetAccess } from './seriesAccess.js';
+import {
+  normalizeRecordingsAccessPolicy,
+  RECORDINGS_ACCESS_POLICIES,
+  resolveSeriesAccess,
+  resolveSeriesAssetAccess,
+} from './seriesAccess.js';
 import { registerSeriesStoreRoutes } from './seriesStore.js';
 import { hasActiveSubscription } from './subscriptionShared.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
@@ -36,6 +42,8 @@ const priceInCentsSchema = z
   .optional()
   .transform((value) => (value === undefined ? undefined : value));
 
+const recordingsAccessPolicySchema = z.enum(RECORDINGS_ACCESS_POLICIES);
+
 const createSeriesSchema = z.object({
   title: z.string().trim().min(3, 'Title is required.').max(180),
   description: z.union([z.string().trim().max(4000), z.null()]).optional(),
@@ -44,6 +52,7 @@ const createSeriesSchema = z.object({
   isPremium: z.boolean().default(false),
   priceInCents: priceInCentsSchema,
   salesEnabled: z.boolean().default(false),
+  recordingsAccessPolicy: recordingsAccessPolicySchema.default('free_for_prior_buyers'),
 });
 
 const updateSeriesSchema = z
@@ -55,6 +64,7 @@ const updateSeriesSchema = z
     isPremium: z.boolean().optional(),
     priceInCents: priceInCentsSchema,
     salesEnabled: z.boolean().optional(),
+    recordingsAccessPolicy: recordingsAccessPolicySchema.optional(),
     sortOrder: z.number().int().min(0).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
@@ -225,6 +235,7 @@ export function registerSeriesRoutes(app: Hono) {
           isPremium: series.isPremium,
           priceInCents: series.priceInCents,
           salesEnabled: series.salesEnabled,
+          recordingsAccessPolicy: series.recordingsAccessPolicy,
           trackId: series.trackId,
           createdAt: series.createdAt,
           updatedAt: series.updatedAt,
@@ -245,11 +256,15 @@ export function registerSeriesRoutes(app: Hono) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
     }
 
+    const recordingsAccessPolicy = normalizeRecordingsAccessPolicy(
+      seriesRecord.recordingsAccessPolicy,
+    );
     const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
     let hasTrackBooking = false;
+    let hasTrackEventAttendance = false;
     let hasSeriesGrant = false;
     if (!isStaff && !isSubscriber) {
-      const [bookingRows, grantRows] = await Promise.all([
+      const [bookingRows, attendanceRows, grantRows] = await Promise.all([
         seriesRecord.trackId
           ? db
               .select({ id: trackBookings.id })
@@ -258,6 +273,20 @@ export function registerSeriesRoutes(app: Hono) {
                 activeTrackBookingWhere(
                   eq(trackBookings.trackId, seriesRecord.trackId),
                   eq(trackBookings.userId, session.user.id),
+                ),
+              )
+              .limit(1)
+          : Promise.resolve([]),
+        seriesRecord.trackId
+          ? db
+              .select({ id: eventAttendees.id })
+              .from(eventAttendees)
+              .innerJoin(trackEvents, eq(trackEvents.eventId, eventAttendees.eventId))
+              .where(
+                and(
+                  eq(trackEvents.trackId, seriesRecord.trackId),
+                  eq(eventAttendees.userId, session.user.id),
+                  eq(eventAttendees.status, 'active'),
                 ),
               )
               .limit(1)
@@ -276,6 +305,7 @@ export function registerSeriesRoutes(app: Hono) {
       ]);
 
       hasTrackBooking = Boolean(bookingRows[0]);
+      hasTrackEventAttendance = Boolean(attendanceRows[0]);
       hasSeriesGrant = Boolean(grantRows[0]);
     }
 
@@ -283,8 +313,10 @@ export function registerSeriesRoutes(app: Hono) {
       isStaff,
       isSubscriber,
       hasTrackBooking,
+      hasTrackEventAttendance,
       hasSeriesGrant,
       seriesIsPremium: seriesRecord.isPremium,
+      recordingsAccessPolicy,
     };
     const hasSeriesAccess = resolveSeriesAccess(accessContext);
     const isPremiumLocked = !hasSeriesAccess;
@@ -330,7 +362,14 @@ export function registerSeriesRoutes(app: Hono) {
 
     // Get user's registered event IDs for permission checking
     let userEventIds = new Set<string>();
-    if (!isStaff && !isSubscriber && !hasTrackBooking && !hasSeriesGrant && !isPremiumLocked) {
+    if (
+      !isStaff &&
+      !isSubscriber &&
+      !hasTrackBooking &&
+      !hasTrackEventAttendance &&
+      !hasSeriesGrant &&
+      !isPremiumLocked
+    ) {
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
@@ -373,6 +412,7 @@ export function registerSeriesRoutes(app: Hono) {
 
     return c.json({
       ...seriesRecord,
+      recordingsAccessPolicy,
       assetCount: assets.length,
       assets,
       hasAccess: hasSeriesAccess,
@@ -406,6 +446,7 @@ export function registerSeriesRoutes(app: Hono) {
         isPremium: payload.isPremium,
         priceInCents: payload.priceInCents ?? null,
         salesEnabled: payload.salesEnabled,
+        recordingsAccessPolicy: payload.recordingsAccessPolicy,
       })
       .returning();
 
@@ -466,6 +507,9 @@ export function registerSeriesRoutes(app: Hono) {
     if (updates.isPremium !== undefined) updateValues.isPremium = updates.isPremium;
     if (updates.priceInCents !== undefined) updateValues.priceInCents = updates.priceInCents;
     if (updates.salesEnabled !== undefined) updateValues.salesEnabled = updates.salesEnabled;
+    if (updates.recordingsAccessPolicy !== undefined) {
+      updateValues.recordingsAccessPolicy = updates.recordingsAccessPolicy;
+    }
     if (updates.sortOrder !== undefined) updateValues.sortOrder = updates.sortOrder;
 
     const [updated] = await db

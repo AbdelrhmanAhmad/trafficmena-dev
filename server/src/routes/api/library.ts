@@ -10,9 +10,14 @@ import {
   seriesAccessGrants,
   seriesAssets,
   trackBookings,
+  trackEvents,
 } from '../../db/schema/index.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import {
+  normalizeRecordingsAccessPolicy,
+  resolveLibraryAssetAccess,
+} from './seriesAccess.js';
 import { hasActiveSubscription } from './subscriptionShared.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
@@ -225,58 +230,128 @@ export function registerLibraryRoutes(app: Hono) {
       filteredItemsQuery.orderBy(libraryAssets.createdAt).limit(pageSize).offset(offset),
     ]);
 
-    let bookedAssetIds = new Set<string>();
-    let grantedAssetIds = new Set<string>();
+    type ParentSeriesContext = {
+      seriesId: string;
+      trackId: string | null;
+      isPremium: boolean;
+      salesEnabled: boolean;
+      recordingsAccessPolicy: ReturnType<typeof normalizeRecordingsAccessPolicy>;
+    };
+    const parentByAssetId = new Map<string, ParentSeriesContext>();
+    const bookedTrackIds = new Set<string>();
+    const attendedTrackIds = new Set<string>();
+    const grantedSeriesIds = new Set<string>();
+
     if (!isStaff && !isSubscriber) {
       const pageAssetIds = items.map((item) => item.id);
 
       if (pageAssetIds.length > 0) {
-        const [bookedAssets, grantedAssets] = await Promise.all([
-          db
-            .select({ assetId: seriesAssets.assetId })
-            .from(seriesAssets)
-            .innerJoin(series, eq(series.id, seriesAssets.seriesId))
-            .innerJoin(trackBookings, eq(trackBookings.trackId, series.trackId))
-            .where(
-              activeTrackBookingWhere(
-                eq(trackBookings.userId, session.user.id),
-                inArray(seriesAssets.assetId, pageAssetIds),
-              ),
-            ),
-          db
-            .select({ assetId: seriesAssets.assetId })
-            .from(seriesAssets)
-            .innerJoin(seriesAccessGrants, eq(seriesAccessGrants.seriesId, seriesAssets.seriesId))
-            .where(
-              and(
-                eq(seriesAccessGrants.userId, session.user.id),
-                isNull(seriesAccessGrants.revokedAt),
-                inArray(seriesAssets.assetId, pageAssetIds),
-              ),
-            ),
+        const memberships = await db
+          .select({
+            assetId: seriesAssets.assetId,
+            seriesId: series.id,
+            trackId: series.trackId,
+            isPremium: series.isPremium,
+            salesEnabled: series.salesEnabled,
+            recordingsAccessPolicy: series.recordingsAccessPolicy,
+          })
+          .from(seriesAssets)
+          .innerJoin(series, eq(series.id, seriesAssets.seriesId))
+          .where(inArray(seriesAssets.assetId, pageAssetIds));
+
+        for (const row of memberships) {
+          const candidate: ParentSeriesContext = {
+            seriesId: row.seriesId,
+            trackId: row.trackId,
+            isPremium: row.isPremium,
+            salesEnabled: row.salesEnabled,
+            recordingsAccessPolicy: normalizeRecordingsAccessPolicy(row.recordingsAccessPolicy),
+          };
+          const existing = parentByAssetId.get(row.assetId);
+          if (!existing) {
+            parentByAssetId.set(row.assetId, candidate);
+            continue;
+          }
+          const existingGated = existing.salesEnabled || existing.isPremium;
+          const candidateGated = candidate.salesEnabled || candidate.isPremium;
+          if (!existingGated && candidateGated) {
+            parentByAssetId.set(row.assetId, candidate);
+          }
+        }
+
+        const preferredParents = [...parentByAssetId.values()];
+        const seriesIds = [...new Set(preferredParents.map((p) => p.seriesId))];
+        const trackIds = [
+          ...new Set(preferredParents.map((p) => p.trackId).filter((id): id is string => Boolean(id))),
+        ];
+
+        const [bookingRows, attendanceRows, grantRows] = await Promise.all([
+          trackIds.length > 0
+            ? db
+                .select({ trackId: trackBookings.trackId })
+                .from(trackBookings)
+                .where(
+                  activeTrackBookingWhere(
+                    eq(trackBookings.userId, session.user.id),
+                    inArray(trackBookings.trackId, trackIds),
+                  ),
+                )
+            : Promise.resolve([]),
+          trackIds.length > 0
+            ? db
+                .select({ trackId: trackEvents.trackId })
+                .from(eventAttendees)
+                .innerJoin(trackEvents, eq(trackEvents.eventId, eventAttendees.eventId))
+                .where(
+                  and(
+                    eq(eventAttendees.userId, session.user.id),
+                    eq(eventAttendees.status, 'active'),
+                    inArray(trackEvents.trackId, trackIds),
+                  ),
+                )
+            : Promise.resolve([]),
+          seriesIds.length > 0
+            ? db
+                .select({ seriesId: seriesAccessGrants.seriesId })
+                .from(seriesAccessGrants)
+                .where(
+                  and(
+                    eq(seriesAccessGrants.userId, session.user.id),
+                    isNull(seriesAccessGrants.revokedAt),
+                    inArray(seriesAccessGrants.seriesId, seriesIds),
+                  ),
+                )
+            : Promise.resolve([]),
         ]);
 
-        bookedAssetIds = new Set(bookedAssets.map((asset) => asset.assetId));
-        grantedAssetIds = new Set(grantedAssets.map((asset) => asset.assetId));
+        for (const row of bookingRows) bookedTrackIds.add(row.trackId);
+        for (const row of attendanceRows) attendedTrackIds.add(row.trackId);
+        for (const row of grantRows) grantedSeriesIds.add(row.seriesId);
       }
     }
 
     const mappedItems = items.map((item) => {
-      let hasAccess = isStaff || isSubscriber;
-      if (!hasAccess) {
-        const hasSeriesAccess =
-          bookedAssetIds.has(item.id) || grantedAssetIds.has(item.id);
-        if (item.isPremium) {
-          hasAccess =
-            hasSeriesAccess || (item.eventId ? registeredEventIds.has(item.eventId) : false);
-        } else {
-          hasAccess =
-            item.isPublic ||
-            !item.eventId ||
-            registeredEventIds.has(item.eventId) ||
-            hasSeriesAccess;
-        }
-      }
+      const parent = parentByAssetId.get(item.id) ?? null;
+      const hasAccess = resolveLibraryAssetAccess({
+        isStaff: Boolean(isStaff),
+        isSubscriber: Boolean(isSubscriber),
+        assetIsPremium: item.isPremium,
+        assetIsPublic: item.isPublic,
+        assetEventId: item.eventId,
+        hasEventRegistration: item.eventId ? registeredEventIds.has(item.eventId) : false,
+        parentSeries: parent
+          ? {
+              isPremium: parent.isPremium,
+              salesEnabled: parent.salesEnabled,
+              recordingsAccessPolicy: parent.recordingsAccessPolicy,
+              hasTrackBooking: parent.trackId ? bookedTrackIds.has(parent.trackId) : false,
+              hasTrackEventAttendance: parent.trackId
+                ? attendedTrackIds.has(parent.trackId)
+                : false,
+              hasSeriesGrant: grantedSeriesIds.has(parent.seriesId),
+            }
+          : null,
+      });
 
       if (hasAccess) {
         return { ...item, hasAccess };
@@ -367,9 +442,22 @@ export function registerLibraryRoutes(app: Hono) {
     const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
 
     if (!isStaff && !isSubscriber) {
-      let hasTrackBooking = false;
-      let hasSeriesGrant = false;
-      let hasRegistration = false;
+      const parentSeriesRows = await db
+        .select({
+          seriesId: series.id,
+          trackId: series.trackId,
+          isPremium: series.isPremium,
+          salesEnabled: series.salesEnabled,
+          recordingsAccessPolicy: series.recordingsAccessPolicy,
+        })
+        .from(seriesAssets)
+        .innerJoin(series, eq(series.id, seriesAssets.seriesId))
+        .where(eq(seriesAssets.assetId, asset[0].id));
+
+      const preferredParent =
+        parentSeriesRows.find((row) => row.salesEnabled || row.isPremium) ??
+        parentSeriesRows[0] ??
+        null;
 
       const registrationPromise = asset[0].eventId
         ? db
@@ -385,66 +473,71 @@ export function registerLibraryRoutes(app: Hono) {
             .limit(1)
         : Promise.resolve([]);
 
-      const [registrationRows, bookingRows, seriesGrantRows] = await Promise.all([
+      const [registrationRows, bookingRows, attendanceRows, seriesGrantRows] = await Promise.all([
         registrationPromise,
-        db
-          .select({ assetId: seriesAssets.assetId })
-          .from(seriesAssets)
-          .innerJoin(series, eq(series.id, seriesAssets.seriesId))
-          .innerJoin(trackBookings, eq(trackBookings.trackId, series.trackId))
-          .where(
-            activeTrackBookingWhere(
-              eq(trackBookings.userId, session.user.id),
-              eq(seriesAssets.assetId, asset[0].id),
-            ),
-          )
-          .limit(1),
-        db
-          .select({ assetId: seriesAssets.assetId })
-          .from(seriesAssets)
-          .innerJoin(seriesAccessGrants, eq(seriesAccessGrants.seriesId, seriesAssets.seriesId))
-          .where(
-            and(
-              eq(seriesAssets.assetId, asset[0].id),
-              eq(seriesAccessGrants.userId, session.user.id),
-              isNull(seriesAccessGrants.revokedAt),
-            ),
-          )
-          .limit(1),
+        preferredParent?.trackId
+          ? db
+              .select({ id: trackBookings.id })
+              .from(trackBookings)
+              .where(
+                activeTrackBookingWhere(
+                  eq(trackBookings.trackId, preferredParent.trackId),
+                  eq(trackBookings.userId, session.user.id),
+                ),
+              )
+              .limit(1)
+          : Promise.resolve([]),
+        preferredParent?.trackId
+          ? db
+              .select({ id: eventAttendees.id })
+              .from(eventAttendees)
+              .innerJoin(trackEvents, eq(trackEvents.eventId, eventAttendees.eventId))
+              .where(
+                and(
+                  eq(trackEvents.trackId, preferredParent.trackId),
+                  eq(eventAttendees.userId, session.user.id),
+                  eq(eventAttendees.status, 'active'),
+                ),
+              )
+              .limit(1)
+          : Promise.resolve([]),
+        preferredParent
+          ? db
+              .select({ id: seriesAccessGrants.id })
+              .from(seriesAccessGrants)
+              .where(
+                and(
+                  eq(seriesAccessGrants.seriesId, preferredParent.seriesId),
+                  eq(seriesAccessGrants.userId, session.user.id),
+                  isNull(seriesAccessGrants.revokedAt),
+                ),
+              )
+              .limit(1)
+          : Promise.resolve([]),
       ]);
 
-      hasRegistration = Boolean(registrationRows[0]);
-      hasTrackBooking = Boolean(bookingRows[0]);
-      hasSeriesGrant = Boolean(seriesGrantRows[0]);
-      const hasSeriesAccess = hasTrackBooking || hasSeriesGrant;
+      const hasAccess = resolveLibraryAssetAccess({
+        isStaff: false,
+        isSubscriber: false,
+        assetIsPremium: asset[0].isPremium,
+        assetIsPublic: asset[0].isPublic,
+        assetEventId: asset[0].eventId,
+        hasEventRegistration: Boolean(registrationRows[0]),
+        parentSeries: preferredParent
+          ? {
+              isPremium: preferredParent.isPremium,
+              salesEnabled: preferredParent.salesEnabled,
+              recordingsAccessPolicy: normalizeRecordingsAccessPolicy(
+                preferredParent.recordingsAccessPolicy,
+              ),
+              hasTrackBooking: Boolean(bookingRows[0]),
+              hasTrackEventAttendance: Boolean(attendanceRows[0]),
+              hasSeriesGrant: Boolean(seriesGrantRows[0]),
+            }
+          : null,
+      });
 
-      if (asset[0].isPremium) {
-        if (!hasSeriesAccess && !hasRegistration) {
-          return c.json(
-            {
-              id: asset[0].id,
-              title: asset[0].title,
-              description: asset[0].description,
-              fileType: asset[0].fileType,
-              thumbnailUrl: asset[0].thumbnailUrl,
-              eventId: asset[0].eventId,
-              isPremium: asset[0].isPremium,
-              hasAccess: false,
-              error: {
-                code: 'SUBSCRIPTION_REQUIRED',
-                message: 'Subscribe to access this content.',
-              },
-            },
-            403,
-          );
-        }
-      } else if (
-        asset[0].eventId &&
-        !asset[0].isPublic &&
-        !hasRegistration &&
-        !hasSeriesAccess
-      ) {
-        // Return metadata without content URLs
+      if (!hasAccess) {
         return c.json(
           {
             id: asset[0].id,
@@ -455,7 +548,15 @@ export function registerLibraryRoutes(app: Hono) {
             eventId: asset[0].eventId,
             isPremium: asset[0].isPremium,
             hasAccess: false,
-            error: { code: 'REGISTRATION_REQUIRED', message: 'Register for event to access.' },
+            error: asset[0].isPremium
+              ? {
+                  code: 'SUBSCRIPTION_REQUIRED',
+                  message: 'Subscribe to access this content.',
+                }
+              : {
+                  code: 'REGISTRATION_REQUIRED',
+                  message: 'Register for event to access.',
+                },
           },
           403,
         );

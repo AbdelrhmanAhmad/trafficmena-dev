@@ -23,6 +23,7 @@ import { executeTrackBookingWrite } from './trackBookingShared.js';
 import { isPaidTrack } from './trackPaidStatus.js';
 import { shouldPublishTrackSeries } from './trackSeriesPublishing.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
+import { loadRecordingsSeriesForTrack } from '../../services/trackRecordingsSeries.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -529,6 +530,8 @@ export function registerTrackRoutes(app: Hono) {
           }
         }
 
+        const recordingsSeries = await loadRecordingsSeriesForTrack(id);
+
         return c.json({
           track: {
             id: track.id,
@@ -553,6 +556,7 @@ export function registerTrackRoutes(app: Hono) {
             priceInCents: track.priceInCents,
             location: track.location,
             locationUrl: userHasBooked || isStaff ? track.locationUrl : null, // Only reveal URL to booked users or staff
+            recordingsSeries,
           },
           events: trackEventsFormatted,
         });
@@ -778,6 +782,8 @@ export function registerTrackRoutes(app: Hono) {
       userHasBooked = Boolean(booking);
     }
 
+    const recordingsSeries = await loadRecordingsSeriesForTrack(id);
+
     return c.json({
       ...track,
       eventCount: eventsWithAssets.length,
@@ -788,6 +794,7 @@ export function registerTrackRoutes(app: Hono) {
           ? track.maxTrackBookings - Number(bookingStats?.value ?? 0)
           : null,
       userHasBooked,
+      recordingsSeries,
     });
   });
 

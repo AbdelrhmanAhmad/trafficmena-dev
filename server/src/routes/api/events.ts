@@ -19,6 +19,7 @@ import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
+import { loadRecordingsSeriesForTrack } from '../../services/trackRecordingsSeries.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -346,6 +347,10 @@ export function registerEventRoutes(app: Hono) {
         const canAccessMeetingLink = attending || trackBooked || isStaff;
         const locationUrl = canAccessMeetingLink ? event.locationUrl : null;
 
+        const recordingsSeries = trackInfo
+          ? await loadRecordingsSeriesForTrack(trackInfo.id, eventId)
+          : null;
+
         return c.json({
           ...event,
           attendeeCount,
@@ -353,6 +358,7 @@ export function registerEventRoutes(app: Hono) {
           registrationStatus,
           meetingLink: canAccessMeetingLink ? event.meetingLink : null,
           locationUrl,
+          recordingsSeries,
           trackInfo: trackInfo
             ? {
                 id: trackInfo.id,

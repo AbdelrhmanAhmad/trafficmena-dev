@@ -2,7 +2,7 @@
 
 > **الغرض:** مرجع دقيق قبل أي تطوير على البنية.  
 > **تاريخ:** 2026-08-10  
-> **حالة الكود:** بعد التراجع عن شغل «إعادة بيع التسجيلات بعد انتهاء الأيفنت» — الإبقاء على Module Settings.
+> **حالة الكود:** بعد نقطة #2 — نشر حزمة تسجيلات التراك بعد انتهاء الحجز/الأيفنت عبر Series؛ `/recordings` ما زال معطّلًا من الهيدر.
 
 ---
 
@@ -56,10 +56,14 @@ flowchart TB
     MeetupsPage["/meetups = Events only"]
     TracksPage["/tracks = Tracks catalog"]
     TrackPage["/tracks/:id"]
+    TrackRecs["/tracks/:id/recordings (buy Series after end)"]
+    EventRecs["/meetups/:id/recordings (buy Series after end)"]
     RecordingsDisabled["/recordings temporarily disabled"]
     MeetupsPage --> Event
     TracksPage --> Track
     TrackPage --> Track
+    TrackRecs --> Series
+    EventRecs --> Series
   end
 
   subgraph other [منتجات مستقلة]
@@ -87,7 +91,7 @@ flowchart TB
 | **عام** | `/meetups`, `/meetups/:id` |
 | **أدمن** | `/admin/meetups` |
 | **الشراء/التسجيل** | تسجيل فردي على الأيفنت (مجاني أو مدفوع عبر `payments` itemType=event) |
-| **بعد الانتهاء** | يختفي من قوائم «القادم»؛ **لا يوجد حاليًا** مسار منتج «إعادة بيع تسجيلات الأيفنت المنتهي» كمنتج مستقل عبر Publish على الأيفنت |
+| **بعد الانتهاء** | إن الأيفنت تابع لتراك وله Series قابلة للبيع + أصول للأيفنت → زر **Available recordings** → `/meetups/:id/recordings` (شراء حزمة Series التراك) |
 
 قد يكون الأيفنت **داخل Track** (عبر `track_events`) أو **Standalone**.
 
@@ -99,13 +103,13 @@ flowchart TB
 |--|--|
 | **الوظيفة** | باقة تعلم = عدة Sessions (Events) |
 | **جداول** | `tracks`, `track_events`, `track_bookings`, `track_reservations` |
-| **عام** | يظهر ضمن `/meetups` + تفصيل `/tracks/:id` («Sessions Included») |
-| **أدمن** | Library / Meetups → Tracks |
+| **عام** | كتالوج `/tracks` + تفصيل `/tracks/:id`؛ بعد انتهاء الحجز إن Series sellable → `/tracks/:id/recordings` |
+| **أدمن** | Library / Meetups → Tracks (+ بطاقة Publish recordings) |
 | **الشراء** | حجز Track كامل → `track_bookings` + تسجيل المستخدم على أحداث الباقة |
 | **نافذة الحجز** | `track_booking_start` / `track_booking_end` (وخيارات single booking) |
 
 **مهم:** شراء Track ≠ شراء Series من المتجر.  
-لكن **حجز Track نشط** يفتح الوصول لـ Series المرتبطة بنفس `track_id` (عبر منطق `resolveSeriesAccess` / `hasTrackBooking`).
+حجز Track (أو حضور أيفنت في التراك) قد يمنح وصولًا مجانيًا لـ Series حسب `recordings_access_policy` (`free_for_prior_buyers` افتراضيًا؛ `everyone_pays` يلغي المجانية).
 
 ---
 
@@ -115,7 +119,7 @@ flowchart TB
 |--|--|
 | **الوظيفة** | حاوية محتوى مسجّل (ترتيب أصول مكتبة) |
 | **جداول** | `series`, `series_assets`, `series_access_grants` |
-| **حقول البيع** | `price_in_cents`, `sales_enabled`, `is_published`, `is_premium` |
+| **حقول البيع** | `price_in_cents`, `sales_enabled`, `is_published`, `is_premium`, `recordings_access_policy` |
 | **ربط اختياري** | `series.track_id` → Track |
 | **أدمن** | `/admin/library` تبويب Series |
 | **عضو بعد الشراء** | `/dashboard/library/series/:id` |
@@ -136,12 +140,12 @@ flowchart TB
 
 | | |
 |--|--|
-| **الوظيفة** | كتالوج زوار لـ Series القابلة للبيع |
-| **مسارات** | `/recordings`, `/recordings/:id` (+ legacy `/series/:id`) |
+| **الوظيفة** | كتالوج زوار لـ Series القابلة للبيع **أو** مدخل شراء من Track/Event المنتهي |
+| **مسارات** | `/recordings` (معطّل مؤقتًا)، `/tracks/:id/recordings`, `/meetups/:id/recordings` (+ legacy `/series/:id`) |
 | **API** | `GET /api/series/store`, `GET /api/series/store/:id` |
-| **في الهيدر** | لابل **Recordings** |
+| **في الهيدر** | مخفي مؤقتًا (نقطة #1) — البيع بعد الانتهاء عبر زر على الصفحة |
 
-إذًا: الأدمن يدير **Series**؛ الزائر يرى **Recordings**. نفس البيانات.
+إذًا: الأدمن يدير **Series**؛ الزائر يرى **Recordings** كواجهة. نفس البيانات.
 
 ---
 
@@ -221,7 +225,7 @@ flowchart LR
 3. **Series المرتبطة بـ Track** تُنشأ تلقائيًا؛ Series الحرة تُنشأ من الأدمن — الاثنان يظهران في `/recordings` إن صارا sellable.
 4. **وصول Series بعد حجز Track** مشتق من الحجز الحي (`hasTrackBooking`)، بينما **شراء Recordings** يكتب `series_access_grants` — مساران مختلفان لنفس المحتوى أحيانًا.
 5. **Asset مربوط بـ Event** قد يدخل Series التراك عند إضافة الأيفنت للتراك — المحتوى المسجّل واللايف يلتقيان هنا.
-6. **انتهاء الأيفنت/التراك** لا يفعّل تلقائيًا بيع التسجيلات. أي «إعادة بيع بعد الانتهاء» تحتاج تصميم منتج صريح (ولم يُعتمد بعد التراجع في 2026-08-10).
+6. **انتهاء الأيفنت/التراك** لا يفعّل البيع تلقائيًا؛ الأدمن ينشر من بطاقة Publish (نقطة #2). الزر العام يفتح صفحة شراء Series — لا يمدّد حجز اللايف.
 
 ---
 
@@ -241,9 +245,12 @@ flowchart LR
 
 ## 8) قرارات منتج مؤجلة (لا تُفترض موجودة)
 
-- Publish على أيفنت منتهٍ لإعادة بيع تسجيلاته كمنتج مسجّل  
-- زرار Recordings داخل صفحة Event/Track كمدخل أساسي للبيع  
+- إعادة كتالوج `/recordings` للهيدر  
+- بيع أصل واحد منفصل عن Series (بدون حزمة التراك)  
+- أيفنت standalone بدون Track/Series  
 - تمديد نافذة حجز Track كبديل لبيع التسجيلات  
+
+**مُنفَّذ في نقطة #2:** Publish من Track/Event edit + زر Available recordings + سياسة `recordings_access_policy`.
 
 أي عمل جديد على هذا المحور يجب أن يبدأ من هذه الوثيقة ويحدّثها عند تغيير السلوك.
 
@@ -253,6 +260,7 @@ flowchart LR
 
 | وثيقة | ماذا تغطي |
 |-------|-----------|
+| [publish-recordings-after-end.md](./publish-recordings-after-end.md) | نقطة #2 — نشر التسجيلات بعد الانتهاء |
 | [public-store-pages.md](./public-store-pages.md) | `/recordings` و Digital Products للزوار |
 | [series-sales-commerce.md](./series-sales-commerce.md) | سلة وطلبات Series |
 | [series-pricing-and-sales.md](./series-pricing-and-sales.md) | سعر و`sales_enabled` |

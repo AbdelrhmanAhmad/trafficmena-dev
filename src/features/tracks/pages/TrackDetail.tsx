@@ -518,9 +518,21 @@ const TrackDetail: React.FC = () => {
                       </div>
 
                       {bookingState === 'booked' ? (
-                        <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
-                          <CheckCircle className="h-4 w-4" />
-                          <span>You're enrolled in this track</span>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
+                            <CheckCircle className="h-4 w-4" />
+                            <span>You're enrolled in this track</span>
+                          </div>
+                          {bookingStatus.message === 'Booking period has ended.' &&
+                          track.recordings_series?.is_sellable ? (
+                            <Button
+                              type="button"
+                              className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                              onClick={() => navigate(`/tracks/${id}/recordings`)}
+                            >
+                              Available recordings
+                            </Button>
+                          ) : null}
                         </div>
                       ) : bookingState === 'pending' ? (
                         <div className="space-y-3">
@@ -570,6 +582,16 @@ const TrackDetail: React.FC = () => {
                               ? 'Sold Out'
                               : 'Booking Closed'}
                           </Button>
+                          {bookingStatus.message === 'Booking period has ended.' &&
+                          track.recordings_series?.is_sellable ? (
+                            <Button
+                              type="button"
+                              className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                              onClick={() => navigate(`/tracks/${id}/recordings`)}
+                            >
+                              Available recordings
+                            </Button>
+                          ) : null}
                         </div>
                       )}
 

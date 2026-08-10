@@ -306,6 +306,10 @@ export const series = pgTable(
     isPremium: boolean('is_premium').default(false).notNull(),
     priceInCents: integer('price_in_cents'),
     salesEnabled: boolean('sales_enabled').default(false).notNull(),
+    // free_for_prior_buyers | everyone_pays — who may watch after recordings are published for sale
+    recordingsAccessPolicy: text('recordings_access_policy')
+      .default('free_for_prior_buyers')
+      .notNull(),
     trackId: uuid('track_id').references(() => tracks.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

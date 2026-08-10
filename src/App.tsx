@@ -9,6 +9,8 @@ import PublicRecordingDetailPage from '@/features/series/pages/PublicRecordingDe
 import PublicRecordingsDisabledPage from '@/features/series/pages/PublicRecordingsDisabled';
 import PublicTrackDetail from '@/features/tracks/pages/TrackDetail';
 import PublicTracksPage from '@/features/tracks/pages/PublicTracks';
+import TrackAvailableRecordingsPage from '@/features/tracks/pages/TrackAvailableRecordingsPage';
+import EventAvailableRecordingsPage from '@/features/tracks/pages/EventAvailableRecordingsPage';
 import { usePageTracking } from '@/lib/analytics/usePageTracking';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
@@ -394,6 +396,14 @@ const App = () => {
                     }
                   />
                   <Route
+                    path="/meetups/:id/recordings"
+                    element={
+                      <ErrorBoundary>
+                        <EventAvailableRecordingsPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
                     path="/recordings"
                     element={
                       <ErrorBoundary>
@@ -442,6 +452,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <PublicTrackDetail />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/tracks/:id/recordings"
+                    element={
+                      <ErrorBoundary>
+                        <TrackAvailableRecordingsPage />
                       </ErrorBoundary>
                     }
                   />

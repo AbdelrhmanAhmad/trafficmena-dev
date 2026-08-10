@@ -81,13 +81,15 @@ const SeriesResourceCard: React.FC<{
   const styles = getAssetTypeStyles(asset.file_type, asset.embed_type);
   const isPremium = isSeriesPremium || asset.is_premium;
   const hasAccess = asset.has_access !== false;
-  const showPremiumOverlay = isPremium && !hasAccess;
+  const showLockOverlay = !hasAccess;
   const showPremiumBadge = isPremium;
 
   return (
     <button
       type="button"
+      disabled={!hasAccess}
       onClick={() => {
+        if (!hasAccess) return;
         navigate(`/dashboard/library/${asset.id}`, {
           state: {
             seriesContext: {
@@ -97,7 +99,11 @@ const SeriesResourceCard: React.FC<{
           },
         });
       }}
-      className="group cursor-pointer rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl overflow-hidden"
+      className={
+        hasAccess
+          ? 'group cursor-pointer rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl overflow-hidden'
+          : 'group cursor-not-allowed rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur overflow-hidden'
+      }
     >
       {/* Thumbnail Area */}
       <div className="relative aspect-[300/160] overflow-hidden">
@@ -107,7 +113,11 @@ const SeriesResourceCard: React.FC<{
           <img
             src={asset.thumbnail_url}
             alt={asset.title}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className={
+              hasAccess
+                ? 'absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                : 'absolute inset-0 h-full w-full object-cover'
+            }
           />
         )}
 
@@ -119,7 +129,7 @@ const SeriesResourceCard: React.FC<{
           </div>
         )}
 
-        {isVideo && (
+        {isVideo && hasAccess && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/10">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:scale-110">
               <Play className="h-6 w-6 text-neutral-800 ml-1" fill="currentColor" />
@@ -127,7 +137,7 @@ const SeriesResourceCard: React.FC<{
           </div>
         )}
 
-        {showPremiumOverlay && (
+        {showLockOverlay && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/10">
             <div className="flex flex-col items-center gap-2 text-neutral-900/60">
               <Lock className="h-12 w-12" />

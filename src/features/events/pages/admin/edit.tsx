@@ -1,6 +1,7 @@
 import { Calendar } from 'lucide-react';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { TrackRecordingsPublishCard } from '@/features/tracks/components/TrackRecordingsPublishCard';
 import DataLoader from '@/shared/components/DataLoader';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -93,6 +94,16 @@ const AdminMeetupEdit = () => {
               </DataLoader>
             </CardContent>
           </Card>
+
+          {event?.trackInfo && event.recordings_series ? (
+            <div className="mt-6">
+              <TrackRecordingsPublishCard
+                trackId={event.trackInfo.id}
+                eventId={event.id}
+                recordingsSeries={event.recordings_series}
+              />
+            </div>
+          ) : null}
         </div>
       </AppLayout>
     </AdminProtectedRoute>
