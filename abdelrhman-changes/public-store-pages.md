@@ -1,47 +1,36 @@
-# Public store pages — Recordings & Digital Products
+# Public store pages — Tracks, Recordings (disabled), Digital Products
 
-## Overview
+## Current public navigation (2026-08-10)
 
-Guest-facing catalog and preview pages for commerce items (no dashboard required to browse). Purchase still requires sign-in; guests see locked previews and a sign-in modal on buy/cart actions.
+| Path | Page | Status |
+|------|------|--------|
+| `/meetups` | Events only | Active |
+| `/tracks` | Published tracks catalog | Active (new) |
+| `/tracks/:id` | Track detail + booking | Active |
+| `/recordings`, `/recordings/:id` | Temporarily disabled unavailable screen | Disabled (hidden from nav) |
+| `/digital-products` | Digital products store | Active (Module Settings) |
 
-## Routes
-
-| Path | Page | API |
-|------|------|-----|
-| `/recordings` | List sellable series | `GET /api/series/store` (public list uses store endpoint with optional auth) |
-| `/recordings/:id` | Series preview + buy/cart | `GET /api/series/store/:id` |
-| `/series/:id` | Same detail as `/recordings/:id` (legacy links) | — |
-| `/digital-products` | List digital products | `GET /api/digital-products/public` |
-| `/digital-products/:id` | Product preview + buy/cart | `GET /api/digital-products/public/:id` |
-
-## Header navigation
+## Header
 
 `Header.tsx` — `NAVIGATION_ITEMS`:
 
-- **Recordings** → `/recordings` (`FolderOpen` icon)
-- **Digital Products** → `/digital-products` (`FileStack` icon)
+- **Events** → `/meetups`
+- **Tracks** → `/tracks`
+- **Digital Products** → `/digital-products` (gated)
 
-## Guest detail behaviour
+Recordings removed from nav.
 
-- **Description:** sanitized HTML (DOMPurify) where applicable
-- **Videos/files:** titles + thumbnails only; playback/download locked until purchase
-- **Purchased / granted access:** link to dashboard detail (`/dashboard/library/series/:id` or `/dashboard/digital-products/:id`)
-- **Buy / Add to cart / Open in dashboard (guest):** `SignInRequiredDialog` with return path to the public detail URL
+## Tracks list
 
-## Key frontend files
+- Page: `src/features/tracks/pages/PublicTracks.tsx`
+- Card: `PublicTrackCard`
+- API: existing `GET /api/tracks/public` (no backend change required)
 
-| File | Role |
-|------|------|
-| `src/features/series/pages/PublicRecordings.tsx` | Recordings list |
-| `src/features/series/pages/PublicRecordingDetail.tsx` | Recording detail |
-| `src/features/series/components/PublicRecordingCard.tsx` | Card on list |
-| `src/features/digital-products/pages/PublicDigitalProducts.tsx` | Products list |
-| `src/features/digital-products/pages/PublicDigitalProductDetail.tsx` | Product detail |
-| `src/features/digital-products/components/PublicDigitalProductCard.tsx` | Card on list |
-| `src/shared/components/SignInRequiredDialog.tsx` | Auth gate for guests |
-| `src/features/series/components/SeriesBuyActions.tsx` | `onRequireAuth`, `signInReturnPath` |
-| `src/features/digital-products/components/DigitalProductBuyActions.tsx` | Same pattern |
+## Recordings (Series store) — temporary
 
-## Backend
+- Routes still registered but render `PublicRecordingsDisabled`
+- Series APIs / dashboard / admin unchanged
 
-Existing store APIs in `server/src/routes/api/seriesStore.ts` and `server/src/routes/api/digitalProducts.ts` — public variants strip URLs until purchase; optional session adds `has_purchased` / access flags.
+## Digital Products
+
+Unchanged — see [digital-products-commerce.md](./digital-products-commerce.md).

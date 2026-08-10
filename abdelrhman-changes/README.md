@@ -6,12 +6,15 @@
 
 | الملف | الوصف |
 |-------|--------|
+| [product-structure-and-overlap.md](./product-structure-and-overlap.md) | **هيكل المنتجات:** Event / Track / Series / Recordings والتداخل بينها |
+| [meetups-tracks-split.md](./meetups-tracks-split.md) | **نقطة #1:** `/meetups`=Events، `/tracks`=Tracks، Recordings معطّل مؤقتًا |
+| [recordings-change-checkpoints.md](./recordings-change-checkpoints.md) | **ترقيم نقاط التقدم** لموضوع تغيرات التسجيلات (للتراجع) |
 | [series-pricing-and-sales.md](./series-pricing-and-sales.md) | سعر Series + تفعيل/إيقاف البيع + عرض السعر في الأدمن والزوار |
 | [fawaterk-payment-invoice-id-fix.md](./fawaterk-payment-invoice-id-fix.md) | إصلاح Fawaterk: UUID لـ `invoice_id` + verify الاشتراك |
 | [series-sales-commerce.md](./series-sales-commerce.md) | بيع Recording Series: سلة، orders، دفع، badge تم الشراء |
 | [digital-products-commerce.md](./digital-products-commerce.md) | Digital Products: ملفات، سلة موحّدة مع Series |
 | [video-url-system.md](./video-url-system.md) | **Video URL** لـ Digital Products + فيديوهات دروس Masterclass (migrations 0022–0023) |
-| [public-store-pages.md](./public-store-pages.md) | **صفحات الزوار:** Recordings + Digital Products + Sign-in modal |
+| [public-store-pages.md](./public-store-pages.md) | **صفحات الزوار:** Meetups=Events، Tracks=/tracks، Recordings معطّل مؤقتًا |
 | [thank-you-order-page.md](./thank-you-order-page.md) | **Thank you for your order** بعد شراء السلة |
 | [module-settings.md](./module-settings.md) | **إعدادات الموديولات:** إخفاء/إظهار Masterclasses و Digital Products |
 | [masterclass-enrollment-display.md](./masterclass-enrollment-display.md) | أدمن Masterclass: هاتف الطالب + بادج سعر الشراء |
@@ -36,6 +39,8 @@ npm --prefix server run db:migrate
 
 ## آخر تحديث
 
+- **2026-08-10** — **نقطة #1** تغيرات التسجيلات: فصل `/meetups` عن `/tracks`؛ تعطيل مؤقت لـ `/recordings`
+- **2026-08-10** — وثيقة هيكل المنتجات والتداخل (Event / Track / Series / Recordings)
 - **2026-08-10** — تراجع عن شغل إعادة بيع/Publish التسجيلات بعد انتهاء الأيفنت (revert إلى ما بعد Module Settings)
 - **2026-08-04** — Module Settings + إصلاح كاش العضو (`no-store` / optimistic public cache)
 - **2026-06-23** — Public Recordings/Digital Products، Video URL system، Thank you order page، Masterclass enrollment phone + purchase price

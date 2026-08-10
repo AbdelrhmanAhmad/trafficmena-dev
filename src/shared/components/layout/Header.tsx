@@ -1,9 +1,9 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  BookOpen,
   Calendar,
   Crown,
   FileStack,
-  FolderOpen,
   Home,
   Info,
   Library,
@@ -35,7 +35,7 @@ const NAVIGATION_ITEMS: NavItem[] = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/meetups', label: 'Events', icon: Calendar },
   // { href: '/library', label: 'Library', icon: Library },
-  { href: '/recordings', label: 'Recordings', icon: FolderOpen },
+  { href: '/tracks', label: 'Tracks', icon: BookOpen },
   { href: '/digital-products', label: 'Digital Products', icon: FileStack, module: 'digitalProducts' },
   // { href: '/community', label: 'Community', icon: MessageSquare },
   { href: '/about', label: 'About Us', icon: Info },

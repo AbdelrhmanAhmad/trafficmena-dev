@@ -6,8 +6,9 @@ import Meetups from '@/features/events/pages/Meetups';
 import PublicDigitalProductDetailPage from '@/features/digital-products/pages/PublicDigitalProductDetail';
 import PublicDigitalProductsPage from '@/features/digital-products/pages/PublicDigitalProducts';
 import PublicRecordingDetailPage from '@/features/series/pages/PublicRecordingDetail';
-import PublicRecordingsPage from '@/features/series/pages/PublicRecordings';
+import PublicRecordingsDisabledPage from '@/features/series/pages/PublicRecordingsDisabled';
 import PublicTrackDetail from '@/features/tracks/pages/TrackDetail';
+import PublicTracksPage from '@/features/tracks/pages/PublicTracks';
 import { usePageTracking } from '@/lib/analytics/usePageTracking';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
@@ -396,7 +397,7 @@ const App = () => {
                     path="/recordings"
                     element={
                       <ErrorBoundary>
-                        <PublicRecordingsPage />
+                        <PublicRecordingsDisabledPage />
                       </ErrorBoundary>
                     }
                   />
@@ -404,7 +405,7 @@ const App = () => {
                     path="/recordings/:id"
                     element={
                       <ErrorBoundary>
-                        <PublicRecordingDetailPage />
+                        <PublicRecordingsDisabledPage />
                       </ErrorBoundary>
                     }
                   />
@@ -425,6 +426,14 @@ const App = () => {
                         <ModuleGate module="digitalProducts" fallbackHref="/">
                           <PublicDigitalProductDetailPage />
                         </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/tracks"
+                    element={
+                      <ErrorBoundary>
+                        <PublicTracksPage />
                       </ErrorBoundary>
                     }
                   />

@@ -55,6 +55,7 @@ const PAGE_TYPE_MAP: Array<[RegExp, string]> = [
   [/^\/about$/, 'about'],
   [/^\/meetups$/, 'event_list'],
   [/^\/meetups\/[^/]+$/, 'event_detail'],
+  [/^\/tracks$/, 'track_list'],
   [/^\/tracks\/[^/]+$/, 'track_detail'],
   [/^\/subscribe$/, 'subscribe_landing'],
   [/^\/dashboard\/subscribe$/, 'subscribe_landing'],
