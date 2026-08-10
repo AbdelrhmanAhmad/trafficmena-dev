@@ -20,7 +20,6 @@ type ApiEvent = {
 type ApiEventDetail = ApiEvent & {
   attending?: boolean;
   registrationStatus?: 'active' | 'cancelled' | 'refund_requested' | null;
-  recordingsSeriesId?: string | null;
   trackInfo?: {
     id: string;
     title: string;
@@ -29,7 +28,6 @@ type ApiEventDetail = ApiEvent & {
     singleBookingStart: string | null;
     singleBookingEnd: string | null;
     booked?: boolean;
-    recordingsSeriesId?: string | null;
   } | null;
 };
 
@@ -55,7 +53,6 @@ export interface EventDetailRecord extends EventRecord {
   attending: boolean;
   registrationStatus: 'active' | 'cancelled' | 'refund_requested' | null;
   meetingLink: string | null;
-  recordingsSeriesId: string | null;
   trackInfo?: {
     id: string;
     title: string;
@@ -64,7 +61,6 @@ export interface EventDetailRecord extends EventRecord {
     singleBookingStart: Date | null;
     singleBookingEnd: Date | null;
     booked: boolean;
-    recordingsSeriesId: string | null;
   } | null;
 }
 
@@ -86,15 +82,12 @@ const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
 });
 
 export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecord {
-  const recordingsSeriesId =
-    api.recordingsSeriesId ?? api.trackInfo?.recordingsSeriesId ?? null;
   return {
     ...mapApiEventToRecord(api),
     attendeeCount: api.attendeeCount,
     attending: api.attending,
     registrationStatus: api.registrationStatus ?? null,
     meetingLink: api.meetingLink,
-    recordingsSeriesId,
     trackInfo: api.trackInfo
       ? {
           id: api.trackInfo.id,
@@ -112,7 +105,6 @@ export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecor
             ? new Date(api.trackInfo.singleBookingEnd)
             : null,
           booked: api.trackInfo.booked ?? false,
-          recordingsSeriesId: api.trackInfo.recordingsSeriesId ?? recordingsSeriesId,
         }
       : null,
   };

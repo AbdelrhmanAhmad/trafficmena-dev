@@ -37,7 +37,7 @@ npm --prefix server run db:migrate
 
 ## آخر تحديث
 
-- **2026-08-04** — Recordings داخل Event/Track (CTA + حضور track events يفتح Series) مع الإبقاء على `/recordings`
+- **2026-08-04** — Checkpoint: Recordings داخل Event/Track (الإبقاء على `/recordings`)
 - **2026-08-04** — Module Settings + إصلاح كاش العضو (`no-store` / optimistic public cache)
 - **2026-06-23** — Public Recordings/Digital Products، Video URL system، Thank you order page، Masterclass enrollment phone + purchase price
 - **2026-06-17** — Orders pages + English UI (`f767461`)

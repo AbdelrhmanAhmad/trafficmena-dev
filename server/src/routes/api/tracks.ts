@@ -466,13 +466,6 @@ export function registerTrackRoutes(app: Hono) {
           .from(trackBookings)
           .where(activeTrackBookingWhere(eq(trackBookings.trackId, id)));
 
-        const [trackSeries] = await db
-          .select({ id: series.id })
-          .from(series)
-          .where(eq(series.trackId, id))
-          .limit(1);
-        const recordingsSeriesId = trackSeries?.id ?? null;
-
         // Check if current user has booked
         let userHasBooked = false;
         let isStaff = false;
@@ -560,7 +553,6 @@ export function registerTrackRoutes(app: Hono) {
             priceInCents: track.priceInCents,
             location: track.location,
             locationUrl: userHasBooked || isStaff ? track.locationUrl : null, // Only reveal URL to booked users or staff
-            recordingsSeriesId,
           },
           events: trackEventsFormatted,
         });

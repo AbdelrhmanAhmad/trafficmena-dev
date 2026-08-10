@@ -6,7 +6,6 @@ import {
   Calendar,
   CheckCircle,
   ExternalLink,
-  FolderOpen,
   Loader2,
   MapPin,
   Sparkles,
@@ -519,30 +518,9 @@ const TrackDetail: React.FC = () => {
                       </div>
 
                       {bookingState === 'booked' ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>You're enrolled in this track</span>
-                          </div>
-                          {track.recordings_series_id ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="w-full rounded-xl"
-                              onClick={() => {
-                                if (!user) {
-                                  navigate('/signup?source=track');
-                                  return;
-                                }
-                                navigate(
-                                  `/dashboard/library/series/${track.recordings_series_id}`,
-                                );
-                              }}
-                            >
-                              <FolderOpen className="mr-2 h-4 w-4" />
-                              Recordings
-                            </Button>
-                          ) : null}
+                        <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>You're enrolled in this track</span>
                         </div>
                       ) : bookingState === 'pending' ? (
                         <div className="space-y-3">

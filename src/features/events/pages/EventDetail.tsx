@@ -6,7 +6,6 @@ import {
   Clock,
   ClockIcon,
   ExternalLink,
-  FolderOpen,
   MapPin,
   Sparkles,
   Users,
@@ -578,25 +577,6 @@ const EventDetail: React.FC = () => {
                           <span>You're registered</span>
                         </div>
                       )}
-
-                      {(event.attending || event.trackInfo?.booked || isStaff) &&
-                      event.recordingsSeriesId ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full rounded-xl"
-                          onClick={() => {
-                            if (!user) {
-                              navigate('/signup?source=event');
-                              return;
-                            }
-                            navigate(`/dashboard/library/series/${event.recordingsSeriesId}`);
-                          }}
-                        >
-                          <FolderOpen className="mr-2 h-4 w-4" />
-                          Recordings
-                        </Button>
-                      ) : null}
 
                       {event.meeting_link && (
                         <div className="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
