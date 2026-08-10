@@ -1,6 +1,6 @@
 # Checkpoint #2 — نشر التسجيلات بعد انتهاء Track/Event
 
-**Commit tag (عند الرفع):** `checkpoint-recordings-2`  
+**Commit tag (عند الرفع):** `checkpoint-recordings-2` (`dd37934`)  
 **يعتمد على:** نقطة #1 (`b93ce08`)
 
 ## القرار

@@ -5,7 +5,7 @@
 | النقطة | الوصف | Commit | Baseline قبلها |
 |--------|--------|--------|----------------|
 | **#1** | فصل `/meetups` (Events فقط) + صفحة `/tracks` + إخفاء/تعطيل مؤقت لـ `/recordings` | `b93ce08` | `277f722` |
-| **#2** | نشر التسجيلات بعد انتهاء Track/Event (سياسة وصول + زر Available recordings) | *(pending push)* | `b93ce08` |
+| **#2** | نشر التسجيلات بعد انتهاء Track/Event (سياسة وصول + زر Available recordings) | `dd37934` | `b93ce08` |
 
 ## كيف تتراجع لنقطة؟
 
