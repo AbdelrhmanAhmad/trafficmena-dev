@@ -108,3 +108,18 @@ export function normalizeRecordingsAccessPolicy(value: unknown): RecordingsAcces
   if (value === 'everyone_pays') return 'everyone_pays';
   return 'free_for_prior_buyers';
 }
+
+/**
+ * Member /dashboard/library Series tab visibility.
+ * Track-linked auto Series stay hidden until "Publish for sale";
+ * standalone series appear when published by admin.
+ */
+export function isSeriesVisibleInMemberLibrary(series: {
+  isPublished: boolean;
+  salesEnabled: boolean;
+  trackId: string | null;
+}): boolean {
+  if (!series.isPublished) return false;
+  if (series.trackId == null) return true;
+  return series.salesEnabled;
+}

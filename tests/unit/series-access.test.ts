@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   hasPriorBuyerComplimentaryAccess,
+  isSeriesVisibleInMemberLibrary,
   normalizeRecordingsAccessPolicy,
   resolveLibraryAssetAccess,
   resolveSeriesAccess,
@@ -242,5 +243,51 @@ describe('series access', () => {
     });
 
     assert.equal(hasAccess, true);
+  });
+
+  it('hides track-linked series from member library until Publish for sale', () => {
+    // Bug repro: publishing a Track auto-sets series.isPublished, so "… Recordings"
+    // appeared on /dashboard/library before admin enabled sales.
+    assert.equal(
+      isSeriesVisibleInMemberLibrary({
+        isPublished: true,
+        salesEnabled: false,
+        trackId: 'track-1',
+      }),
+      false,
+    );
+  });
+
+  it('shows track-linked series after Publish for sale', () => {
+    assert.equal(
+      isSeriesVisibleInMemberLibrary({
+        isPublished: true,
+        salesEnabled: true,
+        trackId: 'track-1',
+      }),
+      true,
+    );
+  });
+
+  it('shows standalone published series without salesEnabled', () => {
+    assert.equal(
+      isSeriesVisibleInMemberLibrary({
+        isPublished: true,
+        salesEnabled: false,
+        trackId: null,
+      }),
+      true,
+    );
+  });
+
+  it('hides unpublished standalone series from member library', () => {
+    assert.equal(
+      isSeriesVisibleInMemberLibrary({
+        isPublished: false,
+        salesEnabled: false,
+        trackId: null,
+      }),
+      false,
+    );
   });
 });
