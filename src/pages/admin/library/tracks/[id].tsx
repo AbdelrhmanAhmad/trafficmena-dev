@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TrackEventSelector from '@/features/tracks/components/TrackEventSelector';
 import TrackForm from '@/features/tracks/components/TrackForm';
-import { TrackRecordingsPublishCard } from '@/features/tracks/components/TrackRecordingsPublishCard';
 import {
   useAddEventsToTrack,
   useDeleteTrack,
@@ -287,11 +286,6 @@ function TrackDetailPage() {
               </CardContent>
             </Card>
           </div>
-
-          <TrackRecordingsPublishCard
-            trackId={track.id}
-            recordingsSeries={track.recordings_series}
-          />
         </div>
 
         {/* Event Selector Modal */}

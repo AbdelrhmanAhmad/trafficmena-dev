@@ -1,44 +1,65 @@
-# Recordings داخل Event / Track + Publish للبيع
+# Recordings داخل Event / Track
 
-> **Implementation:** 2026-08-04
+> **Checkpoint + implementation:** 2026-08-04  
+> **حالة:** منفّذ ومرّ على GitHub
 
-## مطلب العميل (المثبت)
+## الاتفاق مع العميل
 
-1. **صفحة `/recordings` تبقى.**
-2. **مش كل أيفنت/تراك منتهي** يعرض تسجيلاته للبيع — **فقط** بعد زرار **Publish for sale** من الأدمن.
-3. **البيع = شراء تسجيلات** عبر `/recordings` (Series commerce) — **بدون** تمديد نافذة حجز التراك اللايف.
-4. الحاجزون/الحضور يقدروا يفتحوا تسجيلاتهم من زرار **Recordings** جوه Track/Event.
+1. **صفحة `/recordings` تبقى** — كتالوج Series العام للزوار/البيع.
+2. **التسجيلات مرتبطة بالـ Track** (Series تلقائي `series.trackId`) وتظهر أيضًا عبر زرار **Recordings** داخل:
+   - صفحة الـ Track (`/tracks/:id`)
+   - صفحة الـ Event / Meetup (`/meetups/:id`)
+3. **من يشوف التسجيلات:** من حجز الـ Track، أو سجّل/حضر أي Event تابع لنفس الـ Track، أو لديه شراء/منح Series.
+4. **التراكات القديمة:** عند إعادة publish + فتح نافذة الحجز، الشراء = كورس مسجّل (وصول للتسجيلات) — عملية أدمن؛ الكود يضمن الوصول بعد الحجز/الحضور.
 
-## زر × زر (للعميل)
+## نموذج البيانات (بدون schema جديد)
 
-| وين | الزر / الأكشن | النتيجة |
-|-----|----------------|---------|
-| أدمن → Edit Track | **Publish for sale** + سعر EGP | يظهر في `/recordings` للشراء |
-| أدمن → Edit Track | **Manage recording assets** | يفتح Series لإدارة الملفات |
-| أدمن → Edit Track | إيقاف Publish | يختفي من `/recordings` |
-| `/recordings` | شراء | سلة Series → وصول دائم للتسجيلات |
-| `/tracks/:id` أو `/meetups/:id` (حاجز/حضور) | **Recordings** | يشوف التسجيلات المرتبطة |
+```
+Track ──1:1──► Series (auto: "{title} Recordings", series.trackId)
+  │
+  └─ track_events ──► Event
+                         │
+                         └─ library_assets.eventId ──► series_assets ──► Series
+```
 
-## شروط الظهور في `/recordings` (موجودة مسبقًا)
+## ما تم تنفيذه
 
-`isPublished` + `salesEnabled` + سعر > 0 + أصل واحد على الأقل (`isSeriesSellable`).
+### صلاحية الوصول
 
-## ما اتعمل في الكود
+[`server/src/routes/api/seriesAccess.ts`](../server/src/routes/api/seriesAccess.ts)
 
-### أدمن — Publish على التراك
+- حقل جديد: `hasTrackEventAttendance`
+- `resolveSeriesAccess` / `resolveSeriesAssetAccess` يفتحان الـ Series عند حضور أي event في `track_events` لنفس `series.trackId`
+- مربوط في `series.ts` و `seriesStore.ts`
 
-- API: `GET /api/tracks/:id` يرجّع `recordingsSeries` (id, sales, price, assetCount)
-- UI: [`TrackRecordingsPublishCard`](../src/features/tracks/components/TrackRecordingsPublishCard.tsx) في [`admin/library/tracks/[id].tsx`](../src/pages/admin/library/tracks/[id].tsx)
-- التفعيل يستدعي `PUT /api/series/:id` بـ `salesEnabled: true`, `isPublished: true`, `priceInCents`
-- **لا يمس** `track_booking_start/end`
+اختبارات: [`tests/unit/series-access.test.ts`](../tests/unit/series-access.test.ts)
 
-### زرار Recordings للحاجزين (سابق)
+### API — `recordingsSeriesId`
 
-- `TrackDetail` / `EventDetail` → `/dashboard/library/series/:id`
-- حضور event في التراك يفتح صلاحية Series (`hasTrackEventAttendance`) للمشاهدة الخاصة — **مش** للظهور في الكتالوج العام
+| Endpoint | التغيير |
+|----------|---------|
+| `GET /api/tracks/:id/public` | `track.recordingsSeriesId` |
+| `GET /api/events/:id` | `recordingsSeriesId` + داخل `trackInfo` |
+
+فرونت: [`src/app/api/tracks.ts`](../src/app/api/tracks.ts)، [`src/app/api/events.ts`](../src/app/api/events.ts)
+
+### UI — زرار Recordings
+
+| صفحة | متى يظهر | الوجهة |
+|------|----------|--------|
+| `TrackDetail.tsx` | enrolled + يوجد series | `/dashboard/library/series/:id` |
+| `EventDetail.tsx` | attending أو track booked (أو staff) + يوجد series | نفس المسار |
+
+`/recordings` لم تُمس.
+
+## أدمن — تراكات قديمة
+
+1. Publish الـ Track
+2. إعادة فتح `track_booking_end` إن كانت نافذة الحجز مغلقة
+3. بعد الشراء/الحجز يظهر زرار Recordings ويفتح الـ Series المرتبطة
 
 ## خارج النطاق
 
-- تمديد نافذة حجز Track
-- Publish تلقائي لكل الأيفنتات المنتهية
 - إزالة `/recordings`
+- ربط Series يدويًا بـ Event منفصل عن Track
+- تغيير Module Settings أو بوابة الدفع
