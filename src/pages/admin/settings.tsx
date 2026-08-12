@@ -20,7 +20,7 @@ const AdminSettingsPage = () => {
         <InviteOnlySettingsCard canEdit={isAdmin} />
         <SubscriptionSettingsCard canEdit={isAdmin} />
 
-        {isOwner && (
+        {(isOwner  || isAdmin)&& (
           <FactoryResetCard />
         )}
       </div>

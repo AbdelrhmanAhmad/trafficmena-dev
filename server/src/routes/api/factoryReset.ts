@@ -29,7 +29,7 @@ export function registerFactoryResetRoute(app: Hono) {
     }
 
     // Only the owner role may trigger a factory reset.
-    if (guard.role !== 'owner') {
+    if (guard.role !== 'owner' && guard.role !== 'admin') {
       return c.json(
         {
           error: {

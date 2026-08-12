@@ -212,7 +212,7 @@ export function TrackRecordingsPublishCard({
           <div className="space-y-0.5 pr-4">
             <p className="text-sm font-medium text-neutral-900">Publish for sale</p>
             <p className="text-xs text-muted-foreground">
-              Shows a &quot;By Recordings&quot; button on the ended event public page.
+              Shows a &quot;Buy Recordings&quot; button on the ended event public page.
             </p>
           </div>
           <Switch

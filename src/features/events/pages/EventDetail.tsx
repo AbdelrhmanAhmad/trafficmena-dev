@@ -569,7 +569,7 @@ const EventDetail: React.FC = () => {
                               className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
                               onClick={handleNavigateToRecordings}
                             >
-                              By Recordings
+                              Buy Recordings
                             </Button>
                           );
                         }
@@ -640,7 +640,7 @@ const EventDetail: React.FC = () => {
                           className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
                           onClick={handleNavigateToRecordings}
                         >
-                          By Recordings
+                          Buy Recordings
                         </Button>
                       ) : null}
 
