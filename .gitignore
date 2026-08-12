@@ -51,3 +51,6 @@ check-db-config copy.sh
 
 # Local migration cleanup
 server/drizzle/_archive/
+
+# Private dev notes — local only, never sync to remote
+abdelrhman-changes/
