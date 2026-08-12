@@ -14,6 +14,9 @@ interface SeriesGridProps {
   canManage?: boolean;
   canDelete?: boolean;
   basePath?: string;
+  /** Hide price badge and sales toggle (admin library uses Track/Event publish card). */
+  hideSalesControls?: boolean;
+  hidePurchaseActions?: boolean;
 }
 
 const SeriesGrid: React.FC<SeriesGridProps> = React.memo(
@@ -27,6 +30,8 @@ const SeriesGrid: React.FC<SeriesGridProps> = React.memo(
     canManage = false,
     canDelete = false,
     basePath,
+    hideSalesControls = false,
+    hidePurchaseActions = false,
   }) => {
     if (series.length === 0) {
       return (
@@ -62,6 +67,8 @@ const SeriesGrid: React.FC<SeriesGridProps> = React.memo(
             canManage={canManage}
             canDelete={canDelete}
             basePath={basePath}
+            hideSalesControls={hideSalesControls}
+            hidePurchaseActions={hidePurchaseActions}
           />
         ))}
       </div>

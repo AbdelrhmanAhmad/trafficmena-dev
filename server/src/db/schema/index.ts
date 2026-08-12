@@ -311,6 +311,7 @@ export const series = pgTable(
       .default('free_for_prior_buyers')
       .notNull(),
     trackId: uuid('track_id').references(() => tracks.id, { onDelete: 'set null' }),
+    eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -318,6 +319,7 @@ export const series = pgTable(
     sortOrderIdx: index('series_sort_order_idx').on(table.sortOrder),
     publishedIdx: index('series_is_published_idx').on(table.isPublished),
     trackIdIdx: index('series_track_id_idx').on(table.trackId),
+    eventIdIdx: index('series_event_id_idx').on(table.eventId),
   }),
 );
 
@@ -454,6 +456,7 @@ export const platformSettings = pgTable('platform_settings', {
   eventMode: boolean('event_mode').notNull().default(false),
   masterclassesEnabled: boolean('masterclasses_enabled').notNull().default(true),
   digitalProductsEnabled: boolean('digital_products_enabled').notNull().default(true),
+  libraryStoreEnabled: boolean('library_store_enabled').notNull().default(false),
   annualSubscriptionPriceCents: integer('annual_subscription_price_cents'),
   subscriberDiscountPercent: integer('subscriber_discount_percent').default(20),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

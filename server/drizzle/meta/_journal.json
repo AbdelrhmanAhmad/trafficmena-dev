@@ -183,6 +183,20 @@
       "when": 1779400000000,
       "tag": "0025_series_recordings_access_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786523995169,
+      "tag": "0026_event_recordings_series",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786525000000,
+      "tag": "0027_library_store_enabled",
+      "breakpoints": true
     }
   ]
 }

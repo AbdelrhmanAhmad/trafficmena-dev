@@ -27,17 +27,20 @@ import { useToast } from '@/shared/hooks/custom/use-toast';
 type AccessPolicy = 'free_for_prior_buyers' | 'everyone_pays';
 
 type TrackRecordingsPublishCardProps = {
-  trackId: string;
+  trackId?: string;
   recordingsSeries: RecordingsSeriesSummaryRecord | null;
-  /** When set (event edit), invalidate this event query after save */
   eventId?: string;
+  scope?: 'track' | 'standalone-event';
 };
 
 export function TrackRecordingsPublishCard({
   trackId,
   recordingsSeries,
   eventId,
+  scope = trackId ? 'track' : 'standalone-event',
 }: TrackRecordingsPublishCardProps) {
+  const formId = eventId ?? trackId ?? recordingsSeries?.id ?? 'recordings';
+  const isStandaloneEvent = scope === 'standalone-event';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -66,8 +69,9 @@ export function TrackRecordingsPublishCard({
             Publish Recordings for Sale
           </CardTitle>
           <CardDescription className="text-neutral-600">
-            No recordings series is linked to this track yet. Create the track again or contact
-            support if this track predates auto Series creation.
+            {isStandaloneEvent
+              ? 'No recordings series is linked to this event yet. Save the event again or contact support if this event predates auto Series creation.'
+              : 'No recordings series is linked to this track yet. Create the track again or contact support if this track predates auto Series creation.'}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -78,8 +82,10 @@ export function TrackRecordingsPublishCard({
     recordingsSeries.asset_count > 0 && Number(priceEgp) > 0 && Number.isFinite(Number(priceEgp));
 
   const invalidateRelated = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', trackId] });
-    await queryClient.invalidateQueries({ queryKey: ['tracks', 'public', 'detail', trackId] });
+    if (trackId) {
+      await queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', trackId] });
+      await queryClient.invalidateQueries({ queryKey: ['tracks', 'public', 'detail', trackId] });
+    }
     await queryClient.invalidateQueries({ queryKey: ['series', 'store'] });
     if (eventId) {
       await queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -143,8 +149,9 @@ export function TrackRecordingsPublishCard({
           Publish Recordings for Sale
         </CardTitle>
         <CardDescription className="text-neutral-600">
-          After the live booking window ends, members can buy this track&apos;s recordings package.
-          This does not reopen live track booking.
+          {isStandaloneEvent
+            ? 'After this event ends, members can buy its recording from the public event page. This does not reopen live event registration.'
+            : 'After the live booking window ends, members can buy this track\'s recordings package. This does not reopen live track booking.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -161,9 +168,9 @@ export function TrackRecordingsPublishCard({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor={`recordings-price-${trackId}`}>Sale price (EGP)</Label>
+          <Label htmlFor={`recordings-price-${formId}`}>Price (EGP)</Label>
           <Input
-            id={`recordings-price-${trackId}`}
+            id={`recordings-price-${formId}`}
             inputMode="decimal"
             placeholder="e.g. 150"
             value={priceEgp}
@@ -176,25 +183,28 @@ export function TrackRecordingsPublishCard({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor={`recordings-policy-${trackId}`}>Prior buyers access</Label>
+          <Label htmlFor={`recordings-policy-${formId}`}>Prior buyers access</Label>
           <Select
             value={policy}
             onValueChange={(value) => void handlePolicyChange(value as AccessPolicy)}
             disabled={updateSeries.isPending}
           >
-            <SelectTrigger id={`recordings-policy-${trackId}`}>
+            <SelectTrigger id={`recordings-policy-${formId}`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="free_for_prior_buyers">
-                Free for prior track/event buyers (default)
+                {isStandaloneEvent
+                  ? 'Free for prior event registrants (default)'
+                  : 'Free for prior track/event buyers (default)'}
               </SelectItem>
               <SelectItem value="everyone_pays">Everyone pays</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Controls whether people who already booked the live track (or attended its events) get
-            complimentary recordings access.
+            {isStandaloneEvent
+              ? 'Controls whether people who already registered for this live event get complimentary recordings access.'
+              : 'Controls whether people who already booked the live track (or attended its events) get complimentary recordings access.'}
           </p>
         </div>
 
@@ -202,7 +212,7 @@ export function TrackRecordingsPublishCard({
           <div className="space-y-0.5 pr-4">
             <p className="text-sm font-medium text-neutral-900">Publish for sale</p>
             <p className="text-xs text-muted-foreground">
-              Shows an &quot;Available recordings&quot; button on the ended track/event public pages.
+              Shows a &quot;By Recordings&quot; button on the ended event public page.
             </p>
           </div>
           <Switch

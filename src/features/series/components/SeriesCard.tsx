@@ -26,6 +26,8 @@ interface SeriesCardProps {
   canManage?: boolean;
   canDelete?: boolean;
   basePath?: string;
+  hideSalesControls?: boolean;
+  hidePurchaseActions?: boolean;
 }
 
 const SeriesCard: React.FC<SeriesCardProps> = ({
@@ -37,10 +39,12 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
   canManage = false,
   canDelete = false,
   basePath = '/dashboard/library/series',
+  hideSalesControls = false,
+  hidePurchaseActions = false,
 }) => {
   const navigate = useNavigate();
   const isPremium = series.is_premium ?? false;
-  const showBuyActions = !canManage && canShowSeriesPurchaseActions(series);
+  const showBuyActions = !canManage && !hidePurchaseActions && canShowSeriesPurchaseActions(series);
 
   const sanitizeConfig = {
     ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u'],
@@ -158,9 +162,11 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
                 {series.asset_count} {series.asset_count === 1 ? 'item' : 'items'}
               </span>
               {series.has_purchased && <SeriesPurchasedBadge />}
-              <SeriesPriceBadge series={series} isStaff={canManage} />
+              {!hideSalesControls && !hidePurchaseActions && (
+                <SeriesPriceBadge series={series} isStaff={canManage} />
+              )}
             </div>
-            {canManage && onSalesToggle && (
+            {canManage && onSalesToggle && !hideSalesControls && (
               <div
                 className="flex items-center gap-2"
                 onClick={(e) => e.stopPropagation()}

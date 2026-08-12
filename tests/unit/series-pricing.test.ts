@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   formatSeriesPriceLabel,
-  mapSeriesFormToPayload,
+  mapSeriesFormToContentPayload,
   shouldShowSeriesPrice,
 } from '../../src/features/series/utils/seriesPricing.ts';
 
@@ -25,16 +25,18 @@ describe('series pricing', () => {
     );
   });
 
-  it('maps form values to API payload', () => {
-    const payload = mapSeriesFormToPayload({
+  it('maps admin library form values without price or sales fields', () => {
+    const payload = mapSeriesFormToContentPayload({
       title: 'Growth Series',
+      description: 'Notes',
       isPublished: true,
-      isPremium: false,
-      priceEgp: '99.50',
-      salesEnabled: true,
+      isPremium: true,
     });
 
-    assert.equal(payload.priceInCents, 9950);
-    assert.equal(payload.salesEnabled, true);
+    assert.equal(payload.title, 'Growth Series');
+    assert.equal(payload.isPublished, true);
+    assert.equal(payload.isPremium, true);
+    assert.equal('priceInCents' in payload, false);
+    assert.equal('salesEnabled' in payload, false);
   });
 });

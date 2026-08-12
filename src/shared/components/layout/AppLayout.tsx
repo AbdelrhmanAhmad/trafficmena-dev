@@ -151,7 +151,7 @@ const adminMenuItems = [
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
-    title: 'Content Recordings',
+    title: 'Content library',
     url: '/admin/library',
     icon: BookOpen,
     roles: ['owner', 'admin', 'manager'] as UserRole[],

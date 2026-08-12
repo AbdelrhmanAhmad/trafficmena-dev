@@ -530,7 +530,11 @@ export function registerTrackRoutes(app: Hono) {
           }
         }
 
-        const recordingsSeries = await loadRecordingsSeriesForTrack(id);
+        const recordingsSeries = await loadRecordingsSeriesForTrack(id, null, {
+          userId: session?.user?.id ?? null,
+          isStaff,
+          userHasTrackBooking: userHasBooked,
+        });
 
         return c.json({
           track: {
@@ -782,7 +786,11 @@ export function registerTrackRoutes(app: Hono) {
       userHasBooked = Boolean(booking);
     }
 
-    const recordingsSeries = await loadRecordingsSeriesForTrack(id);
+    const recordingsSeries = await loadRecordingsSeriesForTrack(id, null, {
+      userId: session?.user?.id ?? null,
+      isStaff: Boolean(isStaff),
+      userHasTrackBooking: userHasBooked,
+    });
 
     return c.json({
       ...track,
@@ -1263,6 +1271,10 @@ export function registerTrackRoutes(app: Hono) {
                 sortOrder: sortOrder++,
               })),
             );
+
+            for (const eventId of toInsert) {
+              await tx.delete(series).where(eq(series.eventId, eventId));
+            }
 
             // Link event assets to track's Series
             const [trackSeries] = await tx

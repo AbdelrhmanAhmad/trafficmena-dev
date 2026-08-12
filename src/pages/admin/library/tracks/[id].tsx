@@ -291,6 +291,7 @@ function TrackDetailPage() {
           <TrackRecordingsPublishCard
             trackId={track.id}
             recordingsSeries={track.recordings_series}
+            scope="track"
           />
         </div>
 

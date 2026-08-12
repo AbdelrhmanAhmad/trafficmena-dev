@@ -139,6 +139,8 @@ export type CreateEventPayload = {
   tags?: string[];
   eventType?: ApiEvent['eventType'];
   priceInCents?: number | null;
+  /** When false (e.g. event for a track), skip auto Series for standalone recordings sale */
+  createRecordingsSeries?: boolean;
 };
 
 export type UpdateEventPayload = Partial<CreateEventPayload>;

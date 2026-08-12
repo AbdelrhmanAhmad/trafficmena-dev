@@ -71,6 +71,7 @@ export type FetchLibraryParams = {
   type?: ApiLibraryAsset['fileType'];
   eventIds?: string; // Comma-separated UUIDs for filtering by event
   excludeInTracks?: boolean; // Exclude assets that are in any track
+  accessibleOnly?: boolean;
 };
 
 export type CreateLibraryAssetPayload = {
@@ -105,6 +106,7 @@ export async function fetchLibraryAssets(
   if (params.type) query.set('type', params.type);
   if (params.eventIds) query.set('eventIds', params.eventIds);
   if (params.excludeInTracks) query.set('excludeInTracks', 'true');
+  if (params.accessibleOnly) query.set('accessibleOnly', 'true');
 
   const data = await fetchJson<{
     items: ApiLibraryAsset[];

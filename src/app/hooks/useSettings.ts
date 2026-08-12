@@ -34,12 +34,18 @@ export function useModuleFlags() {
     : isLoading
       ? false
       : true;
+  const libraryStoreEnabled = data
+    ? data.libraryStoreEnabled
+    : isLoading
+      ? false
+      : false;
 
   return {
     isLoading,
     isError,
     masterclassesEnabled,
     digitalProductsEnabled,
+    libraryStoreEnabled,
   };
 }
 
@@ -73,12 +79,18 @@ export function useUpdateAdminSettings() {
         previousAdmin?.digitalProductsEnabled ??
         previousPublic?.digitalProductsEnabled ??
         true;
+      const nextLibraryStore =
+        variables.libraryStoreEnabled ??
+        previousAdmin?.libraryStoreEnabled ??
+        previousPublic?.libraryStoreEnabled ??
+        false;
 
       queryClient.setQueryData<AdminSettings>(ADMIN_SETTINGS_QUERY_KEY, (current) => ({
         inviteOnly: variables.inviteOnly ?? current?.inviteOnly ?? false,
         eventMode: variables.eventMode ?? current?.eventMode ?? false,
         masterclassesEnabled: nextMasterclasses,
         digitalProductsEnabled: nextDigitalProducts,
+        libraryStoreEnabled: nextLibraryStore,
         updatedAt: current?.updatedAt ?? null,
         updatedBy: current?.updatedBy ?? null,
       }));
@@ -87,6 +99,7 @@ export function useUpdateAdminSettings() {
         inviteOnly: variables.inviteOnly ?? current?.inviteOnly ?? false,
         masterclassesEnabled: nextMasterclasses,
         digitalProductsEnabled: nextDigitalProducts,
+        libraryStoreEnabled: nextLibraryStore,
       }));
 
       return { previousAdmin, previousPublic };
@@ -105,6 +118,7 @@ export function useUpdateAdminSettings() {
         inviteOnly: data.inviteOnly,
         masterclassesEnabled: data.masterclassesEnabled,
         digitalProductsEnabled: data.digitalProductsEnabled,
+        libraryStoreEnabled: data.libraryStoreEnabled,
       });
       void queryClient.invalidateQueries({ queryKey: PUBLIC_SETTINGS_QUERY_KEY });
     },

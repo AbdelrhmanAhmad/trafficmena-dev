@@ -49,6 +49,8 @@ export type RecordingsSeriesSummaryRecord = {
   asset_count: number;
   event_asset_count: number | null;
   is_sellable: boolean;
+  has_access?: boolean;
+  has_purchased?: boolean;
 };
 
 type ApiRecordingsSeriesSummary = {
@@ -61,6 +63,8 @@ type ApiRecordingsSeriesSummary = {
   assetCount: number;
   eventAssetCount: number | null;
   isSellable: boolean;
+  hasAccess?: boolean;
+  hasPurchased?: boolean;
 };
 
 export function mapRecordingsSeriesSummary(
@@ -77,6 +81,8 @@ export function mapRecordingsSeriesSummary(
     asset_count: api.assetCount,
     event_asset_count: api.eventAssetCount ?? null,
     is_sellable: api.isSellable,
+    has_access: api.hasAccess,
+    has_purchased: api.hasPurchased,
   };
 }
 

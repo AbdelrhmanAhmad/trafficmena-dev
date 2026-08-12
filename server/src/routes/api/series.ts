@@ -34,6 +34,10 @@ const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(50).default(12),
   search: z.string().optional(),
+  accessibleOnly: z
+    .enum(['true', 'false', '1', '0'])
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
 });
 
 const priceInCentsSchema = z
@@ -110,13 +114,14 @@ export function registerSeriesRoutes(app: Hono) {
       page: c.req.query('page'),
       pageSize: c.req.query('pageSize'),
       search: c.req.query('search'),
+      accessibleOnly: c.req.query('accessibleOnly'),
     });
 
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_QUERY', message: parsed.error.message } }, 400);
     }
 
-    const { page, pageSize, search } = parsed.data;
+    const { page, pageSize, search, accessibleOnly } = parsed.data;
     const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
     const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
 
@@ -124,7 +129,12 @@ export function registerSeriesRoutes(app: Hono) {
     if (!isStaff) {
       filters.push(eq(series.isPublished, true));
       // Track-linked auto Series stay hidden until Publish for sale
-      filters.push(or(isNull(series.trackId), eq(series.salesEnabled, true))!);
+      filters.push(
+        or(
+          and(isNull(series.trackId), isNull(series.eventId)),
+          eq(series.salesEnabled, true),
+        )!,
+      );
     }
     if (search) {
       filters.push(ilike(series.title, `%${escapeLikePattern(search)}%`));
@@ -152,6 +162,9 @@ export function registerSeriesRoutes(app: Hono) {
         isPremium: series.isPremium,
         priceInCents: series.priceInCents,
         salesEnabled: series.salesEnabled,
+        recordingsAccessPolicy: series.recordingsAccessPolicy,
+        trackId: series.trackId,
+        eventId: series.eventId,
         createdAt: series.createdAt,
       })
       .from(series)
@@ -180,6 +193,66 @@ export function registerSeriesRoutes(app: Hono) {
     }
 
     const seriesIdsForAccess = seriesList.map((s) => s.id);
+    const isSubscriber = !isStaff ? await hasActiveSubscription(session.user.id) : false;
+
+    const trackIds = [
+      ...new Set(seriesList.map((s) => s.trackId).filter((id): id is string => Boolean(id))),
+    ];
+    const standaloneEventIds = [
+      ...new Set(seriesList.map((s) => s.eventId).filter((id): id is string => Boolean(id))),
+    ];
+
+    const bookedTrackIds = new Set<string>();
+    const attendedTrackIds = new Set<string>();
+    const attendedStandaloneEventIds = new Set<string>();
+
+    if (!isStaff && !isSubscriber && session.user.id) {
+      const [bookingRows, trackAttendanceRows, standaloneAttendanceRows] = await Promise.all([
+        trackIds.length > 0
+          ? db
+              .select({ trackId: trackBookings.trackId })
+              .from(trackBookings)
+              .where(
+                activeTrackBookingWhere(
+                  inArray(trackBookings.trackId, trackIds),
+                  eq(trackBookings.userId, session.user.id),
+                ),
+              )
+          : Promise.resolve([]),
+        trackIds.length > 0
+          ? db
+              .select({ trackId: trackEvents.trackId })
+              .from(eventAttendees)
+              .innerJoin(trackEvents, eq(trackEvents.eventId, eventAttendees.eventId))
+              .where(
+                and(
+                  eq(eventAttendees.userId, session.user.id),
+                  eq(eventAttendees.status, 'active'),
+                  inArray(trackEvents.trackId, trackIds),
+                ),
+              )
+          : Promise.resolve([]),
+        standaloneEventIds.length > 0
+          ? db
+              .select({ eventId: eventAttendees.eventId })
+              .from(eventAttendees)
+              .where(
+                and(
+                  eq(eventAttendees.userId, session.user.id),
+                  eq(eventAttendees.status, 'active'),
+                  inArray(eventAttendees.eventId, standaloneEventIds),
+                ),
+              )
+          : Promise.resolve([]),
+      ]);
+
+      for (const row of bookingRows) bookedTrackIds.add(row.trackId);
+      for (const row of trackAttendanceRows) attendedTrackIds.add(row.trackId);
+      for (const row of standaloneAttendanceRows) {
+        if (row.eventId) attendedStandaloneEventIds.add(row.eventId);
+      }
+    }
+
     const [purchasedIds, seriesGrantIds] = !isStaff
       ? await Promise.all([
           getPurchasedSeriesIds(session.user.id, seriesIdsForAccess),
@@ -187,25 +260,54 @@ export function registerSeriesRoutes(app: Hono) {
         ])
       : [new Set<string>(), new Set<string>()];
 
-    const items = seriesList.map((s) => {
-      const assetCount = countsMap.get(s.id) ?? 0;
-      return {
-        ...s,
-        assetCount,
-        isSellable: isSeriesSellable({
-          salesEnabled: s.salesEnabled,
-          priceInCents: s.priceInCents ?? 0,
-          isPublished: s.isPublished,
+    const items = seriesList
+      .map((s) => {
+        const assetCount = countsMap.get(s.id) ?? 0;
+        const recordingsAccessPolicy = normalizeRecordingsAccessPolicy(s.recordingsAccessPolicy);
+        const hasTrackBooking = s.trackId ? bookedTrackIds.has(s.trackId) : false;
+        const hasTrackEventAttendance = s.trackId
+          ? attendedTrackIds.has(s.trackId)
+          : s.eventId
+            ? attendedStandaloneEventIds.has(s.eventId)
+            : false;
+        const hasSeriesGrant = seriesGrantIds.has(s.id);
+        const hasPurchased = purchasedIds.has(s.id);
+        const hasAccess =
+          isStaff ||
+          hasPurchased ||
+          resolveSeriesAccess({
+            isStaff: false,
+            isSubscriber,
+            hasTrackBooking,
+            hasTrackEventAttendance,
+            hasSeriesGrant,
+            seriesIsPremium: s.isPremium,
+            recordingsAccessPolicy,
+          });
+
+        return {
+          ...s,
           assetCount,
-        }),
-        hasPurchased: purchasedIds.has(s.id),
-        hasSeriesGrant: seriesGrantIds.has(s.id),
-      };
-    });
+          isSellable: isSeriesSellable({
+            salesEnabled: s.salesEnabled,
+            priceInCents: s.priceInCents ?? 0,
+            isPublished: s.isPublished,
+            assetCount,
+          }),
+          hasPurchased,
+          hasSeriesGrant,
+          hasAccess,
+        };
+      })
+      .filter((item) => !accessibleOnly || isStaff || item.hasAccess);
 
     return c.json({
       items,
-      pagination: { page, pageSize, total: Number(totalResult?.value ?? 0) },
+      pagination: {
+        page,
+        pageSize,
+        total: accessibleOnly && !isStaff ? items.length : Number(totalResult?.value ?? 0),
+      },
     });
   });
 
@@ -241,6 +343,7 @@ export function registerSeriesRoutes(app: Hono) {
           salesEnabled: series.salesEnabled,
           recordingsAccessPolicy: series.recordingsAccessPolicy,
           trackId: series.trackId,
+          eventId: series.eventId,
           createdAt: series.createdAt,
           updatedAt: series.updatedAt,
         })
@@ -262,6 +365,7 @@ export function registerSeriesRoutes(app: Hono) {
         isPublished: seriesRecord.isPublished,
         salesEnabled: seriesRecord.salesEnabled,
         trackId: seriesRecord.trackId,
+        eventId: seriesRecord.eventId,
       })
     ) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
@@ -301,7 +405,19 @@ export function registerSeriesRoutes(app: Hono) {
                 ),
               )
               .limit(1)
-          : Promise.resolve([]),
+          : seriesRecord.eventId
+            ? db
+                .select({ id: eventAttendees.id })
+                .from(eventAttendees)
+                .where(
+                  and(
+                    eq(eventAttendees.eventId, seriesRecord.eventId),
+                    eq(eventAttendees.userId, session.user.id),
+                    eq(eventAttendees.status, 'active'),
+                  ),
+                )
+                .limit(1)
+            : Promise.resolve([]),
         db
           .select({ id: seriesAccessGrants.id })
           .from(seriesAccessGrants)

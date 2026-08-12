@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useModuleFlags } from '@/app/hooks/useSettings';
+import { SeriesCartNavButton } from '@/features/series/components/SeriesCartNavButton';
 import { Button } from '@/shared/components/ui/button';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/shared/components/ui/drawer';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -119,6 +120,7 @@ const Header: React.FC = () => {
           {/* Desktop Auth - Only show on large screens */}
           <div className="flex items-center gap-2">
             <div className="hidden md:inline-flex items-center gap-2">
+              <SeriesCartNavButton variant="icon" />
               {showSubscriptionEntry && (
                 <Link to={user ? '/dashboard/subscribe' : '/subscribe'}>
                   <Button
@@ -186,6 +188,7 @@ const Header: React.FC = () => {
 
                 {/* Mobile/Tablet Navigation Links */}
                 <nav className="space-y-1 px-4 py-4">
+                  <SeriesCartNavButton variant="drawer" />
                   {visibleNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = isRouteActive(item.href);

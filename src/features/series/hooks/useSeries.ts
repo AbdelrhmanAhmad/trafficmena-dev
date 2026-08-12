@@ -16,7 +16,11 @@ import {
 } from '@/app/api/series';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 
-export const useSeries = (page = 1, pageSize = 12, filters?: { search?: string }) => {
+export const useSeries = (
+  page = 1,
+  pageSize = 12,
+  filters?: { search?: string; accessibleOnly?: boolean },
+) => {
   const safePageSize = Math.min(pageSize, 50);
   return useQuery({
     queryKey: ['series', page, safePageSize, filters],
@@ -25,6 +29,7 @@ export const useSeries = (page = 1, pageSize = 12, filters?: { search?: string }
         page,
         pageSize: safePageSize,
         search: filters?.search,
+        accessibleOnly: filters?.accessibleOnly,
       };
       const response = await fetchSeries(params);
       return {

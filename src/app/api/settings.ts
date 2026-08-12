@@ -4,6 +4,7 @@ export type PublicSettings = {
   inviteOnly: boolean;
   masterclassesEnabled: boolean;
   digitalProductsEnabled: boolean;
+  libraryStoreEnabled: boolean;
 };
 
 export async function fetchPublicSettings(): Promise<PublicSettings> {
@@ -17,6 +18,7 @@ export type AdminSettings = {
   eventMode: boolean;
   masterclassesEnabled: boolean;
   digitalProductsEnabled: boolean;
+  libraryStoreEnabled: boolean;
   updatedAt: string | null;
   updatedBy: string | null;
 };
@@ -32,6 +34,7 @@ export async function updateAdminSettings(payload: {
   eventMode?: boolean;
   masterclassesEnabled?: boolean;
   digitalProductsEnabled?: boolean;
+  libraryStoreEnabled?: boolean;
 }): Promise<AdminSettings> {
   try {
     return await fetchJson<AdminSettings>(`${API_BASE}/admin/settings/general`, {

@@ -1,8 +1,30 @@
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, isNull } from 'drizzle-orm';
 import { db } from '../db/client.js';
-import { libraryAssets, series, seriesAssets } from '../db/schema/index.js';
-import { isSeriesSellable } from './seriesSales.js';
-import { normalizeRecordingsAccessPolicy } from '../routes/api/seriesAccess.js';
+import {
+  eventAttendees,
+  libraryAssets,
+  series,
+  seriesAccessGrants,
+  seriesAssets,
+  trackBookings,
+  trackEvents,
+} from '../db/schema/index.js';
+import {
+  normalizeRecordingsAccessPolicy,
+  resolveSeriesAccess,
+} from '../routes/api/seriesAccess.js';
+import { hasActiveSubscription } from '../routes/api/subscriptionShared.js';
+import { activeTrackBookingWhere } from '../utils/booking.js';
+import { getPurchasedSeriesIds, isSeriesSellable } from './seriesSales.js';
+
+export type RecordingsSeriesUserContext = {
+  userId?: string | null;
+  isStaff?: boolean;
+  userHasTrackBooking?: boolean;
+  userHasTrackEventAttendance?: boolean;
+  /** Standalone event recordings — prior buyer = active registration on this event */
+  standaloneEventId?: string | null;
+};
 
 export type RecordingsSeriesSummary = {
   id: string;
@@ -14,11 +36,116 @@ export type RecordingsSeriesSummary = {
   assetCount: number;
   eventAssetCount: number | null;
   isSellable: boolean;
+  hasAccess?: boolean;
+  hasPurchased?: boolean;
 };
+
+export async function enrichRecordingsSeriesForUser(
+  summary: Omit<RecordingsSeriesSummary, 'hasAccess' | 'hasPurchased'>,
+  options: {
+    trackId?: string | null;
+    standaloneEventId?: string | null;
+    seriesIsPremium: boolean;
+    userContext?: RecordingsSeriesUserContext;
+  },
+): Promise<RecordingsSeriesSummary> {
+  const { trackId, standaloneEventId, seriesIsPremium, userContext } = options;
+  const userId = userContext?.userId ?? null;
+  if (!userId) {
+    return summary;
+  }
+
+  const isStaff = userContext?.isStaff ?? false;
+  if (isStaff) {
+    return { ...summary, hasAccess: true, hasPurchased: false };
+  }
+
+  let hasTrackBooking = userContext?.userHasTrackBooking ?? false;
+  let hasTrackEventAttendance = userContext?.userHasTrackEventAttendance ?? false;
+
+  const eventIdForAttendance = standaloneEventId ?? null;
+
+  const [isSubscriber, bookingRows, attendanceRows, grantRows, purchasedSet] = await Promise.all([
+    hasActiveSubscription(userId),
+    trackId && !hasTrackBooking
+      ? db
+          .select({ id: trackBookings.id })
+          .from(trackBookings)
+          .where(
+            activeTrackBookingWhere(
+              eq(trackBookings.trackId, trackId),
+              eq(trackBookings.userId, userId),
+            ),
+          )
+          .limit(1)
+      : Promise.resolve([]),
+    !hasTrackEventAttendance && (eventIdForAttendance || trackId)
+      ? eventIdForAttendance
+        ? db
+            .select({ id: eventAttendees.id })
+            .from(eventAttendees)
+            .where(
+              and(
+                eq(eventAttendees.eventId, eventIdForAttendance),
+                eq(eventAttendees.userId, userId),
+                eq(eventAttendees.status, 'active'),
+              ),
+            )
+            .limit(1)
+        : db
+            .select({ id: eventAttendees.id })
+            .from(eventAttendees)
+            .innerJoin(trackEvents, eq(trackEvents.eventId, eventAttendees.eventId))
+            .where(
+              and(
+                eq(trackEvents.trackId, trackId!),
+                eq(eventAttendees.userId, userId),
+                eq(eventAttendees.status, 'active'),
+              ),
+            )
+            .limit(1)
+      : Promise.resolve([]),
+    db
+      .select({ id: seriesAccessGrants.id })
+      .from(seriesAccessGrants)
+      .where(
+        and(
+          eq(seriesAccessGrants.seriesId, summary.id),
+          eq(seriesAccessGrants.userId, userId),
+          isNull(seriesAccessGrants.revokedAt),
+        ),
+      )
+      .limit(1),
+    getPurchasedSeriesIds(userId, [summary.id]),
+  ]);
+
+  if (trackId && !hasTrackBooking) {
+    hasTrackBooking = Boolean(bookingRows[0]);
+  }
+  if (!hasTrackEventAttendance) {
+    hasTrackEventAttendance = Boolean(attendanceRows[0]);
+  }
+
+  const hasSeriesGrant = Boolean(grantRows[0]);
+  const hasPurchased = purchasedSet.has(summary.id);
+
+  const hasAccess = resolveSeriesAccess({
+    isStaff: false,
+    isSubscriber,
+    hasTrackBooking,
+    hasTrackEventAttendance,
+    hasSeriesGrant,
+    seriesIsPremium,
+    recordingsAccessPolicy: summary.recordingsAccessPolicy,
+  });
+
+  return { ...summary, hasAccess, hasPurchased };
+}
 
 export async function loadRecordingsSeriesForTrack(
   trackId: string,
   eventId?: string | null,
+  userContext?: RecordingsSeriesUserContext,
 ): Promise<RecordingsSeriesSummary | null> {
   const [trackSeries] = await db
     .select({
@@ -28,6 +155,7 @@ export async function loadRecordingsSeriesForTrack(
       salesEnabled: series.salesEnabled,
       priceInCents: series.priceInCents,
       recordingsAccessPolicy: series.recordingsAccessPolicy,
+      isPremium: series.isPremium,
     })
     .from(series)
     .where(eq(series.trackId, trackId))
@@ -55,7 +183,7 @@ export async function loadRecordingsSeriesForTrack(
     trackSeries.recordingsAccessPolicy,
   );
 
-  return {
+  const baseSummary = {
     id: trackSeries.id,
     title: trackSeries.title,
     isPublished: trackSeries.isPublished,
@@ -71,4 +199,10 @@ export async function loadRecordingsSeriesForTrack(
       assetCount,
     }),
   };
+
+  return enrichRecordingsSeriesForUser(baseSummary, {
+    trackId,
+    seriesIsPremium: trackSeries.isPremium,
+    userContext,
+  });
 }

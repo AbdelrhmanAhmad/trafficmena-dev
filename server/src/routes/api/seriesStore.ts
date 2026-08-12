@@ -191,7 +191,19 @@ export function registerSeriesStoreRoutes(app: Hono) {
                 ),
               )
               .limit(1)
-          : Promise.resolve([]),
+          : seriesRecord.eventId
+            ? db
+                .select({ id: eventAttendees.id })
+                .from(eventAttendees)
+                .where(
+                  and(
+                    eq(eventAttendees.eventId, seriesRecord.eventId),
+                    eq(eventAttendees.userId, userId),
+                    eq(eventAttendees.status, 'active'),
+                  ),
+                )
+                .limit(1)
+            : Promise.resolve([]),
         db
           .select({ id: seriesAccessGrants.id })
           .from(seriesAccessGrants)

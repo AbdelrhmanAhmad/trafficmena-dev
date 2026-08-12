@@ -269,23 +269,49 @@ describe('series access', () => {
     );
   });
 
-  it('shows standalone published series without salesEnabled', () => {
+  it('shows manual library series without salesEnabled', () => {
     assert.equal(
       isSeriesVisibleInMemberLibrary({
         isPublished: true,
         salesEnabled: false,
         trackId: null,
+        eventId: null,
       }),
       true,
     );
   });
 
-  it('hides unpublished standalone series from member library', () => {
+  it('hides standalone event-linked series until Publish for sale', () => {
+    assert.equal(
+      isSeriesVisibleInMemberLibrary({
+        isPublished: true,
+        salesEnabled: false,
+        trackId: null,
+        eventId: 'event-1',
+      }),
+      false,
+    );
+  });
+
+  it('shows standalone event-linked series after Publish for sale', () => {
+    assert.equal(
+      isSeriesVisibleInMemberLibrary({
+        isPublished: true,
+        salesEnabled: true,
+        trackId: null,
+        eventId: 'event-1',
+      }),
+      true,
+    );
+  });
+
+  it('hides unpublished manual series from member library', () => {
     assert.equal(
       isSeriesVisibleInMemberLibrary({
         isPublished: false,
         salesEnabled: false,
         trackId: null,
+        eventId: null,
       }),
       false,
     );

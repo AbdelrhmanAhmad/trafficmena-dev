@@ -95,12 +95,12 @@ const AdminMeetupEdit = () => {
             </CardContent>
           </Card>
 
-          {event?.trackInfo && event.recordings_series ? (
+          {!event?.trackInfo && event?.recordings_series ? (
             <div className="mt-6">
               <TrackRecordingsPublishCard
-                trackId={event.trackInfo.id}
                 eventId={event.id}
                 recordingsSeries={event.recordings_series}
+                scope="standalone-event"
               />
             </div>
           ) : null}

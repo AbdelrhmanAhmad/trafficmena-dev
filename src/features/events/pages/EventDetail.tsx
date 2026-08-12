@@ -15,6 +15,8 @@ import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { usePricePreview } from '@/app/hooks/usePayments';
+import { formatSeriesPriceLabel } from '@/features/series/utils/seriesPricing';
+import { resolveRecordingsNavigationPath } from '@/features/series/utils/recordingsNavigation';
 import { trackClickMeetingLink, trackViewItem } from '@/lib/analytics/events';
 import { centsToUnits } from '@/lib/analytics/helpers';
 import DataLoader from '@/shared/components/DataLoader';
@@ -275,6 +277,31 @@ const EventDetail: React.FC = () => {
       ? event.image_url.trim()
       : '/placeholder.svg';
   const isUpcoming = event ? new Date(event.date) > new Date() : false;
+
+  const recordingsSellableAfterRegistrationClosed = useMemo(() => {
+    if (!isStandaloneEvent) return false;
+    if (!event?.recordings_series?.is_sellable) return false;
+    if ((event.recordings_series.event_asset_count ?? 0) <= 0) return false;
+
+    return !isUpcoming;
+  }, [event, isStandaloneEvent, isUpcoming]);
+
+  const recordingsPriceCents = event?.recordings_series?.price_in_cents ?? null;
+  const showRecordingsPrice =
+    recordingsSellableAfterRegistrationClosed &&
+    recordingsPriceCents != null &&
+    recordingsPriceCents >= 0;
+
+  const handleNavigateToRecordings = () => {
+    if (!id) return;
+    navigate(
+      resolveRecordingsNavigationPath({
+        series: event?.recordings_series,
+        publicRecordingsPath: `/meetups/${id}/recordings`,
+      }),
+    );
+  };
+
   const locationLabel =
     event?.location && event.location.trim().length > 0
       ? event.location.trim()
@@ -439,7 +466,19 @@ const EventDetail: React.FC = () => {
                         </div>
 
                         {/* Price display */}
-                        {isPaidEvent && (
+                        {showRecordingsPrice ? (
+                          <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-indigo-100/80 to-purple-100/60 px-4 py-3">
+                            <Sparkles className="h-5 w-5 text-indigo-500" />
+                            <div>
+                              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                                Recordings
+                              </p>
+                              <p className="text-sm font-semibold text-indigo-700">
+                                {formatSeriesPriceLabel(recordingsPriceCents)}
+                              </p>
+                            </div>
+                          </div>
+                        ) : isPaidEvent ? (
                           <div className="space-y-3">
                             <PriceDisplayCard
                               itemType="event"
@@ -474,7 +513,7 @@ const EventDetail: React.FC = () => {
                               />
                             )}
                           </div>
-                        )}
+                        ) : null}
                       </div>
 
                       {(() => {
@@ -523,7 +562,24 @@ const EventDetail: React.FC = () => {
                           );
                         }
 
-                        if (!canBookSingle && !event.attending && bookingMessage) {
+                        if (recordingsSellableAfterRegistrationClosed && !event.attending) {
+                          return (
+                            <Button
+                              type="button"
+                              className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                              onClick={handleNavigateToRecordings}
+                            >
+                              By Recordings
+                            </Button>
+                          );
+                        }
+
+                        if (
+                          !canBookSingle &&
+                          !event.attending &&
+                          bookingMessage &&
+                          !recordingsSellableAfterRegistrationClosed
+                        ) {
                           return (
                             <div className="space-y-3">
                               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
@@ -578,15 +634,13 @@ const EventDetail: React.FC = () => {
                         </div>
                       )}
 
-                      {!isUpcoming &&
-                      event.recordings_series?.is_sellable &&
-                      (event.recordings_series.event_asset_count ?? 0) > 0 ? (
+                      {recordingsSellableAfterRegistrationClosed && event.attending ? (
                         <Button
                           type="button"
                           className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
-                          onClick={() => navigate(`/meetups/${id}/recordings`)}
+                          onClick={handleNavigateToRecordings}
                         >
-                          Available recordings
+                          By Recordings
                         </Button>
                       ) : null}
 

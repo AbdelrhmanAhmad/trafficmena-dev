@@ -9,6 +9,9 @@
 | [product-structure-and-overlap.md](./product-structure-and-overlap.md) | **هيكل المنتجات:** Event / Track / Series / Recordings والتداخل بينها |
 | [meetups-tracks-split.md](./meetups-tracks-split.md) | **نقطة #1:** `/meetups`=Events، `/tracks`=Tracks، Recordings معطّل مؤقتًا |
 | [recordings-change-checkpoints.md](./recordings-change-checkpoints.md) | **ترقيم نقاط التقدم** لموضوع تغيرات التسجيلات (للتراجع) |
+| [library-hide-unpublished-track-recordings.md](./library-hide-unpublished-track-recordings.md) | نقطة #3 — إخفاء Series التراك من مكتبة العضو |
+| [standalone-event-recordings-sale.md](./standalone-event-recordings-sale.md) | نقطة #5 — بيع تسجيلات Meetup مستقل |
+| [admin-library-hide-series-sales.md](./admin-library-hide-series-sales.md) | إخفاء السعر و Sales من مكتبة الأدmin |
 | [series-pricing-and-sales.md](./series-pricing-and-sales.md) | سعر Series + تفعيل/إيقاف البيع + عرض السعر في الأدمن والزوار |
 | [fawaterk-payment-invoice-id-fix.md](./fawaterk-payment-invoice-id-fix.md) | إصلاح Fawaterk: UUID لـ `invoice_id` + verify الاشتراك |
 | [series-sales-commerce.md](./series-sales-commerce.md) | بيع Recording Series: سلة، orders، دفع، badge تم الشراء |

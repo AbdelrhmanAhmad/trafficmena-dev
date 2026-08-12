@@ -31,6 +31,10 @@ const listQuerySchema = z.object({
     .enum(['true', 'false', '1', '0'])
     .optional()
     .transform((v) => v === 'true' || v === '1'),
+  accessibleOnly: z
+    .enum(['true', 'false', '1', '0'])
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
 });
 
 const optionalText = z.union([z.string().trim().max(8000), z.null()]).optional();
@@ -119,6 +123,7 @@ export function registerLibraryRoutes(app: Hono) {
       type: c.req.query('type'),
       eventIds: c.req.query('eventIds'),
       excludeInTracks: c.req.query('excludeInTracks'),
+      accessibleOnly: c.req.query('accessibleOnly'),
     });
 
     if (!parsed.success) {
@@ -133,7 +138,8 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
 
-    const { page, pageSize, search, type, eventIds, excludeInTracks } = parsed.data;
+    const { page, pageSize, search, type, eventIds, excludeInTracks, accessibleOnly } =
+      parsed.data;
     const filters: SQL<unknown>[] = [];
 
     // Permission filtering: staff/subscribers see all, free users see accessible + premium assets
@@ -367,12 +373,20 @@ export function registerLibraryRoutes(app: Hono) {
       };
     });
 
+    const visibleItems =
+      accessibleOnly && !isStaff
+        ? mappedItems.filter((item) => item.hasAccess)
+        : mappedItems;
+
     return c.json({
-      items: mappedItems,
+      items: visibleItems,
       pagination: {
         page,
         pageSize,
-        total: Number(totalResult?.[0]?.value ?? 0),
+        total:
+          accessibleOnly && !isStaff
+            ? visibleItems.length
+            : Number(totalResult?.[0]?.value ?? 0),
       },
     });
   });

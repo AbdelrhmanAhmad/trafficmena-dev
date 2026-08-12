@@ -19,6 +19,7 @@ export interface ApiSeries {
   isSellable?: boolean;
   hasPurchased?: boolean;
   hasSeriesGrant?: boolean;
+  hasAccess?: boolean;
 }
 
 type ApiSeriesAsset = {
@@ -68,6 +69,7 @@ export interface SeriesRecord {
   is_sellable?: boolean;
   has_purchased?: boolean;
   has_series_grant?: boolean;
+  has_access?: boolean;
   created_at: Date;
 }
 
@@ -119,6 +121,7 @@ const mapSeries = (api: ApiSeries): SeriesRecord => ({
   is_sellable: api.isSellable,
   has_purchased: api.hasPurchased,
   has_series_grant: api.hasSeriesGrant,
+  has_access: api.hasAccess,
   created_at: new Date(api.createdAt),
 });
 
@@ -161,6 +164,7 @@ export type FetchSeriesParams = {
   page?: number;
   pageSize?: number;
   search?: string;
+  accessibleOnly?: boolean;
 };
 
 export type CreateSeriesPayload = {
@@ -187,6 +191,7 @@ export async function fetchSeries(
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
   if (params.search) query.set('search', params.search);
+  if (params.accessibleOnly) query.set('accessibleOnly', 'true');
 
   const data = await fetchJson<{
     items: ApiSeries[];

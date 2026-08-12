@@ -25,15 +25,6 @@ const seriesFormSchema = z.object({
   imageUrl: z.string().url('Enter a valid URL').or(z.literal('')).optional(),
   isPublished: z.boolean(),
   isPremium: z.boolean(),
-  priceEgp: z
-    .string()
-    .optional()
-    .refine(
-      (value) =>
-        !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
-      'Price must be between 0 and 100,000 EGP.',
-    ),
-  salesEnabled: z.boolean(),
 });
 
 type SeriesFormValues = z.infer<typeof seriesFormSchema>;
@@ -54,8 +45,6 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
       imageUrl: series?.image_url || '',
       isPublished: series?.is_published ?? true,
       isPremium: series?.is_premium ?? false,
-      priceEgp: series?.price_in_cents ? String(series.price_in_cents / 100) : '',
-      salesEnabled: series?.sales_enabled ?? false,
     },
   });
 
@@ -207,42 +196,6 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
               <div className="space-y-0.5">
                 <FormLabel>Premium Content</FormLabel>
                 <FormDescription>Require an active subscription to access.</FormDescription>
-              </div>
-              <FormControl>
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="priceEgp"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Price (EGP)</FormLabel>
-              <FormControl>
-                <Input placeholder="0 for free" inputMode="decimal" {...field} />
-              </FormControl>
-              <FormDescription>
-                Set the series price. Leave empty or 0 for a free series.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="salesEnabled"
-          render={({ field }) => (
-            <FormItem className="flex items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel>Sales Enabled</FormLabel>
-                <FormDescription>
-                  Available for sale when enabled, priced, published, and at least one recording is
-                  attached. Purchase grants recordings only (not live track booking).
-                </FormDescription>
               </div>
               <FormControl>
                 <Switch checked={field.value} onCheckedChange={field.onChange} />

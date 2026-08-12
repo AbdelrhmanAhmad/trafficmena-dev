@@ -36,3 +36,7 @@
 - `src/features/tracks/components/TrackRecordingsPublishCard.tsx`
 - `src/features/tracks/pages/TrackRecordingsPage.tsx` (+ wrappers)
 - `tests/unit/series-access.test.ts`
+
+## ملاحظة (2026-08-12)
+
+تسعير ونشر البيع **لا يظهران** في `/admin/library` — انظر [admin-library-hide-series-sales.md](./admin-library-hide-series-sales.md).

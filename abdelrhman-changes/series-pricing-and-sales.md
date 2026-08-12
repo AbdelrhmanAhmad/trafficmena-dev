@@ -4,6 +4,8 @@
 > **Date:** June 10, 2026  
 > **Scope:** إضافة سعر لكل Series + زر تفعيل/إيقاف البيع + عرض السعر في الأدمن ونطاق الزوار
 
+> **تحديث 2026-08-12:** واجهة **Price / Sales Enabled** أُزيلت من `/admin/library` و`/admin/library/series/:id`. التسعير والنشر للبيع للتراكات يتم من بطاقة **Publish recordings** على Track/Event — انظر [admin-library-hide-series-sales.md](./admin-library-hide-series-sales.md).
+
 ---
 
 ## الملخص

@@ -118,8 +118,12 @@ export function isSeriesVisibleInMemberLibrary(series: {
   isPublished: boolean;
   salesEnabled: boolean;
   trackId: string | null;
+  eventId?: string | null;
 }): boolean {
   if (!series.isPublished) return false;
-  if (series.trackId == null) return true;
-  return series.salesEnabled;
+  // Auto-created track or standalone event recordings: hide until Publish for sale
+  if (series.trackId != null || series.eventId != null) {
+    return series.salesEnabled;
+  }
+  return true;
 }

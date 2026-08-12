@@ -5,7 +5,7 @@ import { useLibraryList } from '@/app/hooks/useLibraryAssets';
 import LibraryGrid from '@/features/library/components/LibraryGrid';
 import { useDeleteLibraryAsset } from '@/features/library/hooks/useLibrary';
 import { SeriesGrid } from '@/features/series';
-import { useDeleteSeries, useSeries, useUpdateSeries } from '@/features/series/hooks/useSeries';
+import { useDeleteSeries, useSeries } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -44,7 +44,6 @@ function LibraryManagement() {
   const setActiveTab = (tab: string) => setSearchParams({ tab });
   const deleteMutation = useDeleteLibraryAsset();
   const deleteSeriesMutation = useDeleteSeries();
-  const updateSeriesMutation = useUpdateSeries();
   const { canManageContent, canDeleteContent, loading: roleLoading } = useRolePermissions();
 
   // Query library assets (first 50 items; API caps pageSize at 50).
@@ -174,15 +173,6 @@ function LibraryManagement() {
     navigate('/admin/library/series/new');
   };
 
-  const handleSeriesSalesToggle = (seriesId: string, salesEnabled: boolean) => {
-    if (!canManageContent || updateSeriesMutation.isPending) return;
-
-    updateSeriesMutation.mutate({
-      id: seriesId,
-      data: { salesEnabled },
-    });
-  };
-
   if (isLoading || seriesLoading) {
     return (
       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
@@ -256,12 +246,11 @@ function LibraryManagement() {
                 series={seriesData?.items ?? []}
                 onEdit={handleEditSeries}
                 onDelete={canDeleteContent ? handleDeleteSeries : undefined}
-                onSalesToggle={canManageContent ? handleSeriesSalesToggle : undefined}
-                isSalesTogglePending={updateSeriesMutation.isPending}
                 onAddNew={handleAddSeries}
                 canManage={canManageContent}
                 canDelete={canDeleteContent}
                 basePath="/admin/library/series"
+                hideSalesControls
               />
             </TabsContent>
 

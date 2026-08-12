@@ -11,6 +11,7 @@ type SettingsRecord = {
   eventMode: boolean;
   masterclassesEnabled: boolean;
   digitalProductsEnabled: boolean;
+  libraryStoreEnabled: boolean;
   updatedAt: Date | null;
   updatedBy: string | null;
 };
@@ -23,6 +24,7 @@ async function fetchSettings(): Promise<SettingsRecord | null> {
       eventMode: platformSettings.eventMode,
       masterclassesEnabled: platformSettings.masterclassesEnabled,
       digitalProductsEnabled: platformSettings.digitalProductsEnabled,
+      libraryStoreEnabled: platformSettings.libraryStoreEnabled,
       updatedAt: platformSettings.updatedAt,
       updatedBy: platformSettings.updatedBy,
     })
@@ -43,6 +45,7 @@ function toAdminPayload(record: SettingsRecord | null, fallbacks?: Partial<Setti
     masterclassesEnabled: record?.masterclassesEnabled ?? fallbacks?.masterclassesEnabled ?? true,
     digitalProductsEnabled:
       record?.digitalProductsEnabled ?? fallbacks?.digitalProductsEnabled ?? true,
+    libraryStoreEnabled: record?.libraryStoreEnabled ?? fallbacks?.libraryStoreEnabled ?? false,
     updatedAt: record?.updatedAt ?? null,
     updatedBy: record?.updatedBy ?? null,
   };
@@ -57,6 +60,7 @@ export function registerSettingsRoutes(app: Hono) {
         inviteOnly: record?.inviteOnlySignup ?? false,
         masterclassesEnabled: record?.masterclassesEnabled ?? true,
         digitalProductsEnabled: record?.digitalProductsEnabled ?? true,
+        libraryStoreEnabled: record?.libraryStoreEnabled ?? false,
       });
     } catch (error) {
       console.error('[settings] public fetch failed', error);
@@ -65,6 +69,7 @@ export function registerSettingsRoutes(app: Hono) {
         inviteOnly: false,
         masterclassesEnabled: true,
         digitalProductsEnabled: true,
+        libraryStoreEnabled: false,
       });
     }
   });
@@ -96,13 +101,15 @@ export function registerSettingsRoutes(app: Hono) {
         eventMode: z.boolean().optional(),
         masterclassesEnabled: z.boolean().optional(),
         digitalProductsEnabled: z.boolean().optional(),
+        libraryStoreEnabled: z.boolean().optional(),
       })
       .refine(
         (data) =>
           data.inviteOnly !== undefined ||
           data.eventMode !== undefined ||
           data.masterclassesEnabled !== undefined ||
-          data.digitalProductsEnabled !== undefined,
+          data.digitalProductsEnabled !== undefined ||
+          data.libraryStoreEnabled !== undefined,
         'At least one setting must be provided.',
       );
 
@@ -134,12 +141,15 @@ export function registerSettingsRoutes(app: Hono) {
         validatedData.masterclassesEnabled ?? existing?.masterclassesEnabled ?? true;
       const nextDigitalProductsEnabled =
         validatedData.digitalProductsEnabled ?? existing?.digitalProductsEnabled ?? true;
+      const nextLibraryStoreEnabled =
+        validatedData.libraryStoreEnabled ?? existing?.libraryStoreEnabled ?? false;
 
       const values = {
         inviteOnlySignup: nextInviteOnly,
         eventMode: nextEventMode,
         masterclassesEnabled: nextMasterclassesEnabled,
         digitalProductsEnabled: nextDigitalProductsEnabled,
+        libraryStoreEnabled: nextLibraryStoreEnabled,
         updatedAt: now,
         updatedBy: result.userId,
       };
@@ -157,6 +167,7 @@ export function registerSettingsRoutes(app: Hono) {
             eventMode: platformSettings.eventMode,
             masterclassesEnabled: platformSettings.masterclassesEnabled,
             digitalProductsEnabled: platformSettings.digitalProductsEnabled,
+            libraryStoreEnabled: platformSettings.libraryStoreEnabled,
             updatedAt: platformSettings.updatedAt,
             updatedBy: platformSettings.updatedBy,
           });
@@ -171,6 +182,7 @@ export function registerSettingsRoutes(app: Hono) {
             eventMode: platformSettings.eventMode,
             masterclassesEnabled: platformSettings.masterclassesEnabled,
             digitalProductsEnabled: platformSettings.digitalProductsEnabled,
+            libraryStoreEnabled: platformSettings.libraryStoreEnabled,
             updatedAt: platformSettings.updatedAt,
             updatedBy: platformSettings.updatedBy,
           });
@@ -183,6 +195,7 @@ export function registerSettingsRoutes(app: Hono) {
           eventMode: nextEventMode,
           masterclassesEnabled: nextMasterclassesEnabled,
           digitalProductsEnabled: nextDigitalProductsEnabled,
+          libraryStoreEnabled: nextLibraryStoreEnabled,
         }),
       );
     } catch (error) {

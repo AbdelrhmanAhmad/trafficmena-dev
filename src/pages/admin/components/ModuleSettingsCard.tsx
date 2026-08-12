@@ -15,11 +15,12 @@ export function ModuleSettingsCard({ canEdit }: ModuleSettingsCardProps) {
 
   const masterclassesEnabled = adminSettings.data?.masterclassesEnabled ?? true;
   const digitalProductsEnabled = adminSettings.data?.digitalProductsEnabled ?? true;
+  const libraryStoreEnabled = adminSettings.data?.libraryStoreEnabled ?? false;
   const settingsUpdating = updateAdminSettings.isPending;
   const controlsDisabled = !canEdit || settingsUpdating || adminSettings.isLoading;
 
   const handleToggle = (
-    field: 'masterclassesEnabled' | 'digitalProductsEnabled',
+    field: 'masterclassesEnabled' | 'digitalProductsEnabled' | 'libraryStoreEnabled',
     checked: boolean,
   ) => {
     if (!canEdit) return;
@@ -27,7 +28,12 @@ export function ModuleSettingsCard({ canEdit }: ModuleSettingsCardProps) {
     const labels =
       field === 'masterclassesEnabled'
         ? { on: 'Masterclasses enabled', off: 'Masterclasses disabled' }
-        : { on: 'Digital Products enabled', off: 'Digital Products disabled' };
+        : field === 'digitalProductsEnabled'
+          ? { on: 'Digital Products enabled', off: 'Digital Products disabled' }
+          : {
+              on: 'Library store enabled',
+              off: 'Library store disabled',
+            };
 
     updateAdminSettings.mutate(
       { [field]: checked },
@@ -44,9 +50,14 @@ export function ModuleSettingsCard({ canEdit }: ModuleSettingsCardProps) {
         onSuccess: () => {
           toast({
             title: checked ? labels.on : labels.off,
-            description: checked
-              ? 'The module is visible again across the site and dashboards.'
-              : 'The module is hidden for members and disabled in admin navigation.',
+            description:
+              field === 'libraryStoreEnabled'
+                ? checked
+                  ? 'Members can browse and purchase recordings from My Recordings.'
+                  : 'My Recordings shows only content members already have access to. Purchases stay on track/event pages.'
+                : checked
+                  ? 'The module is visible again across the site and dashboards.'
+                  : 'The module is hidden for members and disabled in admin navigation.',
           });
         },
       },
@@ -96,6 +107,22 @@ export function ModuleSettingsCard({ canEdit }: ModuleSettingsCardProps) {
             disabled={controlsDisabled}
             onCheckedChange={(checked) => handleToggle('digitalProductsEnabled', checked)}
             aria-label="Toggle digital products module"
+          />
+        </div>
+
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-left">
+            <p className="text-sm font-medium text-foreground">Library store</p>
+            <p className="text-sm text-muted-foreground">
+              When off (default), My Recordings lists only owned or accessible content. Recordings
+              are purchased from track or event pages instead.
+            </p>
+          </div>
+          <Switch
+            checked={libraryStoreEnabled}
+            disabled={controlsDisabled}
+            onCheckedChange={(checked) => handleToggle('libraryStoreEnabled', checked)}
+            aria-label="Toggle library store"
           />
         </div>
 

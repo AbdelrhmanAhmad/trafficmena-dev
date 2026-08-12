@@ -20,7 +20,10 @@ import {
   useSeriesDetail,
   useUpdateSeries,
 } from '@/features/series/hooks/useSeries';
-import { mapSeriesFormToPayload, type SeriesFormPricingValues } from '@/features/series/utils/seriesPricing';
+import {
+  mapSeriesFormToContentPayload,
+  type SeriesFormContentValues,
+} from '@/features/series/utils/seriesPricing';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -84,11 +87,11 @@ function SeriesDetailPage() {
     );
   }
 
-  const handleUpdateSeries = async (values: SeriesFormPricingValues) => {
+  const handleUpdateSeries = async (values: SeriesFormContentValues) => {
     try {
       await updateMutation.mutateAsync({
         id: series.id,
-        data: mapSeriesFormToPayload(values),
+        data: mapSeriesFormToContentPayload(values),
       });
     } catch {
       // Mutation onError already reports a toast.
@@ -175,7 +178,8 @@ function SeriesDetailPage() {
               <CardHeader>
                 <CardTitle className="text-lg text-neutral-900">Series Details</CardTitle>
                 <CardDescription className="text-neutral-600">
-                  Update the series information.
+                  Update series content here. Price and publish-for-sale for track recordings are
+                  managed from the parent Track or Event edit page.
                 </CardDescription>
               </CardHeader>
               <CardContent>

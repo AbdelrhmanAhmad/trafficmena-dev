@@ -1,13 +1,12 @@
 import DOMPurify from 'dompurify';
-import { ArrowLeft, BookOpen, FolderOpen, Lock, Play } from 'lucide-react';
+import { ArrowLeft, BookOpen, FolderOpen, Lock, Play, Tag } from 'lucide-react';
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SeriesBuyActions } from '@/features/series/components/SeriesBuyActions';
-import SeriesPriceBadge from '@/features/series/components/SeriesPriceBadge';
 import SeriesPurchasedBadge from '@/features/series/components/SeriesPurchasedBadge';
 import { useStoreSeriesDetail } from '@/features/series/hooks/useSeries';
-import { canShowSeriesPurchaseActions } from '@/features/series/utils/seriesPricing';
+import { canShowSeriesPurchaseActions, formatSeriesPriceLabel } from '@/features/series/utils/seriesPricing';
 import Layout from '@/shared/components/layout/Layout';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import { SignInRequiredDialog } from '@/shared/components/SignInRequiredDialog';
@@ -105,9 +104,6 @@ export const ParentRecordingsBuyPage: React.FC<ParentRecordingsPageProps> = ({
               <ArrowLeft className="mr-2 h-4 w-4" />
               {backLabel}
             </Button>
-            <Link to="/series/cart" className="text-sm text-indigo-600 hover:underline">
-              View cart
-            </Link>
           </div>
 
           <div className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)]">
@@ -128,7 +124,6 @@ export const ParentRecordingsBuyPage: React.FC<ParentRecordingsPageProps> = ({
                   Recordings package
                 </span>
                 {series.has_purchased && <SeriesPurchasedBadge />}
-                <SeriesPriceBadge series={series} />
               </div>
 
               <h1 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
@@ -149,9 +144,28 @@ export const ParentRecordingsBuyPage: React.FC<ParentRecordingsPageProps> = ({
                   : `${series.asset_count} ${series.asset_count === 1 ? 'recording' : 'recordings'} included`}
               </p>
 
+              {!hasDashboardAccess && canPurchase && (
+                <div className="mt-6 flex items-center gap-4 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-100/90 via-purple-100/70 to-indigo-50 px-5 py-4 sm:px-6 sm:py-5">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm">
+                    <Tag className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                      Package price
+                    </p>
+                    <p className="mt-1 text-3xl font-bold tracking-tight text-indigo-900 sm:text-4xl">
+                      {formatSeriesPriceLabel(series.price_in_cents)}
+                    </p>
+                    <p className="mt-1 text-sm text-neutral-600">
+                      One-time purchase · unlocks all recordings in your dashboard
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {!hasDashboardAccess && (
                 <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                  Preview only — purchase unlocks the full recordings package in your dashboard.
+                  Preview only, purchase unlocks the full recordings package in your dashboard.
                   This does not include live track booking.
                 </div>
               )}
