@@ -5,6 +5,8 @@ type TrackPricePreviewGateInput = {
   hasItemId: boolean;
   // Whether the track query has resolved. Firing before it does sends a request with no ticketType.
   trackLoaded: boolean;
+  // Whether booking is currently possible (window open, not sold out) — the page's canBook check.
+  bookingOpen: boolean;
   userHasBooked: boolean;
   usesTicketTypes: boolean;
   selectedTicketType: TicketType | null;
@@ -24,11 +26,15 @@ export function getTrackPricePreviewGate({
   signedIn,
   hasItemId,
   trackLoaded,
+  bookingOpen,
   userHasBooked,
   usesTicketTypes,
   selectedTicketType,
 }: TrackPricePreviewGateInput): TrackPricePreviewGate {
   if (!(signedIn && hasItemId && trackLoaded)) return OFF;
+  // Outside the booking window the server rejects previews before pricing (BOOKING_NOT_OPEN /
+  // BOOKING_PERIOD_CLOSED / BOOKING_NOT_CONFIGURED) — a deterministic 400 a retry can never fix.
+  if (!bookingOpen) return OFF;
   // Enrolled users already hold the track — the preview 400s ALREADY_BOOKED and the price is moot.
   if (userHasBooked) return OFF;
   // Ticketed tracks price per variant, so hold until one is chosen.

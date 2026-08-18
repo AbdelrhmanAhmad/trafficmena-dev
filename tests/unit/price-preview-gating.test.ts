@@ -8,10 +8,26 @@ describe('track price-preview gate', () => {
     signedIn: true,
     hasItemId: true,
     trackLoaded: true,
+    bookingOpen: true,
     userHasBooked: false,
     usesTicketTypes: false,
     selectedTicketType: null,
   };
+
+  it('does not fire while booking is not possible (window closed / sold out)', () => {
+    // The server rejects previews outside the booking window (BOOKING_NOT_OPEN / _CLOSED /
+    // _NOT_CONFIGURED) before pricing — a deterministic 400 a retry can never fix.
+    assert.equal(getTrackPricePreviewGate({ ...loadedLegacy, bookingOpen: false }).enabled, false);
+    assert.equal(
+      getTrackPricePreviewGate({
+        ...loadedLegacy,
+        bookingOpen: false,
+        usesTicketTypes: true,
+        selectedTicketType: 'online_only',
+      }).enabled,
+      false,
+    );
+  });
 
   it('does not fire while the track is still loading (reproduces the 400 storm)', () => {
     // With the track undefined, ticket state is unknown; firing here sends a request with no
