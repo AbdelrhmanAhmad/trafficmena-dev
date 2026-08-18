@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { describe, it } from 'node:test';
 import {
-  getAllTicketTypes,
   getEnabledTicketTypes,
   hasTicketTypes,
   includedFormatsFor,
@@ -37,22 +36,6 @@ describe('track ticket-type selector helpers', () => {
     assert.equal(enabled.length, 1);
     assert.equal(enabled[0].type, 'offline_only');
     assert.equal(enabled[0].priceCents, 0); // free, still enabled
-  });
-
-  it('getAllTicketTypes keeps disabled variants visible with an enabled flag', () => {
-    // online_only paid, online_offline disabled (null), offline_only free (0).
-    const partial = { ...legacy, online_only_price_cents: 40_000, offline_only_price_cents: 0 };
-    const all = getAllTicketTypes(partial);
-    assert.deepEqual(
-      all.map((option) => option.type),
-      ['online_only', 'online_offline', 'offline_only'],
-    );
-    assert.deepEqual(
-      all.map((option) => option.enabled),
-      [true, false, true],
-    );
-    assert.equal(all[1].priceCents, null, 'disabled variant carries a null price');
-    assert.equal(all[2].priceCents, 0, 'free-but-enabled variant carries 0');
   });
 
   it('reports a legacy (all-null) track as not using ticket types', () => {

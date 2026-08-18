@@ -35,12 +35,7 @@ import {
 import { storePendingTrackContext } from '@/shared/utils/trackRedirectUtils';
 import { TrackTicketSelector } from '../components/TrackTicketSelector';
 import { useBookTrack, usePublicTrack } from '../hooks/useTracks';
-import {
-  getAllTicketTypes,
-  getEnabledTicketTypes,
-  includedFormatsFor,
-  type TicketType,
-} from '../ticketTypes';
+import { getEnabledTicketTypes, includedFormatsFor, type TicketType } from '../ticketTypes';
 import { getTrackBookingState } from '../utils/trackBookingState';
 import { getTrackPricePreviewGate } from '../utils/trackPricePreviewGate';
 
@@ -149,8 +144,6 @@ const TrackDetail: React.FC = () => {
 
   // Ticket types for this track (empty = legacy single-price track, unchanged).
   const enabledTickets = useMemo(() => (track ? getEnabledTicketTypes(track) : []), [track]);
-  // All three variants (incl. disabled) for the public selector, which shows disabled ones greyed.
-  const allTickets = useMemo(() => (track ? getAllTicketTypes(track) : []), [track]);
   const usesTicketTypes = enabledTickets.length > 0;
   const enabledTicketTypeSet = useMemo(
     () => new Set(enabledTickets.map((ticket) => ticket.type)),
@@ -574,7 +567,7 @@ const TrackDetail: React.FC = () => {
                           <div className="border-t border-neutral-200 pt-4">
                             <TrackTicketSelector
                               onChange={setSelectedTicketType}
-                              options={allTickets}
+                              options={enabledTickets}
                               value={selectedTicketType}
                             />
                           </div>

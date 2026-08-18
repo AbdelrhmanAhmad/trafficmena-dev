@@ -80,33 +80,6 @@ export function getEnabledTicketTypes(track: TrackTicketPrices): EnabledTicketTy
   });
 }
 
-export type TicketOption = {
-  type: TicketType;
-  label: string;
-  benefit: string;
-  /** Price in cents, or null when the variant is disabled (not sold by this track). */
-  priceCents: number | null;
-  enabled: boolean;
-};
-
-/**
- * All three variants in canonical order, each flagged enabled/disabled. The public selector renders
- * disabled variants as "Not available now" (greyed, non-selectable) rather than hiding them, so a
- * buyer can see the full menu and what they're missing.
- */
-export function getAllTicketTypes(track: TrackTicketPrices): TicketOption[] {
-  return TICKET_TYPE_ORDER.map((type) => {
-    const priceCents = track[TICKET_META[type].priceKey];
-    return {
-      type,
-      label: TICKET_META[type].label,
-      benefit: TICKET_META[type].benefit,
-      priceCents: priceCents ?? null,
-      enabled: priceCents != null,
-    };
-  });
-}
-
 export function hasTicketTypes(track: TrackTicketPrices): boolean {
   return getEnabledTicketTypes(track).length > 0;
 }
