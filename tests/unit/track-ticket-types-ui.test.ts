@@ -87,6 +87,28 @@ describe('track ticket-type selector helpers', () => {
         }),
         null,
       );
+      // The real payment-pending state: canPreselect is false there, yet a valid pending
+      // ticket must still restore.
+      assert.equal(
+        resolveTicketSelection({
+          current: null,
+          pending: 'offline_only',
+          enabledTypes: ['online_only', 'offline_only'],
+          canPreselect: false,
+        }),
+        'offline_only',
+      );
+    });
+
+    it('preselects a lone free variant derived from real track prices', () => {
+      const onlyFree = { ...legacy, offline_only_price_cents: 0 };
+      const resolved = resolveTicketSelection({
+        current: null,
+        pending: null,
+        enabledTypes: getEnabledTicketTypes(onlyFree).map((option) => option.type),
+        canPreselect: true,
+      });
+      assert.equal(resolved, 'offline_only');
     });
 
     it('never picks among several enabled variants', () => {

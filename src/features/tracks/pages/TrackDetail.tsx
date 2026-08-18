@@ -232,10 +232,10 @@ const TrackDetail: React.FC = () => {
   const promoError = pricePreview?.promoError ?? null;
   const isPromoApplied =
     Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !promoError;
-  const promoDisabledReason = !user
-    ? 'Sign in to apply a promo code.'
-    : !bookingStatus.canBook
-      ? (bookingStatus.message ?? 'Booking is not currently available.')
+  const promoDisabledReason = !bookingStatus.canBook
+    ? (bookingStatus.message ?? 'Booking is not currently available.')
+    : !user
+      ? 'Sign in to apply a promo code.'
       : pricePreview?.discountSource === 'subscriber'
         ? 'Subscriber discount already applied.'
         : pricePreview?.isFree
@@ -295,10 +295,14 @@ const TrackDetail: React.FC = () => {
       : '/uploads/trafficmena-track.png';
 
   useEffect(() => {
-    if (!id || !track || !user || !needsPayment || !bookingStatus.canBook) return;
+    if (!id || !track || !user || !needsPayment) return;
     const checkoutParam = searchParams.get('checkout');
     if (checkoutParam !== '1') return;
-    setShowPaymentDialog(true);
+    // Consume the param either way; open only when booking is possible — leaving a stale
+    // ?checkout=1 in the URL would pop the dialog whenever a later refetch reopens the window.
+    if (bookingStatus.canBook) {
+      setShowPaymentDialog(true);
+    }
     const next = new URLSearchParams(searchParams);
     next.delete('checkout');
     const nextQuery = next.toString();
@@ -574,8 +578,8 @@ const TrackDetail: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Price display */}
-                        {isPaidTrack && (
+                        {/* Price display — never for enrolled users, even if a selection lingers */}
+                        {isPaidTrack && bookingState !== 'booked' && (
                           <div className="space-y-3">
                             <PriceDisplayCard
                               itemType="track"
