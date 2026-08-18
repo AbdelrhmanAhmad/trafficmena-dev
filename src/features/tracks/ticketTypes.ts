@@ -84,6 +84,31 @@ export function hasTicketTypes(track: TrackTicketPrices): boolean {
   return getEnabledTicketTypes(track).length > 0;
 }
 
+type TicketSelectionInput = {
+  current: TicketType | null;
+  pending: TicketType | null;
+  enabledTypes: readonly TicketType[];
+  canPreselect: boolean;
+};
+
+/**
+ * Selection precedence for the public buying page: a valid pending-payment ticket wins, then a
+ * still-valid current choice, then the lone enabled variant preselects — it mirrors the admin
+ * Ticket Types config, so a single-variant track needs no tap. Preselection only applies while
+ * the viewer can still buy (canPreselect = booking state 'available'); anything else clears.
+ */
+export function resolveTicketSelection({
+  current,
+  pending,
+  enabledTypes,
+  canPreselect,
+}: TicketSelectionInput): TicketType | null {
+  if (pending && enabledTypes.includes(pending)) return pending;
+  if (current && enabledTypes.includes(current)) return current;
+  if (canPreselect && enabledTypes.length === 1) return enabledTypes[0];
+  return null;
+}
+
 export function includedFormatsFor(type: TicketType): readonly EventFormat[] {
   return TICKET_META[type].includedFormats;
 }

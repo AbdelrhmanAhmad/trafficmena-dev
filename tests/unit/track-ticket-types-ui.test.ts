@@ -5,6 +5,7 @@ import {
   getEnabledTicketTypes,
   hasTicketTypes,
   includedFormatsFor,
+  resolveTicketSelection,
 } from '../../src/features/tracks/ticketTypes.ts';
 
 const hybrid = {
@@ -41,6 +42,95 @@ describe('track ticket-type selector helpers', () => {
   it('reports a legacy (all-null) track as not using ticket types', () => {
     assert.equal(hasTicketTypes(legacy), false);
     assert.equal(getEnabledTicketTypes(legacy).length, 0);
+  });
+
+  describe('resolveTicketSelection precedence', () => {
+    it('valid pending overrides a different current selection (multi-variant)', () => {
+      // A single-variant fixture proves nothing here — the pending type would equal the lone
+      // preselection candidate. Two variants force the precedence to show.
+      const resolved = resolveTicketSelection({
+        current: 'online_only',
+        pending: 'offline_only',
+        enabledTypes: ['online_only', 'offline_only'],
+        canPreselect: true,
+      });
+      assert.equal(resolved, 'offline_only');
+    });
+
+    it('preselects the lone enabled variant while the viewer can buy', () => {
+      const resolved = resolveTicketSelection({
+        current: null,
+        pending: null,
+        enabledTypes: ['online_only'],
+        canPreselect: true,
+      });
+      assert.equal(resolved, 'online_only');
+    });
+
+    it('does not preselect for booked or payment-pending viewers', () => {
+      assert.equal(
+        resolveTicketSelection({
+          current: null,
+          pending: null,
+          enabledTypes: ['online_only'],
+          canPreselect: false,
+        }),
+        null,
+      );
+      // An invalid stored pending type must clear, not fall through to the lone variant.
+      assert.equal(
+        resolveTicketSelection({
+          current: null,
+          pending: 'online_offline',
+          enabledTypes: ['online_only'],
+          canPreselect: false,
+        }),
+        null,
+      );
+    });
+
+    it('never picks among several enabled variants', () => {
+      assert.equal(
+        resolveTicketSelection({
+          current: null,
+          pending: null,
+          enabledTypes: ['online_only', 'offline_only'],
+          canPreselect: true,
+        }),
+        null,
+      );
+      // A still-valid current choice is kept; a stale one clears.
+      assert.equal(
+        resolveTicketSelection({
+          current: 'offline_only',
+          pending: null,
+          enabledTypes: ['online_only', 'offline_only'],
+          canPreselect: true,
+        }),
+        'offline_only',
+      );
+      assert.equal(
+        resolveTicketSelection({
+          current: 'online_offline',
+          pending: null,
+          enabledTypes: ['online_only', 'offline_only'],
+          canPreselect: true,
+        }),
+        null,
+      );
+    });
+
+    it('resolves to null for a legacy track with no ticket types', () => {
+      assert.equal(
+        resolveTicketSelection({
+          current: null,
+          pending: null,
+          enabledTypes: [],
+          canPreselect: true,
+        }),
+        null,
+      );
+    });
   });
 
   it('maps each variant to the session formats it filters to', () => {

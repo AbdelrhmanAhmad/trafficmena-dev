@@ -35,7 +35,12 @@ import {
 import { storePendingTrackContext } from '@/shared/utils/trackRedirectUtils';
 import { TrackTicketSelector } from '../components/TrackTicketSelector';
 import { useBookTrack, usePublicTrack } from '../hooks/useTracks';
-import { getEnabledTicketTypes, includedFormatsFor, type TicketType } from '../ticketTypes';
+import {
+  getEnabledTicketTypes,
+  includedFormatsFor,
+  resolveTicketSelection,
+  type TicketType,
+} from '../ticketTypes';
 import { getTrackBookingState } from '../utils/trackBookingState';
 import { getTrackPricePreviewGate } from '../utils/trackPricePreviewGate';
 
@@ -145,13 +150,40 @@ const TrackDetail: React.FC = () => {
   // Ticket types for this track (empty = legacy single-price track, unchanged).
   const enabledTickets = useMemo(() => (track ? getEnabledTicketTypes(track) : []), [track]);
   const usesTicketTypes = enabledTickets.length > 0;
-  const enabledTicketTypeSet = useMemo(
-    () => new Set(enabledTickets.map((ticket) => ticket.type)),
-    [enabledTickets],
-  );
   const selectedTicket = enabledTickets.find((t) => t.type === selectedTicketType) ?? null;
   // For ticket-typed tracks a variant must be picked before pricing/booking is meaningful.
   const ticketSelectionReady = !usesTicketTypes || Boolean(selectedTicketType);
+
+  // Booking status (window + capacity). Also feeds the preview gate and the checkout auto-open:
+  // outside the window the server rejects both deterministically.
+  const bookingStatus = useMemo(() => {
+    if (!track) return { canBook: false, message: null };
+
+    const now = new Date();
+    const start = track.track_booking_start;
+    const end = track.track_booking_end;
+
+    if (!start || !end) {
+      return { canBook: false, message: 'Booking not configured for this track.' };
+    }
+
+    if (now < start) {
+      return {
+        canBook: false,
+        message: `Booking opens on ${format(start, 'MMM d, yyyy')}`,
+      };
+    }
+
+    if (now > end) {
+      return { canBook: false, message: 'Booking period has ended.' };
+    }
+
+    if (track.spots_remaining !== null && track.spots_remaining <= 0) {
+      return { canBook: false, message: 'This track is fully booked.' };
+    }
+
+    return { canBook: true, message: null };
+  }, [track]);
 
   // Gate the price preview until the track has loaded and the user can actually buy — a permissive
   // gate fires before `track` resolves (with no ticketType) and 400-storms the endpoint.
@@ -159,6 +191,7 @@ const TrackDetail: React.FC = () => {
     signedIn: Boolean(user),
     hasItemId: Boolean(id),
     trackLoaded: Boolean(track),
+    bookingOpen: bookingStatus.canBook,
     userHasBooked: Boolean(track?.user_has_booked),
     usesTicketTypes,
     selectedTicketType,
@@ -201,11 +234,13 @@ const TrackDetail: React.FC = () => {
     Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !promoError;
   const promoDisabledReason = !user
     ? 'Sign in to apply a promo code.'
-    : pricePreview?.discountSource === 'subscriber'
-      ? 'Subscriber discount already applied.'
-      : pricePreview?.isFree
-        ? 'Promo codes are not available for free items.'
-        : null;
+    : !bookingStatus.canBook
+      ? (bookingStatus.message ?? 'Booking is not currently available.')
+      : pricePreview?.discountSource === 'subscriber'
+        ? 'Subscriber discount already applied.'
+        : pricePreview?.isFree
+          ? 'Promo codes are not available for free items.'
+          : null;
   const promoDisabled = Boolean(promoDisabledReason);
 
   const bookingState = useMemo(
@@ -217,22 +252,18 @@ const TrackDetail: React.FC = () => {
     [track?.user_has_booked, track?.user_has_pending_payment],
   );
 
+  // Normalize the selection whenever the track config or viewer state changes. The lone enabled
+  // variant preselects (it mirrors the admin Ticket Types config) only while the viewer can buy.
   useEffect(() => {
-    if (!usesTicketTypes) {
-      setSelectedTicketType(null);
-      return;
-    }
-
-    const pendingTicketType = track?.pending_ticket_type ?? null;
-    if (pendingTicketType && enabledTicketTypeSet.has(pendingTicketType)) {
-      setSelectedTicketType(pendingTicketType);
-      return;
-    }
-
     setSelectedTicketType((current) =>
-      current && enabledTicketTypeSet.has(current) ? current : null,
+      resolveTicketSelection({
+        current,
+        pending: track?.pending_ticket_type ?? null,
+        enabledTypes: enabledTickets.map((ticket) => ticket.type),
+        canPreselect: bookingState === 'available',
+      }),
     );
-  }, [enabledTicketTypeSet, track?.pending_ticket_type, usesTicketTypes]);
+  }, [enabledTickets, track?.pending_ticket_type, bookingState]);
 
   const pendingPaymentUrl = useMemo(() => {
     if (!track?.user_has_pending_payment || !id) return null;
@@ -263,38 +294,8 @@ const TrackDetail: React.FC = () => {
       ? track.image_url.trim()
       : '/uploads/trafficmena-track.png';
 
-  // Booking status
-  const bookingStatus = useMemo(() => {
-    if (!track) return { canBook: false, message: null };
-
-    const now = new Date();
-    const start = track.track_booking_start;
-    const end = track.track_booking_end;
-
-    if (!start || !end) {
-      return { canBook: false, message: 'Booking not configured for this track.' };
-    }
-
-    if (now < start) {
-      return {
-        canBook: false,
-        message: `Booking opens on ${format(start, 'MMM d, yyyy')}`,
-      };
-    }
-
-    if (now > end) {
-      return { canBook: false, message: 'Booking period has ended.' };
-    }
-
-    if (track.spots_remaining !== null && track.spots_remaining <= 0) {
-      return { canBook: false, message: 'This track is fully booked.' };
-    }
-
-    return { canBook: true, message: null };
-  }, [track]);
-
   useEffect(() => {
-    if (!id || !track || !user || !needsPayment) return;
+    if (!id || !track || !user || !needsPayment || !bookingStatus.canBook) return;
     const checkoutParam = searchParams.get('checkout');
     if (checkoutParam !== '1') return;
     setShowPaymentDialog(true);
@@ -302,7 +303,7 @@ const TrackDetail: React.FC = () => {
     next.delete('checkout');
     const nextQuery = next.toString();
     navigate(`/tracks/${id}${nextQuery ? `?${nextQuery}` : ''}`, { replace: true });
-  }, [id, navigate, needsPayment, searchParams, track, user]);
+  }, [id, navigate, needsPayment, searchParams, track, user, bookingStatus.canBook]);
 
   useEffect(() => {
     if (!appliedPromoCode) return;
