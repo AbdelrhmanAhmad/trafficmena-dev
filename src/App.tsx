@@ -3,10 +3,18 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import MeetupDetail from '@/features/events/pages/EventDetail';
 import Meetups from '@/features/events/pages/Meetups';
+import PublicDigitalProductDetailPage from '@/features/digital-products/pages/PublicDigitalProductDetail';
+import PublicDigitalProductsPage from '@/features/digital-products/pages/PublicDigitalProducts';
+import PublicRecordingDetailPage from '@/features/series/pages/PublicRecordingDetail';
+import PublicRecordingsDisabledPage from '@/features/series/pages/PublicRecordingsDisabled';
 import PublicTrackDetail from '@/features/tracks/pages/TrackDetail';
+import PublicTracksPage from '@/features/tracks/pages/PublicTracks';
+import TrackAvailableRecordingsPage from '@/features/tracks/pages/TrackAvailableRecordingsPage';
+import EventAvailableRecordingsPage from '@/features/tracks/pages/EventAvailableRecordingsPage';
 import { usePageTracking } from '@/lib/analytics/usePageTracking';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
+import { ModuleGate } from '@/shared/components/ModuleGate';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { SignUpGuard } from '@/shared/components/layout/SignUpGuard';
@@ -14,6 +22,7 @@ import { SignUpProvider } from '@/shared/components/layout/SignUpLayout';
 import { Toaster as Sonner } from '@/shared/components/ui/sonner';
 import { Toaster } from '@/shared/components/ui/toaster';
 import { TooltipProvider } from '@/shared/components/ui/tooltip';
+import { SeriesCartProvider } from '@/features/series/context/SeriesCartContext';
 import { AuthProvider } from '@/shared/context/AuthContext';
 import Index from './pages/Index';
 import SignIn from './pages/SignIn';
@@ -41,10 +50,12 @@ const SubscribeLanding = lazy(() => import('./pages/SubscribeLanding'));
 const ThankYou = lazy(() => import('./pages/ThankYou'));
 const ThankYouEvent = lazy(() => import('./pages/ThankYouEvent'));
 const ThankYouTrack = lazy(() => import('./pages/ThankYouTrack'));
+const ThankYouOrder = lazy(() => import('./pages/ThankYouOrder'));
 const PrivacyPolicy = lazy(() => import('./pages/Privacy'));
 const TermsOfService = lazy(() => import('./pages/Terms'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const InvitationAcceptancePage = lazy(() => import('./pages/invitation/[token]'));
+const PublicCertificatePage = lazy(() => import('./pages/certificates/[code]'));
 
 const PaymentSuccessPage = lazy(() => import('./pages/payment/success'));
 const PaymentFailedPage = lazy(() => import('./pages/payment/failed'));
@@ -56,6 +67,14 @@ const DashboardMeetups = lazy(() => import('@/features/events/pages/DashboardMee
 const DashboardLibrary = lazy(() => import('./pages/DashboardLibrary'));
 const DashboardTrackDetail = lazy(() => import('./pages/DashboardTrackDetail'));
 const DashboardSeriesDetail = lazy(() => import('./pages/DashboardSeriesDetail'));
+const SeriesCartPage = lazy(() => import('./pages/SeriesCart'));
+const DigitalProductsPage = lazy(() => import('./pages/dashboard/DigitalProducts'));
+const DigitalProductDetailPage = lazy(() => import('./pages/dashboard/DigitalProductDetail'));
+const MyOrdersPage = lazy(() => import('./pages/dashboard/MyOrders'));
+const MasterclassesPage = lazy(() => import('./pages/dashboard/Masterclasses'));
+const MasterclassDetailPage = lazy(() => import('./pages/dashboard/MasterclassDetail'));
+const MasterclassLearnPage = lazy(() => import('./pages/dashboard/MasterclassLearn'));
+const MasterclassLessonPage = lazy(() => import('./pages/dashboard/MasterclassLesson'));
 const DashboardSubscribePage = lazy(() => import('./pages/dashboard/Subscribe'));
 const LibraryItemDetail = lazy(() => import('./pages/LibraryItemDetail'));
 
@@ -64,9 +83,11 @@ const CalculatorDetail = lazy(() => import('@/features/calculators/pages/Calcula
 
 const AdminDashboard = lazy(() => import('./pages/admin/index'));
 const AdminSettingsPage = lazy(() => import('./pages/admin/settings'));
+const AdminModuleSettingsPage = lazy(() => import('./pages/admin/module-settings'));
 const UserManagement = lazy(() => import('./pages/admin/users'));
 const AdminInvitations = lazy(() => import('./pages/admin/invitations'));
 const AdminPromoCodes = lazy(() => import('./pages/admin/promo-codes'));
+const AdminOrdersPage = lazy(() => import('./pages/admin/orders'));
 const LibraryManagement = lazy(() => import('./pages/admin/library'));
 const AdminLibraryItemDetail = lazy(() => import('./pages/admin/library/[id]'));
 const NewLibraryItem = lazy(() => import('./pages/admin/library/new-item'));
@@ -75,6 +96,13 @@ const NewTrackPage = lazy(() => import('./pages/admin/library/tracks/new'));
 const TrackDetailPage = lazy(() => import('./pages/admin/library/tracks/[id]'));
 const NewSeriesPage = lazy(() => import('./pages/admin/library/series/new'));
 const SeriesDetailPage = lazy(() => import('./pages/admin/library/series/[id]'));
+const AdminDigitalProductsPage = lazy(() => import('./pages/admin/digital-products/index'));
+const AdminNewDigitalProductPage = lazy(() => import('./pages/admin/digital-products/new'));
+const AdminDigitalProductDetailPage = lazy(() => import('./pages/admin/digital-products/[id]'));
+const AdminMasterclassesPage = lazy(() => import('./pages/admin/masterclasses/index'));
+const AdminNewMasterclassPage = lazy(() => import('./pages/admin/masterclasses/new'));
+const AdminMasterclassDetailPage = lazy(() => import('./pages/admin/masterclasses/[id]'));
+const AdminCertificateSettingsPage = lazy(() => import('./pages/admin/certificate-settings'));
 
 const AdminMeetups = lazy(() => import('@/features/events/pages/AdminMeetups'));
 const AdminMeetupsNew = lazy(() => import('@/features/events/pages/admin/new'));
@@ -119,6 +147,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <AuthProvider>
+              <SeriesCartProvider>
               <PageTracker />
               <Suspense fallback={routeFallback}>
                 <Routes>
@@ -251,6 +280,76 @@ const App = () => {
                     }
                   />
                   <Route
+                    path="/dashboard/digital-products"
+                    element={
+                      <ErrorBoundary>
+                        <ModuleGate module="digitalProducts" fallbackHref="/dashboard">
+                          <DigitalProductsPage />
+                        </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/digital-products/:id"
+                    element={
+                      <ErrorBoundary>
+                        <ModuleGate module="digitalProducts" fallbackHref="/dashboard">
+                          <DigitalProductDetailPage />
+                        </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/orders"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <MyOrdersPage />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/masterclasses"
+                    element={
+                      <ErrorBoundary>
+                        <ModuleGate module="masterclasses" fallbackHref="/dashboard">
+                          <MasterclassesPage />
+                        </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/masterclasses/:id/learn"
+                    element={
+                      <ErrorBoundary>
+                        <ModuleGate module="masterclasses" fallbackHref="/dashboard">
+                          <MasterclassLearnPage />
+                        </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/masterclasses/lessons/:lessonId"
+                    element={
+                      <ErrorBoundary>
+                        <ModuleGate module="masterclasses" fallbackHref="/dashboard">
+                          <MasterclassLessonPage />
+                        </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/masterclasses/:id"
+                    element={
+                      <ErrorBoundary>
+                        <ModuleGate module="masterclasses" fallbackHref="/dashboard">
+                          <MasterclassDetailPage />
+                        </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
                     path="/dashboard/calculators"
                     element={
                       <ProtectedRoute>
@@ -297,10 +396,86 @@ const App = () => {
                     }
                   />
                   <Route
+                    path="/meetups/:id/recordings"
+                    element={
+                      <ErrorBoundary>
+                        <EventAvailableRecordingsPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/recordings"
+                    element={
+                      <ErrorBoundary>
+                        <PublicRecordingsDisabledPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/recordings/:id"
+                    element={
+                      <ErrorBoundary>
+                        <PublicRecordingsDisabledPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/digital-products"
+                    element={
+                      <ErrorBoundary>
+                        <ModuleGate module="digitalProducts" fallbackHref="/">
+                          <PublicDigitalProductsPage />
+                        </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/digital-products/:id"
+                    element={
+                      <ErrorBoundary>
+                        <ModuleGate module="digitalProducts" fallbackHref="/">
+                          <PublicDigitalProductDetailPage />
+                        </ModuleGate>
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/tracks"
+                    element={
+                      <ErrorBoundary>
+                        <PublicTracksPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
                     path="/tracks/:id"
                     element={
                       <ErrorBoundary>
                         <PublicTrackDetail />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/tracks/:id/recordings"
+                    element={
+                      <ErrorBoundary>
+                        <TrackAvailableRecordingsPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/series/cart"
+                    element={
+                      <ErrorBoundary>
+                        <SeriesCartPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/series/:id"
+                    element={
+                      <ErrorBoundary>
+                        <PublicRecordingDetailPage />
                       </ErrorBoundary>
                     }
                   />
@@ -367,6 +542,16 @@ const App = () => {
                     }
                   />
                   <Route
+                    path="/thank-you-order/:orderId"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <ThankYouOrder />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/admin"
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
@@ -382,6 +567,26 @@ const App = () => {
                       <AdminProtectedRoute>
                         <ErrorBoundary>
                           <AdminSettingsPage />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/settings/modules"
+                    element={
+                      <AdminProtectedRoute>
+                        <ErrorBoundary>
+                          <AdminModuleSettingsPage />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/certificate-settings"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin']}>
+                        <ErrorBoundary>
+                          <AdminCertificateSettingsPage />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }
@@ -477,6 +682,78 @@ const App = () => {
                     }
                   />
                   <Route
+                    path="/admin/digital-products"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <ModuleGate module="digitalProducts" fallbackHref="/admin">
+                            <AdminDigitalProductsPage />
+                          </ModuleGate>
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/digital-products/new"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <ModuleGate module="digitalProducts" fallbackHref="/admin">
+                            <AdminNewDigitalProductPage />
+                          </ModuleGate>
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/digital-products/:id"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <ModuleGate module="digitalProducts" fallbackHref="/admin">
+                            <AdminDigitalProductDetailPage />
+                          </ModuleGate>
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/masterclasses"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <ModuleGate module="masterclasses" fallbackHref="/admin">
+                            <AdminMasterclassesPage />
+                          </ModuleGate>
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/masterclasses/new"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <ModuleGate module="masterclasses" fallbackHref="/admin">
+                            <AdminNewMasterclassPage />
+                          </ModuleGate>
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/masterclasses/:id"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <ModuleGate module="masterclasses" fallbackHref="/admin">
+                            <AdminMasterclassDetailPage />
+                          </ModuleGate>
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/admin/meetups"
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
@@ -547,10 +824,26 @@ const App = () => {
                     }
                   />
                   <Route
+                    path="/admin/orders"
+                    element={
+                      <ErrorBoundary>
+                        <AdminOrdersPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
                     path="/invitation/:token"
                     element={
                       <ErrorBoundary>
                         <InvitationAcceptancePage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/certificates/:code"
+                    element={
+                      <ErrorBoundary>
+                        <PublicCertificatePage />
                       </ErrorBoundary>
                     }
                   />
@@ -601,6 +894,7 @@ const App = () => {
                   />
                 </Routes>
               </Suspense>
+              </SeriesCartProvider>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

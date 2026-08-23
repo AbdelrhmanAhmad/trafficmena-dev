@@ -5,11 +5,15 @@ import { z } from 'zod';
 import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import {
+  digitalProducts,
   eventAttendees,
   eventReservations,
   events,
+  orderItems,
+  orders,
   payments,
   platformSettings,
+  series,
   profiles,
   subscriptions,
   trackBookings,
@@ -25,6 +29,11 @@ import {
   verifyFawaterkWebhook,
 } from '../../services/fawaterk.js';
 import { validatePromoCode } from '../../services/promoCodes.js';
+import {
+  assertMasterclassSellable,
+  getEnrolledMasterclassIds,
+  grantMasterclassEnrollment,
+} from '../../services/masterclassSales.js';
 import { paymentRateLimiter } from '../../services/rateLimiter.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError } from '../../utils/errors.js';
@@ -32,6 +41,7 @@ import { isInvoicePaid } from '../../utils/invoiceStatus.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { loadVerifiedPaymentAnalytics } from './paymentAnalytics.js';
 import { ONE_YEAR_MS } from './subscriptionShared.js';
+import { fulfillSeriesOrder } from './orders.js';
 import { executeTrackBookingWrite } from './trackBookingShared.js';
 import { isKnownDatabaseConflict } from './utils.js';
 
@@ -46,7 +56,7 @@ const CHECKOUT_IDEMPOTENCY_TTL_MS = 10 * 60 * 1000;
 // --- Schemas ---
 
 const checkoutSchema = z.object({
-  itemType: z.enum(['event', 'track', 'subscription']),
+  itemType: z.enum(['event', 'track', 'subscription', 'order', 'masterclass']),
   itemId: z.string().uuid().optional(),
   paymentMethodId: z.number().int().positive(),
   forceNewCode: z.boolean().optional(),
@@ -54,12 +64,17 @@ const checkoutSchema = z.object({
   promoCode: z.string().optional(),
 });
 
+const invoiceIdSchema = z
+  .union([z.number(), z.string()])
+  .transform((value) => String(value).trim())
+  .refine((value) => value.length > 0 && value !== 'NaN', 'Invalid invoice id');
+
 const verifySchema = z.object({
-  invoiceId: z.number().int().positive(),
+  invoiceId: invoiceIdSchema,
 });
 
 const webhookSchema = z.object({
-  invoice_id: z.number().int().positive(),
+  invoice_id: invoiceIdSchema,
   invoice_key: z.string().min(1).max(255),
   payment_method: z.string().min(1).max(100),
   hashKey: z.string().regex(/^[a-f0-9]{64}$/i, 'Invalid HMAC signature format'),
@@ -83,7 +98,7 @@ type PriceResult = {
 type CheckoutSuccessPayload = {
   paymentId: string;
   free?: boolean;
-  invoiceId?: number;
+  invoiceId?: string;
   redirectUrl?: string;
   fawryCode?: string;
   meezaReference?: string;
@@ -97,7 +112,7 @@ type ConfirmationSource = 'verify' | 'webhook' | 'reconcile';
 type ConfirmGatewayInvoiceResult = {
   status: 'pending' | 'paid' | 'failed' | 'expired';
   paymentId: string;
-  itemType: 'event' | 'track' | 'subscription';
+  itemType: 'event' | 'track' | 'subscription' | 'order' | 'masterclass';
   itemId: string | null;
   amountCents?: number;
   itemName?: string;
@@ -129,7 +144,7 @@ const checkoutIdempotencyInFlight = new Map<string, CheckoutInFlightReservation>
 
 function buildCheckoutIdempotencyCacheKey(params: {
   userId: string;
-  itemType: 'event' | 'track' | 'subscription';
+  itemType: 'event' | 'track' | 'subscription' | 'order' | 'masterclass';
   itemId?: string;
   paymentMethodId: number;
   idempotencyKey: string;
@@ -201,7 +216,7 @@ function isPostgresUniqueViolation(error: unknown): boolean {
 
 async function calculatePrice(
   userId: string,
-  itemType: 'event' | 'track' | 'subscription',
+  itemType: 'event' | 'track' | 'subscription' | 'order' | 'masterclass',
   itemId: string | null,
   promoCode?: string,
   tx?: DbTransaction,
@@ -472,6 +487,72 @@ async function calculatePrice(
       promoCodeId,
       isSubscriber,
       isFree: amountCents === 0,
+    };
+  }
+
+  if (itemType === 'order' && itemId) {
+    const [order] = await dbClient
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, itemId), eq(orders.userId, userId)))
+      .limit(1);
+
+    if (!order) {
+      throw new ApiError('ORDER_NOT_FOUND', 'Order not found', 404);
+    }
+
+    if (order.status !== 'pending') {
+      throw new ApiError('ORDER_NOT_PAYABLE', 'This order is no longer payable.', 409);
+    }
+
+    const seriesLines = await dbClient
+      .select({ title: series.title })
+      .from(orderItems)
+      .innerJoin(series, eq(series.id, orderItems.seriesId))
+      .where(and(eq(orderItems.orderId, order.id), eq(orderItems.itemType, 'series')));
+
+    const productLines = await dbClient
+      .select({ title: digitalProducts.title })
+      .from(orderItems)
+      .innerJoin(digitalProducts, eq(digitalProducts.id, orderItems.digitalProductId))
+      .where(and(eq(orderItems.orderId, order.id), eq(orderItems.itemType, 'digital_product')));
+
+    const lineTitles = [...seriesLines, ...productLines].map((row) => row.title);
+
+    const itemName =
+      lineTitles.length === 1
+        ? lineTitles[0]
+        : `Order bundle (${lineTitles.length} items)`;
+
+    return {
+      amountCents: order.totalCents,
+      itemName,
+      originalAmountCents: order.totalCents,
+      discountAppliedCents: 0,
+      discountSource: null,
+      promoCodeId: null,
+      isSubscriber,
+      isFree: order.totalCents === 0,
+    };
+  }
+
+  if (itemType === 'masterclass' && itemId) {
+    const sellable = await assertMasterclassSellable(itemId);
+    const enrolledIds = await getEnrolledMasterclassIds(userId, [itemId]);
+    if (enrolledIds.has(itemId)) {
+      throw new ApiError('ALREADY_ENROLLED', 'Already enrolled in this masterclass', 400);
+    }
+
+    const basePrice = sellable.priceInCents ?? 0;
+    return {
+      amountCents: basePrice,
+      itemName: sellable.title,
+      originalAmountCents: basePrice,
+      discountAppliedCents: 0,
+      discountSource: null,
+      promoCodeId: null,
+      isSubscriber,
+      isFree: basePrice === 0,
     };
   }
 
@@ -832,6 +913,26 @@ async function processSuccessfulPayment(
         }
       }
 
+      if (payment.itemType === 'order' && payment.itemId) {
+        await fulfillSeriesOrder({
+          orderId: payment.itemId,
+          paymentId: payment.id,
+          userId: payment.userId,
+          paidAt,
+          tx,
+        });
+      }
+
+      if (payment.itemType === 'masterclass' && payment.itemId) {
+        await grantMasterclassEnrollment({
+          userId: payment.userId,
+          masterclassId: payment.itemId,
+          source: 'paid',
+          paymentId: payment.id,
+          tx,
+        });
+      }
+
       await tx.update(payments).set({ status: 'paid', paidAt }).where(eq(payments.id, paymentId));
       return { status: 'paid', alreadyProcessed };
     });
@@ -849,7 +950,7 @@ async function processSuccessfulPayment(
 }
 
 export async function confirmGatewayInvoicePayment(args: {
-  invoiceId: number;
+  invoiceId: string;
   source: ConfirmationSource;
   userId?: string;
   expectedInvoiceKey?: string;
@@ -868,6 +969,15 @@ export async function confirmGatewayInvoicePayment(args: {
   }
 
   if (payment.status === 'paid') {
+    if (payment.itemType === 'masterclass' && payment.itemId) {
+      await grantMasterclassEnrollment({
+        userId: payment.userId,
+        masterclassId: payment.itemId,
+        source: 'paid',
+        paymentId: payment.id,
+      });
+    }
+
     let paymentMethod: string | undefined;
     try {
       const invoiceData = await getInvoiceData(args.invoiceId);
@@ -1094,10 +1204,21 @@ export function registerPaymentRoutes(app: Hono) {
       );
     }
 
-    // Validate event/track needs itemId
-    if ((itemType === 'event' || itemType === 'track') && !itemId) {
+    // Validate event/track/order/masterclass needs itemId
+    if (
+      (itemType === 'event' ||
+        itemType === 'track' ||
+        itemType === 'order' ||
+        itemType === 'masterclass') &&
+      !itemId
+    ) {
       return c.json(
-        { error: { code: 'INVALID_INPUT', message: 'itemId is required for event/track' } },
+        {
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'itemId is required for event/track/order/masterclass',
+          },
+        },
         400,
       );
     }
@@ -1718,8 +1839,8 @@ export function registerPaymentRoutes(app: Hono) {
             },
           ],
           redirectionUrls: {
-            successUrl: `${env.APP_BASE_URL}/payment/success`,
-            failUrl: `${env.APP_BASE_URL}/payment/failed`,
+            successUrl: `${env.APP_BASE_URL}/payment/success?payment_id=${paymentId}`,
+            failUrl: `${env.APP_BASE_URL}/payment/failed?payment_id=${paymentId}`,
             pendingUrl,
             webhookUrl,
           },
@@ -1867,7 +1988,7 @@ export function registerPaymentRoutes(app: Hono) {
 
     // Validate query parameters with Zod
     const pricePreviewSchema = z.object({
-      itemType: z.enum(['event', 'track', 'subscription']),
+      itemType: z.enum(['event', 'track', 'subscription', 'order', 'masterclass']),
       itemId: z.string().uuid().optional(),
       promoCode: z.string().optional(),
     });

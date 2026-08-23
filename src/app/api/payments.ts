@@ -10,7 +10,7 @@ export type PaymentMethod = {
   redirect: string;
 };
 
-export type PaymentItemType = 'event' | 'track' | 'subscription';
+export type PaymentItemType = 'event' | 'track' | 'subscription' | 'order' | 'masterclass';
 
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'expired';
 
@@ -25,7 +25,7 @@ export type CheckoutRequest = {
 
 export type CheckoutResponse = {
   paymentId: string;
-  invoiceId?: number;
+  invoiceId?: string;
   redirectUrl?: string;
   fawryCode?: string;
   meezaReference?: string;
@@ -36,7 +36,7 @@ export type CheckoutResponse = {
 };
 
 export type VerifyPaymentRequest = {
-  invoiceId: number;
+  invoiceId: string;
 };
 
 export type VerifyPaymentResponse = {
@@ -67,7 +67,7 @@ export type Payment = {
   currency: string;
   itemType: PaymentItemType;
   itemId: string | null;
-  fawaterkInvoiceId?: number | null;
+  fawaterkInvoiceId?: string | null;
   fawryCode?: string | null;
   amanCode?: string | null;
   masaryCode?: string | null;

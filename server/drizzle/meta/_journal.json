@@ -113,6 +113,90 @@
       "when": 1776091146389,
       "tag": "0015_steady_sabra",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1778500000000,
+      "tag": "0016_series_sales_pricing",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1778600000000,
+      "tag": "0017_fawaterk_invoice_id_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1778700000000,
+      "tag": "0018_series_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1778800000000,
+      "tag": "0019_digital_products",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1778900000000,
+      "tag": "0020_masterclasses",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1779000000000,
+      "tag": "0021_certificates",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1779100000000,
+      "tag": "0022_digital_product_videos",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1779200000000,
+      "tag": "0023_masterclass_lesson_video_urls",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1779300000000,
+      "tag": "0024_module_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1779400000000,
+      "tag": "0025_series_recordings_access_policy",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786523995169,
+      "tag": "0026_event_recordings_series",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786525000000,
+      "tag": "0027_library_store_enabled",
+      "breakpoints": true
     }
   ]
 }

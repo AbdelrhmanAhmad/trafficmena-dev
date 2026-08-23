@@ -20,6 +20,10 @@ import {
   useSeriesDetail,
   useUpdateSeries,
 } from '@/features/series/hooks/useSeries';
+import {
+  mapSeriesFormToContentPayload,
+  type SeriesFormContentValues,
+} from '@/features/series/utils/seriesPricing';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -75,7 +79,7 @@ function SeriesDetailPage() {
           <div className="flex flex-col items-center justify-center py-12">
             <p className="text-lg text-muted-foreground">Series not found</p>
             <Button variant="outline" onClick={() => navigate('/admin/library')} className="mt-4">
-              Back to Library
+              Back to Recordings
             </Button>
           </div>
         </AppLayout>
@@ -83,23 +87,11 @@ function SeriesDetailPage() {
     );
   }
 
-  const handleUpdateSeries = async (values: {
-    title: string;
-    description?: string;
-    imageUrl?: string;
-    isPublished: boolean;
-    isPremium: boolean;
-  }) => {
+  const handleUpdateSeries = async (values: SeriesFormContentValues) => {
     try {
       await updateMutation.mutateAsync({
         id: series.id,
-        data: {
-          title: values.title,
-          description: values.description || null,
-          imageUrl: values.imageUrl || null,
-          isPublished: values.isPublished,
-          isPremium: values.isPremium,
-        },
+        data: mapSeriesFormToContentPayload(values),
       });
     } catch {
       // Mutation onError already reports a toast.
@@ -186,7 +178,8 @@ function SeriesDetailPage() {
               <CardHeader>
                 <CardTitle className="text-lg text-neutral-900">Series Details</CardTitle>
                 <CardDescription className="text-neutral-600">
-                  Update the series information.
+                  Update series content here. Price and publish-for-sale for track recordings are
+                  managed from the parent Track or Event edit page.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -206,7 +199,7 @@ function SeriesDetailPage() {
                   <div>
                     <CardTitle className="text-lg text-neutral-900">Assets in Series</CardTitle>
                     <CardDescription className="text-neutral-600">
-                      Library assets included in this series. Displayed to members in the order
+                      Recording assets included in this series. Displayed to members in the order
                       shown below.
                     </CardDescription>
                   </div>

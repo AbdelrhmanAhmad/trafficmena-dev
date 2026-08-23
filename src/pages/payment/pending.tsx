@@ -21,7 +21,9 @@ import {
 } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { rememberCheckoutReturn } from '@/shared/utils/paymentReturnContext';
 import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
+import { clearCommerceCartStorage } from '@/features/series/context/SeriesCartContext';
 
 function createCheckoutIdempotencyKey(scope: string): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -47,16 +49,20 @@ export default function PaymentPendingPage() {
     rawMeezaQrCode && rawMeezaQrCode.length <= maxMeezaQrLength ? rawMeezaQrCode : undefined;
   const isMeezaQrTooLarge = Boolean(rawMeezaQrCode && !meezaQrCode);
   const invoiceIdParam = searchParams.get('invoice_id');
-  const invoiceId = invoiceIdParam ? Number(invoiceIdParam) : (payment?.fawaterkInvoiceId ?? null);
+  const invoiceId = invoiceIdParam ?? payment?.fawaterkInvoiceId ?? null;
   const itemTypeParam = searchParams.get('item_type');
   const itemType: PaymentItemType | null =
-    itemTypeParam === 'event' || itemTypeParam === 'track' || itemTypeParam === 'subscription'
+    itemTypeParam === 'event' ||
+    itemTypeParam === 'track' ||
+    itemTypeParam === 'subscription' ||
+    itemTypeParam === 'order' ||
+    itemTypeParam === 'masterclass'
       ? itemTypeParam
       : null;
   const itemId = searchParams.get('item_id') ?? undefined;
   const methodIdParam = searchParams.get('method_id');
   const paymentMethodId = methodIdParam ? Number(methodIdParam) : null;
-  const isInvoiceIdValid = invoiceId !== null && !Number.isNaN(invoiceId);
+  const isInvoiceIdValid = invoiceId !== null && invoiceId.trim().length > 0;
   const isMethodIdValid = paymentMethodId !== null && !Number.isNaN(paymentMethodId);
   const { data: methods } = usePaymentMethods({ enabled: !!user });
   const selectedMethod =
@@ -138,9 +144,32 @@ export default function PaymentPendingPage() {
 
   useEffect(() => {
     if (verifyPayment.data?.status === 'paid' && isInvoiceIdValid && invoiceId !== null) {
-      navigate(`/payment/success?invoice_id=${invoiceId}`);
+      if (itemType === 'order') {
+        clearCommerceCartStorage();
+      }
+      const params = new URLSearchParams();
+      params.set('invoice_id', invoiceId);
+      if (paymentId) params.set('payment_id', paymentId);
+      navigate(`/payment/success?${params.toString()}`);
     }
-  }, [verifyPayment.data?.status, isInvoiceIdValid, invoiceId, navigate]);
+  }, [verifyPayment.data?.status, isInvoiceIdValid, invoiceId, paymentId, itemType, navigate]);
+
+  const autoVerifyAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (
+      !user ||
+      !isInvoiceIdValid ||
+      invoiceId === null ||
+      autoVerifyAttemptedRef.current ||
+      verifyPayment.isPending ||
+      verifyPayment.data?.status === 'paid'
+    ) {
+      return;
+    }
+
+    autoVerifyAttemptedRef.current = true;
+    verifyPayment.mutate({ invoiceId });
+  }, [user, isInvoiceIdValid, invoiceId, verifyPayment]);
 
   useEffect(() => {
     if (!paymentId || isInvoiceIdValid) {
@@ -175,7 +204,7 @@ export default function PaymentPendingPage() {
     verifyPayment.mutate({ invoiceId });
   };
 
-  const goToPending = (payload: { invoiceId?: number; paymentId?: string }) => {
+  const goToPending = (payload: { invoiceId?: string; paymentId?: string }) => {
     const params = new URLSearchParams();
     if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
     if (itemType) params.set('item_type', itemType);
@@ -195,6 +224,15 @@ export default function PaymentPendingPage() {
 
   const handleRequestNewCode = async () => {
     if (!canRequestNewCode || !itemType || !isMethodIdValid || !paymentMethodId) {
+      return;
+    }
+
+    if (itemType === 'order') {
+      toast({
+        title: 'Use series cart',
+        description: 'Return to your series cart to start a new checkout.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -224,6 +262,11 @@ export default function PaymentPendingPage() {
       }
 
       if (result.redirectUrl) {
+        rememberCheckoutReturn({
+          paymentId: result.paymentId,
+          invoiceId: result.invoiceId,
+          itemType,
+        });
         window.location.href = result.redirectUrl;
         return;
       }
@@ -243,7 +286,7 @@ export default function PaymentPendingPage() {
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
-        const invoiceId = error.extra?.invoiceId as number | undefined;
+        const invoiceId = error.extra?.invoiceId as string | undefined;
         const pendingPaymentId = error.extra?.paymentId as string | undefined;
         if (invoiceId || pendingPaymentId) {
           goToPending({ invoiceId, paymentId: pendingPaymentId });

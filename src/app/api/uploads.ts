@@ -1,6 +1,13 @@
 import { API_BASE, getCsrfHeaders } from './client';
 
-export type UploadScope = 'events' | 'library' | 'editor' | 'general';
+export type UploadScope =
+  | 'events'
+  | 'library'
+  | 'editor'
+  | 'general'
+  | 'digital-products'
+  | 'masterclasses'
+  | 'certificates';
 
 export type UploadFileOptions = {
   file: File;

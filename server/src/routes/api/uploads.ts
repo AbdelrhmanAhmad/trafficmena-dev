@@ -7,7 +7,7 @@ import { requireManager } from './utils.js';
 
 const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB cap for MVP
 
-type UploadScope = 'events' | 'library' | 'editor' | 'general';
+type UploadScope = 'events' | 'library' | 'editor' | 'general' | 'digital-products' | 'masterclasses' | 'certificates';
 
 type ScopeConfig = {
   directory: string;
@@ -51,6 +51,39 @@ const scopeConfig: Record<UploadScope, ScopeConfig> = {
       'image/avif',
     ],
     allowedExtensions: ['pdf', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'webp', 'avif'],
+  },
+  'digital-products': {
+    directory: 'digital-products',
+    allowedMimeTypes: [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'text/markdown',
+      'text/html',
+      'text/csv',
+    ],
+    allowedExtensions: ['xls', 'xlsx', 'ppt', 'pptx', 'md', 'markdown', 'html', 'htm', 'txt', 'csv'],
+  },
+  masterclasses: {
+    directory: 'masterclasses',
+    allowedMimeTypes: [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain',
+      'text/markdown',
+      'text/html',
+      'text/csv',
+    ],
+    allowedExtensions: ['xls', 'xlsx', 'ppt', 'pptx', 'md', 'markdown', 'html', 'htm', 'txt', 'csv'],
+  },
+  certificates: {
+    directory: 'certificates',
+    allowedMimeTypes: ['image/jpeg', 'image/png'],
+    allowedExtensions: ['jpg', 'jpeg', 'png'],
   },
 };
 
@@ -111,6 +144,10 @@ async function validateFileSignature(file: File, extension: string) {
 }
 
 async function handleUploadRequest(c: Context) {
+
+
+
+
   const staff = await requireManager(c);
   if ('response' in staff) return staff.response;
 
@@ -125,6 +162,9 @@ async function handleUploadRequest(c: Context) {
       503,
     );
   }
+
+  const zone = storageZone;
+  const accessKey = storageAccessKey;
 
   const body = await c.req.parseBody();
   const scope = resolveScopeName(body.scope ?? c.req.query('scope'));
@@ -205,10 +245,10 @@ async function handleUploadRequest(c: Context) {
     extension || 'bin'
   }`;
 
-  const response = await fetch(`https://storage.bunnycdn.com/${storageZone}/${storagePath}`, {
+  const response = await fetch(`https://storage.bunnycdn.com/${zone}/${storagePath}`, {
     method: 'PUT',
     headers: {
-      AccessKey: storageAccessKey,
+      AccessKey: accessKey,
       'Content-Type': file.type || 'application/octet-stream',
       'Content-Length': buffer.byteLength.toString(),
     },
@@ -222,6 +262,20 @@ async function handleUploadRequest(c: Context) {
       scope,
       error: text,
     });
+
+    if (response.status === 401) {
+      return c.json(
+        {
+          error: {
+            code: 'UPLOAD_UNAUTHORIZED',
+            message:
+              'Bunny storage rejected the upload (401). Check BUNNY_STORAGE_ZONE and BUNNY_STORAGE_ACCESS_KEY in server/.env — use the Storage Zone password, not the read-only key.',
+          },
+        },
+        502,
+      );
+    }
+
     return c.json(
       {
         error: {

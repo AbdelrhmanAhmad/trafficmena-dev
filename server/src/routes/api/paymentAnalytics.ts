@@ -1,6 +1,6 @@
 import { and, eq, ne, sql } from 'drizzle-orm';
 import { db } from '../../db/client.js';
-import { events, payments, promoCodes, tracks } from '../../db/schema/index.js';
+import { events, masterclasses, orderItems, orders, payments, promoCodes, series, tracks } from '../../db/schema/index.js';
 import {
   buildVerifiedPaymentAnalytics,
   getDefaultAnalyticsItemCategory,
@@ -27,6 +27,35 @@ async function loadAnalyticsItemMetadata(
     };
   }
 
+  if (payment.itemType === 'order') {
+    const [orderRecord] = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(eq(orders.id, payment.itemId))
+      .limit(1);
+
+    if (!orderRecord) {
+      return {
+        itemName: 'Series order',
+        itemCategory: 'Series',
+      };
+    }
+
+    const lineItems = await db
+      .select({ title: series.title })
+      .from(orderItems)
+      .innerJoin(series, eq(series.id, orderItems.seriesId))
+      .where(eq(orderItems.orderId, orderRecord.id));
+
+    return {
+      itemName:
+        lineItems.length === 1
+          ? lineItems[0].title
+          : `Series bundle (${lineItems.length} items)`,
+      itemCategory: 'Series',
+    };
+  }
+
   if (payment.itemType === 'event') {
     const [eventRecord] = await db
       .select({ title: events.title, eventType: events.eventType })
@@ -37,6 +66,19 @@ async function loadAnalyticsItemMetadata(
     return {
       itemName: eventRecord?.title ?? '',
       itemCategory: eventRecord?.eventType ?? getDefaultAnalyticsItemCategory(payment.itemType),
+    };
+  }
+
+  if (payment.itemType === 'masterclass') {
+    const [masterclassRecord] = await db
+      .select({ title: masterclasses.title })
+      .from(masterclasses)
+      .where(eq(masterclasses.id, payment.itemId))
+      .limit(1);
+
+    return {
+      itemName: masterclassRecord?.title ?? '',
+      itemCategory: getDefaultAnalyticsItemCategory(payment.itemType),
     };
   }
 

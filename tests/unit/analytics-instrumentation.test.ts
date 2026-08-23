@@ -227,8 +227,9 @@ describe('calculator analytics gating', () => {
 });
 
 describe('discovery page gating', () => {
-  it('tracks canonical list discovery only on the public meetups listing page', () => {
+  it('tracks canonical list discovery on public meetups and tracks listing pages', () => {
     assert.equal(isCanonicalDiscoveryListPath('/meetups'), true);
+    assert.equal(isCanonicalDiscoveryListPath('/tracks'), true);
     assert.equal(isCanonicalDiscoveryListPath('/'), false);
     assert.equal(isCanonicalDiscoveryListPath('/dashboard/meetups'), false);
   });

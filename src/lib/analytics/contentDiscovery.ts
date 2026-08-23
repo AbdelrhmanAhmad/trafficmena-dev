@@ -82,7 +82,7 @@ export function buildTrackDiscoveryItem(
 }
 
 export function isCanonicalDiscoveryListPath(pathname: string): boolean {
-  return pathname === '/meetups';
+  return pathname === '/meetups' || pathname === '/tracks';
 }
 
 export function useTrackedItemListView(

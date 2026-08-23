@@ -24,6 +24,7 @@ import {
 } from '@/shared/components/ui/dialog';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { rememberCheckoutReturn } from '@/shared/utils/paymentReturnContext';
 import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
 
@@ -140,7 +141,7 @@ export function PaymentCheckoutDialog({
   }, [open, pricePreview, itemType, itemId, itemName, itemCategory]);
 
   const goToPending = (payload: {
-    invoiceId?: number;
+    invoiceId?: string;
     paymentMethodId?: number | null;
     paymentId?: string;
   }) => {
@@ -218,6 +219,11 @@ export function PaymentCheckoutDialog({
       }
 
       if (result.redirectUrl) {
+        rememberCheckoutReturn({
+          paymentId: result.paymentId,
+          invoiceId: result.invoiceId,
+          itemType,
+        });
         window.location.href = result.redirectUrl;
         return;
       }
@@ -247,7 +253,7 @@ export function PaymentCheckoutDialog({
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
-        const invoiceId = error.extra?.invoiceId as number | undefined;
+        const invoiceId = error.extra?.invoiceId as string | undefined;
         const fawryCode = error.extra?.fawryCode as string | undefined;
         const meezaReference = error.extra?.meezaReference as string | undefined;
         const meezaQrCode = error.extra?.meezaQrCode as string | undefined;

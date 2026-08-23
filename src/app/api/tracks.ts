@@ -39,8 +39,56 @@ type ApiTrackEvent = {
   assetCount: number;
 };
 
+export type RecordingsSeriesSummaryRecord = {
+  id: string;
+  title: string;
+  is_published: boolean;
+  sales_enabled: boolean;
+  price_in_cents: number | null;
+  recordings_access_policy: 'free_for_prior_buyers' | 'everyone_pays';
+  asset_count: number;
+  event_asset_count: number | null;
+  is_sellable: boolean;
+  has_access?: boolean;
+  has_purchased?: boolean;
+};
+
+type ApiRecordingsSeriesSummary = {
+  id: string;
+  title: string;
+  isPublished: boolean;
+  salesEnabled: boolean;
+  priceInCents: number | null;
+  recordingsAccessPolicy: 'free_for_prior_buyers' | 'everyone_pays';
+  assetCount: number;
+  eventAssetCount: number | null;
+  isSellable: boolean;
+  hasAccess?: boolean;
+  hasPurchased?: boolean;
+};
+
+export function mapRecordingsSeriesSummary(
+  api: ApiRecordingsSeriesSummary | null | undefined,
+): RecordingsSeriesSummaryRecord | null {
+  if (!api) return null;
+  return {
+    id: api.id,
+    title: api.title,
+    is_published: api.isPublished,
+    sales_enabled: api.salesEnabled,
+    price_in_cents: api.priceInCents,
+    recordings_access_policy: api.recordingsAccessPolicy ?? 'free_for_prior_buyers',
+    asset_count: api.assetCount,
+    event_asset_count: api.eventAssetCount ?? null,
+    is_sellable: api.isSellable,
+    has_access: api.hasAccess,
+    has_purchased: api.hasPurchased,
+  };
+}
+
 type ApiTrackDetail = ApiTrack & {
   events: ApiTrackEvent[];
+  recordingsSeries?: ApiRecordingsSeriesSummary | null;
 };
 
 // Frontend types (snake_case for consistency)
@@ -91,6 +139,7 @@ export type TrackEventRecord = {
 export type TrackDetailRecord = TrackRecord & {
   updated_at: string;
   events: TrackEventRecord[];
+  recordings_series: RecordingsSeriesSummaryRecord | null;
 };
 
 // Mappers
@@ -132,6 +181,7 @@ const mapTrackDetail = (track: ApiTrackDetail): TrackDetailRecord => ({
   ...mapTrack(track),
   updated_at: track.updatedAt ?? track.createdAt,
   events: (track.events ?? []).map(mapTrackEvent),
+  recordings_series: mapRecordingsSeriesSummary(track.recordingsSeries),
 });
 
 // Params and payloads
@@ -257,7 +307,7 @@ export interface TrackAttendee {
   lastName: string | null;
   phoneNumber: string | null;
   bookedAt: string;
-  invoiceId: number | null;
+  invoiceId: string | null;
   invoiceNumber: string | null;
   source: TrackEnrollmentSource;
   reference: string | null;
@@ -361,6 +411,7 @@ export interface PublicTrackDetailRecord {
   price_in_cents: number | null;
   location: string | null;
   location_url: string | null;
+  recordings_series: RecordingsSeriesSummaryRecord | null;
 }
 
 export interface PublicTrackEventRecord {
@@ -449,6 +500,7 @@ export async function fetchPublicTrackById(
     priceInCents: number | null;
     location: string | null;
     locationUrl: string | null;
+    recordingsSeries?: ApiRecordingsSeriesSummary | null;
   };
 
   type ApiPublicTrackEvent = {
@@ -497,6 +549,7 @@ export async function fetchPublicTrackById(
       price_in_cents: data.track.priceInCents,
       location: data.track.location,
       location_url: data.track.locationUrl,
+      recordings_series: mapRecordingsSeriesSummary(data.track.recordingsSeries),
     },
     events: data.events.map((event) => ({
       id: event.id,

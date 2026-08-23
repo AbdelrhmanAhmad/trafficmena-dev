@@ -1,0 +1,74 @@
+import type { CreateSeriesPayload } from '@/app/api/series';
+import type { Series } from '../types';
+
+export type SeriesFormContentValues = {
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  isPublished: boolean;
+  isPremium: boolean;
+};
+
+/** Admin library Series form — content only; price/sales live on Track/Event publish card. */
+export function mapSeriesFormToContentPayload(values: SeriesFormContentValues): CreateSeriesPayload {
+  return {
+    title: values.title,
+    description: values.description || null,
+    imageUrl: values.imageUrl || null,
+    isPublished: values.isPublished,
+    isPremium: values.isPremium,
+  };
+}
+
+export function formatSeriesPriceLabel(priceInCents: number | null | undefined): string {
+  if (priceInCents == null || priceInCents === 0) {
+    return 'Free';
+  }
+
+  const hasFraction = priceInCents % 100 !== 0;
+  return `${(priceInCents / 100).toFixed(hasFraction ? 2 : 0)} EGP`;
+}
+
+export function shouldShowSeriesPrice(
+  series: Pick<Series, 'sales_enabled' | 'price_in_cents'>,
+  options?: { isStaff?: boolean },
+): boolean {
+  if (options?.isStaff) {
+    return series.price_in_cents != null || series.sales_enabled;
+  }
+
+  return series.sales_enabled && (series.price_in_cents ?? 0) > 0;
+}
+
+export function isSeriesPurchasable(
+  series: Pick<Series, 'sales_enabled' | 'price_in_cents' | 'asset_count' | 'is_sellable'>,
+): boolean {
+  if (series.is_sellable !== undefined) {
+    return series.is_sellable;
+  }
+
+  return (
+    series.sales_enabled &&
+    (series.price_in_cents ?? 0) > 0 &&
+    (series.asset_count ?? 0) > 0
+  );
+}
+
+/** Show buy/cart actions: sellable, not already purchased, and no direct series grant (track access is OK). */
+export function canShowSeriesPurchaseActions(
+  series: Pick<
+    Series,
+    | 'sales_enabled'
+    | 'price_in_cents'
+    | 'asset_count'
+    | 'is_sellable'
+    | 'has_purchased'
+    | 'has_series_grant'
+  >,
+): boolean {
+  if (series.has_purchased || series.has_series_grant) {
+    return false;
+  }
+
+  return isSeriesPurchasable(series);
+}

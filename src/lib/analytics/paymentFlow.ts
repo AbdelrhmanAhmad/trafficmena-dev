@@ -143,6 +143,13 @@ export function isVerifiedPaymentAnalyticsReady(
     return typeof payload.priorPaidPurchases === 'number';
   }
 
+  if (payload.itemType === 'order' || payload.itemType === 'masterclass') {
+    if (payload.itemType === 'masterclass' && !payload.itemId?.trim()) {
+      return false;
+    }
+    return typeof payload.priorNonSubscriptionPurchases === 'number';
+  }
+
   if (payload.itemType !== 'event' && payload.itemType !== 'track') {
     return false;
   }

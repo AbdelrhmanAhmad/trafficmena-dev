@@ -93,7 +93,7 @@ export async function reconcileRecentAtRiskPayments(): Promise<ReconciliationSum
     summary.scanned += candidates.length;
 
     const withInvoice = candidates.filter(
-      (candidate): candidate is { paymentId: string; invoiceId: number; createdAt: Date } =>
+      (candidate): candidate is { paymentId: string; invoiceId: string; createdAt: Date } =>
         candidate.invoiceId !== null,
     );
     const reconciliationTasks = withInvoice.map(async (candidate) => {

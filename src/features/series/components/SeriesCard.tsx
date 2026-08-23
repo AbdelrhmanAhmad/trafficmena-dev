@@ -2,7 +2,12 @@ import DOMPurify from 'dompurify';
 import { BookOpen, Edit, FolderOpen, Lock, Trash2 } from 'lucide-react';
 import type React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SeriesBuyActions } from '@/features/series/components/SeriesBuyActions';
+import SeriesPriceBadge from '@/features/series/components/SeriesPriceBadge';
+import SeriesPurchasedBadge from '@/features/series/components/SeriesPurchasedBadge';
+import { canShowSeriesPurchaseActions } from '@/features/series/utils/seriesPricing';
 import { Button } from '@/shared/components/ui/button';
+import { Switch } from '@/shared/components/ui/switch';
 import {
   Card,
   CardContent,
@@ -16,21 +21,30 @@ interface SeriesCardProps {
   series: Series;
   onEdit?: (seriesId: string) => void;
   onDelete?: (seriesId: string) => void;
+  onSalesToggle?: (seriesId: string, salesEnabled: boolean) => void;
+  isSalesTogglePending?: boolean;
   canManage?: boolean;
   canDelete?: boolean;
   basePath?: string;
+  hideSalesControls?: boolean;
+  hidePurchaseActions?: boolean;
 }
 
 const SeriesCard: React.FC<SeriesCardProps> = ({
   series,
   onEdit,
   onDelete,
+  onSalesToggle,
+  isSalesTogglePending = false,
   canManage = false,
   canDelete = false,
   basePath = '/dashboard/library/series',
+  hideSalesControls = false,
+  hidePurchaseActions = false,
 }) => {
   const navigate = useNavigate();
   const isPremium = series.is_premium ?? false;
+  const showBuyActions = !canManage && !hidePurchaseActions && canShowSeriesPurchaseActions(series);
 
   const sanitizeConfig = {
     ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u'],
@@ -141,14 +155,42 @@ const SeriesCard: React.FC<SeriesCardProps> = ({
         </CardHeader>
 
         <CardContent className="mt-auto border-t border-neutral-200/60 pt-4">
-          <div className="flex items-center justify-between text-xs text-neutral-500">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-3 text-xs text-neutral-500">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="flex items-center gap-1">
                 <BookOpen className="h-3.5 w-3.5" />
                 {series.asset_count} {series.asset_count === 1 ? 'item' : 'items'}
               </span>
+              {series.has_purchased && <SeriesPurchasedBadge />}
+              {!hideSalesControls && !hidePurchaseActions && (
+                <SeriesPriceBadge series={series} isStaff={canManage} />
+              )}
             </div>
+            {canManage && onSalesToggle && !hideSalesControls && (
+              <div
+                className="flex items-center gap-2"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <span className="text-[11px] font-medium text-neutral-600">Sales</span>
+                <Switch
+                  checked={series.sales_enabled}
+                  disabled={isSalesTogglePending}
+                  onCheckedChange={(checked) => onSalesToggle(series.id, checked)}
+                  aria-label={`Toggle sales for ${series.title}`}
+                />
+              </div>
+            )}
           </div>
+          {showBuyActions && (
+            <div
+              className="mt-4 border-t border-neutral-200/60 pt-4"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <SeriesBuyActions series={series} layout="stack" />
+            </div>
+          )}
         </CardContent>
       </div>
     </Card>

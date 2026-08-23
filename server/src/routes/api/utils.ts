@@ -166,6 +166,13 @@ export async function requireAdmin(c: Context): Promise<RoleGuardSuccess | RoleG
   return requireRole(c, ['owner', 'admin'], { forbiddenMessage: 'Admin privileges required.' });
 }
 
+/** Delete operations on Phase 1 content — Admin/Owner only (not Manager). */
+export async function requireContentDelete(
+  c: Context,
+): Promise<RoleGuardSuccess | RoleGuardFailure> {
+  return requireAdmin(c);
+}
+
 export async function requireManager(c: Context): Promise<RoleGuardSuccess | RoleGuardFailure> {
   return requireRole(c, ['owner', 'admin', 'manager'], {
     forbiddenMessage: 'Manager or admin privileges required.',

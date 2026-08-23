@@ -57,6 +57,9 @@ export function useVerifyPayment() {
         queryClient.invalidateQueries({ queryKey: ['current-subscription'] });
         queryClient.invalidateQueries({ queryKey: ['events'] });
         queryClient.invalidateQueries({ queryKey: ['tracks'] });
+        queryClient.invalidateQueries({ queryKey: ['series'] });
+        queryClient.invalidateQueries({ queryKey: ['series-store'] });
+        queryClient.invalidateQueries({ queryKey: ['digital-products'] });
         // Refresh user aggregates so global_variables reflects updated totals
         queryClient.invalidateQueries({ queryKey: currentUserQueryKey });
       }

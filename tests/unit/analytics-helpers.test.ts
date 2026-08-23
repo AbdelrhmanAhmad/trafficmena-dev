@@ -15,6 +15,7 @@ describe('getPageType', () => {
     assert.equal(getPageType('/about'), 'about');
     assert.equal(getPageType('/meetups'), 'event_list');
     assert.equal(getPageType('/meetups/abc-123'), 'event_detail');
+    assert.equal(getPageType('/tracks'), 'track_list');
     assert.equal(getPageType('/tracks/trk-456'), 'track_detail');
     assert.equal(getPageType('/subscribe'), 'subscribe_landing');
     assert.equal(getPageType('/dashboard/subscribe'), 'subscribe_landing');

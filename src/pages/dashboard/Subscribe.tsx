@@ -17,6 +17,7 @@ import {
 } from '@/features/subscribe/components';
 import { FINAL_CTA_COPY, HERO_BENEFITS, PRICING } from '@/features/subscribe/content';
 import { trackBeginCheckout, trackSelectPaymentMethod } from '@/lib/analytics/events';
+import { rememberCheckoutReturn } from '@/shared/utils/paymentReturnContext';
 import {
   buildCheckoutAnalyticsItem,
   getAmountCentsFromUnits,
@@ -338,7 +339,7 @@ function SubscribePaymentView() {
   }, [pricePreview, selectedMethodId, subscriptionBasePriceCents]);
 
   const goToPending = (payload: {
-    invoiceId?: number;
+    invoiceId?: string;
     paymentMethodId?: number | null;
     paymentId?: string;
   }) => {
@@ -405,6 +406,11 @@ function SubscribePaymentView() {
       }
 
       if (result.redirectUrl) {
+        rememberCheckoutReturn({
+          paymentId: result.paymentId,
+          invoiceId: result.invoiceId,
+          itemType: 'subscription',
+        });
         window.location.href = result.redirectUrl;
         return;
       }
@@ -434,7 +440,7 @@ function SubscribePaymentView() {
       }
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
-        const invoiceId = error.extra?.invoiceId as number | undefined;
+        const invoiceId = error.extra?.invoiceId as string | undefined;
         const fawryCode = error.extra?.fawryCode as string | undefined;
         const meezaReference = error.extra?.meezaReference as string | undefined;
         const meezaQrCode = error.extra?.meezaQrCode as string | undefined;

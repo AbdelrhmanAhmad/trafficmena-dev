@@ -1,4 +1,4 @@
-type PaymentItemType = 'event' | 'track' | 'subscription';
+type PaymentItemType = 'event' | 'track' | 'subscription' | 'order' | 'masterclass';
 
 export type VerifiedPaymentAnalyticsInput = {
   amountCents: number;
@@ -40,13 +40,22 @@ export function getDefaultAnalyticsItemName(itemType: PaymentItemType): string {
   if (itemType === 'subscription') {
     return 'TrafficMENA Annual Subscription';
   }
+  if (itemType === 'order') {
+    return 'Series order';
+  }
 
   return '';
 }
 
 export function getDefaultAnalyticsItemCategory(itemType: PaymentItemType): string {
+  if (itemType === 'order') {
+    return 'Series';
+  }
   if (itemType === 'track') {
     return 'Track';
+  }
+  if (itemType === 'masterclass') {
+    return 'Masterclass';
   }
 
   if (itemType === 'subscription') {

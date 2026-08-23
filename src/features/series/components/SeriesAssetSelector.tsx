@@ -98,7 +98,7 @@ const SeriesAssetSelector: React.FC<SeriesAssetSelectorProps> = ({
         <DialogHeader>
           <DialogTitle>Add Assets to Series</DialogTitle>
           <DialogDescription>
-            Select library assets to include in this series. Only assets not already in the series
+            Select recording assets to include in this series. Only assets not already in the series
             are shown.
           </DialogDescription>
         </DialogHeader>

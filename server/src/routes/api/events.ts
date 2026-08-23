@@ -19,6 +19,12 @@ import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
+import { loadRecordingsSeriesForTrack } from '../../services/trackRecordingsSeries.js';
+import {
+  createEventRecordingsSeriesInTx,
+  ensureEventRecordingsSeries,
+  loadRecordingsSeriesForEventDetail,
+} from '../../services/eventRecordingsSeries.js';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -138,7 +144,9 @@ const baseEventSchema = z.object({
   priceInCents: priceInCentsSchema,
 });
 
-const createEventSchema = baseEventSchema;
+const createEventSchema = baseEventSchema.extend({
+  createRecordingsSeries: z.boolean().optional().default(false),
+});
 const updateEventSchema = baseEventSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
@@ -317,6 +325,10 @@ export function registerEventRoutes(app: Hono) {
           return c.json({ error: { code: 'EVENT_NOT_FOUND', message: 'Event not found' } }, 404);
         }
 
+        if (!trackInfo && isStaff) {
+          await ensureEventRecordingsSeries(eventId, event.title);
+        }
+
         // Check if user has booked the track (for track events)
         let trackBooked = false;
         if (trackInfo && viewerId) {
@@ -346,6 +358,17 @@ export function registerEventRoutes(app: Hono) {
         const canAccessMeetingLink = attending || trackBooked || isStaff;
         const locationUrl = canAccessMeetingLink ? event.locationUrl : null;
 
+        const recordingsSeries = await loadRecordingsSeriesForEventDetail(
+          eventId,
+          trackInfo?.id ?? null,
+          {
+            userId: viewerId ?? null,
+            isStaff: Boolean(isStaff),
+            userHasTrackBooking: trackBooked,
+            userHasTrackEventAttendance: attending,
+          },
+        );
+
         return c.json({
           ...event,
           attendeeCount,
@@ -353,6 +376,7 @@ export function registerEventRoutes(app: Hono) {
           registrationStatus,
           meetingLink: canAccessMeetingLink ? event.meetingLink : null,
           locationUrl,
+          recordingsSeries,
           trackInfo: trackInfo
             ? {
                 id: trackInfo.id,
@@ -511,13 +535,25 @@ export function registerEventRoutes(app: Hono) {
               priceInCents: events.priceInCents,
             });
 
-          await tx.insert(libraryAssets).values({
-            title: `${payload.title} - Recording`,
-            description: `Recording from ${payload.title}`,
-            fileType: 'Video',
-            eventId: event.id,
-            isPublic: false,
-          });
+          const [recordingAsset] = await tx
+            .insert(libraryAssets)
+            .values({
+              title: `${payload.title} - Recording`,
+              description: `Recording from ${payload.title}`,
+              fileType: 'Video',
+              eventId: event.id,
+              isPublic: false,
+            })
+            .returning({ id: libraryAssets.id });
+
+          if (payload.createRecordingsSeries) {
+            await createEventRecordingsSeriesInTx(
+              tx,
+              event.id,
+              payload.title,
+              recordingAsset.id,
+            );
+          }
 
           return event;
         });

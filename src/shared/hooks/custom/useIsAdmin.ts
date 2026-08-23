@@ -5,6 +5,7 @@ export const useIsAdmin = () => {
 
   return {
     isAdmin: hasRankAtLeast('admin'),
+    isOwner: hasRankAtLeast('owner'),
     loading,
   };
 };

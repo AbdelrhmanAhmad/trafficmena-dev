@@ -10,9 +10,16 @@ export interface ApiSeries {
   sortOrder: number;
   isPublished: boolean;
   isPremium: boolean;
+  priceInCents: number | null;
+  salesEnabled: boolean;
+  recordingsAccessPolicy?: 'free_for_prior_buyers' | 'everyone_pays';
   createdAt: string;
   updatedAt?: string;
   assetCount: number;
+  isSellable?: boolean;
+  hasPurchased?: boolean;
+  hasSeriesGrant?: boolean;
+  hasAccess?: boolean;
 }
 
 type ApiSeriesAsset = {
@@ -37,6 +44,13 @@ type ApiSeriesAsset = {
 type ApiSeriesDetail = ApiSeries & {
   assets: ApiSeriesAsset[];
   hasAccess?: boolean;
+  hasPurchased?: boolean;
+  hasSeriesGrant?: boolean;
+  isSellable?: boolean;
+};
+
+export type ApiStoreSeriesDetail = ApiSeriesDetail & {
+  isAuthenticated?: boolean;
 };
 
 // Frontend types (snake_case for consistency)
@@ -48,7 +62,14 @@ export interface SeriesRecord {
   sort_order: number;
   is_published: boolean;
   is_premium: boolean;
+  price_in_cents: number | null;
+  sales_enabled: boolean;
+  recordings_access_policy: 'free_for_prior_buyers' | 'everyone_pays';
   asset_count: number;
+  is_sellable?: boolean;
+  has_purchased?: boolean;
+  has_series_grant?: boolean;
+  has_access?: boolean;
   created_at: Date;
 }
 
@@ -75,6 +96,13 @@ export type SeriesDetailRecord = SeriesRecord & {
   updated_at: string;
   assets: SeriesAssetRecord[];
   has_access: boolean;
+  has_purchased?: boolean;
+  has_series_grant?: boolean;
+  is_sellable?: boolean;
+};
+
+export type StoreSeriesDetailRecord = SeriesDetailRecord & {
+  is_authenticated?: boolean;
 };
 
 // Mappers
@@ -86,7 +114,14 @@ const mapSeries = (api: ApiSeries): SeriesRecord => ({
   sort_order: api.sortOrder,
   is_published: api.isPublished,
   is_premium: api.isPremium ?? false,
+  price_in_cents: api.priceInCents ?? null,
+  sales_enabled: api.salesEnabled ?? false,
+  recordings_access_policy: api.recordingsAccessPolicy ?? 'free_for_prior_buyers',
   asset_count: api.assetCount ?? 0,
+  is_sellable: api.isSellable,
+  has_purchased: api.hasPurchased,
+  has_series_grant: api.hasSeriesGrant,
+  has_access: api.hasAccess,
   created_at: new Date(api.createdAt),
 });
 
@@ -114,6 +149,14 @@ const mapSeriesDetail = (series: ApiSeriesDetail): SeriesDetailRecord => ({
   updated_at: series.updatedAt ?? series.createdAt,
   assets: (series.assets ?? []).map(mapSeriesAsset),
   has_access: series.hasAccess ?? true,
+  has_purchased: series.hasPurchased,
+  has_series_grant: series.hasSeriesGrant,
+  is_sellable: series.isSellable,
+});
+
+const mapStoreSeriesDetail = (series: ApiStoreSeriesDetail): StoreSeriesDetailRecord => ({
+  ...mapSeriesDetail(series),
+  is_authenticated: series.isAuthenticated,
 });
 
 // Params and payloads
@@ -121,6 +164,7 @@ export type FetchSeriesParams = {
   page?: number;
   pageSize?: number;
   search?: string;
+  accessibleOnly?: boolean;
 };
 
 export type CreateSeriesPayload = {
@@ -129,6 +173,9 @@ export type CreateSeriesPayload = {
   imageUrl?: string | null;
   isPublished?: boolean;
   isPremium?: boolean;
+  priceInCents?: number | null;
+  salesEnabled?: boolean;
+  recordingsAccessPolicy?: 'free_for_prior_buyers' | 'everyone_pays';
 };
 
 export type UpdateSeriesPayload = Partial<CreateSeriesPayload> & {
@@ -144,6 +191,7 @@ export async function fetchSeries(
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
   if (params.search) query.set('search', params.search);
+  if (params.accessibleOnly) query.set('accessibleOnly', 'true');
 
   const data = await fetchJson<{
     items: ApiSeries[];
@@ -156,6 +204,34 @@ export async function fetchSeries(
     items: (data.items ?? []).map(mapSeries),
     pagination: data.pagination,
   };
+}
+
+export async function fetchStoreSeries(
+  params: FetchSeriesParams = {},
+): Promise<PaginatedResult<SeriesRecord>> {
+  const query = new URLSearchParams();
+  if (params.page) query.set('page', String(params.page));
+  if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
+  if (params.search) query.set('search', params.search);
+
+  const data = await fetchJson<{
+    items: ApiSeries[];
+    pagination: PaginatedResult<ApiSeries>['pagination'];
+  }>(`${API_BASE}/series/store${query.toString() ? `?${query.toString()}` : ''}`, {
+    method: 'GET',
+  });
+
+  return {
+    items: (data.items ?? []).map(mapSeries),
+    pagination: data.pagination,
+  };
+}
+
+export async function fetchStoreSeriesById(id: string): Promise<StoreSeriesDetailRecord> {
+  const data = await fetchJson<ApiStoreSeriesDetail>(`${API_BASE}/series/store/${id}`, {
+    method: 'GET',
+  });
+  return mapStoreSeriesDetail(data);
 }
 
 export async function fetchSeriesById(id: string): Promise<SeriesDetailRecord> {

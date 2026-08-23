@@ -26,7 +26,7 @@ export function InviteOnlySettingsCard({ canEdit }: InviteOnlySettingsCardProps)
     if (!canEdit) return;
 
     updateAdminSettings.mutate(
-      { inviteOnly: checked, eventMode: eventModeEnabled },
+      { inviteOnly: checked },
       {
         onError: (error) => {
           const message =
@@ -53,7 +53,7 @@ export function InviteOnlySettingsCard({ canEdit }: InviteOnlySettingsCardProps)
     if (!canEdit) return;
 
     updateAdminSettings.mutate(
-      { inviteOnly: inviteOnlyEnabled, eventMode: checked },
+      { eventMode: checked },
       {
         onError: (error) => {
           const message =

@@ -14,6 +14,7 @@ import type React from 'react';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDeleteLibraryAsset, useLibraryAsset } from '@/features/library/hooks/useLibrary';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
@@ -38,6 +39,7 @@ const AdminLibraryItemDetail: React.FC = () => {
   const navigate = useNavigate();
   const { data, isLoading, error } = useLibraryAsset(id ?? '');
   const deleteMutation = useDeleteLibraryAsset();
+  const { canDeleteContent } = useRolePermissions();
   const item = data ?? null;
 
   useEffect(() => {
@@ -153,7 +155,7 @@ const AdminLibraryItemDetail: React.FC = () => {
           </p>
           <Button onClick={() => navigate('/admin/library')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Library Management
+            Back to Recordings   Management
           </Button>
         </div>
       </AppLayout>
@@ -168,7 +170,7 @@ const AdminLibraryItemDetail: React.FC = () => {
           <p className="text-gray-600 mb-4">The requested library item could not be found.</p>
           <Button onClick={() => navigate('/admin/library')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Library Management
+            Back to Recordings Management
           </Button>
         </div>
       </AppLayout>
@@ -186,7 +188,7 @@ const AdminLibraryItemDetail: React.FC = () => {
             className="-ml-2 hover:bg-gray-100"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Library Management
+            Back to Recordings Management
           </Button>
 
           <div className="flex gap-2">
@@ -194,14 +196,16 @@ const AdminLibraryItemDetail: React.FC = () => {
               <Edit2 className="mr-2 h-4 w-4" />
               Edit
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
+            {canDeleteContent && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
           </div>
         </div>
 

@@ -2,6 +2,10 @@ import { ArrowLeft, FolderPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SeriesForm } from '@/features/series';
 import { useCreateSeries } from '@/features/series/hooks/useSeries';
+import {
+  mapSeriesFormToContentPayload,
+  type SeriesFormContentValues,
+} from '@/features/series/utils/seriesPricing';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
@@ -17,20 +21,8 @@ function NewSeriesPage() {
   const navigate = useNavigate();
   const createMutation = useCreateSeries();
 
-  const handleSubmit = async (values: {
-    title: string;
-    description?: string;
-    imageUrl?: string;
-    isPublished: boolean;
-    isPremium: boolean;
-  }) => {
-    await createMutation.mutateAsync({
-      title: values.title,
-      description: values.description || null,
-      imageUrl: values.imageUrl || null,
-      isPublished: values.isPublished,
-      isPremium: values.isPremium,
-    });
+  const handleSubmit = async (values: SeriesFormContentValues) => {
+    await createMutation.mutateAsync(mapSeriesFormToContentPayload(values));
     navigate('/admin/library?tab=series');
   };
 

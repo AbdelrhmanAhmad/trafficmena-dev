@@ -59,7 +59,8 @@ export default defineConfig({
   dialect: 'postgresql',
   // drizzle-kit expects `out` to be a relative path (it prefixes with `./` internally)
   out: 'drizzle',
-  schema: resolve(currentDir, 'src/db/schema'),
+  // schema: resolve(currentDir, 'src/db/schema'), 
+   schema: './src/db/schema/index.ts',
   dbCredentials: {
     url: adminUrl ?? appUrl ?? '',
   },

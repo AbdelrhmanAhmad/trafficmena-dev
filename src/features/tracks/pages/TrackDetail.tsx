@@ -17,6 +17,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { PublicTrackEventRecord } from '@/app/api/tracks';
 import { usePricePreview } from '@/app/hooks/usePayments';
 import { trackViewItem } from '@/lib/analytics/events';
+import { formatSeriesPriceLabel } from '@/features/series/utils/seriesPricing';
+import { resolveRecordingsNavigationPath } from '@/features/series/utils/recordingsNavigation';
 import { centsToUnits } from '@/lib/analytics/helpers';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
@@ -226,6 +228,14 @@ const TrackDetail: React.FC = () => {
     return { canBook: true, message: null };
   }, [track]);
 
+  const recordingsSellableAfterBookingEnded = useMemo(() => {
+    if (!track) return false;
+    return (
+      bookingStatus.message === 'Booking period has ended.' &&
+      Boolean(track.recordings_series?.is_sellable)
+    );
+  }, [bookingStatus.message, track]);
+
   useEffect(() => {
     if (!id || !track || !user || !needsPayment) return;
     const checkoutParam = searchParams.get('checkout');
@@ -307,6 +317,22 @@ const TrackDetail: React.FC = () => {
 
   const handleRequestNewCode = () => {
     setShowPaymentDialog(true);
+  };
+
+  const recordingsPriceCents = track?.recordings_series?.price_in_cents ?? null;
+  const showRecordingsPrice =
+    recordingsSellableAfterBookingEnded &&
+    recordingsPriceCents != null &&
+    recordingsPriceCents >= 0;
+
+  const handleNavigateToRecordings = () => {
+    if (!id) return;
+    navigate(
+      resolveRecordingsNavigationPath({
+        series: track?.recordings_series,
+        publicRecordingsPath: `/tracks/${id}/recordings`,
+      }),
+    );
   };
 
   // First event date
@@ -481,7 +507,19 @@ const TrackDetail: React.FC = () => {
                         </div>
 
                         {/* Price display */}
-                        {isPaidTrack && (
+                        {showRecordingsPrice ? (
+                          <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-indigo-100/80 to-purple-100/60 px-4 py-3">
+                            <Sparkles className="h-5 w-5 text-indigo-500" />
+                            <div>
+                              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                                Recordings
+                              </p>
+                              <p className="text-sm font-semibold text-indigo-700">
+                                {formatSeriesPriceLabel(recordingsPriceCents)}
+                              </p>
+                            </div>
+                          </div>
+                        ) : isPaidTrack ? (
                           <div className="space-y-3">
                             <PriceDisplayCard
                               itemType="track"
@@ -514,13 +552,24 @@ const TrackDetail: React.FC = () => {
                               }
                             />
                           </div>
-                        )}
+                        ) : null}
                       </div>
 
                       {bookingState === 'booked' ? (
-                        <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
-                          <CheckCircle className="h-4 w-4" />
-                          <span>You're enrolled in this track</span>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
+                            <CheckCircle className="h-4 w-4" />
+                            <span>You're enrolled in this track</span>
+                          </div>
+                          {recordingsSellableAfterBookingEnded ? (
+                            <Button
+                              type="button"
+                              className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                              onClick={handleNavigateToRecordings}
+                            >
+                              Buy Recordings
+                            </Button>
+                          ) : null}
                         </div>
                       ) : bookingState === 'pending' ? (
                         <div className="space-y-3">
@@ -559,6 +608,14 @@ const TrackDetail: React.FC = () => {
                             'Book Full Track'
                           )}
                         </Button>
+                      ) : recordingsSellableAfterBookingEnded ? (
+                        <Button
+                          type="button"
+                          className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                          onClick={handleNavigateToRecordings}
+                        >
+                          Buy Recordings
+                        </Button>
                       ) : (
                         <div className="space-y-3">
                           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
@@ -573,7 +630,9 @@ const TrackDetail: React.FC = () => {
                         </div>
                       )}
 
-                      {track.track_booking_start && track.track_booking_end && (
+                      {track.track_booking_start &&
+                      track.track_booking_end &&
+                      !recordingsSellableAfterBookingEnded ? (
                         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
                           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
                             Booking Window
@@ -583,7 +642,7 @@ const TrackDetail: React.FC = () => {
                             {format(track.track_booking_end, 'MMM d, yyyy')}
                           </p>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </aside>

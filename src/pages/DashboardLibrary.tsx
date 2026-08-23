@@ -2,8 +2,10 @@ import { FileText, Search } from 'lucide-react';
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import LibraryItemCard from '@/features/library/components/LibraryItemCard';
 import { SeriesGrid } from '@/features/series';
+import { SeriesCartNavButton } from '@/features/series/components/SeriesCartNavButton';
 import { useSeries } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -15,24 +17,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui
 const DashboardLibrary: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('series');
-  const { data: assetsData, isLoading, isError } = useLibraryList(1, 50, { excludeInTracks: true });
-  const { data: seriesData, isLoading: seriesLoading } = useSeries(1, 50);
+  const { libraryStoreEnabled } = useModuleFlags();
+  const accessibleOnly = !libraryStoreEnabled;
+
+  const { data: assetsData, isLoading, isError } = useLibraryList(1, 50, {
+    excludeInTracks: true,
+    accessibleOnly,
+  });
+  const { data: seriesData, isLoading: seriesLoading } = useSeries(1, 50, { accessibleOnly });
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
-  // Filter assets based on search query
   const filteredAssets = useMemo(() => {
     if (!assetsData?.items) return [];
-    if (!normalizedQuery) return assetsData.items;
+    const items = accessibleOnly
+      ? assetsData.items.filter((item) => item.has_access !== false)
+      : assetsData.items;
+    if (!normalizedQuery) return items;
 
-    return assetsData.items.filter(
+    return items.filter(
       (item) =>
         item.title.toLowerCase().includes(normalizedQuery) ||
         item.description?.toLowerCase().includes(normalizedQuery),
     );
-  }, [assetsData?.items, normalizedQuery]);
+  }, [assetsData?.items, accessibleOnly, normalizedQuery]);
 
-  // Transform library items to match LibraryItemCard expected format
   const transformedItems = useMemo(
     () =>
       filteredAssets.map((item) => ({
@@ -44,7 +53,7 @@ const DashboardLibrary: React.FC = () => {
         document_url: item.document_url,
         embed_url: item.embed_url,
         embed_type: item.embed_type,
-        file_url: item.file_url, // Legacy field for backward compatibility
+        file_url: item.file_url,
         created_at: item.created_at,
         view_count: item.view_count,
         download_count: item.download_count,
@@ -56,29 +65,44 @@ const DashboardLibrary: React.FC = () => {
     [filteredAssets],
   );
 
+  const emptySeriesMessage = accessibleOnly
+    ? 'Purchased and complimentary recordings appear here after you buy or unlock them from a track or event.'
+    : 'Library content will appear here once available.';
+
+  const emptyContentMessage = accessibleOnly
+    ? searchQuery
+      ? 'No items match your search. Try different keywords.'
+      : 'Content you have access to will appear here.'
+    : searchQuery
+      ? 'No items match your search. Try different keywords.'
+      : 'Library content will appear here once available.';
+
   return (
     <ProtectedRoute>
       <AppLayout variant="member">
         <div className="w-full max-w-6xl mx-auto space-y-6 sm:space-y-8">
-          {/* Hero Header */}
           <div className="relative w-full overflow-hidden rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 p-6 sm:p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#d5ffe9]/10 via-transparent to-[#f4fff9]/5" />
-            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#29cf9f] to-[#00fdc2] text-white shadow-lg">
-                <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+            <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#29cf9f] to-[#00fdc2] text-white shadow-lg">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">
+                    My Recordings
+                  </h1>
+                  <p className="text-sm sm:text-base text-neutral-600 mt-0.5">
+                    {accessibleOnly
+                      ? 'Content you own or can access'
+                      : 'Access your exclusive marketing resources and content'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">
-                  My Library
-                </h1>
-                <p className="text-sm sm:text-base text-neutral-600 mt-0.5">
-                  Access your exclusive marketing resources and content
-                </p>
-              </div>
+              {libraryStoreEnabled ? <SeriesCartNavButton /> : null}
             </div>
           </div>
 
-          {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="mb-4 sm:mb-6 rounded-xl bg-neutral-100 p-1">
               <TabsTrigger
@@ -100,13 +124,22 @@ const DashboardLibrary: React.FC = () => {
                 <div className="flex justify-center py-12">
                   <LoadingSpinner size="lg" text="Loading series..." />
                 </div>
+              ) : (seriesData?.items?.length ?? 0) > 0 ? (
+                <SeriesGrid
+                  series={seriesData?.items ?? []}
+                  basePath="/dashboard/library/series"
+                  hidePurchaseActions={accessibleOnly}
+                />
               ) : (
-                <SeriesGrid series={seriesData?.items ?? []} basePath="/dashboard/library/series" />
+                <Card className="rounded-2xl border border-neutral-200 bg-white/95">
+                  <CardContent className="py-8 text-center text-sm text-neutral-600">
+                    {emptySeriesMessage}
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
 
             <TabsContent value="content">
-              {/* Search Bar */}
               <div className="mb-4 sm:mb-6 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                 <Input
@@ -118,14 +151,12 @@ const DashboardLibrary: React.FC = () => {
                 />
               </div>
 
-              {/* Loading State */}
               {isLoading && (
                 <div className="flex justify-center py-12">
                   <LoadingSpinner size="lg" text="Loading library content..." />
                 </div>
               )}
 
-              {/* Error State */}
               {isError && (
                 <Card className="rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
                   <CardContent className="py-8 sm:py-12 text-center">
@@ -136,7 +167,6 @@ const DashboardLibrary: React.FC = () => {
                 </Card>
               )}
 
-              {/* Empty State */}
               {!isLoading && !isError && filteredAssets.length === 0 && (
                 <Card className="rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
                   <CardContent className="py-8 sm:py-12 text-center">
@@ -146,16 +176,11 @@ const DashboardLibrary: React.FC = () => {
                     <h3 className="mb-2 text-base sm:text-lg font-medium text-neutral-900">
                       No content available
                     </h3>
-                    <p className="text-sm sm:text-base text-neutral-600">
-                      {searchQuery
-                        ? 'No items match your search. Try different keywords.'
-                        : 'Library content will appear here once available.'}
-                    </p>
+                    <p className="text-sm sm:text-base text-neutral-600">{emptyContentMessage}</p>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Content Grid */}
               {!isLoading && !isError && filteredAssets.length > 0 && (
                 <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {transformedItems.map((item) => (

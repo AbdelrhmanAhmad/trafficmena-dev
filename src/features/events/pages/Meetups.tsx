@@ -1,15 +1,11 @@
-import { BookOpen, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
-import { usePublicTracks } from '@/features/tracks/hooks/useTracks';
 import {
   buildEventDiscoveryItem,
-  buildTrackDiscoveryItem,
   EVENTS_LIST_CONTEXT,
   isCanonicalDiscoveryListPath,
-  TRACKS_LIST_CONTEXT,
   useTrackedItemListView,
 } from '@/lib/analytics/contentDiscovery';
 import { trackSelectItem } from '@/lib/analytics/events';
@@ -31,18 +27,10 @@ const EventsPage: React.FC = () => {
 
   const itemsPerPage = 12;
   const { data, isLoading, error } = useEvents(currentPage, itemsPerPage, filters);
-  const { data: tracksData } = usePublicTracks(1, 6);
 
   const handleEventClick = useCallback(
     (event: Event) => {
       navigate(`/meetups/${event.id}`);
-    },
-    [navigate],
-  );
-
-  const handleTrackClick = useCallback(
-    (trackId: string) => {
-      navigate(`/tracks/${trackId}`);
     },
     [navigate],
   );
@@ -61,16 +49,9 @@ const EventsPage: React.FC = () => {
     () => (data?.items ?? []).map((event, index) => buildEventDiscoveryItem(event, index)),
     [data?.items],
   );
-  const trackListItems = useMemo(
-    () => (tracksData?.items ?? []).map((track, index) => buildTrackDiscoveryItem(track, index)),
-    [tracksData?.items],
-  );
   const shouldTrackDiscoveryLists = isCanonicalDiscoveryListPath(pathname);
 
   useTrackedItemListView(EVENTS_LIST_CONTEXT, eventListItems, {
-    enabled: shouldTrackDiscoveryLists,
-  });
-  useTrackedItemListView(TRACKS_LIST_CONTEXT, trackListItems, {
     enabled: shouldTrackDiscoveryLists,
   });
 
@@ -108,44 +89,6 @@ const EventsPage: React.FC = () => {
               </Button>
             </div>
           </section>
-
-          {/* Learning Tracks Section */}
-          {tracksData && tracksData.items.length > 0 && (
-            <section className="relative w-full rounded-[28px] border border-neutral-200 bg-white/90 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
-              <div className="flex flex-col items-center gap-2 text-center">
-                <span className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-neutral-500">
-                  <BookOpen className="h-3.5 w-3.5 text-purple-500" />
-                  Learning Tracks
-                </span>
-                <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                  Master Skills Together
-                </h2>
-                <p className="text-neutral-600">
-                  Deep-dive programs with multiple sessions. Book once, learn it all.
-                </p>
-              </div>
-
-              <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {tracksData.items.map((track, index) => (
-                  <PublicTrackCard
-                    key={track.id}
-                    track={track}
-                    onCardClick={() => {
-                      const trackedItem = trackListItems[index];
-                      if (shouldTrackDiscoveryLists && trackedItem) {
-                        trackSelectItem(
-                          TRACKS_LIST_CONTEXT.listId,
-                          TRACKS_LIST_CONTEXT.listName,
-                          trackedItem,
-                        );
-                      }
-                    }}
-                    onClick={() => handleTrackClick(track.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
 
           {/* Events Grid */}
           <section className="relative w-full rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">

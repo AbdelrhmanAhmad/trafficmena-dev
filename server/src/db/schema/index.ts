@@ -304,7 +304,14 @@ export const series = pgTable(
     sortOrder: integer('sort_order').default(0).notNull(),
     isPublished: boolean('is_published').default(true).notNull(),
     isPremium: boolean('is_premium').default(false).notNull(),
+    priceInCents: integer('price_in_cents'),
+    salesEnabled: boolean('sales_enabled').default(false).notNull(),
+    // free_for_prior_buyers | everyone_pays — who may watch after recordings are published for sale
+    recordingsAccessPolicy: text('recordings_access_policy')
+      .default('free_for_prior_buyers')
+      .notNull(),
     trackId: uuid('track_id').references(() => tracks.id, { onDelete: 'set null' }),
+    eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
@@ -312,6 +319,7 @@ export const series = pgTable(
     sortOrderIdx: index('series_sort_order_idx').on(table.sortOrder),
     publishedIdx: index('series_is_published_idx').on(table.isPublished),
     trackIdIdx: index('series_track_id_idx').on(table.trackId),
+    eventIdIdx: index('series_event_id_idx').on(table.eventId),
   }),
 );
 
@@ -347,6 +355,7 @@ export const seriesAccessGrants = pgTable(
       .notNull(),
     grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
     grantReason: text('grant_reason').notNull(),
+    paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
     grantedAt: timestamp('granted_at', { withTimezone: true }).defaultNow().notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     revokedBy: uuid('revoked_by').references(() => users.id, { onDelete: 'set null' }),
@@ -364,6 +373,7 @@ export const seriesAccessGrants = pgTable(
     activeSeriesUserUnique: uniqueIndex('series_access_grants_active_unique')
       .on(table.seriesId, table.userId)
       .where(sql`revoked_at is null`),
+    paymentIdx: index('series_access_grants_payment_idx').on(table.paymentId),
   }),
 );
 
@@ -444,6 +454,9 @@ export const platformSettings = pgTable('platform_settings', {
   id: uuid('id').primaryKey().defaultRandom(),
   inviteOnlySignup: boolean('invite_only_signup').notNull().default(false),
   eventMode: boolean('event_mode').notNull().default(false),
+  masterclassesEnabled: boolean('masterclasses_enabled').notNull().default(true),
+  digitalProductsEnabled: boolean('digital_products_enabled').notNull().default(true),
+  libraryStoreEnabled: boolean('library_store_enabled').notNull().default(false),
   annualSubscriptionPriceCents: integer('annual_subscription_price_cents'),
   subscriberDiscountPercent: integer('subscriber_discount_percent').default(20),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -550,7 +563,381 @@ export const promoCodes = pgTable(
 
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'paid', 'failed', 'expired']);
 
-export const paymentItemTypeEnum = pgEnum('payment_item_type', ['event', 'track', 'subscription']);
+export const paymentItemTypeEnum = pgEnum('payment_item_type', [
+  'event',
+  'track',
+  'subscription',
+  'order',
+  'masterclass',
+]);
+
+export const masterclassEnrollmentSourceEnum = pgEnum('masterclass_enrollment_source', [
+  'paid',
+  'manual',
+]);
+
+export const lessonCompletionMethodEnum = pgEnum('lesson_completion_method', ['manual', 'video']);
+
+export const certificateStatusEnum = pgEnum('certificate_status', ['issued', 'revoked']);
+
+export const orderStatusEnum = pgEnum('order_status', ['pending', 'paid', 'failed', 'expired']);
+
+export const orderItemFulfillmentStatusEnum = pgEnum('order_item_fulfillment_status', [
+  'pending',
+  'fulfilled',
+]);
+
+export const orderItemTypeEnum = pgEnum('order_item_type', ['series', 'digital_product']);
+
+export const digitalProductFileTypeEnum = pgEnum('digital_product_file_type', [
+  'excel',
+  'markdown',
+  'html',
+  'text',
+  'powerpoint',
+]);
+
+export const digitalProducts = pgTable(
+  'digital_products',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    description: text('description'),
+    imageUrl: text('image_url'),
+    priceInCents: integer('price_in_cents'),
+    salesEnabled: boolean('sales_enabled').default(false).notNull(),
+    isPublished: boolean('is_published').default(true).notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    publishedIdx: index('digital_products_published_idx').on(table.isPublished),
+    salesIdx: index('digital_products_sales_idx').on(table.salesEnabled),
+  }),
+);
+
+export const digitalProductFiles = pgTable(
+  'digital_product_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id')
+      .references(() => digitalProducts.id, { onDelete: 'cascade' })
+      .notNull(),
+    fileType: digitalProductFileTypeEnum('file_type').notNull(),
+    displayName: text('display_name').notNull(),
+    fileUrl: text('file_url').notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    productIdx: index('digital_product_files_product_idx').on(table.productId),
+  }),
+);
+
+export const digitalProductVideos = pgTable(
+  'digital_product_videos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    productId: uuid('product_id')
+      .references(() => digitalProducts.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: text('title').notNull(),
+    videoUrl: text('video_url').notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    productIdx: index('digital_product_videos_product_idx').on(table.productId),
+  }),
+);
+
+export const digitalProductPurchases = pgTable(
+  'digital_product_purchases',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    productId: uuid('product_id')
+      .references(() => digitalProducts.id, { onDelete: 'cascade' })
+      .notNull(),
+    paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+    purchasedAt: timestamp('purchased_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userProductUnique: uniqueIndex('digital_product_purchases_user_product_unique').on(
+      table.userId,
+      table.productId,
+    ),
+    userIdx: index('digital_product_purchases_user_idx').on(table.userId),
+  }),
+);
+
+export const masterclasses = pgTable(
+  'masterclasses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    description: text('description'),
+    imageUrl: text('image_url'),
+    priceInCents: integer('price_in_cents'),
+    isPublished: boolean('is_published').default(false).notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    publishedIdx: index('masterclasses_published_idx').on(table.isPublished),
+  }),
+);
+
+export const masterclassModules = pgTable(
+  'masterclass_modules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    masterclassId: uuid('masterclass_id')
+      .references(() => masterclasses.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: text('title').notNull(),
+    description: text('description'),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    masterclassIdx: index('masterclass_modules_class_idx').on(table.masterclassId),
+  }),
+);
+
+export const masterclassLessons = pgTable(
+  'masterclass_lessons',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    moduleId: uuid('module_id')
+      .references(() => masterclassModules.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: text('title').notNull(),
+    description: text('description'),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    moduleIdx: index('masterclass_lessons_module_idx').on(table.moduleId),
+  }),
+);
+
+export const masterclassLessonVideos = pgTable(
+  'masterclass_lesson_videos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lessonId: uuid('lesson_id')
+      .references(() => masterclassLessons.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: text('title').notNull(),
+    videoUrl: text('video_url').notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    lessonIdx: index('masterclass_lesson_videos_lesson_idx').on(table.lessonId),
+  }),
+);
+
+export const masterclassLessonFiles = pgTable(
+  'masterclass_lesson_files',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    lessonId: uuid('lesson_id')
+      .references(() => masterclassLessons.id, { onDelete: 'cascade' })
+      .notNull(),
+    fileType: digitalProductFileTypeEnum('file_type').notNull(),
+    displayName: text('display_name').notNull(),
+    fileUrl: text('file_url').notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    lessonIdx: index('masterclass_lesson_files_lesson_idx').on(table.lessonId),
+  }),
+);
+
+export const masterclassEnrollments = pgTable(
+  'masterclass_enrollments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    masterclassId: uuid('masterclass_id')
+      .references(() => masterclasses.id, { onDelete: 'cascade' })
+      .notNull(),
+    source: masterclassEnrollmentSourceEnum('source').default('paid').notNull(),
+    paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
+    enrolledBy: uuid('enrolled_by').references(() => users.id, { onDelete: 'set null' }),
+    enrollmentNote: text('enrollment_note'),
+    enrolledAt: timestamp('enrolled_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userMasterclassUnique: uniqueIndex('masterclass_enrollments_user_class_unique').on(
+      table.userId,
+      table.masterclassId,
+    ),
+    userIdx: index('masterclass_enrollments_user_idx').on(table.userId),
+  }),
+);
+
+export const masterclassLessonProgress = pgTable(
+  'masterclass_lesson_progress',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    lessonId: uuid('lesson_id')
+      .references(() => masterclassLessons.id, { onDelete: 'cascade' })
+      .notNull(),
+    completedAt: timestamp('completed_at', { withTimezone: true }).defaultNow().notNull(),
+    completionMethod: lessonCompletionMethodEnum('completion_method').default('manual').notNull(),
+  },
+  (table) => ({
+    userLessonUnique: uniqueIndex('masterclass_lesson_progress_user_lesson_unique').on(
+      table.userId,
+      table.lessonId,
+    ),
+    userIdx: index('masterclass_lesson_progress_user_idx').on(table.userId),
+  }),
+);
+
+export type CertificateFieldSettings = {
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+  align: 'left' | 'center' | 'right';
+  fontWeight: 'normal' | 'bold';
+};
+
+export type CertificateDesignSettings = {
+  studentName: CertificateFieldSettings;
+  courseTitle: CertificateFieldSettings;
+  issueDate: CertificateFieldSettings;
+  certificateCode: CertificateFieldSettings;
+};
+
+export const certificateSettings = pgTable('certificate_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  backgroundImageUrl: text('background_image_url'),
+  settings: jsonb('settings').$type<CertificateDesignSettings>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const masterclassCertificateSettings = pgTable(
+  'masterclass_certificate_settings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    masterclassId: uuid('masterclass_id')
+      .references(() => masterclasses.id, { onDelete: 'cascade' })
+      .notNull(),
+    certificateEnabled: boolean('certificate_enabled').default(false).notNull(),
+    certificateTitle: text('certificate_title'),
+    certificateDescription: text('certificate_description'),
+    certificateTemplateUrl: text('certificate_template_url'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    masterclassUnique: uniqueIndex('masterclass_certificate_settings_class_unique').on(
+      table.masterclassId,
+    ),
+  }),
+);
+
+export const certificates = pgTable(
+  'certificates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    masterclassId: uuid('masterclass_id')
+      .references(() => masterclasses.id, { onDelete: 'cascade' })
+      .notNull(),
+    certificateCode: text('certificate_code').notNull(),
+    issueDate: timestamp('issue_date', { withTimezone: true }).defaultNow().notNull(),
+    status: certificateStatusEnum('status').default('issued').notNull(),
+    generatedCertificateUrl: text('generated_certificate_url'),
+    externalCertificateUrl: text('external_certificate_url'),
+    certificateTemplateUrl: text('certificate_template_url'),
+    issuedByAdminId: uuid('issued_by_admin_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    issuedManually: boolean('issued_manually').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userMasterclassUnique: uniqueIndex('certificates_user_masterclass_unique').on(
+      table.userId,
+      table.masterclassId,
+    ),
+    codeUnique: uniqueIndex('certificates_code_unique').on(table.certificateCode),
+    userIdx: index('certificates_user_idx').on(table.userId),
+    masterclassIdx: index('certificates_masterclass_idx').on(table.masterclassId),
+  }),
+);
+
+export const orders = pgTable(
+  'orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    status: orderStatusEnum('status').default('pending').notNull(),
+    totalCents: integer('total_cents').notNull(),
+    currency: text('currency').default('EGP').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+  },
+  (table) => ({
+    userIdx: index('orders_user_idx').on(table.userId),
+    statusIdx: index('orders_status_idx').on(table.status),
+  }),
+);
+
+export const orderItems = pgTable(
+  'order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id')
+      .references(() => orders.id, { onDelete: 'cascade' })
+      .notNull(),
+    itemType: orderItemTypeEnum('item_type').default('series').notNull(),
+    seriesId: uuid('series_id').references(() => series.id, { onDelete: 'restrict' }),
+    digitalProductId: uuid('digital_product_id').references(() => digitalProducts.id, {
+      onDelete: 'restrict',
+    }),
+    unitPriceCents: integer('unit_price_cents').notNull(),
+    lineTotalCents: integer('line_total_cents').notNull(),
+    fulfillmentStatus: orderItemFulfillmentStatusEnum('fulfillment_status')
+      .default('pending')
+      .notNull(),
+  },
+  (table) => ({
+    orderIdx: index('order_items_order_idx').on(table.orderId),
+    seriesIdx: index('order_items_series_idx').on(table.seriesId),
+    digitalProductIdx: index('order_items_digital_product_idx').on(table.digitalProductId),
+    orderSeriesUnique: uniqueIndex('order_items_order_series_unique')
+      .on(table.orderId, table.seriesId)
+      .where(sql`series_id IS NOT NULL`),
+    orderDigitalProductUnique: uniqueIndex('order_items_order_digital_product_unique')
+      .on(table.orderId, table.digitalProductId)
+      .where(sql`digital_product_id IS NOT NULL`),
+  }),
+);
 
 export const payments = pgTable(
   'payments',
@@ -567,7 +954,7 @@ export const payments = pgTable(
     promoCodeId: uuid('promo_code_id').references(() => promoCodes.id, { onDelete: 'set null' }),
     discountAppliedCents: integer('discount_applied_cents'),
     originalAmountCents: integer('original_amount_cents'),
-    fawaterkInvoiceId: integer('fawaterk_invoice_id'),
+    fawaterkInvoiceId: text('fawaterk_invoice_id'),
     fawaterkInvoiceKey: text('fawaterk_invoice_key'),
     fawryCode: text('fawry_code'),
     amanCode: text('aman_code'),

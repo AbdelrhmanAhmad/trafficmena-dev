@@ -56,6 +56,13 @@ const LibraryItemDetail: React.FC = () => {
   }, [id, navigate]);
 
   const seriesContext = resolveLibrarySeriesContext(location.state);
+  const backToLibrary = () => {
+    if (seriesContext.seriesId) {
+      navigate(`/dashboard/library/series/${seriesContext.seriesId}`);
+      return;
+    }
+    navigate('/dashboard/library');
+  };
   const trackedContentViewKeyRef = useRef('');
   useEffect(() => {
     if (!item || !id) return;
@@ -166,9 +173,9 @@ const LibraryItemDetail: React.FC = () => {
             <p className="text-gray-600 mb-4">
               {error instanceof Error ? error.message : 'Please try again shortly.'}
             </p>
-            <Button onClick={() => navigate('/dashboard/library')}>
+            <Button onClick={backToLibrary}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Library
+              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
             </Button>
           </div>
         </AppLayout>
@@ -183,9 +190,9 @@ const LibraryItemDetail: React.FC = () => {
           <div className="text-center py-12">
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Item not found</h2>
             <p className="text-gray-600 mb-4">The requested library item could not be found.</p>
-            <Button onClick={() => navigate('/dashboard/library')}>
+            <Button onClick={backToLibrary}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Library
+              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
             </Button>
           </div>
         </AppLayout>
@@ -211,11 +218,11 @@ const LibraryItemDetail: React.FC = () => {
           <div className="max-w-2xl mx-auto">
             <Button
               variant="ghost"
-              onClick={() => navigate('/dashboard/library')}
+              onClick={backToLibrary}
               className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Library
+              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
             </Button>
 
             <Card className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
@@ -249,10 +256,10 @@ const LibraryItemDetail: React.FC = () => {
                       asChild
                       className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:shadow-xl"
                     >
-                      <Link to={`/dashboard/events/${item.event_id}`}>Register for Event</Link>
+                      <Link to={`/meetups/${item.event_id}`}>Register for Event</Link>
                     </Button>
                   )}
-                  <Button variant="outline" onClick={() => navigate('/dashboard/events')}>
+                  <Button variant="outline" onClick={() => navigate('/dashboard/meetups')}>
                     Browse All Events
                   </Button>
                 </div>
@@ -271,11 +278,11 @@ const LibraryItemDetail: React.FC = () => {
           {/* Breadcrumb Navigation */}
           <Button
             variant="ghost"
-            onClick={() => navigate('/dashboard/library')}
+            onClick={backToLibrary}
             className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Library
+              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
           </Button>
 
           <Card className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">

@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { fetchEvents } from '@/app/api/events';
 import { fetchLibraryAssets } from '@/app/api/library';
 import { fetchSeries } from '@/app/api/series';
+import SeriesPriceBadge from '@/features/series/components/SeriesPriceBadge';
 import { fetchTracks } from '@/app/api/tracks';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { SubscriptionStatusBadge } from '@/shared/components/payment';
@@ -313,10 +314,11 @@ const WelcomeDashboard: React.FC = () => {
                             {getPlainText(item.description)}
                           </p>
                         ) : null}
-                        <div className="mt-3 flex items-center gap-2">
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
                           <Badge className="rounded-full border border-[#6366f1]/60 bg-[#6366f1]/10 text-[#6366f1] px-2 py-1 text-[10px] font-medium">
                             {item.asset_count} {item.asset_count === 1 ? 'Item' : 'Items'}
                           </Badge>
+                          <SeriesPriceBadge series={item} className="px-2 py-1 text-[10px] font-medium" />
                         </div>
                       </div>
                     </Link>

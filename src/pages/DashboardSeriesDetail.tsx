@@ -9,9 +9,14 @@ import {
   Video,
   Youtube,
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import type React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { SeriesAsset } from '@/features/series';
+import { SeriesBuyActions } from '@/features/series/components/SeriesBuyActions';
+import SeriesPriceBadge from '@/features/series/components/SeriesPriceBadge';
+import SeriesPurchasedBadge from '@/features/series/components/SeriesPurchasedBadge';
+import { canShowSeriesPurchaseActions } from '@/features/series/utils/seriesPricing';
 import { useSeriesDetail } from '@/features/series/hooks/useSeries';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -19,6 +24,19 @@ import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import PremiumContentGate from '@/shared/components/PremiumContentGate';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent } from '@/shared/components/ui/card';
+
+type SanitizedHtmlProps = {
+  className?: string;
+  html: string;
+};
+
+const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
+  <div
+    className={className}
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: series descriptions are sanitized with DOMPurify
+    dangerouslySetInnerHTML={{ __html: html }}
+  />
+);
 
 const getAssetTypeStyles = (fileType: string, embedType?: string | null) => {
   if (embedType?.toLowerCase().includes('youtube')) {
@@ -63,13 +81,15 @@ const SeriesResourceCard: React.FC<{
   const styles = getAssetTypeStyles(asset.file_type, asset.embed_type);
   const isPremium = isSeriesPremium || asset.is_premium;
   const hasAccess = asset.has_access !== false;
-  const showPremiumOverlay = isPremium && !hasAccess;
+  const showLockOverlay = !hasAccess;
   const showPremiumBadge = isPremium;
 
   return (
     <button
       type="button"
+      disabled={!hasAccess}
       onClick={() => {
+        if (!hasAccess) return;
         navigate(`/dashboard/library/${asset.id}`, {
           state: {
             seriesContext: {
@@ -79,7 +99,11 @@ const SeriesResourceCard: React.FC<{
           },
         });
       }}
-      className="group cursor-pointer rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl overflow-hidden"
+      className={
+        hasAccess
+          ? 'group cursor-pointer rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl overflow-hidden'
+          : 'group cursor-not-allowed rounded-[28px] border border-neutral-200 bg-white/95 text-left shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur overflow-hidden'
+      }
     >
       {/* Thumbnail Area */}
       <div className="relative aspect-[300/160] overflow-hidden">
@@ -89,7 +113,11 @@ const SeriesResourceCard: React.FC<{
           <img
             src={asset.thumbnail_url}
             alt={asset.title}
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className={
+              hasAccess
+                ? 'absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105'
+                : 'absolute inset-0 h-full w-full object-cover'
+            }
           />
         )}
 
@@ -101,7 +129,7 @@ const SeriesResourceCard: React.FC<{
           </div>
         )}
 
-        {isVideo && (
+        {isVideo && hasAccess && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/10">
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 shadow-lg opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:scale-110">
               <Play className="h-6 w-6 text-neutral-800 ml-1" fill="currentColor" />
@@ -109,7 +137,7 @@ const SeriesResourceCard: React.FC<{
           </div>
         )}
 
-        {showPremiumOverlay && (
+        {showLockOverlay && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/10">
             <div className="flex flex-col items-center gap-2 text-neutral-900/60">
               <Lock className="h-12 w-12" />
@@ -170,7 +198,7 @@ const DashboardSeriesDetail: React.FC = () => {
               onClick={() => navigate('/dashboard/library')}
               className="mt-4"
             >
-              Back to Library
+              Back to Recordings
             </Button>
           </div>
         </AppLayout>
@@ -178,7 +206,13 @@ const DashboardSeriesDetail: React.FC = () => {
     );
   }
 
-  if (series.has_access === false) {
+  const canPurchase = canShowSeriesPurchaseActions(series);
+  const showSellablePreview = series.has_access === false && canPurchase;
+  const sanitizedDescription = series.description
+    ? DOMPurify.sanitize(series.description)
+    : null;
+
+  if (series.has_access === false && !showSellablePreview) {
     return (
       <ProtectedRoute>
         <AppLayout variant="member">
@@ -201,7 +235,7 @@ const DashboardSeriesDetail: React.FC = () => {
               className="mb-4"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Library
+              Back to Recordings
             </Button>
 
             <div className="relative overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
@@ -222,20 +256,37 @@ const DashboardSeriesDetail: React.FC = () => {
                       Series
                     </span>
                     <h1 className="text-3xl font-bold text-neutral-900">{series.title}</h1>
-                    {series.description && (
-                      <p className="mt-2 text-neutral-600 max-w-2xl">{series.description}</p>
+                    {sanitizedDescription && (
+                      <SanitizedDescription
+                        className="prose prose-neutral mt-2 max-w-2xl text-neutral-600"
+                        html={sanitizedDescription}
+                      />
                     )}
-                    <div className="mt-4 flex items-center gap-4 text-sm text-neutral-500">
+                    <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-neutral-500">
+                      {series.has_purchased && <SeriesPurchasedBadge />}
+                      <SeriesPriceBadge series={series} />
                       <span className="flex items-center gap-1">
                         <BookOpen className="h-4 w-4" />
                         {series.asset_count} {series.asset_count === 1 ? 'resource' : 'resources'}
                       </span>
                     </div>
+                    {canPurchase && (
+                      <div className="mt-6 max-w-md">
+                        <SeriesBuyActions series={series} layout="stack" />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {showSellablePreview && (
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              Preview mode , purchase for permanent access to all recordings. This does not include
+              live track booking.
+            </div>
+          )}
 
           {/* Resources */}
           {series.assets.length > 0 ? (

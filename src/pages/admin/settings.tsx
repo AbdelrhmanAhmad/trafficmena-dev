@@ -1,10 +1,11 @@
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { useIsAdmin } from '@/shared/hooks/custom/useIsAdmin';
+import { FactoryResetCard } from './components/FactoryResetCard';
 import { InviteOnlySettingsCard } from './components/InviteOnlySettingsCard';
 import { SubscriptionSettingsCard } from './components/SubscriptionSettingsCard';
 
 const AdminSettingsPage = () => {
-  const { isAdmin } = useIsAdmin();
+  const { isAdmin, isOwner } = useIsAdmin();
 
   return (
     <AppLayout variant="admin">
@@ -18,6 +19,10 @@ const AdminSettingsPage = () => {
 
         <InviteOnlySettingsCard canEdit={isAdmin} />
         <SubscriptionSettingsCard canEdit={isAdmin} />
+
+        {(isOwner  || isAdmin)&& (
+          <FactoryResetCard />
+        )}
       </div>
     </AppLayout>
   );

@@ -123,7 +123,7 @@ export type PaymentMethod = {
 };
 
 type InvoiceData = {
-  invoice_id: number;
+  invoice_id: string;
   invoice_key: string;
   due_date: string;
   pay_load: unknown;
@@ -145,21 +145,55 @@ const paymentMethodSchema = z.object({
   logo: z.string().optional(),
 });
 
+// Live API returns UUID strings; staging may return numeric ids.
+const invoiceRefSchema = z
+  .union([z.number(), z.string()])
+  .transform((value) => String(value).trim())
+  .refine((value) => value.length > 0 && value !== 'NaN', 'Invalid invoice id');
+
+// Staging legacy: invoice_id + invoice_key. Newer responses use intent_key + transaction_created_at.
 const invoiceDataSchema = z
   .object({
-    invoice_id: z.number(),
-    invoice_key: z.string(),
-    due_date: z.string(),
-    pay_load: z.unknown(),
-    customer_email: z.string(),
-    payment_method: z.string(),
-    currency: z.string(),
-    total: z.number(),
-    paid: z.number(),
-    paid_at: z.string().nullable(),
-    invoice_created_at: z.string(),
+    invoice_id: invoiceRefSchema.optional(),
+    intent_key: z.string().optional(),
+    invoice_key: z.string().optional(),
+    transaction_id: z.union([z.number(), z.string()]).optional(),
+    due_date: z.string().optional(),
+    pay_load: z.unknown().optional(),
+    customer_email: z.string().optional(),
+    payment_method: z.string().optional(),
+    currency: z.string().optional(),
+    total: z.coerce.number(),
+    paid: z.coerce.number(),
+    paid_at: z.string().nullable().optional(),
+    invoice_created_at: z.string().optional(),
+    transaction_created_at: z.string().optional(),
   })
-  .passthrough(); // Allow additional fields we don't use
+  .passthrough()
+  .transform((data) => {
+    const invoiceId =
+      (data.invoice_id !== undefined ? String(data.invoice_id) : undefined) ??
+      data.intent_key ??
+      (data.transaction_id !== undefined ? String(data.transaction_id) : '');
+    const invoiceKey = data.invoice_key ?? data.intent_key ?? invoiceId;
+    return {
+      invoice_id: invoiceId.trim(),
+      invoice_key: invoiceKey,
+      due_date: data.due_date ?? '',
+      pay_load: data.pay_load,
+      customer_email: data.customer_email ?? '',
+      payment_method: data.payment_method ?? '',
+      currency: data.currency ?? '',
+      total: data.total,
+      paid: data.paid,
+      paid_at: data.paid_at ?? null,
+      invoice_created_at: data.invoice_created_at ?? data.transaction_created_at ?? '',
+    };
+  })
+  .refine((data) => data.invoice_id.length > 0 && data.invoice_id !== 'NaN', {
+    path: ['invoice_id'],
+    message: 'Missing invoice id',
+  });
 
 const referenceCodeSchema = z
   .union([z.string(), z.number(), z.null()])
@@ -193,7 +227,7 @@ const paymentDataSchema = z
 
 const invoiceInitPayResponseSchema = z
   .object({
-    invoice_id: z.number(),
+    invoice_id: invoiceRefSchema,
     invoice_key: z.string(),
     payment_data: paymentDataSchema,
   })
@@ -235,6 +269,9 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
   if (methodsCache && Date.now() - methodsCache.fetchedAt < METHODS_CACHE_TTL_MS) {
     return methodsCache.data;
   }
+
+
+
 
   try {
     const response = await fetchWithCircuitBreaker(`${getBaseUrl()}/getPaymentmethods`, {
@@ -278,7 +315,7 @@ export function invalidatePaymentMethodsCache() {
 }
 
 export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
-  invoiceId: number;
+  invoiceId: string;
   invoiceKey: string;
   paymentData: {
     redirectTo?: string;
@@ -321,8 +358,13 @@ export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
   const paymentDataSummary = summarizePaymentData(result?.data?.payment_data);
   const parsed = invoiceInitPayResponseSchema.safeParse(result.data);
   if (!parsed.success) {
+    const dataKeys =
+      result?.data && typeof result.data === 'object'
+        ? Object.keys(result.data as Record<string, unknown>)
+        : [];
     console.error('[fawaterk] Invalid invoiceInitPay response:', parsed.error.format(), {
       paymentDataSummary,
+      dataKeys,
     });
     throw new Error('Invalid invoice initialization response from gateway');
   }
@@ -349,18 +391,21 @@ export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
   };
 }
 
-export async function getInvoiceData(invoiceId: number): Promise<InvoiceData> {
+export async function getInvoiceData(invoiceId: string | number): Promise<InvoiceData> {
   if (!env.FAWATERK_API_KEY) {
     throw new Error('FAWATERK_API_KEY not configured');
   }
 
-  const response = await fetchWithCircuitBreaker(`${getBaseUrl()}/getInvoiceData/${invoiceId}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.FAWATERK_API_KEY}`,
+  const response = await fetchWithCircuitBreaker(
+    `${getBaseUrl()}/getInvoiceData/${encodeURIComponent(String(invoiceId))}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${env.FAWATERK_API_KEY}`,
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     const detail = await response.text();
@@ -370,7 +415,14 @@ export async function getInvoiceData(invoiceId: number): Promise<InvoiceData> {
   const result = await response.json();
   const parsed = invoiceDataSchema.safeParse(result.data);
   if (!parsed.success) {
-    console.error('[fawaterk] Invalid getInvoiceData response:', parsed.error.format());
+    const dataKeys =
+      result?.data && typeof result.data === 'object'
+        ? Object.keys(result.data as Record<string, unknown>)
+        : [];
+    console.error('[fawaterk] Invalid getInvoiceData response:', parsed.error.format(), {
+      dataKeys,
+      paid: (result?.data as { paid?: unknown } | undefined)?.paid,
+    });
     throw new Error('Invalid invoice data response from gateway');
   }
   return parsed.data as InvoiceData;
@@ -380,7 +432,7 @@ export async function getInvoiceData(invoiceId: number): Promise<InvoiceData> {
 // Uses API Key as secret, NOT a separate webhook secret
 // SECURITY: Uses timing-safe comparison to prevent timing attacks
 export function verifyFawaterkWebhook(body: {
-  invoice_id: number;
+  invoice_id: string | number;
   invoice_key: string;
   payment_method: string;
   hashKey: string;

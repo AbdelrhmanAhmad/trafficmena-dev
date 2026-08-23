@@ -1,13 +1,18 @@
 import {
+  Award,
   BarChart3,
   BookOpen,
+  Boxes,
   Calculator,
   Calendar,
   Crown,
   Edit,
+  FileStack,
+  GraduationCap,
   Home,
   Library,
   Mail,
+  Receipt,
   Settings,
   Shield,
   Sparkles,
@@ -18,6 +23,7 @@ import type React from 'react';
 import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import { PhoneCompletionBanner } from '@/shared/components/PhoneCompletionBanner';
 import {
   Sidebar,
@@ -39,6 +45,7 @@ import {
   type UserRole,
   useRolePermissions,
 } from '@/shared/hooks/custom/useRolePermissions';
+import { SeriesCartNavButton } from '@/features/series/components/SeriesCartNavButton';
 import UserProfileDropdown from './UserProfileDropdown';
 
 // Menu items for member dashboard
@@ -59,9 +66,26 @@ const memberMenuItems = [
     icon: Calendar,
   },
   {
-    title: 'Library',
+    title: 'Recordings',
     url: '/dashboard/library',
     icon: Library,
+  },
+  {
+    title: 'Digital Products',
+    url: '/dashboard/digital-products',
+    icon: FileStack,
+    module: 'digitalProducts' as const,
+  },
+  {
+    title: 'My Orders',
+    url: '/dashboard/orders',
+    icon: Receipt,
+  },
+  {
+    title: 'Masterclasses',
+    url: '/dashboard/masterclasses',
+    icon: GraduationCap,
+    module: 'masterclasses' as const,
   },
   {
     title: 'Calculators',
@@ -85,6 +109,18 @@ const adminMenuItems = [
     roles: ['owner', 'admin'] as UserRole[],
   },
   {
+    title: 'Module Settings',
+    url: '/admin/settings/modules',
+    icon: Boxes,
+    roles: ['owner', 'admin'] as UserRole[],
+  },
+  {
+    title: 'Certificate Design',
+    url: '/admin/certificate-settings',
+    icon: Award,
+    roles: ['owner', 'admin'] as UserRole[],
+  },
+  {
     title: 'User Management',
     url: '/admin/users',
     icon: Users,
@@ -103,16 +139,36 @@ const adminMenuItems = [
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
+    title: 'Orders',
+    url: '/admin/orders',
+    icon: Receipt,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
     title: 'Events & Tracks',
     url: '/admin/meetups',
     icon: Calendar,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
-    title: 'Content Library',
+    title: 'Content library',
     url: '/admin/library',
     icon: BookOpen,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'Digital Products',
+    url: '/admin/digital-products',
+    icon: FileStack,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+    module: 'digitalProducts' as const,
+  },
+  {
+    title: 'Masterclasses',
+    url: '/admin/masterclasses',
+    icon: GraduationCap,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+    module: 'masterclasses' as const,
   },
 ];
 
@@ -130,18 +186,29 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
   const { loading, rank, isOwner, isAdmin, isManager, canAccessSubscriptionPages } =
     useRolePermissions();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
+  const { masterclassesEnabled, digitalProductsEnabled } = useModuleFlags();
   const hasActiveSubscription = subscription?.status === 'active';
 
-  // Filter admin menu items based on user's role rank
+  const isModuleVisible = (module?: 'masterclasses' | 'digitalProducts') => {
+    if (!module) return true;
+    if (module === 'masterclasses') return masterclassesEnabled;
+    return digitalProductsEnabled;
+  };
+
+  // Filter admin menu items based on user's role rank and module flags
   const filteredAdminMenuItems = useMemo(() => {
     return adminMenuItems.filter((item) => {
       const minRank = Math.min(...item.roles.map((r) => getRolePriority(r)));
-      return rank >= minRank;
+      return rank >= minRank && isModuleVisible(item.module);
     });
-  }, [rank]);
+  }, [rank, masterclassesEnabled, digitalProductsEnabled]);
+
+  const filteredMemberMenuItems = useMemo(() => {
+    return memberMenuItems.filter((item) => isModuleVisible(item.module));
+  }, [masterclassesEnabled, digitalProductsEnabled]);
 
   // Select menu items based on variant
-  const menuItems = variant === 'admin' ? filteredAdminMenuItems : memberMenuItems;
+  const menuItems = variant === 'admin' ? filteredAdminMenuItems : filteredMemberMenuItems;
 
   // Role badge label - always show actual role
   const badgeLabel = loading
@@ -239,6 +306,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                   </SidebarMenuItem>
                 );
               })}
+              {variant === 'member' && <SeriesCartNavButton variant="sidebar" />}
               {variant === 'member' && canAccessSubscriptionPages && !hasActiveSubscription && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -296,12 +364,24 @@ const AppLayout: React.FC<AppLayoutProps> = ({ variant, children }) => {
         case '/dashboard/meetups':
           return 'Events & Tracks';
         case '/dashboard/library':
-          return 'Library';
+          return 'Recordings';
+        case '/dashboard/digital-products':
+          return 'Digital Products';
+        case '/dashboard/masterclasses':
+          return 'Masterclasses';
+        case '/series/cart':
+          return 'Cart';
         case '/dashboard/calculators':
           return 'Marketing Calculators';
         default:
           if (location.pathname.startsWith('/dashboard/calculators/')) {
             return 'Calculator';
+          }
+          if (location.pathname.startsWith('/dashboard/digital-products/')) {
+            return 'Digital Product';
+          }
+          if (location.pathname.startsWith('/dashboard/masterclasses/')) {
+            return 'Masterclass';
           }
           return 'Dashboard';
       }
@@ -328,7 +408,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({ variant, children }) => {
               <SidebarTrigger className="-ml-1" />
               <h1 className="text-xl font-semibold text-neutral-900">{getPageTitle()}</h1>
             </div>
-            <UserProfileDropdown />
+            <div className="flex items-center gap-2">
+              {variant === 'member' && <SeriesCartNavButton />}
+              <UserProfileDropdown />
+            </div>
           </header>
           {variant === 'member' && <PhoneCompletionBanner />}
           <main className="relative flex-1 overflow-x-hidden overflow-y-auto">

@@ -23,8 +23,10 @@ const AdminMeetupsNew = () => {
   const isSubmitting = createEventMutation.isPending || addToTrackMutation.isPending;
 
   const handleSubmit = async (payload: Parameters<typeof createEventMutation.mutateAsync>[0]) => {
-    // Step 1: Create the event
-    const newEvent = await createEventMutation.mutateAsync(payload);
+    const newEvent = await createEventMutation.mutateAsync({
+      ...payload,
+      createRecordingsSeries: !trackId ? true : undefined,
+    });
 
     // Step 2: If trackId present, add event to track
     if (trackId && newEvent?.id) {
