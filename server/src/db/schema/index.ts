@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   index,
   inet,
@@ -18,6 +19,9 @@ import {
 export const userRoleEnum = pgEnum('user_role', ['owner', 'admin', 'manager', 'expert', 'user']);
 export const userTypeEnum = pgEnum('user_type', ['learner', 'expert']);
 export const eventTypeEnum = pgEnum('event_type', ['Event', 'Meetup', 'Mastermind', 'Retreat']);
+// Explicit delivery mode. Replaces the load-bearing `meetingLink && !location` inference; binary by
+// design (a hybrid day is modeled as separate online + offline sessions).
+export const eventFormatEnum = pgEnum('event_format', ['online', 'offline']);
 export const assetFileTypeEnum = pgEnum('asset_file_type', ['Document', 'Video', 'Presentation']);
 export const invitationStatusEnum = pgEnum('invitation_status', [
   'pending',
@@ -33,6 +37,13 @@ export const registrationStatusEnum = pgEnum('registration_status', [
   'refund_requested',
 ]);
 export const trackBookingSourceEnum = pgEnum('track_booking_source', ['paid', 'free', 'manual']);
+// Hybrid track ticket variants. Drives price, which sessions a buyer is registered for, and which
+// Zoom links / locations / recordings they can access. See server/src/routes/api/ticketAccess.ts.
+export const ticketTypeEnum = pgEnum('ticket_type', [
+  'online_only',
+  'online_offline',
+  'offline_only',
+]);
 
 // --- Core Tables ------------------------------------------------------------
 
@@ -79,13 +90,20 @@ export const events = pgTable(
     imageUrl: text('image_url'),
     tags: text('tags').array(),
     eventType: eventTypeEnum('event_type').default('Event').notNull(),
+    // Online vs offline delivery, explicit (not inferred from location text). Default 'offline' is the
+    // safe choice: a new event is paid-for-subscribers until an admin marks it online.
+    eventFormat: eventFormatEnum('event_format').default('offline').notNull(),
     guestExperts: jsonb('guest_experts'),
     priceInCents: integer('price_in_cents'),
+    // Default true so existing events stay visible after the migration; the create route defaults
+    // NEW events to draft (false), mirroring tracks.
+    isPublished: boolean('is_published').default(true).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     dateIdx: index('events_date_idx').on(table.date),
+    publishedIdx: index('events_is_published_idx').on(table.isPublished),
   }),
 );
 
@@ -198,6 +216,11 @@ export const tracks = pgTable(
     allowIndividualBooking: boolean('allow_individual_booking').default(false).notNull(),
     maxTrackBookings: integer('max_track_bookings'),
     priceInCents: integer('price_in_cents'),
+    // Per-ticket-type prices. Non-null = that ticket type is offered. All three null = ticket types
+    // not configured -> legacy single-price (priceInCents) path, unchanged. Not auto-backfilled.
+    onlineOnlyPriceCents: integer('online_only_price_cents'),
+    onlineOfflinePriceCents: integer('online_offline_price_cents'),
+    offlineOnlyPriceCents: integer('offline_only_price_cents'),
     location: text('location'),
     locationUrl: text('location_url'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -246,6 +269,10 @@ export const trackBookings = pgTable(
     pricePaidCents: integer('price_paid_cents'),
     paymentId: uuid('payment_id').references(() => payments.id, { onDelete: 'set null' }),
     bookingSource: trackBookingSourceEnum('booking_source').notNull(),
+    // Durable record of the purchased ticket variant, read by every access check. Nullable: legacy
+    // bookings (and bookings on tracks without ticket types) have none. Existing rows backfill to
+    // 'online_offline' (they granted everything).
+    ticketType: ticketTypeEnum('ticket_type'),
     manualReference: text('manual_reference'),
     grantedBy: uuid('granted_by').references(() => users.id, { onDelete: 'set null' }),
     grantReason: text('grant_reason'),
@@ -533,6 +560,29 @@ export const authVerifications = pgTable(
   (table) => ({
     identifierCreatedAtIdx: index('auth_verifications_identifier_created_at_idx').on(
       table.identifier,
+      table.createdAt,
+    ),
+  }),
+);
+
+// Custom OTP-to-new-email flow for self-service email change (email is the sole auth factor,
+// so this is kept fully in our control rather than Better Auth's link-based change-email).
+export const emailChangeRequests = pgTable(
+  'email_change_requests',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    newEmail: text('new_email').notNull(),
+    otpHash: text('otp_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userCreatedIdx: index('email_change_requests_user_created_at_idx').on(
+      table.userId,
       table.createdAt,
     ),
   }),
@@ -951,11 +1001,18 @@ export const payments = pgTable(
     currency: text('currency').default('EGP').notNull(),
     itemType: paymentItemTypeEnum('item_type').notNull(),
     itemId: uuid('item_id'),
+    // Purchased ticket variant for track payments. The single source fulfillment reads (paid + free
+    // paths both create/read the payment row). Null for non-track payments and legacy tracks.
+    ticketType: ticketTypeEnum('ticket_type'),
     promoCodeId: uuid('promo_code_id').references(() => promoCodes.id, { onDelete: 'set null' }),
     discountAppliedCents: integer('discount_applied_cents'),
     originalAmountCents: integer('original_amount_cents'),
     fawaterkInvoiceId: text('fawaterk_invoice_id'),
     fawaterkInvoiceKey: text('fawaterk_invoice_key'),
+    // v3 transaction-intent identifiers (additive; the invoice_* columns above stay as historical
+    // financial audit data on pre-cutover rows).
+    fawaterkIntentKey: text('fawaterk_intent_key'),
+    fawaterkTransactionId: bigint('fawaterk_transaction_id', { mode: 'number' }),
     fawryCode: text('fawry_code'),
     amanCode: text('aman_code'),
     masaryCode: text('masary_code'),
@@ -968,6 +1025,8 @@ export const payments = pgTable(
     userIdx: index('payments_user_idx').on(table.userId),
     statusIdx: index('payments_status_idx').on(table.status),
     invoiceIdx: index('payments_fawaterk_invoice_idx').on(table.fawaterkInvoiceId),
+    intentKeyIdx: uniqueIndex('payments_fawaterk_intent_key_idx').on(table.fawaterkIntentKey),
+    transactionIdIdx: index('payments_fawaterk_transaction_id_idx').on(table.fawaterkTransactionId),
     promoCodeIdx: index('payments_promo_code_idx').on(table.promoCodeId),
     uniquePendingPayment: uniqueIndex('payments_unique_pending')
       .on(table.userId, table.itemType, table.itemId)
@@ -975,6 +1034,39 @@ export const payments = pgTable(
     uniquePendingSubscription: uniqueIndex('payments_unique_pending_subscription')
       .on(table.userId)
       .where(sql`status = 'pending' AND item_type = 'subscription'`),
+  }),
+);
+
+export const paymentFulfillmentFailures = pgTable(
+  'payment_fulfillment_failures',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    paymentId: uuid('payment_id')
+      .references(() => payments.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    paymentStatus: paymentStatusEnum('payment_status').notNull(),
+    itemType: paymentItemTypeEnum('item_type').notNull(),
+    itemId: uuid('item_id'),
+    ticketType: ticketTypeEnum('ticket_type'),
+    invoiceId: integer('invoice_id'),
+    amountCents: integer('amount_cents').notNull(),
+    confirmationSource: text('confirmation_source').notNull(),
+    errorCode: text('error_code'),
+    errorMessage: text('error_message').notNull(),
+    failureCount: integer('failure_count').default(1).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolutionNote: text('resolution_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    paymentIdx: index('payment_fulfillment_failures_payment_idx').on(table.paymentId),
+    unresolvedIdx: index('payment_fulfillment_failures_unresolved_idx').on(table.resolvedAt),
+    invoiceIdx: index('payment_fulfillment_failures_invoice_idx').on(table.invoiceId),
   }),
 );
 

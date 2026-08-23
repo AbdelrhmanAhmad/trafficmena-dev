@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  events,
   libraryAssets,
   series,
   seriesAccessGrants,
@@ -163,12 +164,13 @@ export function registerSeriesStoreRoutes(app: Hono) {
     let hasTrackEventAttendance = false;
     let hasSeriesGrant = false;
     let hasPurchased = false;
+    let bookingTicketType: import('./ticketAccess.js').TicketType | null = null;
 
     if (userId && !isStaff) {
       const [bookingRows, attendanceRows, grantRows, purchasedSet] = await Promise.all([
         seriesRecord.trackId
           ? db
-              .select({ id: trackBookings.id })
+              .select({ id: trackBookings.id, ticketType: trackBookings.ticketType })
               .from(trackBookings)
               .where(
                 activeTrackBookingWhere(
@@ -219,6 +221,7 @@ export function registerSeriesStoreRoutes(app: Hono) {
       ]);
 
       hasTrackBooking = Boolean(bookingRows[0]);
+      bookingTicketType = bookingRows[0]?.ticketType ?? null;
       hasTrackEventAttendance = Boolean(attendanceRows[0]);
       hasSeriesGrant = Boolean(grantRows[0]);
       hasPurchased = purchasedSet.has(seriesRecord.id);
@@ -235,6 +238,7 @@ export function registerSeriesStoreRoutes(app: Hono) {
       hasSeriesGrant,
       seriesIsPremium: seriesRecord.isPremium,
       recordingsAccessPolicy,
+      bookingTicketType,
     };
     const hasAccess = resolveSeriesAccess(accessContext);
 
@@ -273,12 +277,27 @@ export function registerSeriesStoreRoutes(app: Hono) {
       userEventIds = new Set(registrations.map((row) => row.eventId));
     }
 
+    const linkedEventIds = [
+      ...new Set(seriesAssetsList.map((row) => row.asset.eventId).filter(Boolean) as string[]),
+    ];
+    const eventFormatRows =
+      linkedEventIds.length > 0
+        ? await db
+            .select({ id: events.id, eventFormat: events.eventFormat })
+            .from(events)
+            .where(inArray(events.id, linkedEventIds))
+        : [];
+    const eventFormatById = new Map(eventFormatRows.map((row) => [row.id, row.eventFormat]));
+
     const assets = seriesAssetsList.map((row) => {
       const assetHasAccess = resolveSeriesAssetAccess({
         ...accessContext,
         assetIsPremium: row.asset.isPremium,
         assetIsPublic: row.asset.isPublic,
         assetEventId: row.asset.eventId,
+        assetEventFormat: row.asset.eventId
+          ? (eventFormatById.get(row.asset.eventId) ?? null)
+          : null,
         userEventIds,
       });
 

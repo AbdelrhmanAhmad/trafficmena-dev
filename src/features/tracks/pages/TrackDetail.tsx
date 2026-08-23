@@ -35,8 +35,16 @@ import {
   useLocationVisibility,
 } from '@/shared/hooks/custom/useLocationVisibility';
 import { storePendingTrackContext } from '@/shared/utils/trackRedirectUtils';
+import { TrackTicketSelector } from '../components/TrackTicketSelector';
 import { useBookTrack, usePublicTrack } from '../hooks/useTracks';
+import {
+  getEnabledTicketTypes,
+  includedFormatsFor,
+  resolveTicketSelection,
+  type TicketType,
+} from '../ticketTypes';
 import { getTrackBookingState } from '../utils/trackBookingState';
+import { getTrackPricePreviewGate } from '../utils/trackPricePreviewGate';
 
 type SanitizedHtmlProps = {
   className?: string;
@@ -46,6 +54,8 @@ type SanitizedHtmlProps = {
 const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
   <div
     className={className}
+    // Base direction follows content's first strong char so mixed AR/EN keeps correct word order
+    dir="auto"
     // biome-ignore lint/security/noDangerouslySetInnerHtml: track descriptions are sanitized with DOMPurify
     dangerouslySetInnerHTML={{ __html: html }}
   />
@@ -104,7 +114,9 @@ function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
         </div>
         <div className="mt-2 flex items-center gap-1 text-sm text-neutral-500">
           <MapPin className="h-3.5 w-3.5" />
-          <span className="truncate">{event.location ?? 'Online'}</span>
+          <span className="truncate">
+            {event.event_format === 'online' ? 'Online' : (event.location ?? 'In person')}
+          </span>
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3">
           <span className="flex items-center gap-1 text-sm text-neutral-600">
@@ -129,76 +141,23 @@ const TrackDetail: React.FC = () => {
   const { data, isLoading, error } = usePublicTrack(id || '', user?.id);
   const bookMutation = useBookTrack();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [requestingNewCode, setRequestingNewCode] = useState(false);
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [promoAttemptKey, setPromoAttemptKey] = useState(0);
+  const [selectedTicketType, setSelectedTicketType] = useState<TicketType | null>(null);
 
   const track = data?.track;
   const events = data?.events ?? [];
 
-  // Get price preview for logged-in users
-  const { data: pricePreview, isLoading: pricePreviewLoading } = usePricePreview(
-    user && id ? 'track' : undefined,
-    id,
-    appliedPromoCode ?? undefined,
-    { requestKey: promoAttemptKey },
-  );
+  // Ticket types for this track (empty = legacy single-price track, unchanged).
+  const enabledTickets = useMemo(() => (track ? getEnabledTicketTypes(track) : []), [track]);
+  const usesTicketTypes = enabledTickets.length > 0;
+  const selectedTicket = enabledTickets.find((t) => t.type === selectedTicketType) ?? null;
+  // For ticket-typed tracks a variant must be picked before pricing/booking is meaningful.
+  const ticketSelectionReady = !usesTicketTypes || Boolean(selectedTicketType);
 
-  const isPaidTrack = !!(track?.price_in_cents && track.price_in_cents > 0);
-  const needsPayment = isPaidTrack;
-  const promoError = pricePreview?.promoError ?? null;
-  const isPromoApplied =
-    Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !promoError;
-  const promoDisabledReason = !user
-    ? 'Sign in to apply a promo code.'
-    : pricePreview?.discountSource === 'subscriber'
-      ? 'Subscriber discount already applied.'
-      : pricePreview?.isFree
-        ? 'Promo codes are not available for free items.'
-        : null;
-  const promoDisabled = Boolean(promoDisabledReason);
-
-  const bookingState = useMemo(
-    () =>
-      getTrackBookingState({
-        userHasBooked: track?.user_has_booked,
-        userHasPendingPayment: track?.user_has_pending_payment,
-      }),
-    [track?.user_has_booked, track?.user_has_pending_payment],
-  );
-
-  const pendingPaymentUrl = useMemo(() => {
-    if (!track?.user_has_pending_payment || !id) return null;
-    const params = new URLSearchParams();
-    params.set('item_type', 'track');
-    params.set('item_id', id);
-    if (track.pending_invoice_id) {
-      params.set('invoice_id', String(track.pending_invoice_id));
-    }
-    if (track.pending_payment_id) {
-      params.set('payment_id', track.pending_payment_id);
-    }
-    const query = params.toString();
-    return query ? `/payment/pending?${query}` : '/payment/pending';
-  }, [id, track?.pending_invoice_id, track?.pending_payment_id, track?.user_has_pending_payment]);
-
-  const showLocationUrl = useLocationVisibility(
-    track?.location_url,
-    Boolean(track?.user_has_booked),
-    isStaff,
-    adminLoading,
-  );
-
-  const sanitizedDescription = useMemo(
-    () => (track?.description ? DOMPurify.sanitize(track.description) : null),
-    [track?.description],
-  );
-
-  const trackImageUrl =
-    track?.image_url && track.image_url.trim().length > 0
-      ? track.image_url.trim()
-      : '/uploads/trafficmena-track.png';
-
-  // Booking status
+  // Booking status (window + capacity). Also feeds the preview gate and the checkout auto-open:
+  // outside the window the server rejects both deterministically.
   const bookingStatus = useMemo(() => {
     if (!track) return { canBook: false, message: null };
 
@@ -236,16 +195,129 @@ const TrackDetail: React.FC = () => {
     );
   }, [bookingStatus.message, track]);
 
+  // Gate the price preview until the track has loaded and the user can actually buy — a permissive
+  // gate fires before `track` resolves (with no ticketType) and 400-storms the endpoint.
+  const previewGate = getTrackPricePreviewGate({
+    signedIn: Boolean(user),
+    hasItemId: Boolean(id),
+    trackLoaded: Boolean(track),
+    bookingOpen: bookingStatus.canBook,
+    userHasBooked: Boolean(track?.user_has_booked),
+    usesTicketTypes,
+    selectedTicketType,
+  });
+  const { data: pricePreview, isLoading: pricePreviewLoading } = usePricePreview(
+    user && id ? 'track' : undefined,
+    id,
+    appliedPromoCode ?? undefined,
+    {
+      requestKey: promoAttemptKey,
+      enabled: previewGate.enabled,
+      ticketType: previewGate.ticketType,
+    },
+  );
+
+  // Effective base price: the chosen variant on ticketed tracks, else the legacy single price.
+  const effectiveBasePriceCents = usesTicketTypes
+    ? (selectedTicket?.priceCents ?? null)
+    : (track?.price_in_cents ?? null);
+  const isPaidTrack = !!(effectiveBasePriceCents && effectiveBasePriceCents > 0);
+  // Ticketed tracks always route through checkout (it persists the ticket type, even when free).
+  const needsPayment = usesTicketTypes ? ticketSelectionReady : isPaidTrack;
+
+  // Selecting a ticket filters the live session cards to the formats it includes (pure client-side).
+  const visibleSessions = useMemo(() => {
+    if (!usesTicketTypes || !selectedTicketType) return events;
+    const formats = includedFormatsFor(selectedTicketType);
+    return events.filter((event) => formats.includes(event.event_format));
+  }, [events, usesTicketTypes, selectedTicketType]);
+
+  // online_only buyers don't attend the offline day live but DO get its recordings — never let the
+  // filtered view imply they lose that entitlement.
+  const offlineSessionCount = useMemo(
+    () => events.filter((event) => event.event_format === 'offline').length,
+    [events],
+  );
+  const showRecordingsBanner = selectedTicketType === 'online_only' && offlineSessionCount > 0;
+  const promoError = pricePreview?.promoError ?? null;
+  const isPromoApplied =
+    Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !promoError;
+  const promoDisabledReason = !bookingStatus.canBook
+    ? (bookingStatus.message ?? 'Booking is not currently available.')
+    : !user
+      ? 'Sign in to apply a promo code.'
+      : pricePreview?.discountSource === 'subscriber'
+        ? 'Subscriber discount already applied.'
+        : pricePreview?.isFree
+          ? 'Promo codes are not available for free items.'
+          : null;
+  const promoDisabled = Boolean(promoDisabledReason);
+
+  const bookingState = useMemo(
+    () =>
+      getTrackBookingState({
+        userHasBooked: track?.user_has_booked,
+        userHasPendingPayment: track?.user_has_pending_payment,
+      }),
+    [track?.user_has_booked, track?.user_has_pending_payment],
+  );
+
+  // Normalize the selection whenever the track config or viewer state changes. The lone enabled
+  // variant preselects (it mirrors the admin Ticket Types config) only while the viewer can buy.
+  useEffect(() => {
+    setSelectedTicketType((current) =>
+      resolveTicketSelection({
+        current,
+        pending: track?.pending_ticket_type ?? null,
+        enabledTypes: enabledTickets.map((ticket) => ticket.type),
+        canPreselect: bookingState === 'available',
+      }),
+    );
+  }, [enabledTickets, track?.pending_ticket_type, bookingState]);
+
+  const pendingPaymentUrl = useMemo(() => {
+    if (!track?.user_has_pending_payment || !id) return null;
+    const params = new URLSearchParams();
+    params.set('item_type', 'track');
+    params.set('item_id', id);
+    if (track.pending_payment_id) {
+      params.set('payment_id', track.pending_payment_id);
+    }
+    const query = params.toString();
+    return query ? `/payment/pending?${query}` : '/payment/pending';
+  }, [id, track?.pending_payment_id, track?.user_has_pending_payment]);
+
+  const showLocationUrl = useLocationVisibility(
+    track?.location_url,
+    Boolean(track?.user_has_booked),
+    isStaff,
+    adminLoading,
+  );
+
+  const sanitizedDescription = useMemo(
+    () => (track?.description ? DOMPurify.sanitize(track.description) : null),
+    [track?.description],
+  );
+
+  const trackImageUrl =
+    track?.image_url && track.image_url.trim().length > 0
+      ? track.image_url.trim()
+      : '/uploads/trafficmena-track.png';
+
   useEffect(() => {
     if (!id || !track || !user || !needsPayment) return;
     const checkoutParam = searchParams.get('checkout');
     if (checkoutParam !== '1') return;
-    setShowPaymentDialog(true);
+    // Consume the param either way; open only when booking is possible — leaving a stale
+    // ?checkout=1 in the URL would pop the dialog whenever a later refetch reopens the window.
+    if (bookingStatus.canBook) {
+      setShowPaymentDialog(true);
+    }
     const next = new URLSearchParams(searchParams);
     next.delete('checkout');
     const nextQuery = next.toString();
     navigate(`/tracks/${id}${nextQuery ? `?${nextQuery}` : ''}`, { replace: true });
-  }, [id, navigate, needsPayment, searchParams, track, user]);
+  }, [id, navigate, needsPayment, searchParams, track, user, bookingStatus.canBook]);
 
   useEffect(() => {
     if (!appliedPromoCode) return;
@@ -278,6 +350,8 @@ const TrackDetail: React.FC = () => {
 
   const handleBook = () => {
     if (!id) return;
+    // Ticketed tracks require a variant choice before booking can proceed.
+    if (usesTicketTypes && !selectedTicketType) return;
 
     if (!user) {
       if (track) {
@@ -299,6 +373,7 @@ const TrackDetail: React.FC = () => {
 
     // If track requires payment, open payment dialog
     if (needsPayment) {
+      setRequestingNewCode(false);
       setShowPaymentDialog(true);
       return;
     }
@@ -312,10 +387,12 @@ const TrackDetail: React.FC = () => {
       navigate(pendingPaymentUrl);
       return;
     }
+    setRequestingNewCode(false);
     setShowPaymentDialog(true);
   };
 
   const handleRequestNewCode = () => {
+    setRequestingNewCode(true);
     setShowPaymentDialog(true);
   };
 
@@ -401,16 +478,26 @@ const TrackDetail: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-5 w-5 text-purple-500" />
                       <h2 className="text-xl font-semibold text-neutral-900">
-                        Sessions Included ({events.length})
+                        Sessions Included ({visibleSessions.length})
                       </h2>
                     </div>
                     <p className="mt-1 text-sm text-neutral-600">
                       Book this track to get access to all sessions below.
                     </p>
 
-                    {events.length > 0 ? (
+                    {showRecordingsBanner && (
+                      <div className="mt-4 flex items-start gap-2 rounded-xl border border-[#05ef62]/40 bg-[#f4fff9] px-4 py-3 text-sm text-neutral-800">
+                        <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#05c24f]" />
+                        <span>
+                          You'll also get recordings of the {offlineSessionCount} offline session
+                          {offlineSessionCount === 1 ? '' : 's'} after the offline day.
+                        </span>
+                      </div>
+                    )}
+
+                    {visibleSessions.length > 0 ? (
                       <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
-                        {events.map((event) => (
+                        {visibleSessions.map((event) => (
                           <TrackEventCard key={event.id} event={event} />
                         ))}
                       </div>
@@ -506,7 +593,6 @@ const TrackDetail: React.FC = () => {
                           </p>
                         </div>
 
-                        {/* Price display */}
                         {showRecordingsPrice ? (
                           <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-indigo-100/80 to-purple-100/60 px-4 py-3">
                             <Sparkles className="h-5 w-5 text-indigo-500" />
@@ -519,40 +605,56 @@ const TrackDetail: React.FC = () => {
                               </p>
                             </div>
                           </div>
-                        ) : isPaidTrack ? (
-                          <div className="space-y-3">
-                            <PriceDisplayCard
-                              itemType="track"
-                              basePriceCents={track.price_in_cents}
-                              pricePreview={pricePreview}
-                            />
-                            <PromoCodeInput
-                              onApply={(code) => {
-                                setAppliedPromoCode(code);
-                                setPromoAttemptKey((currentKey) => currentKey + 1);
-                              }}
-                              onRemove={() => setAppliedPromoCode(null)}
-                              appliedCode={appliedPromoCode ?? undefined}
-                              isApplied={isPromoApplied}
-                              error={promoError}
-                              isLoading={pricePreviewLoading}
-                              disabled={promoDisabled}
-                              disabledMessage={promoDisabledReason ?? undefined}
-                              attemptKey={promoAttemptKey}
-                              itemType="track"
-                              itemId={id}
-                              discountPercent={
-                                isPromoApplied && pricePreview?.originalAmountCents
-                                  ? Math.round(
-                                      (pricePreview.discountAppliedCents /
-                                        pricePreview.originalAmountCents) *
-                                        100,
-                                    )
-                                  : undefined
-                              }
-                            />
-                          </div>
-                        ) : null}
+                        ) : (
+                          <>
+                            {/* Ticket selector — pick a variant before pricing/booking (ticketed tracks) */}
+                            {usesTicketTypes && bookingState === 'available' && (
+                              <div className="border-t border-neutral-200 pt-4">
+                                <TrackTicketSelector
+                                  onChange={setSelectedTicketType}
+                                  options={enabledTickets}
+                                  value={selectedTicketType}
+                                />
+                              </div>
+                            )}
+
+                            {/* Price display — never for enrolled users, even if a selection lingers */}
+                            {isPaidTrack && bookingState !== 'booked' && (
+                              <div className="space-y-3">
+                                <PriceDisplayCard
+                                  itemType="track"
+                                  basePriceCents={effectiveBasePriceCents}
+                                  pricePreview={pricePreview}
+                                />
+                                <PromoCodeInput
+                                  onApply={(code) => {
+                                    setAppliedPromoCode(code);
+                                    setPromoAttemptKey((currentKey) => currentKey + 1);
+                                  }}
+                                  onRemove={() => setAppliedPromoCode(null)}
+                                  appliedCode={appliedPromoCode ?? undefined}
+                                  isApplied={isPromoApplied}
+                                  error={promoError}
+                                  isLoading={pricePreviewLoading}
+                                  disabled={promoDisabled}
+                                  disabledMessage={promoDisabledReason ?? undefined}
+                                  attemptKey={promoAttemptKey}
+                                  itemType="track"
+                                  itemId={id}
+                                  discountPercent={
+                                    isPromoApplied && pricePreview?.originalAmountCents
+                                      ? Math.round(
+                                          (pricePreview.discountAppliedCents /
+                                            pricePreview.originalAmountCents) *
+                                            100,
+                                        )
+                                      : undefined
+                                  }
+                                />
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
 
                       {bookingState === 'booked' ? (
@@ -594,20 +696,27 @@ const TrackDetail: React.FC = () => {
                           </Button>
                         </div>
                       ) : bookingStatus.canBook ? (
-                        <Button
-                          className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
-                          onClick={handleBook}
-                          disabled={bookMutation.isPending}
-                        >
-                          {bookMutation.isPending ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Booking...
-                            </>
-                          ) : (
-                            'Book Full Track'
+                        <div className="space-y-2">
+                          <Button
+                            className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
+                            onClick={handleBook}
+                            disabled={bookMutation.isPending || !ticketSelectionReady}
+                          >
+                            {bookMutation.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Booking...
+                              </>
+                            ) : (
+                              'Book Full Track'
+                            )}
+                          </Button>
+                          {usesTicketTypes && !selectedTicketType && (
+                            <p className="text-center text-xs font-medium text-neutral-600">
+                              Select a ticket type to continue.
+                            </p>
                           )}
-                        </Button>
+                        </div>
                       ) : recordingsSellableAfterBookingEnded ? (
                         <Button
                           type="button"
@@ -656,16 +765,24 @@ const TrackDetail: React.FC = () => {
       {track && id && (
         <PaymentCheckoutDialog
           open={showPaymentDialog}
-          onOpenChange={setShowPaymentDialog}
+          onOpenChange={(open) => {
+            setShowPaymentDialog(open);
+            if (!open) {
+              setRequestingNewCode(false);
+            }
+          }}
           itemType="track"
           itemId={id}
           itemName={track.title}
           itemCategory="Track"
-          basePriceCents={track.price_in_cents}
+          basePriceCents={effectiveBasePriceCents}
+          ticketType={selectedTicketType ?? undefined}
+          forceNewCode={requestingNewCode}
           appliedPromoCode={isPromoApplied ? (appliedPromoCode ?? undefined) : undefined}
           onSuccess={() => {
             // Refresh the track data after successful payment
             queryClient.invalidateQueries({ queryKey: ['tracks', 'public', 'detail', id] });
+            setRequestingNewCode(false);
             setShowPaymentDialog(false);
           }}
         />

@@ -11,10 +11,10 @@ tags:
   - race-conditions
 severity: high
 components:
-  - server/routes/api/events.ts
-  - server/routes/api/library.ts
-  - server/routes/api/series.ts
-  - server/utils/csrf.ts
+  - server/src/routes/api/events.ts
+  - server/src/routes/api/library.ts
+  - server/src/routes/api/series.ts
+  - server/src/utils/csrf.ts
   - src/app/api/client.ts
   - src/features/library/components/LibraryAssetForm.tsx
 symptoms:
@@ -50,40 +50,18 @@ Before launch, a comprehensive security review identified several patterns that 
 
 ### 1. UUID Validation Pattern
 
-**Schema Definition:**
-```typescript
-// server/src/routes/api/utils.ts or inline in route file
-import { z } from 'zod';
+Validate route `:id` params with `z.string().uuid()` before any database query, raising the standard
+`{ error: { code, message } }` envelope as a 400 instead of letting Postgres 500. The guard is declared
+**per route file** (e.g. `parseEventIdParam()` in events.ts, `validateUuid()` in tracks.ts) — there is no
+centralized helper in `utils.ts`.
 
-const uuidParamSchema = z.string().uuid();
-```
+**Canonical doc:** [`../runtime-errors/uuid-parameter-validation.md`](../runtime-errors/uuid-parameter-validation.md)
+(current helper shapes, per-route error codes, testing).
 
-**Usage Pattern:**
-```typescript
-app.get('/events/:id', async (c) => {
-  const idParam = c.req.param('id');
-  const idParsed = uuidParamSchema.safeParse(idParam);
-  if (!idParsed.success) {
-    return c.json({
-      error: { code: 'INVALID_PARAM', message: 'Event ID must be a valid UUID.' }
-    }, 400);
-  }
-  const id = idParsed.data;
-
-  // Safe to use in database queries
-  const [event] = await db.select().from(events).where(eq(events.id, id));
-});
-```
-
-**Files Updated:**
+**Files updated in this pre-launch pass:**
 - `server/src/routes/api/series.ts` - 7 endpoints
 - `server/src/routes/api/library.ts` - 3 endpoints
 - `server/src/routes/api/events.ts` - Multiple endpoints
-
-**Why This Matters:**
-- Prevents malformed UUIDs from reaching database
-- Returns clear 400 error instead of cryptic database errors
-- Defense in depth against potential injection vectors
 
 ---
 
@@ -115,9 +93,10 @@ export async function csrfMiddleware(c: Context, next: Next) {
     return c.json({ error: { code: 'CSRF_INVALID', message: 'Invalid CSRF token.' } }, 403);
   }
 
-  // Also validate Origin header
-  const origin = c.req.header('origin');
-  if (origin && !isOriginAllowed(origin)) {
+  // Also validate the request origin — REQUIRED. Current code rejects when the Referer/Origin is
+  // missing OR not allowlisted (stronger than the earlier "check only when present").
+  const origin = c.req.header('origin') ?? c.req.header('referer');
+  if (!origin || !isOriginAllowed(origin)) {
     return c.json({ error: { code: 'CSRF_ORIGIN', message: 'Invalid request origin.' } }, 403);
   }
 
@@ -157,9 +136,12 @@ setCookie(c, CSRF_COOKIE_NAME, token, {
 });
 ```
 
-**Exempt Paths:**
-- `/api/payments/webhook` - HMAC-verified instead
-- `/api/payments/webhook_json` - HMAC-verified instead
+**Exempt Paths** (all HMAC-verified instead of CSRF; the v3 migration added the cancel/failed/refund webhook routes):
+- `/api/payments/webhook`
+- `/api/payments/webhook_json`
+- `/api/payments/webhook_cancel`
+- `/api/payments/webhook_failed_json`
+- `/api/payments/webhook_refund`
 
 ---
 
@@ -194,23 +176,20 @@ const sanitizedReason = reason
   : undefined;
 ```
 
-**Shared Component for Rendering:**
+**Sanitize-then-render pattern** (used **inline** at each render site — there is no shared `src/shared/components/SanitizedHtml.tsx` component; it is duplicated in `EventDetail.tsx`, `AdminEventForm.tsx`, `LibraryItemDetail.tsx`, and others):
 ```typescript
-// src/shared/components/SanitizedHtml.tsx
-export function SanitizedHtml({ html, className }: Props) {
-  const sanitized = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-  });
+// Inline DOMPurify at each render site (no shared component):
+const sanitized = DOMPurify.sanitize(html, {
+  ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a'],
+  ALLOWED_ATTR: ['href', 'target', 'rel'],
+});
 
-  return (
-    <div
-      className={className}
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized
-      dangerouslySetInnerHTML={{ __html: sanitized }}
-    />
-  );
-}
+return (
+  <div
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized above
+    dangerouslySetInnerHTML={{ __html: sanitized }}
+  />
+);
 ```
 
 ---
@@ -264,6 +243,10 @@ const result = await db.transaction(async (tx) => {
 - Status transitions (pending -> active)
 - Financial operations
 - Any read-then-write pattern
+
+For the complementary atomicity case — multi-table parent+child writes that must commit or roll back
+together (orphan prevention) — see
+[`../database-issues/drizzle-transaction-atomicity.md`](../database-issues/drizzle-transaction-atomicity.md).
 
 ---
 

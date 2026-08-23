@@ -17,8 +17,8 @@ symptoms:
   - Database inconsistency when second operation fails
 root_cause: Auto-creation logic performed multiple related database operations as separate queries instead of wrapping them in a transaction
 related:
-  - ./security-issues/like-pattern-sql-injection.md
-  - ./feature-implementations/learning-tracks-and-series-separation.md
+  - ../security-issues/like-pattern-sql-injection.md
+  - ../feature-implementations/learning-tracks-and-series-separation.md
 ---
 
 # Drizzle ORM Transaction Atomicity
@@ -98,6 +98,16 @@ Use `db.transaction()` when:
 - Deleting with cascading effects not handled by schema
 - Any operation where partial completion would be invalid
 
+| Scenario | Transaction? |
+|----------|--------------|
+| Single-table insert | No |
+| Parent + child inserts | Yes |
+| Update with related cleanup | Yes |
+| Bulk updates (same table, all-or-none) | Yes |
+| Read-only queries | No |
+| Delete with schema-defined cascade | No |
+| Delete with manual cleanup | Yes |
+
 ## Code Review Checklist
 
 - [ ] Multiple tables modified in single handler? Use `db.transaction()`
@@ -118,10 +128,27 @@ rg "await db\.(insert|update|delete)" server/src/routes --type ts -A 5 | grep -B
 
 The codebase correctly uses transactions in:
 
-- `events.ts:576` - Event registration with row locking
-- `tracks.ts:983` - Track reorder operations
-- `tracks.ts:1003` - Track booking (atomic multi-event registration)
-- `series.ts:408` - Series asset reordering
+- `events.ts:983` - Event registration with row locking (`FOR UPDATE` at `:996`)
+- `tracks.ts:2021` - Track event-reorder transaction (route at `:1962`)
+- `payments.ts:1871` - Paid track booking (atomic multi-event registration; `FOR UPDATE` on tracks + trackEvents). The direct `/book` route transaction is at `tracks.ts:2052`
+- `series.ts:556` - Series asset reordering
+
+## Test Cases
+
+DB-integration shape (illustrative — the repo's unit suite runs `node --test` with no database, so transaction atomicity is exercised at the integration tier, not in `tests/unit/`):
+
+```typescript
+// Rolls back the parent insert when a later step in the transaction throws
+const before = await db.select({ c: count() }).from(series);
+await assert.rejects(
+  db.transaction(async (tx) => {
+    await tx.insert(series).values({ title: 'Test' });
+    throw new Error('Simulated child failure');
+  })
+);
+const after = await db.select({ c: count() }).from(series);
+assert.equal(after[0].c, before[0].c); // parent insert was rolled back
+```
 
 ## External References
 

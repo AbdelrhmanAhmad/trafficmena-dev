@@ -48,34 +48,32 @@ const DEFAULT_TRACK_IMAGE = '/uploads/trafficmena-track.png';
 <img
   src={event.imageUrl || DEFAULT_EVENT_IMAGE}
   alt={event.title}
-  className="object-contain aspect-[2/1]"
+  className="object-cover"
 />
 
-// In TrackCard
+// In TrackCard (PublicTrackCard)
 <img
   src={track.imageUrl || DEFAULT_TRACK_IMAGE}
   alt={track.title}
-  className="object-contain aspect-[2/1]"
+  className="object-cover"
 />
 ```
 
-### 3. Consistent Aspect Ratio
+### 3. Aspect Ratio by Surface
 
-Changed from arbitrary ratio to standard `2/1`:
+Cards and detail views treat the image differently:
 
 ```tsx
-// Before
-<div className="aspect-[320/210]">
-  <img className="object-cover" />
-</div>
+// Cards (EventCard, PublicTrackCard): fill the card frame
+<img className="object-cover" />
 
-// After
+// Detail views (TrackDetail): show the whole image, no crop
 <div className="aspect-[2/1]">
   <img className="object-contain" />
 </div>
 ```
 
-**Why `object-contain`:** Prevents cropping of important content in uploaded images.
+**Why the split:** cards prioritize a consistent grid (`object-cover`); detail views prioritize showing the full uploaded image without cropping (`object-contain aspect-[2/1]`).
 
 ## Files Changed
 
@@ -83,11 +81,12 @@ Changed from arbitrary ratio to standard `2/1`:
 - `public/uploads/trafficmena-event.png`
 - `public/uploads/trafficmena-track.png`
 
-**Updated components:**
-- `src/features/events/components/EventCard.tsx`
-- `src/features/tracks/components/PublicTrackCard.tsx`
-- `src/features/events/pages/EventDetail.tsx`
-- `src/features/tracks/pages/TrackDetail.tsx`
+**Updated components (local default fallback):**
+- `src/features/events/components/EventCard.tsx` — `image_url ?? DEFAULT_EVENT_IMAGE`
+- `src/features/tracks/components/PublicTrackCard.tsx` — `image_url ?? DEFAULT_TRACK_IMAGE`
+- `src/features/tracks/pages/TrackDetail.tsx` — uses both defaults
+
+Note: `EventDetail.tsx` renders its image only when `image_url` is present (no local default fallback there).
 
 ## Benefits
 

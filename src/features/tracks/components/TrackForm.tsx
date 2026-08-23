@@ -17,7 +17,17 @@ import {
 } from '@/shared/components/ui/form';
 import { Input } from '@/shared/components/ui/input';
 import { Switch } from '@/shared/components/ui/switch';
+import { cairoLocalToUtcIso, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 import type { Track } from '../types';
+
+const egpPriceSchema = z
+  .string()
+  .optional()
+  .refine(
+    (value) =>
+      !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
+    'Price must be between 0 and 100,000 EGP.',
+  );
 
 const trackFormSchema = z
   .object({
@@ -32,15 +42,15 @@ const trackFormSchema = z
     allowIndividualBooking: z.boolean(),
     singleBookingStart: z.string().optional().nullable(),
     singleBookingEnd: z.string().optional().nullable(),
-    // Pricing
-    priceEgp: z
-      .string()
-      .optional()
-      .refine(
-        (value) =>
-          !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
-        'Price must be between 0 and 100,000 EGP.',
-      ),
+    // Pricing — legacy single price (fallback when no ticket types are enabled)
+    priceEgp: egpPriceSchema,
+    // Per-ticket-type pricing (each enabled independently; empty price = free)
+    onlineOnlyEnabled: z.boolean(),
+    onlineOnlyPriceEgp: egpPriceSchema,
+    onlineOfflineEnabled: z.boolean(),
+    onlineOfflinePriceEgp: egpPriceSchema,
+    offlineOnlyEnabled: z.boolean(),
+    offlineOnlyPriceEgp: egpPriceSchema,
     // Location fields
     location: z.string().trim().max(255).optional(),
     locationUrl: z
@@ -100,7 +110,45 @@ const trackFormSchema = z
     },
   );
 
-type TrackFormValues = z.infer<typeof trackFormSchema>;
+export type TrackFormValues = z.infer<typeof trackFormSchema>;
+
+// Map the form's per-ticket enable + EGP price into the API's nullable cents columns
+// (disabled = null, enabled = cents incl. 0 for free).
+export function mapTrackTicketPrices(values: TrackFormValues) {
+  const toCents = (enabled: boolean, egp: string | undefined) =>
+    enabled ? Math.round(Number(egp || 0) * 100) : null;
+  return {
+    onlineOnlyPriceCents: toCents(values.onlineOnlyEnabled, values.onlineOnlyPriceEgp),
+    onlineOfflinePriceCents: toCents(values.onlineOfflineEnabled, values.onlineOfflinePriceEgp),
+    offlineOnlyPriceCents: toCents(values.offlineOnlyEnabled, values.offlineOnlyPriceEgp),
+  };
+}
+
+const TICKET_TYPE_ROWS = [
+  {
+    enabledField: 'onlineOnlyEnabled',
+    priceField: 'onlineOnlyPriceEgp',
+    label: 'Online Only',
+    description: 'Online sessions live + recordings of all sessions.',
+  },
+  {
+    enabledField: 'onlineOfflineEnabled',
+    priceField: 'onlineOfflinePriceEgp',
+    label: 'Online + Offline',
+    description: 'Online sessions live + the offline day in person + all recordings.',
+  },
+  {
+    enabledField: 'offlineOnlyEnabled',
+    priceField: 'offlineOnlyPriceEgp',
+    label: 'Offline Only',
+    description: 'Offline day in person + its recordings (no online sessions).',
+  },
+] as const satisfies ReadonlyArray<{
+  enabledField: keyof TrackFormValues;
+  priceField: keyof TrackFormValues;
+  label: string;
+  description: string;
+}>;
 
 interface TrackFormProps {
   track?: Track;
@@ -110,19 +158,9 @@ interface TrackFormProps {
 }
 
 function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormProps) {
-  // Helper to format date for datetime-local input (YYYY-MM-DDTHH:mm)
-  const formatDateForInput = (date: Date | string | null | undefined): string => {
-    if (!date) return '';
-    const d = new Date(date);
-    if (Number.isNaN(d.getTime())) return '';
-    // Format as local time, not UTC
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+  // Prefill datetime-local inputs from stored UTC, shown in Cairo wall-clock (empty stays empty).
+  const prefillCairo = (date: Date | string | null | undefined): string =>
+    date ? toCairoDatetimeLocal(date) : '';
 
   const form = useForm<TrackFormValues>({
     resolver: zodResolver(trackFormSchema),
@@ -132,12 +170,23 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
       imageUrl: track?.image_url || '',
       isPublished: track?.is_published ?? false, // Default to false - can't publish without events
       maxTrackBookings: track?.max_track_bookings ?? null,
-      trackBookingStart: formatDateForInput(track?.track_booking_start),
-      trackBookingEnd: formatDateForInput(track?.track_booking_end),
+      trackBookingStart: prefillCairo(track?.track_booking_start),
+      trackBookingEnd: prefillCairo(track?.track_booking_end),
       allowIndividualBooking: track?.allow_individual_booking ?? false,
-      singleBookingStart: formatDateForInput(track?.single_booking_start),
-      singleBookingEnd: formatDateForInput(track?.single_booking_end),
+      singleBookingStart: prefillCairo(track?.single_booking_start),
+      singleBookingEnd: prefillCairo(track?.single_booking_end),
       priceEgp: track?.price_in_cents ? String(track.price_in_cents / 100) : '',
+      onlineOnlyEnabled: track?.online_only_price_cents != null,
+      onlineOnlyPriceEgp:
+        track?.online_only_price_cents != null ? String(track.online_only_price_cents / 100) : '',
+      onlineOfflineEnabled: track?.online_offline_price_cents != null,
+      onlineOfflinePriceEgp:
+        track?.online_offline_price_cents != null
+          ? String(track.online_offline_price_cents / 100)
+          : '',
+      offlineOnlyEnabled: track?.offline_only_price_cents != null,
+      offlineOnlyPriceEgp:
+        track?.offline_only_price_cents != null ? String(track.offline_only_price_cents / 100) : '',
       location: track?.location || '',
       locationUrl: track?.location_url || '',
     },
@@ -164,7 +213,15 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
   };
 
   const handleSubmit = async (values: TrackFormValues) => {
-    await onSubmit(values);
+    // Convert Cairo wall-clock inputs to UTC using the correct per-date offset before submit.
+    const toUtc = (value: string | null | undefined) => (value ? cairoLocalToUtcIso(value) : value);
+    await onSubmit({
+      ...values,
+      trackBookingStart: toUtc(values.trackBookingStart),
+      trackBookingEnd: toUtc(values.trackBookingEnd),
+      singleBookingStart: toUtc(values.singleBookingStart),
+      singleBookingEnd: toUtc(values.singleBookingEnd),
+    });
   };
 
   return (
@@ -241,19 +298,86 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
         <FormField
           control={form.control}
           name="priceEgp"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Price (EGP)</FormLabel>
-              <FormControl>
-                <Input placeholder="0 for free" inputMode="decimal" {...field} />
-              </FormControl>
-              <FormDescription>
-                Leave empty or set to 0 for free tracks. Subscribers get discounts on paid tracks.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            // When any ticket type is enabled the track is sold per-variant and this single price is
+            // ignored (see resolveTrackBasePrice). Disable it so the two price concepts don't compete.
+            const ticketPricingActive =
+              form.watch('onlineOnlyEnabled') ||
+              form.watch('onlineOfflineEnabled') ||
+              form.watch('offlineOnlyEnabled');
+            return (
+              <FormItem>
+                <FormLabel>Price (EGP)</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="0 for free"
+                    inputMode="decimal"
+                    {...field}
+                    disabled={ticketPricingActive}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {ticketPricingActive
+                    ? 'Ignored while ticket types are enabled — each ticket below sets its own price. This single price applies only to tracks without ticket types.'
+                    : 'Leave empty or set to 0 for free tracks. Used as the fallback when no ticket types below are enabled.'}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
+
+        {/* Ticket Types — optional per-variant pricing. Enabling any switches the track to ticket
+            pricing (the legacy price above is ignored). Empty price = free. */}
+        <div className="space-y-4 rounded-xl border bg-muted/30 p-6">
+          <div>
+            <h3 className="text-lg font-semibold">Ticket Types (optional)</h3>
+            <p className="text-sm text-muted-foreground">
+              Sell the track as Online Only / Online + Offline / Offline Only, each with its own
+              price. Enable at least one to use ticket pricing; leave all off to keep the single
+              price above.
+            </p>
+          </div>
+          {TICKET_TYPE_ROWS.map((row) => (
+            <div key={row.enabledField} className="rounded-lg border bg-background p-4">
+              <FormField
+                control={form.control}
+                name={row.enabledField}
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">{row.label}</FormLabel>
+                      <FormDescription>{row.description}</FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              {form.watch(row.enabledField) && (
+                <FormField
+                  control={form.control}
+                  name={row.priceField}
+                  render={({ field }) => (
+                    <FormItem className="mt-3 max-w-xs">
+                      <FormLabel>Price (EGP)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="0 for free"
+                          inputMode="decimal"
+                          {...field}
+                          value={field.value ?? ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+          ))}
+        </div>
 
         <FormField
           control={form.control}

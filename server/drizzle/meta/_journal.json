@@ -1,4 +1,4 @@
-{
+﻿{
   "version": "7",
   "dialect": "postgresql",
   "entries": [
@@ -117,85 +117,120 @@
     {
       "idx": 16,
       "version": "7",
-      "when": 1778500000000,
-      "tag": "0016_series_sales_pricing",
+      "when": 1782395162270,
+      "tag": "0016_tidy_nova",
       "breakpoints": true
     },
     {
       "idx": 17,
       "version": "7",
-      "when": 1778600000000,
-      "tag": "0017_fawaterk_invoice_id_text",
+      "when": 1782419915695,
+      "tag": "0017_amazing_galactus",
       "breakpoints": true
     },
     {
       "idx": 18,
       "version": "7",
-      "when": 1778700000000,
-      "tag": "0018_series_orders",
+      "when": 1782432875968,
+      "tag": "0018_fast_sleepwalker",
       "breakpoints": true
     },
     {
       "idx": 19,
       "version": "7",
-      "when": 1778800000000,
-      "tag": "0019_digital_products",
+      "when": 1782433917771,
+      "tag": "0019_misty_wallow",
       "breakpoints": true
     },
     {
       "idx": 20,
       "version": "7",
-      "when": 1778900000000,
-      "tag": "0020_masterclasses",
+      "when": 1782449185600,
+      "tag": "0020_complete_sandman",
       "breakpoints": true
     },
     {
       "idx": 21,
       "version": "7",
-      "when": 1779000000000,
-      "tag": "0021_certificates",
+      "when": 1783035004425,
+      "tag": "0021_brief_ezekiel_stane",
       "breakpoints": true
     },
     {
       "idx": 22,
       "version": "7",
-      "when": 1779100000000,
-      "tag": "0022_digital_product_videos",
+      "when": 1778500000000,
+      "tag": "0022_series_sales_pricing",
       "breakpoints": true
     },
     {
       "idx": 23,
       "version": "7",
-      "when": 1779200000000,
-      "tag": "0023_masterclass_lesson_video_urls",
+      "when": 1778700000000,
+      "tag": "0023_series_orders",
       "breakpoints": true
     },
     {
       "idx": 24,
       "version": "7",
-      "when": 1779300000000,
-      "tag": "0024_module_settings",
+      "when": 1778800000000,
+      "tag": "0024_digital_products",
       "breakpoints": true
     },
     {
       "idx": 25,
       "version": "7",
-      "when": 1779400000000,
-      "tag": "0025_series_recordings_access_policy",
+      "when": 1778900000000,
+      "tag": "0025_masterclasses",
       "breakpoints": true
     },
     {
       "idx": 26,
       "version": "7",
-      "when": 1786523995169,
-      "tag": "0026_event_recordings_series",
+      "when": 1779000000000,
+      "tag": "0026_certificates",
       "breakpoints": true
     },
     {
       "idx": 27,
       "version": "7",
+      "when": 1779100000000,
+      "tag": "0027_digital_product_videos",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1779200000000,
+      "tag": "0028_masterclass_lesson_video_urls",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1779300000000,
+      "tag": "0029_module_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1779400000000,
+      "tag": "0030_series_recordings_access_policy",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1786523995169,
+      "tag": "0031_event_recordings_series",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
       "when": 1786525000000,
-      "tag": "0027_library_store_enabled",
+      "tag": "0032_library_store_enabled",
       "breakpoints": true
     }
   ]

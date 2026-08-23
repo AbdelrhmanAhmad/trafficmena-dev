@@ -4,3 +4,4 @@ export { PriceBadge } from './PriceBadge';
 export { PriceDisplayCard } from './PriceDisplayCard';
 export { PromoCodeInput } from './PromoCodeInput';
 export { SubscriptionStatusBadge } from './SubscriptionStatusBadge';
+export { isWalletMethod, WalletNumberField } from './WalletNumberField';

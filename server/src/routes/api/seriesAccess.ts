@@ -1,3 +1,5 @@
+import { bookingGrantsRecording, type EventFormat, type TicketType } from './ticketAccess.js';
+
 export type RecordingsAccessPolicy = 'free_for_prior_buyers' | 'everyone_pays';
 
 export const RECORDINGS_ACCESS_POLICIES = ['free_for_prior_buyers', 'everyone_pays'] as const;
@@ -13,9 +15,13 @@ type SeriesAccessContext = {
 };
 
 type SeriesAssetAccessInput = SeriesAccessContext & {
+  // The viewer's active track booking ticket type (null = legacy / non-ticket-typed booking).
+  bookingTicketType: TicketType | null;
   assetIsPremium: boolean;
   assetIsPublic: boolean;
   assetEventId: string | null;
+  // Delivery mode of the asset's linked event (null = no linked event -> general track content).
+  assetEventFormat: EventFormat | null;
   userEventIds: Set<string>;
 };
 
@@ -31,18 +37,25 @@ export function resolveSeriesAccess(context: SeriesAccessContext): boolean {
   return (
     context.isStaff ||
     context.isSubscriber ||
-    hasPriorBuyerComplimentaryAccess(context) ||
     context.hasSeriesGrant ||
+    hasPriorBuyerComplimentaryAccess(context) ||
     !context.seriesIsPremium
   );
 }
 
 export function resolveSeriesAssetAccess(input: SeriesAssetAccessInput): boolean {
+  if (input.isStaff || input.isSubscriber || input.hasSeriesGrant) {
+    return true;
+  }
+
+  const soldRecordingsRequirePurchase =
+    input.recordingsAccessPolicy === 'everyone_pays' && input.seriesIsPremium;
+
+  // Track booking grants this recording only when the ticket matrix allows it.
   if (
-    input.isStaff ||
-    input.isSubscriber ||
-    hasPriorBuyerComplimentaryAccess(input) ||
-    input.hasSeriesGrant
+    input.hasTrackBooking &&
+    !soldRecordingsRequirePurchase &&
+    bookingGrantsRecording(input.bookingTicketType, input.assetEventFormat)
   ) {
     return true;
   }
@@ -60,6 +73,7 @@ type LibraryAssetAccessInput = {
   assetIsPremium: boolean;
   assetIsPublic: boolean;
   assetEventId: string | null;
+  assetEventFormat: EventFormat | null;
   hasEventRegistration: boolean;
   parentSeries: null | {
     isPremium: boolean;
@@ -68,6 +82,7 @@ type LibraryAssetAccessInput = {
     hasTrackBooking: boolean;
     hasTrackEventAttendance: boolean;
     hasSeriesGrant: boolean;
+    bookingTicketType: TicketType | null;
   };
 };
 
@@ -79,6 +94,14 @@ export function resolveLibraryAssetAccess(input: LibraryAssetAccessInput): boole
 
   const parent = input.parentSeries;
   if (parent && (parent.salesEnabled || parent.isPremium)) {
+    if (
+      parent.recordingsAccessPolicy === 'free_for_prior_buyers' &&
+      parent.hasTrackEventAttendance &&
+      input.hasEventRegistration
+    ) {
+      return true;
+    }
+
     return resolveSeriesAssetAccess({
       isStaff: input.isStaff,
       isSubscriber: input.isSubscriber,
@@ -87,9 +110,11 @@ export function resolveLibraryAssetAccess(input: LibraryAssetAccessInput): boole
       hasSeriesGrant: parent.hasSeriesGrant,
       seriesIsPremium: parent.isPremium,
       recordingsAccessPolicy: parent.recordingsAccessPolicy,
+      bookingTicketType: parent.bookingTicketType,
       assetIsPremium: input.assetIsPremium,
       assetIsPublic: input.assetIsPublic,
       assetEventId: input.assetEventId,
+      assetEventFormat: input.assetEventFormat,
       userEventIds:
         input.hasEventRegistration && input.assetEventId
           ? new Set([input.assetEventId])

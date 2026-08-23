@@ -16,8 +16,10 @@ import {
   getUpdatedProfileFields,
   type ProfileAnalyticsSnapshot,
 } from '@/lib/analytics/profile';
+import { ChangeEmailFlow } from '@/shared/components/ChangeEmailFlow';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
+import { PhoneNumberField } from '@/shared/components/PhoneNumberField';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -48,12 +50,10 @@ const EMPTY_PROFILE_ANALYTICS_SNAPSHOT: ProfileAnalyticsSnapshot = {
 };
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshSession } = useAuth();
   const { toast } = useToast();
   const firstNameId = useId();
   const lastNameId = useId();
-  const emailId = useId();
-  const phoneId = useId();
   const goalId = useId();
   const challengeId = useId();
 
@@ -79,6 +79,7 @@ const Dashboard: React.FC = () => {
   );
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState('');
+  const [isPhoneValid, setIsPhoneValid] = useState(true);
 
   useEffect(() => {
     const nextSnapshot: ProfileAnalyticsSnapshot = {
@@ -274,21 +275,14 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div>
-                    <Label htmlFor={emailId}>Email</Label>
-                    <Input id={emailId} name="email" value={formData.email} disabled />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Email updates coming soon. Contact support if you need to change this.
-                    </p>
+                    <ChangeEmailFlow currentEmail={formData.email} onChanged={refreshSession} />
                   </div>
 
                   <div>
-                    <Label htmlFor={phoneId}>Phone Number</Label>
-                    <Input
-                      id={phoneId}
-                      name="phone"
+                    <PhoneNumberField
                       value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="e.g. +971 50 123 4567"
+                      onChange={(phone) => setFormData((prev) => ({ ...prev, phone }))}
+                      onValidChange={setIsPhoneValid}
                     />
                   </div>
 
@@ -318,10 +312,13 @@ const Dashboard: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex justify-end">
+              <div className="flex flex-col items-end gap-2">
+                {isPhoneValid ? null : (
+                  <p className="text-xs text-destructive">Fix the phone number before saving.</p>
+                )}
                 <Button
                   onClick={handleSaveProfile}
-                  disabled={updateProfileMutation.isPending}
+                  disabled={updateProfileMutation.isPending || !isPhoneValid}
                   className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
                 >
                   {updateProfileMutation.isPending ? 'Saving…' : 'Save Changes'}

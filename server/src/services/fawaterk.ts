@@ -81,6 +81,93 @@ async function fetchWithCircuitBreaker(
   }
 }
 
+// --- v3 OAuth client-credentials token manager ---
+// Single-instance in-memory cache with single-flight refresh (same posture as the rate limiter /
+// circuit breaker). SECURITY: never log FAWATERK_CLIENT_SECRET, the token request body, or the
+// access token.
+const TOKEN_REFRESH_MARGIN_MS = 60_000; // refresh slightly before expiry to avoid mid-call 401s
+const DEFAULT_TOKEN_TTL_MS = 60 * 60 * 1000; // fallback if the response omits a usable expires_in
+
+let tokenState: { accessToken: string; expiresAt: number } | null = null;
+let inFlightToken: Promise<string> | null = null;
+
+const getV3Host = () =>
+  env.FAWATERK_ENV === 'live' ? 'https://app.fawaterk.com' : 'https://staging.fawaterk.com';
+
+async function fetchAccessToken(): Promise<string> {
+  if (!env.FAWATERK_CLIENT_ID || !env.FAWATERK_CLIENT_SECRET) {
+    throw new Error('Fawaterk OAuth credentials not configured (FAWATERK_CLIENT_ID/SECRET).');
+  }
+
+  const response = await fetchWithCircuitBreaker(`${getV3Host()}/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'client_credentials',
+      client_id: env.FAWATERK_CLIENT_ID,
+      client_secret: env.FAWATERK_CLIENT_SECRET,
+    }),
+  });
+
+  if (!response.ok) {
+    // Status only — the body can echo request context we must not surface.
+    throw new Error(`Fawaterk OAuth token request failed: ${response.status}`);
+  }
+
+  const result = await response.json().catch(() => null);
+  const accessToken = result?.access_token;
+  if (typeof accessToken !== 'string' || accessToken.length === 0) {
+    throw new Error('Fawaterk OAuth token response missing access_token');
+  }
+
+  const expiresIn = Number(result?.expires_in);
+  const ttlMs =
+    Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn * 1000 : DEFAULT_TOKEN_TTL_MS;
+  tokenState = { accessToken, expiresAt: Date.now() + ttlMs };
+  return accessToken;
+}
+
+async function getAccessToken(): Promise<string> {
+  if (tokenState && Date.now() < tokenState.expiresAt - TOKEN_REFRESH_MARGIN_MS) {
+    return tokenState.accessToken;
+  }
+  if (inFlightToken) {
+    return inFlightToken;
+  }
+  inFlightToken = fetchAccessToken().finally(() => {
+    inFlightToken = null;
+  });
+  return inFlightToken;
+}
+
+function invalidateAccessToken() {
+  tokenState = null;
+}
+
+// Every v3 call goes through here: attach the bearer token, and on a 401 (expired/revoked token)
+// invalidate the cache, refresh once, and retry exactly once. A second 401 is returned as-is so the
+// caller surfaces it as an error (no infinite retry).
+async function v3Fetch(path: string, init: RequestInit): Promise<Response> {
+  const build = (token: string): RequestInit => ({
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init.headers ?? {}),
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const url = `${getV3Host()}${path}`;
+  const token = await getAccessToken();
+  let response = await fetchWithCircuitBreaker(url, build(token));
+  if (response.status === 401) {
+    invalidateAccessToken();
+    const fresh = await getAccessToken();
+    response = await fetchWithCircuitBreaker(url, build(fresh));
+  }
+  return response;
+}
+
 type FawaterkCustomer = {
   first_name: string;
   last_name: string;
@@ -89,29 +176,11 @@ type FawaterkCustomer = {
   address?: string;
 };
 
-type FawaterkCartItem = {
-  name: string;
-  price: string;
-  quantity: string;
-};
-
 type FawaterkRedirectionUrls = {
   successUrl: string;
   failUrl: string;
   pendingUrl: string;
   webhookUrl?: string;
-};
-
-type InitiatePaymentArgs = {
-  paymentMethodId: number;
-  invoiceNumber?: string;
-  cartTotal: number;
-  currency: string;
-  customer: FawaterkCustomer;
-  cartItems: FawaterkCartItem[];
-  redirectionUrls: FawaterkRedirectionUrls;
-  redirectOption?: boolean;
-  payload?: Record<string, unknown>;
 };
 
 export type PaymentMethod = {
@@ -122,20 +191,6 @@ export type PaymentMethod = {
   logo?: string;
 };
 
-type InvoiceData = {
-  invoice_id: string;
-  invoice_key: string;
-  due_date: string;
-  pay_load: unknown;
-  customer_email: string;
-  payment_method: string;
-  currency: string;
-  total: number;
-  paid: number;
-  paid_at: string | null;
-  invoice_created_at: string;
-};
-
 // Zod schemas for Fawaterk API response validation
 const paymentMethodSchema = z.object({
   paymentId: z.number(),
@@ -144,56 +199,6 @@ const paymentMethodSchema = z.object({
   redirect: z.string(),
   logo: z.string().optional(),
 });
-
-// Live API returns UUID strings; staging may return numeric ids.
-const invoiceRefSchema = z
-  .union([z.number(), z.string()])
-  .transform((value) => String(value).trim())
-  .refine((value) => value.length > 0 && value !== 'NaN', 'Invalid invoice id');
-
-// Staging legacy: invoice_id + invoice_key. Newer responses use intent_key + transaction_created_at.
-const invoiceDataSchema = z
-  .object({
-    invoice_id: invoiceRefSchema.optional(),
-    intent_key: z.string().optional(),
-    invoice_key: z.string().optional(),
-    transaction_id: z.union([z.number(), z.string()]).optional(),
-    due_date: z.string().optional(),
-    pay_load: z.unknown().optional(),
-    customer_email: z.string().optional(),
-    payment_method: z.string().optional(),
-    currency: z.string().optional(),
-    total: z.coerce.number(),
-    paid: z.coerce.number(),
-    paid_at: z.string().nullable().optional(),
-    invoice_created_at: z.string().optional(),
-    transaction_created_at: z.string().optional(),
-  })
-  .passthrough()
-  .transform((data) => {
-    const invoiceId =
-      (data.invoice_id !== undefined ? String(data.invoice_id) : undefined) ??
-      data.intent_key ??
-      (data.transaction_id !== undefined ? String(data.transaction_id) : '');
-    const invoiceKey = data.invoice_key ?? data.intent_key ?? invoiceId;
-    return {
-      invoice_id: invoiceId.trim(),
-      invoice_key: invoiceKey,
-      due_date: data.due_date ?? '',
-      pay_load: data.pay_load,
-      customer_email: data.customer_email ?? '',
-      payment_method: data.payment_method ?? '',
-      currency: data.currency ?? '',
-      total: data.total,
-      paid: data.paid,
-      paid_at: data.paid_at ?? null,
-      invoice_created_at: data.invoice_created_at ?? data.transaction_created_at ?? '',
-    };
-  })
-  .refine((data) => data.invoice_id.length > 0 && data.invoice_id !== 'NaN', {
-    path: ['invoice_id'],
-    message: 'Missing invoice id',
-  });
 
 const referenceCodeSchema = z
   .union([z.string(), z.number(), z.null()])
@@ -225,13 +230,72 @@ const paymentDataSchema = z
     masaryCode: data.masaryCode ?? data.masary_code,
   }));
 
-const invoiceInitPayResponseSchema = z
+// --- v3 request/response shapes ---
+
+type NormalizedPaymentData = {
+  redirectTo?: string;
+  fawryCode?: string;
+  meezaReference?: string;
+  meezaQrCode?: string;
+  amanCode?: string;
+  masaryCode?: string;
+};
+
+export type CreateTransactionArgs = {
+  paymentMethodId: number;
+  cartTotal: number;
+  currency: string;
+  customer: FawaterkCustomer;
+  cartItems: { name: string; price: number; quantity: number }[];
+  redirectionUrls: FawaterkRedirectionUrls;
+  payload: Record<string, unknown>;
+  // Aligned to our 72h pending window (RESERVATION_TTL_MS) — v3's own default is only +2 days.
+  dueDate: Date;
+  mobileWalletNumber?: string;
+};
+
+export type GatewayTransaction = {
+  paid: number;
+  total?: number;
+  currency?: string;
+  paymentMethod?: string;
+  transactionId?: number;
+  paidAt?: string | null;
+  // Set when the intent is invalid/expired/not-found (422 with a string message) — treated as
+  // "not paid, possibly expired" by confirm/reconcile.
+  expiredOrMissing?: boolean;
+};
+
+// createTransaction 200 is a oneOf; strict only on intent_key (its absence = the call failed).
+const createTransactionDataSchema = z
   .object({
-    invoice_id: invoiceRefSchema,
-    invoice_key: z.string(),
-    payment_data: paymentDataSchema,
+    intent_key: z.string().min(1),
+    url: z.string().optional(),
+    payment_data: z.unknown().optional(),
   })
   .passthrough();
+
+const transactionDetailSchema = z
+  .object({
+    intent_key: z.string().optional(),
+    transaction_id: z.union([z.number(), z.string()]).optional(),
+    paid: z.number(),
+    paid_at: z.string().nullable().optional(),
+    total: z.number(),
+    currency: z.string(),
+    payment_method: z.string().optional(),
+  })
+  .passthrough();
+
+// v3 due_date wire format. The spec's response examples use "Y-m-d H:i:s" (Laravel default);
+// AE8 confirms the accepted request format + timezone on staging. Formatted in UTC.
+function formatFawaterkDueDate(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return (
+    `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ` +
+    `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`
+  );
+}
 
 const summarizePaymentData = (input: unknown) => {
   if (!input || typeof input !== 'object') {
@@ -255,42 +319,38 @@ const summarizePaymentData = (input: unknown) => {
   return { type: 'object', keys, shapes, lengths };
 };
 
-const getBaseUrl = () =>
-  env.FAWATERK_ENV === 'live'
-    ? 'https://app.fawaterk.com/api/v2'
-    : 'https://staging.fawaterk.com/api/v2';
-
 export async function getPaymentMethods(): Promise<PaymentMethod[]> {
-  if (!env.FAWATERK_API_KEY) {
-    throw new Error('FAWATERK_API_KEY not configured');
-  }
-
   // Return fresh cache if within TTL
   if (methodsCache && Date.now() - methodsCache.fetchedAt < METHODS_CACHE_TTL_MS) {
     return methodsCache.data;
   }
 
-
-
-
   try {
-    const response = await fetchWithCircuitBreaker(`${getBaseUrl()}/getPaymentmethods`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.FAWATERK_API_KEY}`,
-      },
-    });
+    const response = await v3Fetch('/api/v3/getTrPaymentmethods', { method: 'GET' });
 
     if (!response.ok) {
       const detail = await response.text();
-      throw new Error(`Fawaterk getPaymentMethods failed: ${response.status} ${detail}`);
+      throw new Error(`Fawaterk getTrPaymentmethods failed: ${response.status} ${detail}`);
     }
 
     const result = await response.json();
-    const parsed = z.array(paymentMethodSchema).safeParse(result.data);
+    // Normalize the method id so the SPA contract and both heuristics (server requiresPhone, SPA
+    // keyword matching) keep working. The live v3 getTrPaymentmethods returns `paymentId` (verified
+    // against staging 2026-07-03); accept `payment_method_id` too in case the live tenant differs.
+    const normalized = Array.isArray(result?.data)
+      ? result.data.map((method: Record<string, unknown>) => ({
+          paymentId: method.paymentId ?? method.payment_method_id,
+          name_en: method.name_en,
+          name_ar: method.name_ar,
+          redirect: method.redirect,
+          // Coerce an explicit null logo to undefined: z.string().optional() rejects null, and one
+          // null-logo method would otherwise fail the whole-array parse and blank the method list.
+          logo: method.logo ?? undefined,
+        }))
+      : result?.data;
+    const parsed = z.array(paymentMethodSchema).safeParse(normalized);
     if (!parsed.success) {
-      console.error('[fawaterk] Invalid getPaymentMethods response:', parsed.error.format());
+      console.error('[fawaterk] Invalid getTrPaymentmethods response:', parsed.error.format());
       throw new Error('Invalid payment methods response from gateway');
     }
 
@@ -299,7 +359,7 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
   } catch (error) {
     // Stale-while-error: serve expired cache rather than failing
     if (methodsCache) {
-      console.warn('[fawaterk] getPaymentMethods failed, serving stale cache', {
+      console.warn('[fawaterk] getTrPaymentmethods failed, serving stale cache', {
         cacheAge: `${Math.round((Date.now() - methodsCache.fetchedAt) / 1000)}s`,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -309,161 +369,198 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
   }
 }
 
-// Force-clear the methods cache (e.g. after disabling a payment method)
-export function invalidatePaymentMethodsCache() {
-  methodsCache = null;
-}
+// --- v3 transaction API ---
 
-export async function invoiceInitPay(args: InitiatePaymentArgs): Promise<{
-  invoiceId: string;
-  invoiceKey: string;
-  paymentData: {
-    redirectTo?: string;
-    fawryCode?: string;
-    meezaReference?: string;
-    meezaQrCode?: string;
-    amanCode?: string;
-    masaryCode?: string;
-  };
+export async function createTransaction(args: CreateTransactionArgs): Promise<{
+  intentKey: string;
+  redirectUrl?: string;
+  paymentData: NormalizedPaymentData;
 }> {
-  if (!env.FAWATERK_API_KEY) {
-    throw new Error('FAWATERK_API_KEY not configured');
+  const body: Record<string, unknown> = {
+    currency: args.currency,
+    customer: args.customer,
+    cartItems: args.cartItems,
+    cartTotal: args.cartTotal,
+    payment_method_id: args.paymentMethodId,
+    pay_load: args.payload,
+    due_date: formatFawaterkDueDate(args.dueDate),
+    redirectionUrls: args.redirectionUrls,
+  };
+  // Deliberately NO redirectOption: v3 forced-link responses carry no payment_data, so reference
+  // codes would never return. Direct-dispatch renders codes on our own /payment/pending page.
+  if (args.mobileWalletNumber) {
+    body.mobileWalletNumber = args.mobileWalletNumber;
   }
 
-  const response = await fetchWithCircuitBreaker(`${getBaseUrl()}/invoiceInitPay`, {
+  const response = await v3Fetch('/api/v3/createTransaction', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.FAWATERK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      payment_method_id: args.paymentMethodId,
-      invoice_number: args.invoiceNumber,
-      cartTotal: args.cartTotal.toString(),
-      currency: args.currency,
-      customer: args.customer,
-      cartItems: args.cartItems,
-      redirectionUrls: args.redirectionUrls,
-      ...(args.redirectOption ? { redirectOption: true } : {}),
-      payLoad: args.payload,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Fawaterk invoiceInitPay failed: ${response.status} ${detail}`);
+    throw new Error(`Fawaterk createTransaction failed: ${response.status} ${detail}`);
   }
 
   const result = await response.json();
-  const paymentDataSummary = summarizePaymentData(result?.data?.payment_data);
-  const parsed = invoiceInitPayResponseSchema.safeParse(result.data);
+  // v3 nests the intent under `data` for redirect (card) and Meeza/wallet direct-dispatch, but some
+  // direct-dispatch methods (Fawry) return a FLAT top-level body — intent_key and the reference code
+  // are siblings with no `data` wrapper (verified against staging 2026-07-03). Accept both envelopes.
+  const container =
+    result && typeof result.data === 'object' && result.data !== null ? result.data : result;
+  // payment_data is nested under `payment_data` for the wrapped variants; for a flat body the codes
+  // sit at the top level, so fall back to the container itself.
+  const nestedPaymentData = container?.payment_data;
+  const rawPaymentData =
+    nestedPaymentData && typeof nestedPaymentData === 'object' ? nestedPaymentData : container;
+  const paymentDataSummary = summarizePaymentData(rawPaymentData);
+  const parsed = createTransactionDataSchema.safeParse(container);
   if (!parsed.success) {
-    const dataKeys =
-      result?.data && typeof result.data === 'object'
-        ? Object.keys(result.data as Record<string, unknown>)
-        : [];
-    console.error('[fawaterk] Invalid invoiceInitPay response:', parsed.error.format(), {
-      paymentDataSummary,
-      dataKeys,
-    });
-    throw new Error('Invalid invoice initialization response from gateway');
-  }
-  const paymentData = parsed.data.payment_data;
-  const hasRedirect = Boolean(paymentData.redirectTo);
-  const hasReference = Boolean(
-    paymentData.fawryCode ||
-      paymentData.amanCode ||
-      paymentData.masaryCode ||
-      paymentData.meezaReference ||
-      paymentData.meezaQrCode,
-  );
-  if (!hasRedirect && !hasReference) {
-    console.warn('[fawaterk] invoiceInitPay returned no redirect or reference codes', {
-      invoiceId: parsed.data.invoice_id,
-      paymentMethodId: args.paymentMethodId,
+    console.error('[fawaterk] Invalid createTransaction response:', parsed.error.format(), {
       paymentDataSummary,
     });
+    throw new Error('Invalid transaction creation response from gateway');
   }
-  return {
-    invoiceId: parsed.data.invoice_id,
-    invoiceKey: parsed.data.invoice_key,
-    paymentData,
-  };
+
+  // Lenient on payment_data (KTD-4): once intent_key exists the intent is live at the gateway, so a
+  // parsing surprise must degrade UX (pending page + webhook/verify), never fail the payment.
+  let paymentData: NormalizedPaymentData = {};
+  if (rawPaymentData && typeof rawPaymentData === 'object') {
+    const parsedPaymentData = paymentDataSchema.safeParse(rawPaymentData);
+    if (parsedPaymentData.success) {
+      paymentData = parsedPaymentData.data;
+    } else {
+      console.warn('[fawaterk] createTransaction payment_data did not match known shapes', {
+        paymentDataSummary,
+      });
+    }
+  }
+  // A present-but-primitive payment_data (e.g. a double-encoded JSON string from an undocumented
+  // method) carries a code the schema can't reach; surface it for the staging parser-extension loop
+  // instead of degrading silently.
+  if (
+    nestedPaymentData !== undefined &&
+    nestedPaymentData !== null &&
+    typeof nestedPaymentData !== 'object'
+  ) {
+    console.warn('[fawaterk] createTransaction payment_data was a primitive, not an object', {
+      paymentDataSummary: summarizePaymentData(nestedPaymentData),
+    });
+  }
+
+  const redirectUrl = paymentData.redirectTo ?? parsed.data.url ?? container?.url;
+  return { intentKey: parsed.data.intent_key, redirectUrl, paymentData };
 }
 
-export async function getInvoiceData(invoiceId: string | number): Promise<InvoiceData> {
-  if (!env.FAWATERK_API_KEY) {
-    throw new Error('FAWATERK_API_KEY not configured');
-  }
+export async function getTransactionData(intentKey: string): Promise<GatewayTransaction> {
+  const response = await v3Fetch('/api/v3/getTransactionData', {
+    method: 'POST',
+    body: JSON.stringify({ intent_key: intentKey }),
+  });
 
-  const response = await fetchWithCircuitBreaker(
-    `${getBaseUrl()}/getInvoiceData/${encodeURIComponent(String(invoiceId))}`,
-    {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${env.FAWATERK_API_KEY}`,
-      },
-    },
-  );
+  if (response.status === 422) {
+    const errorBody = await response.json().catch(() => null);
+    const message = errorBody?.message;
+    if (typeof message === 'string') {
+      // Invalid / expired / not-found intent → not paid, possibly expired.
+      return { paid: 0, expiredOrMissing: true };
+    }
+    // Object of field errors → OUR request is malformed. Surface as an integration error; it must
+    // never masquerade as "still pending" (silent-degradation guard, R5).
+    console.error('[fawaterk] getTransactionData validation error (request shape drift)', {
+      messageKeys: message && typeof message === 'object' ? Object.keys(message) : typeof message,
+    });
+    throw new Error('getTransactionData request rejected by gateway (validation)');
+  }
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Fawaterk getInvoiceData failed: ${response.status} ${detail}`);
+    throw new Error(`Fawaterk getTransactionData failed: ${response.status} ${detail}`);
   }
 
   const result = await response.json();
-  const parsed = invoiceDataSchema.safeParse(result.data);
+  const parsed = transactionDetailSchema.safeParse(result?.data);
   if (!parsed.success) {
-    const dataKeys =
-      result?.data && typeof result.data === 'object'
-        ? Object.keys(result.data as Record<string, unknown>)
-        : [];
-    console.error('[fawaterk] Invalid getInvoiceData response:', parsed.error.format(), {
-      dataKeys,
-      paid: (result?.data as { paid?: unknown } | undefined)?.paid,
-    });
-    throw new Error('Invalid invoice data response from gateway');
+    console.error('[fawaterk] Invalid getTransactionData response:', parsed.error.format());
+    throw new Error('Invalid transaction data response from gateway');
   }
-  return parsed.data as InvoiceData;
+
+  const detail = parsed.data;
+  const transactionId =
+    detail.transaction_id === undefined ? undefined : Number(detail.transaction_id);
+  return {
+    paid: detail.paid,
+    total: detail.total,
+    currency: detail.currency,
+    paymentMethod: detail.payment_method,
+    transactionId: Number.isFinite(transactionId) ? transactionId : undefined,
+    paidAt: detail.paid_at ?? null,
+  };
 }
 
-// HMAC signature verification for webhooks (per Fawaterk docs)
-// Uses API Key as secret, NOT a separate webhook secret
-// SECURITY: Uses timing-safe comparison to prevent timing attacks
-export function verifyFawaterkWebhook(body: {
-  invoice_id: string | number;
-  invoice_key: string;
-  payment_method: string;
-  hashKey: string;
-}): boolean {
+// --- v3 webhook signature verification ---
+// All v3 webhooks are HMAC-SHA256 signed with the vendor API key (= FAWATERK_API_KEY). Shared
+// hygiene: fail closed when the key is missing, guard the hash is hex, length-check before the
+// timing-safe compare. The hash is NOT hard-assumed to be 64-hex — AE6 confirms the real length on
+// staging; the length-equality check adapts automatically.
+function verifyHmac(stringToSign: string, receivedHash: string): boolean {
   if (!env.FAWATERK_API_KEY) {
     console.error('[webhook] FAWATERK_API_KEY required for verification');
     return false;
   }
+  if (typeof receivedHash !== 'string' || !/^[a-f0-9]+$/i.test(receivedHash)) {
+    return false;
+  }
 
-  // Per Fawaterk docs: build query string in exact order
-  const queryParam = `InvoiceId=${body.invoice_id}&InvoiceKey=${body.invoice_key}&PaymentMethod=${body.payment_method}`;
-
-  // Use API Key as the HMAC secret (per Fawaterk documentation)
   const expectedHash = crypto
     .createHmac('sha256', env.FAWATERK_API_KEY)
-    .update(queryParam)
+    .update(stringToSign)
     .digest('hex');
 
-  // SECURITY: Use timing-safe comparison to prevent timing attacks
   try {
-    const receivedBuffer = Buffer.from(body.hashKey, 'hex');
+    const receivedBuffer = Buffer.from(receivedHash, 'hex');
     const expectedBuffer = Buffer.from(expectedHash, 'hex');
-
-    // Length check before timing-safe comparison
     if (receivedBuffer.length !== expectedBuffer.length) {
       return false;
     }
-
     return timingSafeEqual(receivedBuffer, expectedBuffer);
   } catch {
-    // Invalid hex string or other error
     return false;
   }
+}
+
+// Paid/failed TR webhooks. Caller passes transactionHashKey (paid) or hashKey (failed) as `hash`.
+export function verifyTransactionWebhook(body: {
+  transaction_id: number | string;
+  transaction_key: string;
+  payment_method: string;
+  hash: string;
+}): boolean {
+  return verifyHmac(
+    `TransactionId=${body.transaction_id}&TransactionKey=${body.transaction_key}&PaymentMethod=${body.payment_method}`,
+    body.hash,
+  );
+}
+
+export function verifyCancelWebhook(body: {
+  referenceId: number | string;
+  paymentMethod: string;
+  hash: string;
+}): boolean {
+  return verifyHmac(
+    `referenceId=${body.referenceId}&PaymentMethod=${body.paymentMethod}`,
+    body.hash,
+  );
+}
+
+export function verifyRefundWebhook(body: {
+  transactionId: number | string;
+  amount: number | string;
+  currency: string;
+  hash: string;
+}): boolean {
+  return verifyHmac(
+    `transactionId=${body.transactionId}&amount=${body.amount}&currency=${body.currency}`,
+    body.hash,
+  );
 }

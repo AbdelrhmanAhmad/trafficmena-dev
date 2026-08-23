@@ -5,6 +5,7 @@ import { db } from '../../db/client.js';
 import { tracks, users } from '../../db/schema/index.js';
 import { handleRoute } from '../../utils/errors.js';
 import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
+import { resolveTrackBasePrice, TICKET_TYPES } from './ticketAccess.js';
 import { executeTrackBookingWrite, revokeTrackBookingAccess } from './trackBookingShared.js';
 import { consumeRateLimit, requireManager } from './utils.js';
 
@@ -16,6 +17,7 @@ const manualEnrollmentSchema = z.object({
   userId: z.string().uuid(),
   reason: z.string().trim().min(3).max(500),
   reference: z.string().trim().min(3).max(255),
+  ticketType: z.enum(TICKET_TYPES).optional(),
   amountPaidCents: z
     .union([
       z.coerce
@@ -98,6 +100,9 @@ export function registerTrackEnrollmentRoutes(
                 title: tracks.title,
                 isPublished: tracks.isPublished,
                 priceInCents: tracks.priceInCents,
+                onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
+                onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
+                offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
                 maxTrackBookings: tracks.maxTrackBookings,
               })
               .from(tracks)
@@ -122,6 +127,12 @@ export function registerTrackEnrollmentRoutes(
             return { type: 'user_not_found' as const };
           }
 
+          // Configured tracks require an enabled ticket type; the variant price is the default amount.
+          const baseResult = resolveTrackBasePrice(track, parsed.data.ticketType);
+          if (!baseResult.ok) {
+            return { type: baseResult.reason };
+          }
+
           const bookingResult = await executeTrackBookingWrite(tx, {
             trackId,
             userId: parsed.data.userId,
@@ -130,8 +141,9 @@ export function registerTrackEnrollmentRoutes(
             bookedAt: now,
             referenceTime: now,
             paidAt: now,
-            pricePaidCents: parsed.data.amountPaidCents ?? track.priceInCents ?? 0,
+            pricePaidCents: parsed.data.amountPaidCents ?? baseResult.basePrice,
             paymentId: null,
+            ticketType: parsed.data.ticketType ?? null,
             manualReference: parsed.data.reference,
             grantedBy: actor.userId,
             grantReason: parsed.data.reason,
@@ -168,6 +180,30 @@ export function registerTrackEnrollmentRoutes(
 
         if (result.type === 'user_not_found') {
           return c.json({ error: { code: 'USER_NOT_FOUND', message: 'User not found.' } }, 404);
+        }
+
+        if (result.type === 'ticket_type_required') {
+          return c.json(
+            {
+              error: {
+                code: 'TICKET_TYPE_REQUIRED',
+                message: 'Select a ticket type for this track.',
+              },
+            },
+            400,
+          );
+        }
+
+        if (result.type === 'ticket_type_disabled') {
+          return c.json(
+            {
+              error: {
+                code: 'TICKET_TYPE_DISABLED',
+                message: 'That ticket type is not available.',
+              },
+            },
+            400,
+          );
         }
 
         if (result.type === 'already_enrolled') {

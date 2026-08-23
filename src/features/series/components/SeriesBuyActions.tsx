@@ -51,7 +51,7 @@ export function SeriesBuyActions({
       return true;
     }
     navigate('/signin', {
-      state: { from: { pathname: signInReturnPath ?? `/recordings/${series.id}` } },
+      state: { from: { pathname: signInReturnPath ?? `/series/${series.id}` } },
     });
     return true;
   };

@@ -195,6 +195,9 @@ const AdminMeetups = () => {
                                 >
                                   {new Date(event.date) > new Date() ? 'Upcoming' : 'Past'}
                                 </Badge>
+                                <Badge variant={event.is_published ? 'default' : 'secondary'}>
+                                  {event.is_published ? 'Published' : 'Draft'}
+                                </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground">
                                 {new Date(event.date).toLocaleString()} ·{' '}
@@ -315,12 +318,6 @@ const AdminMeetups = () => {
                                   ? ` · ${track.max_track_bookings} spots`
                                   : ''}
                               </p>
-                              {track.track_booking_start && (
-                                <p className="text-xs text-muted-foreground">
-                                  Booking opens:{' '}
-                                  {new Date(track.track_booking_start).toLocaleDateString()}
-                                </p>
-                              )}
                             </div>
                             <div className="flex flex-wrap gap-2 self-start sm:self-auto">
                               <Button

@@ -2,7 +2,7 @@ import type React from 'react';
 import { useEffect, useId, useState } from 'react';
 import { Link, type Location, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
-import { completeSignInVerification, requestSignInCode } from '@/app/auth/signIn';
+import { completeSignInVerification, requestSignInCode, sanitizeOtp } from '@/app/auth/signIn';
 import { trackLogin, trackLoginStart } from '@/lib/analytics/events';
 import Layout from '@/shared/components/layout/Layout';
 import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
@@ -211,7 +211,10 @@ const SignIn: React.FC = () => {
                   <Input
                     id={otpId}
                     value={otp}
-                    onChange={(event) => setOtp(event.target.value)}
+                    onChange={(event) => setOtp(sanitizeOtp(event.target.value))}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
                     placeholder="Enter the code you received"
                     className="mt-1 rounded-xl border-neutral-200 tracking-[0.3em] text-center text-lg"
                     required

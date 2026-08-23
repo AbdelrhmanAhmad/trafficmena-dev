@@ -112,8 +112,11 @@ npm run format                        # Ultracite format
 │   ├── unit/              # Unit test files
 │   └── node-loader.mjs    # Custom loader for TypeScript tests
 ├── local/postgres/bin/    # Project-scoped Postgres scripts
-└── docs/                  # Operational documentation + solution learnings
+└── docs/                  # Operational documentation
+    └── solutions/         # documented solutions to past problems (bugs, best practices, workflow patterns), by category w/ YAML frontmatter (module, tags, problem_type)
 ```
+
+`CONCEPTS.md` (repo root) — shared domain glossary; read when orienting to the codebase or discussing domain concepts.
 
 ### Key Architectural Patterns
 
@@ -135,7 +138,7 @@ npm run format                        # Ultracite format
 - Better Auth with email OTP plugin
 - Session cookies (7-day expiration, 1-day update age)
 - Auth endpoints: `/api/auth/otp/request`, `/api/auth/otp/verify`, `/api/auth/session`, `/api/auth/logout`
-- OTP sent via Plunk email service
+- OTP sent via Resend email service
 - Rate limiting: normal mode (3 OTPs/10min, 10/day), event mode (15/10min, 50/day)
 - Turnstile CAPTCHA support for high-load scenarios
 - Invite-only signup enforcement (toggleable in settings)
@@ -281,7 +284,7 @@ BETTER_AUTH_SECRET=...            # >=32 chars, unique in production
 BETTER_AUTH_ISSUER=http://localhost:3001
 APP_BASE_URL=http://localhost:8080
 CORS_ORIGIN=http://localhost:8080 # Comma-separated for multiple origins
-PLUNK_API_KEY=...                 # Email delivery
+RESEND_API_KEY=...                 # Email delivery
 BUNNY_STORAGE_ZONE=...           # CDN storage
 BUNNY_STORAGE_ACCESS_KEY=...
 BUNNY_STORAGE_CDN_URL=https://trafficmena.b-cdn.net
@@ -505,7 +508,7 @@ INVITATION_DAILY_LIMIT=1000       # Max invitations per admin per day
 
 ### API & Security Specific
 - Gate every Hono endpoint behind Better Auth sessions and role checks where required
-- Keep Plunk / Better Auth / Fawaterk secrets on the server only; never leak them into the bundle
+- Keep Resend / Better Auth / Fawaterk secrets on the server only; never leak them into the bundle
 - Validate request payloads with Zod (or equivalent) before touching the database
 - Use the shared `AppErrorHandler` helpers when raising API errors back to the SPA
 - Sanitize any user-generated HTML with DOMPurify before storage or rendering

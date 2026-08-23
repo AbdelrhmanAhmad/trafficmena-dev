@@ -17,8 +17,10 @@ type ApiEvent = {
   imageUrl: string | null;
   tags: string[] | null;
   eventType: 'Event' | 'Meetup' | 'Mastermind' | 'Retreat';
+  eventFormat: 'online' | 'offline';
   attendeeCount?: number | null;
   priceInCents: number | null;
+  isPublished?: boolean;
 };
 
 type ApiEventDetail = ApiEvent & {
@@ -58,9 +60,11 @@ export type EventRecord = {
   image_url: string | null;
   tags: string[];
   event_type: ApiEvent['eventType'];
+  event_format: ApiEvent['eventFormat'];
   attendee_count: number;
   guest_experts: { name: string }[];
   price_in_cents: number | null;
+  is_published: boolean;
 };
 
 export interface EventDetailRecord extends EventRecord {
@@ -92,9 +96,13 @@ const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
   image_url: event.imageUrl ?? null,
   tags: event.tags ?? [],
   event_type: event.eventType,
+  // Default to offline (paid for subscribers) if an older response omits the field — never silently online.
+  event_format: event.eventFormat ?? 'offline',
   attendee_count: Number(event.attendeeCount ?? 0),
   guest_experts: [],
   price_in_cents: event.priceInCents ?? null,
+  // Draft-safe: a response that omits the flag should read as a draft, never silently published.
+  is_published: event.isPublished ?? false,
 });
 
 export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecord {
@@ -138,9 +146,12 @@ export type CreateEventPayload = {
   imageUrl?: string | null;
   tags?: string[];
   eventType?: ApiEvent['eventType'];
+  eventFormat?: ApiEvent['eventFormat'];
+  eventFormatOverrideReason?: string;
   priceInCents?: number | null;
   /** When false (e.g. event for a track), skip auto Series for standalone recordings sale */
   createRecordingsSeries?: boolean;
+  isPublished?: boolean;
 };
 
 export type UpdateEventPayload = Partial<CreateEventPayload>;
@@ -248,8 +259,10 @@ type ApiEventAttendee = {
   phoneNumber: string | null;
   registeredAt: string;
   status: 'active' | 'cancelled' | 'refund_requested';
-  invoiceId: string | null;
+  invoiceId: number | null;
+  transactionId: number | null;
   invoiceNumber: string | null;
+  amountPaidCents: number | null;
 };
 
 export type EventAttendeeRecord = {
@@ -262,7 +275,9 @@ export type EventAttendeeRecord = {
   registered_at: string;
   status: 'active' | 'cancelled' | 'refund_requested';
   invoice_id: number | null;
+  transaction_id: number | null;
   invoice_number: string | null;
+  amount_paid_cents: number | null;
 };
 
 export async function fetchEventAttendees(
@@ -292,7 +307,9 @@ export async function fetchEventAttendees(
       registered_at: item.registeredAt,
       status: item.status,
       invoice_id: item.invoiceId,
+      transaction_id: item.transactionId,
       invoice_number: item.invoiceNumber,
+      amount_paid_cents: item.amountPaidCents,
     })),
     pagination: data.pagination,
   };

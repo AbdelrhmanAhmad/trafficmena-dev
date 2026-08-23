@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { TicketType } from '@/app/api/payments';
 import { createManualTrackEnrollment, revokeTrackEnrollment } from '@/app/api/tracks';
 
-function invalidateTrackAccessQueries(
+export function invalidateTrackAccessQueries(
   queryClient: ReturnType<typeof useQueryClient>,
   trackId: string,
 ) {
@@ -23,6 +24,7 @@ export function useCreateManualTrackEnrollment(trackId: string) {
       reason: string;
       reference: string;
       amountPaidCents?: number | null;
+      ticketType?: TicketType;
     }) => createManualTrackEnrollment(trackId, payload),
     onSettled: () => {
       invalidateTrackAccessQueries(queryClient, trackId);

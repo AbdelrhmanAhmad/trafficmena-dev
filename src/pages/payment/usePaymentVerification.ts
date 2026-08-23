@@ -1,44 +1,29 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { usePayment, useVerifyPayment } from '@/app/hooks/usePayments';
+import { useVerifyPayment } from '@/app/hooks/usePayments';
 import {
   clearCheckoutReturn,
   readCheckoutReturn,
 } from '@/shared/utils/paymentReturnContext';
 
+/** Legacy helper — prefer inline paymentId verify in pending/success pages. */
 export function usePaymentVerification(user: { id: string } | null, authLoading: boolean) {
   const [searchParams] = useSearchParams();
   const verifyPayment = useVerifyPayment();
   const verificationAttemptedRef = useRef(false);
 
-  const invoiceFromUrl =
-    searchParams.get('invoice_id') ??
-    searchParams.get('intent_key') ??
-    searchParams.get('InvoiceId');
-
   const paymentIdFromUrl = searchParams.get('payment_id');
   const storedReturn = useMemo(() => readCheckoutReturn(), []);
-  const paymentIdForLookup =
-    paymentIdFromUrl ?? storedReturn?.paymentId ?? undefined;
-
-  const { data: paymentFromId } = usePayment(
-    user && paymentIdForLookup && !invoiceFromUrl ? paymentIdForLookup : undefined,
-  );
-
-  const resolvedInvoiceId =
-    invoiceFromUrl ??
-    paymentFromId?.fawaterkInvoiceId ??
-    storedReturn?.invoiceId ??
-    null;
+  const paymentId = paymentIdFromUrl ?? storedReturn?.paymentId ?? null;
 
   useEffect(() => {
-    if (authLoading || !user || !resolvedInvoiceId || verificationAttemptedRef.current) {
+    if (authLoading || !user || !paymentId || verificationAttemptedRef.current) {
       return;
     }
 
     verificationAttemptedRef.current = true;
-    verifyPayment.mutate({ invoiceId: resolvedInvoiceId });
-  }, [authLoading, user, resolvedInvoiceId, verifyPayment]);
+    verifyPayment.mutate({ paymentId });
+  }, [authLoading, user, paymentId, verifyPayment]);
 
   useEffect(() => {
     if (verifyPayment.data?.status === 'paid') {
@@ -48,8 +33,7 @@ export function usePaymentVerification(user: { id: string } | null, authLoading:
 
   return {
     verifyPayment,
-    resolvedInvoiceId,
-    paymentIdForLookup,
-    hasInvoiceContext: Boolean(resolvedInvoiceId || paymentIdForLookup),
+    paymentId,
+    hasPaymentContext: Boolean(paymentId),
   };
 }

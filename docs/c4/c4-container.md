@@ -51,8 +51,8 @@ The SPA also bootstraps Google Tag Manager (`GTM-5DMGVFZS`) from `public/gtm-boo
 This container is the sole server-side runtime. It is responsible for:
 
 - **Security envelope**: CSP, HSTS (production), CORS, CSRF middleware, request payload size limits, and structured error responses. CSP is hardened for GTM: `script-src` includes `https://www.googletagmanager.com` and `https://tagmanager.google.com`; `frame-src` includes `https://www.googletagmanager.com`; `connect-src` includes `*.google-analytics.com`, `*.analytics.google.com`, and `googletagmanager.com`. The `gtm-bootstrap.js` file is self-hosted to avoid `unsafe-inline` and is covered by regression tests (`tests/unit/gtm-csp-hardening.test.ts`).
-- **Authentication**: OTP-based login via Better Auth with Plunk email delivery. Invite-only enforcement, Cloudflare Turnstile CAPTCHA support, in-memory rate limiting (normal: 3 OTPs/10 min, 10/day; event mode: 15/10 min, 50/day).
-- **Authorization**: Five-level RBAC (user → expert → manager → admin → owner) enforced per-endpoint via `requireAdmin()` / `requireManager()` helpers.
+- **Authentication**: OTP-based login via Better Auth with Resend email delivery. Invite-only enforcement, Cloudflare Turnstile CAPTCHA support, in-memory rate limiting (normal: 3 OTPs/10 min, 10/day; event mode: 15/10 min, 50/day).
+- **Authorization**: Five-level RBAC (user → expert → manager → admin → owner) enforced per-endpoint via `requireAdmin()` / `requireManager()` helpers. See [`c4-rbac.md`](./c4-rbac.md) for the full role hierarchy, endpoint → required-role matrix, owner-protection rules, and enforcement findings.
 - **Learning content**: Full CRUD for events, tracks, series, and library assets including registration, cancellation/refund workflows, capacity reservation with 72-hour TTL, and BunnyCDN file upload.
 - **Commerce**: Fawaterk payment gateway integration (Fawry, Meeza, Aman, Masary, Mobile Wallet), checkout invoice creation, HMAC-verified webhook ingestion, subscriber discount logic, and promo code validation.
 - **Background jobs**: Payment expiration and reservation cleanup runs at startup on a scheduled interval.
@@ -376,7 +376,7 @@ The specification serves as the authoritative container interface contract. It i
 #### External Systems
 
 - **Fawaterk** (`https://api.fawaterk.com`): Payment gateway for invoice creation, status polling, and HMAC-verified webhook callbacks. Requires `FAWATERK_API_KEY`. Configurable between `staging` and `live` environments.
-- **Plunk** (`https://api.useplunk.com`): Transactional email delivery for OTP codes and invitation emails. Requires `PLUNK_API_KEY`.
+- **Resend** (`https://api.resend.com`): Transactional email delivery for OTP codes and invitation emails. Requires `RESEND_API_KEY`.
 - **BunnyCDN** (`https://storage.bunnycdn.com`): Object storage for user-uploaded files (max 20 MB). Requires `BUNNY_STORAGE_ZONE` and `BUNNY_STORAGE_ACCESS_KEY`. Served from `BUNNY_STORAGE_CDN_URL`.
 - **Cloudflare Turnstile** (`https://challenges.cloudflare.com`): Optional bot-protection CAPTCHA. Tokens submitted by the browser are validated server-side during OTP requests. Requires `TURNSTILE_SECRET_KEY`.
 
@@ -410,7 +410,7 @@ The specification serves as the authoritative container interface contract. It i
 - **Deployment Config**: Derived from [server/package.json](../../server/package.json) and [server/src/index.ts](../../server/src/index.ts). No Docker or Kubernetes manifest is present.
 - **Scaling**: Horizontal scaling is feasible because primary state lives in PostgreSQL. The in-memory rate-limit store (`src/services/rateLimiter.ts`) is instance-local; a production deployment with multiple instances would require a shared rate-limit store (e.g., Redis).
 - **Resources**: Moderate CPU and memory for HTTP traffic, background jobs, webhook processing, and transient in-memory state.
-- **Key environment variables**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `PLUNK_API_KEY`, `FAWATERK_API_KEY`, `BUNNY_STORAGE_ZONE`, `BUNNY_STORAGE_ACCESS_KEY`, `TURNSTILE_SECRET_KEY`
+- **Key environment variables**: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `RESEND_API_KEY`, `FAWATERK_API_KEY`, `BUNNY_STORAGE_ZONE`, `BUNNY_STORAGE_ACCESS_KEY`, `TURNSTILE_SECRET_KEY`
 
 ### TrafficMENA PostgreSQL Database
 
@@ -439,7 +439,7 @@ C4Container
     }
 
     System_Ext(fawaterk, "Fawaterk", "Payment gateway (Fawry, Meeza, Aman, Masary, Mobile Wallet)")
-    System_Ext(plunk, "Plunk", "Transactional email delivery for OTP and invitations")
+    System_Ext(resend, "Resend", "Transactional email delivery for OTP and invitations")
     System_Ext(bunny, "BunnyCDN", "Object storage and CDN for uploaded media and assets")
     System_Ext(turnstile, "Cloudflare Turnstile", "Bot-protection CAPTCHA for OTP flows")
     System_Ext(gtm, "Google Tag Manager", "Client-side tag orchestration (GTM-5DMGVFZS) for analytics and conversion tracking")
@@ -451,7 +451,7 @@ C4Container
     Rel(web, gtm, "Bootstraps GTM and pushes dataLayer events", "HTTPS script + in-page dataLayer")
     Rel(api, db, "Reads and writes all platform data", "SQL via Drizzle ORM")
     Rel(api, fawaterk, "Creates invoices and receives payment webhooks", "HTTPS API")
-    Rel(api, plunk, "Sends OTP codes and invitation emails", "HTTPS API")
+    Rel(api, resend, "Sends OTP codes and invitation emails", "HTTPS API")
     Rel(api, bunny, "Uploads files to storage", "HTTPS API")
     Rel(api, turnstile, "Validates CAPTCHA challenge tokens", "HTTPS API")
     Rel(fawaterk, api, "Posts HMAC-signed payment notifications to", "HTTPS webhook")

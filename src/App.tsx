@@ -13,6 +13,7 @@ import TrackAvailableRecordingsPage from '@/features/tracks/pages/TrackAvailable
 import EventAvailableRecordingsPage from '@/features/tracks/pages/EventAvailableRecordingsPage';
 import { usePageTracking } from '@/lib/analytics/usePageTracking';
 import ErrorBoundary from '@/shared/components/ErrorBoundary';
+import FloatingWhatsApp from '@/shared/components/FloatingWhatsApp';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import { ModuleGate } from '@/shared/components/ModuleGate';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
@@ -43,6 +44,7 @@ const queryClient = new QueryClient({
 });
 
 const AboutPage = lazy(() => import('./pages/About'));
+const ContactPage = lazy(() => import('./pages/Contact'));
 const CommunityComingSoon = lazy(() => import('./pages/Community'));
 const InviteOnlyPage = lazy(() => import('./pages/InviteOnly'));
 const LibraryComingSoon = lazy(() => import('./pages/Library'));
@@ -52,6 +54,7 @@ const ThankYouEvent = lazy(() => import('./pages/ThankYouEvent'));
 const ThankYouTrack = lazy(() => import('./pages/ThankYouTrack'));
 const ThankYouOrder = lazy(() => import('./pages/ThankYouOrder'));
 const PrivacyPolicy = lazy(() => import('./pages/Privacy'));
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
 const TermsOfService = lazy(() => import('./pages/Terms'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const InvitationAcceptancePage = lazy(() => import('./pages/invitation/[token]'));
@@ -149,6 +152,7 @@ const App = () => {
             <AuthProvider>
               <SeriesCartProvider>
               <PageTracker />
+              <FloatingWhatsApp />
               <Suspense fallback={routeFallback}>
                 <Routes>
                   <Route
@@ -164,6 +168,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <AboutPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/contact"
+                    element={
+                      <ErrorBoundary>
+                        <ContactPage />
                       </ErrorBoundary>
                     }
                   />
@@ -872,6 +884,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <PrivacyPolicy />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/refund-policy"
+                    element={
+                      <ErrorBoundary>
+                        <RefundPolicy />
                       </ErrorBoundary>
                     }
                   />

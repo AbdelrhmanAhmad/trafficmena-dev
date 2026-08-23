@@ -14,6 +14,8 @@ export type PaymentItemType = 'event' | 'track' | 'subscription' | 'order' | 'ma
 
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'expired';
 
+export type TicketType = 'online_only' | 'online_offline' | 'offline_only';
+
 export type CheckoutRequest = {
   itemType: PaymentItemType;
   itemId?: string;
@@ -21,11 +23,13 @@ export type CheckoutRequest = {
   forceNewCode?: boolean;
   idempotencyKey?: string;
   promoCode?: string;
+  ticketType?: TicketType;
+  // Mobile-wallet payer number (E.164), sent only for wallet methods; may differ from profile phone.
+  walletPhone?: string;
 };
 
 export type CheckoutResponse = {
   paymentId: string;
-  invoiceId?: string;
   redirectUrl?: string;
   fawryCode?: string;
   meezaReference?: string;
@@ -36,7 +40,7 @@ export type CheckoutResponse = {
 };
 
 export type VerifyPaymentRequest = {
-  invoiceId: string;
+  paymentId: string;
 };
 
 export type VerifyPaymentResponse = {
@@ -52,6 +56,7 @@ export type VerifyPaymentResponse = {
   itemCategory?: string;
   itemType?: PaymentItemType;
   itemId?: string | null;
+  ticketType?: TicketType | null;
   paymentType?: string;
   promoCode?: string;
   originalAmountCents?: number;
@@ -67,7 +72,11 @@ export type Payment = {
   currency: string;
   itemType: PaymentItemType;
   itemId: string | null;
-  fawaterkInvoiceId?: string | null;
+  ticketType?: TicketType | null;
+  // Historical (v2) — read-only display on pre-cutover rows.
+  fawaterkInvoiceId?: number | string | null;
+  // v3 gateway transaction id, populated once a payment is confirmed.
+  fawaterkTransactionId?: number | null;
   fawryCode?: string | null;
   amanCode?: string | null;
   masaryCode?: string | null;
@@ -127,6 +136,7 @@ export async function fetchPricePreview(
   itemId?: string,
   promoCode?: string,
   signal?: AbortSignal,
+  ticketType?: TicketType,
 ): Promise<PricePreview> {
   const params = new URLSearchParams({ itemType });
   if (itemId) {
@@ -134,6 +144,9 @@ export async function fetchPricePreview(
   }
   if (promoCode) {
     params.set('promoCode', promoCode);
+  }
+  if (ticketType) {
+    params.set('ticketType', ticketType);
   }
   const response = await fetchJson<{ data: PricePreview }>(
     `${API_BASE}/payments/price-preview?${params.toString()}`,

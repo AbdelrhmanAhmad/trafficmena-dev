@@ -2,7 +2,8 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
-import { fetchPayment, type PaymentItemType } from '@/app/api/payments';
+import type { PaymentItemType, TicketType } from '@/app/api/payments';
+import { useCurrentUser } from '@/app/hooks/useCurrentUser';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { trackBeginCheckout, trackSelectPaymentMethod } from '@/lib/analytics/events';
 import { centsToUnits } from '@/lib/analytics/helpers';
@@ -25,8 +26,8 @@ import {
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { rememberCheckoutReturn } from '@/shared/utils/paymentReturnContext';
-import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
 import { PaymentMethodSelector } from './PaymentMethodSelector';
+import { isWalletMethod, WalletNumberField } from './WalletNumberField';
 
 interface PaymentCheckoutDialogProps {
   open: boolean;
@@ -37,6 +38,8 @@ interface PaymentCheckoutDialogProps {
   itemCategory?: string;
   basePriceCents?: number | null;
   appliedPromoCode?: string;
+  ticketType?: TicketType;
+  forceNewCode?: boolean;
   onSuccess?: () => void;
 }
 
@@ -56,12 +59,16 @@ export function PaymentCheckoutDialog({
   itemCategory,
   basePriceCents,
   appliedPromoCode,
+  ticketType,
+  forceNewCode,
   onSuccess,
 }: PaymentCheckoutDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { data: currentUser } = useCurrentUser();
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
+  const [walletPhone, setWalletPhone] = useState<string | null>(null);
   const [checkoutStuck, setCheckoutStuck] = useState(false);
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const checkoutRequestLockRef = useRef(false);
@@ -73,6 +80,7 @@ export function PaymentCheckoutDialog({
   useEffect(() => {
     if (!open) {
       setSelectedMethodId(null);
+      setWalletPhone(null);
       beginCheckoutFiredRef.current = false;
     }
   }, [open]);
@@ -93,13 +101,17 @@ export function PaymentCheckoutDialog({
     shouldFetchPricing ? itemType : undefined,
     itemId,
     appliedPromoCode,
+    { ticketType },
   );
   const { data: methods } = usePaymentMethods({ enabled: shouldFetchPricing });
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
-  const shouldRedirect = shouldRedirectToGateway(selectedMethod);
+  const walletRequired = isWalletMethod(selectedMethod?.name_en);
   const hasPromoApplied =
     Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !pricePreview.isFree;
-  const canSubmitCheckout = Boolean(selectedMethodId) && !createCheckout.isPending;
+  const canSubmitCheckout =
+    Boolean(selectedMethodId) &&
+    !createCheckout.isPending &&
+    (!walletRequired || Boolean(walletPhone));
   const analyticsItemId = getAnalyticsItemId(itemType, itemId);
   const fallbackAmountFormatted =
     basePriceCents && basePriceCents > 0 ? `${centsToUnits(basePriceCents).toFixed(2)} EGP` : '';
@@ -140,13 +152,8 @@ export function PaymentCheckoutDialog({
     });
   }, [open, pricePreview, itemType, itemId, itemName, itemCategory]);
 
-  const goToPending = (payload: {
-    invoiceId?: string;
-    paymentMethodId?: number | null;
-    paymentId?: string;
-  }) => {
+  const goToPending = (payload: { paymentMethodId?: number | null; paymentId?: string }) => {
     const params = new URLSearchParams();
-    if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
     params.set('item_type', itemType);
     if (itemId) params.set('item_id', itemId);
     if (payload.paymentMethodId) {
@@ -203,9 +210,12 @@ export function PaymentCheckoutDialog({
         itemId,
         paymentMethodId: selectedMethodId,
         idempotencyKey: createCheckoutIdempotencyKey(
-          `${itemType}:${analyticsItemId}:${selectedMethodId}`,
+          `${itemType}:${analyticsItemId}:${ticketType ?? 'none'}:${selectedMethodId}`,
         ),
         promoCode: appliedPromoCode,
+        ticketType,
+        forceNewCode,
+        walletPhone: walletRequired ? (walletPhone ?? undefined) : undefined,
       });
 
       if (result.free) {
@@ -221,67 +231,24 @@ export function PaymentCheckoutDialog({
       if (result.redirectUrl) {
         rememberCheckoutReturn({
           paymentId: result.paymentId,
-          invoiceId: result.invoiceId,
           itemType,
         });
         window.location.href = result.redirectUrl;
         return;
       }
 
-      if (shouldRedirect) {
-        goToPending({
-          invoiceId: result.invoiceId,
-          paymentMethodId: selectedMethodId,
-          paymentId: result.paymentId,
-        });
-        return;
-      }
-
-      if (
-        result.invoiceId ||
-        result.fawryCode ||
-        result.meezaReference ||
-        result.meezaQrCode ||
-        result.amanCode ||
-        result.masaryCode
-      ) {
-        goToPending({
-          invoiceId: result.invoiceId,
-          paymentMethodId: selectedMethodId,
-          paymentId: result.paymentId,
-        });
-      }
+      // Direct-dispatch method (reference codes) or an undocumented method shape with neither a
+      // redirect nor codes → route to the pending page unconditionally. Webhook/verify complete the
+      // flow; the pending page renders codes when present and an action-prompting state when not.
+      goToPending({
+        paymentMethodId: selectedMethodId,
+        paymentId: result.paymentId,
+      });
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
-        const invoiceId = error.extra?.invoiceId as string | undefined;
-        const fawryCode = error.extra?.fawryCode as string | undefined;
-        const meezaReference = error.extra?.meezaReference as string | undefined;
-        const meezaQrCode = error.extra?.meezaQrCode as string | undefined;
-        const amanCode = error.extra?.amanCode as string | undefined;
-        const masaryCode = error.extra?.masaryCode as string | undefined;
         const pendingPaymentId = error.extra?.paymentId as string | undefined;
-        let resolvedInvoiceId = invoiceId;
-
-        if (!resolvedInvoiceId && pendingPaymentId) {
-          try {
-            const pendingPayment = await fetchPayment(pendingPaymentId);
-            resolvedInvoiceId = pendingPayment.fawaterkInvoiceId ?? undefined;
-          } catch {
-            // Fallback to payment_id-only pending flow; pending page will keep polling for invoice_id.
-          }
-        }
-
-        if (
-          resolvedInvoiceId ||
-          pendingPaymentId ||
-          fawryCode ||
-          meezaReference ||
-          meezaQrCode ||
-          amanCode ||
-          masaryCode
-        ) {
+        if (pendingPaymentId) {
           goToPending({
-            invoiceId: resolvedInvoiceId,
             paymentMethodId: selectedMethodId,
             paymentId: pendingPaymentId,
           });
@@ -347,6 +314,15 @@ export function PaymentCheckoutDialog({
             disabled={createCheckout.isPending}
             enabled={shouldFetchPricing}
           />
+          {walletRequired && (
+            <div className="mt-4">
+              <WalletNumberField
+                disabled={createCheckout.isPending}
+                onChange={setWalletPhone}
+                profilePhone={currentUser?.profile?.phone_number}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>

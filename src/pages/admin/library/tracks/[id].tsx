@@ -1,8 +1,12 @@
 import { ArrowLeft, BookOpen, Calendar, Layers, Loader2, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { RemoveTrackEventDialog } from '@/features/tracks/components/RemoveTrackEventDialog';
 import TrackEventSelector from '@/features/tracks/components/TrackEventSelector';
-import TrackForm from '@/features/tracks/components/TrackForm';
+import TrackForm, {
+  mapTrackTicketPrices,
+  type TrackFormValues,
+} from '@/features/tracks/components/TrackForm';
 import { TrackRecordingsPublishCard } from '@/features/tracks/components/TrackRecordingsPublishCard';
 import {
   useAddEventsToTrack,
@@ -11,9 +15,20 @@ import {
   useTrack,
   useUpdateTrack,
 } from '@/features/tracks/hooks/useTracks';
+import { resolveRemoveEventFlow } from '@/features/tracks/utils/removeEventGate';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/components/ui/alert-dialog';
 import { Button } from '@/shared/components/ui/button';
 import {
   Card,
@@ -30,6 +45,11 @@ function TrackDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showEventSelector, setShowEventSelector] = useState(false);
+  const [pendingEventIds, setPendingEventIds] = useState<string[] | null>(null);
+  const [removeDialog, setRemoveDialog] = useState<{
+    eventId: string;
+    eventTitle: string;
+  } | null>(null);
   const { canDeleteContent } = useRolePermissions();
 
   const { data: track, isLoading, isError } = useTrack(id || '');
@@ -67,18 +87,7 @@ function TrackDetailPage() {
     );
   }
 
-  const handleUpdateTrack = async (values: {
-    title: string;
-    description?: string;
-    imageUrl?: string;
-    isPublished: boolean;
-    maxTrackBookings?: number | null;
-    trackBookingStart?: string | null;
-    trackBookingEnd?: string | null;
-    singleBookingStart?: string | null;
-    singleBookingEnd?: string | null;
-    priceEgp?: string;
-  }) => {
+  const handleUpdateTrack = async (values: TrackFormValues) => {
     await updateMutation.mutateAsync({
       id: track.id,
       data: {
@@ -92,6 +101,7 @@ function TrackDetailPage() {
         singleBookingStart: values.singleBookingStart || null,
         singleBookingEnd: values.singleBookingEnd || null,
         priceInCents: values.priceEgp ? Math.round(Number(values.priceEgp) * 100) : null,
+        ...mapTrackTicketPrices(values),
       },
     });
   };
@@ -116,17 +126,62 @@ function TrackDetailPage() {
     });
   };
 
-  const handleAddEvents = (eventIds: string[]) => {
+  const addEventsToTrack = (eventIds: string[]) => {
     addEventsMutation.mutate(
       { trackId: track.id, eventIds },
       { onSuccess: () => setShowEventSelector(false) },
     );
   };
 
-  const handleRemoveEvent = (eventId: string) => {
+  const handleAddEvents = (eventIds: string[]) => {
+    if (track.bookings_count > 0) {
+      setPendingEventIds(eventIds);
+      return;
+    }
+
+    addEventsToTrack(eventIds);
+  };
+
+  const handleConfirmAddEvents = () => {
+    if (!pendingEventIds) return;
+
+    const eventIds = pendingEventIds;
+    setPendingEventIds(null);
+    addEventsToTrack(eventIds);
+  };
+
+  const handleRemoveEvent = (event: { id: string; title: string }) => {
+    const flow = resolveRemoveEventFlow({
+      canDeleteContent,
+      activeBookingsCount: track.bookings_count,
+    });
+
+    if (flow === 'blocked') {
+      toast({
+        title: 'Removal blocked',
+        description:
+          'This track has active bookings. Only owners and admins can remove a session from a booked track.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (flow === 'override-dialog') {
+      setRemoveDialog({ eventId: event.id, eventTitle: event.title });
+      return;
+    }
+
     const confirmed = window.confirm('Remove this event from the track?');
     if (!confirmed) return;
-    removeEventMutation.mutate({ trackId: track.id, eventId });
+    removeEventMutation.mutate({ trackId: track.id, eventId: event.id });
+  };
+
+  const handleConfirmRemoveWithReason = (reason: string) => {
+    if (!removeDialog) return;
+    removeEventMutation.mutate(
+      { trackId: track.id, eventId: removeDialog.eventId, reason },
+      { onSuccess: () => setRemoveDialog(null) },
+    );
   };
 
   return (
@@ -275,7 +330,7 @@ function TrackDetailPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleRemoveEvent(event.id)}
+                          onClick={() => handleRemoveEvent(event)}
                           disabled={removeEventMutation.isPending}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -302,6 +357,33 @@ function TrackDetailPage() {
           existingEventIds={track.events.map((e) => e.id)}
           onSelect={handleAddEvents}
           isLoading={addEventsMutation.isPending}
+        />
+
+        <AlertDialog
+          open={pendingEventIds !== null}
+          onOpenChange={(open) => (open ? null : setPendingEventIds(null))}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Add sessions to this booked track?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Current buyers whose tickets include each session will be registered automatically.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmAddEvents}>Add sessions</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <RemoveTrackEventDialog
+          open={Boolean(removeDialog)}
+          eventTitle={removeDialog?.eventTitle ?? ''}
+          activeBookingsCount={track.bookings_count}
+          isPending={removeEventMutation.isPending}
+          onOpenChange={(open) => (open ? null : setRemoveDialog(null))}
+          onConfirm={handleConfirmRemoveWithReason}
         />
       </AppLayout>
     </AdminProtectedRoute>

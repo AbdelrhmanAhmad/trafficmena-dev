@@ -29,6 +29,8 @@ type SanitizedHtmlProps = {
 const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
   <div
     className={className}
+    // Base direction follows content's first strong char so mixed AR/EN keeps correct word order
+    dir="auto"
     // biome-ignore lint/security/noDangerouslySetInnerHtml: admin descriptions are sanitized with DOMPurify
     dangerouslySetInnerHTML={{ __html: html }}
   />

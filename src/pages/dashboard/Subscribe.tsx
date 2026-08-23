@@ -3,7 +3,7 @@ import { Check, Crown, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
-import { fetchPayment } from '@/app/api/payments';
+import { useCurrentUser } from '@/app/hooks/useCurrentUser';
 import { useCreateCheckout, usePaymentMethods, usePricePreview } from '@/app/hooks/usePayments';
 import { useCurrentSubscription, useSubscriptionInfo } from '@/app/hooks/useSubscriptions';
 import {
@@ -28,7 +28,11 @@ import {
   shouldTrackStandaloneCheckoutEntry,
 } from '@/lib/analytics/paymentFlow';
 import AppLayout from '@/shared/components/layout/AppLayout';
-import { PaymentMethodSelector } from '@/shared/components/payment';
+import {
+  isWalletMethod,
+  PaymentMethodSelector,
+  WalletNumberField,
+} from '@/shared/components/payment';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -39,7 +43,6 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { useToast } from '@/shared/hooks/custom/use-toast';
-import { shouldRedirectToGateway } from '@/shared/utils/paymentMethods';
 
 function createCheckoutIdempotencyKey(scope: string): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -99,6 +102,10 @@ function HeroSection({
   onSubscribe,
   isPending,
   isLoaded,
+  walletRequired,
+  profilePhone,
+  onWalletPhoneChange,
+  canSubmit,
 }: {
   subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
   pricePreview: { amountFormatted?: string } | undefined;
@@ -107,6 +114,10 @@ function HeroSection({
   onSubscribe: () => void;
   isPending: boolean;
   isLoaded: boolean;
+  walletRequired: boolean;
+  profilePhone?: string | null;
+  onWalletPhoneChange: (e164: string | null) => void;
+  canSubmit: boolean;
 }) {
   return (
     <section
@@ -183,11 +194,20 @@ function HeroSection({
                   onChange={setSelectedMethodId}
                   disabled={isPending}
                 />
+                {walletRequired && (
+                  <div className="mt-4">
+                    <WalletNumberField
+                      disabled={isPending}
+                      onChange={onWalletPhoneChange}
+                      profilePhone={profilePhone}
+                    />
+                  </div>
+                )}
               </div>
 
               <Button
                 onClick={onSubscribe}
-                disabled={!selectedMethodId || isPending}
+                disabled={!canSubmit || isPending}
                 className="group w-full transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0"
               >
                 {isPending ? (
@@ -217,12 +237,12 @@ function HeroSection({
 // Final CTA Section with Payment
 function FinalCTASection({
   subscriptionInfo,
-  selectedMethodId,
+  canSubmit,
   onSubscribe,
   isPending,
 }: {
   subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
-  selectedMethodId: number | null;
+  canSubmit: boolean;
   onSubscribe: () => void;
   isPending: boolean;
 }) {
@@ -248,7 +268,7 @@ function FinalCTASection({
         <div className="mt-8">
           <Button
             onClick={onSubscribe}
-            disabled={!selectedMethodId || isPending}
+            disabled={!canSubmit || isPending}
             className="group inline-flex max-w-full transform items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0 whitespace-normal text-center"
           >
             {isPending ? (
@@ -263,9 +283,9 @@ function FinalCTASection({
               </>
             )}
           </Button>
-          {!selectedMethodId && (
+          {!canSubmit && (
             <p className="mt-3 text-sm text-white/50">
-              Please select a payment method above to continue
+              Complete the payment details above to continue
             </p>
           )}
         </div>
@@ -291,16 +311,19 @@ function SubscribePaymentView() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
+  const [walletPhone, setWalletPhone] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const checkoutRequestLockRef = useRef(false);
   const beginCheckoutFiredRef = useRef(false);
 
   const { data: subscriptionInfo } = useSubscriptionInfo();
   const { data: pricePreview } = usePricePreview('subscription', undefined, undefined);
+  const { data: currentUser } = useCurrentUser();
   const createCheckout = useCreateCheckout();
   const { data: methods } = usePaymentMethods();
   const selectedMethod = methods?.find((method) => method.paymentId === selectedMethodId) ?? null;
-  const shouldRedirect = shouldRedirectToGateway(selectedMethod);
+  const walletRequired = isWalletMethod(selectedMethod?.name_en);
+  const canSubmit = Boolean(selectedMethodId) && (!walletRequired || Boolean(walletPhone));
   const analyticsItemId = getAnalyticsItemId('subscription');
   const subscriptionBasePriceCents = getAmountCentsFromUnits(subscriptionInfo?.priceEgp);
 
@@ -338,13 +361,8 @@ function SubscribePaymentView() {
     });
   }, [pricePreview, selectedMethodId, subscriptionBasePriceCents]);
 
-  const goToPending = (payload: {
-    invoiceId?: string;
-    paymentMethodId?: number | null;
-    paymentId?: string;
-  }) => {
+  const goToPending = (payload: { paymentMethodId?: number | null; paymentId?: string }) => {
     const params = new URLSearchParams();
-    if (payload.invoiceId) params.set('invoice_id', String(payload.invoiceId));
     params.set('item_type', 'subscription');
     if (payload.paymentMethodId) {
       params.set('method_id', String(payload.paymentMethodId));
@@ -398,6 +416,7 @@ function SubscribePaymentView() {
         idempotencyKey: createCheckoutIdempotencyKey(
           `subscription:${analyticsItemId}:${selectedMethodId}`,
         ),
+        walletPhone: walletRequired ? (walletPhone ?? undefined) : undefined,
       });
 
       if (result.free) {
@@ -408,67 +427,24 @@ function SubscribePaymentView() {
       if (result.redirectUrl) {
         rememberCheckoutReturn({
           paymentId: result.paymentId,
-          invoiceId: result.invoiceId,
           itemType: 'subscription',
         });
         window.location.href = result.redirectUrl;
         return;
       }
 
-      if (shouldRedirect) {
-        goToPending({
-          invoiceId: result.invoiceId,
-          paymentMethodId: selectedMethodId,
-          paymentId: result.paymentId,
-        });
-        return;
-      }
-
-      if (
-        result.invoiceId ||
-        result.fawryCode ||
-        result.meezaReference ||
-        result.meezaQrCode ||
-        result.amanCode ||
-        result.masaryCode
-      ) {
-        goToPending({
-          invoiceId: result.invoiceId,
-          paymentMethodId: selectedMethodId,
-          paymentId: result.paymentId,
-        });
-      }
+      // Reference codes or an undocumented method shape with neither redirect nor codes → route to
+      // the pending page unconditionally (subscription is the highest-value transaction; it must
+      // never fall through silently). Webhook/verify complete the flow.
+      goToPending({
+        paymentMethodId: selectedMethodId,
+        paymentId: result.paymentId,
+      });
     } catch (error) {
       if (error instanceof ApiError && error.code === 'PENDING_PAYMENT') {
-        const invoiceId = error.extra?.invoiceId as string | undefined;
-        const fawryCode = error.extra?.fawryCode as string | undefined;
-        const meezaReference = error.extra?.meezaReference as string | undefined;
-        const meezaQrCode = error.extra?.meezaQrCode as string | undefined;
-        const amanCode = error.extra?.amanCode as string | undefined;
-        const masaryCode = error.extra?.masaryCode as string | undefined;
         const pendingPaymentId = error.extra?.paymentId as string | undefined;
-        let resolvedInvoiceId = invoiceId;
-
-        if (!resolvedInvoiceId && pendingPaymentId) {
-          try {
-            const pendingPayment = await fetchPayment(pendingPaymentId);
-            resolvedInvoiceId = pendingPayment.fawaterkInvoiceId ?? undefined;
-          } catch {
-            // Fallback to payment_id-only pending flow; pending page will keep polling for invoice_id.
-          }
-        }
-
-        if (
-          resolvedInvoiceId ||
-          pendingPaymentId ||
-          fawryCode ||
-          meezaReference ||
-          meezaQrCode ||
-          amanCode ||
-          masaryCode
-        ) {
+        if (pendingPaymentId) {
           goToPending({
-            invoiceId: resolvedInvoiceId,
             paymentMethodId: selectedMethodId,
             paymentId: pendingPaymentId,
           });
@@ -506,6 +482,10 @@ function SubscribePaymentView() {
           onSubscribe={handleSubscribe}
           isPending={createCheckout.isPending}
           isLoaded={isLoaded}
+          walletRequired={walletRequired}
+          profilePhone={currentUser?.profile?.phone_number}
+          onWalletPhoneChange={setWalletPhone}
+          canSubmit={canSubmit}
         />
 
         {/* Section 2: Social Proof */}
@@ -532,7 +512,7 @@ function SubscribePaymentView() {
         {/* Section 9: Final CTA with Payment */}
         <FinalCTASection
           subscriptionInfo={subscriptionInfo}
-          selectedMethodId={selectedMethodId}
+          canSubmit={canSubmit}
           onSubscribe={handleSubscribe}
           isPending={createCheckout.isPending}
         />

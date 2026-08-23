@@ -22,7 +22,7 @@
 |---|---|
 | **PostgreSQL** | Durable transactional data store. All platform state (users, events, tracks, payments, subscriptions, reservations) is persisted here via Drizzle ORM. |
 | **Fawaterk** | Payment gateway that creates invoices and delivers HMAC-verified payment event webhooks back to the API server. |
-| **Plunk** | Transactional email service used to deliver OTP login codes and invitation emails. |
+| **Resend** | Transactional email service used to deliver OTP login codes and invitation emails. |
 | **BunnyCDN** | Object storage and CDN. The API server uploads files here; the browser loads media assets directly from CDN URLs. |
 | **Cloudflare Turnstile** | Bot-protection CAPTCHA. Tokens are submitted by the browser and validated server-side during OTP requests. |
 | **Google Tag Manager** | Client-side tag orchestration. Loaded by `public/gtm-bootstrap.js`; receives typed events pushed to `window.dataLayer` by `src/lib/analytics/`. No server-side coupling. |
@@ -43,7 +43,7 @@ C4Component
 
     System_Ext(postgres, "PostgreSQL", "Transactional data store")
     System_Ext(fawaterk, "Fawaterk", "Payment gateway")
-    System_Ext(plunk, "Plunk", "Email delivery")
+    System_Ext(resend, "Resend", "Email delivery")
     System_Ext(bunny, "BunnyCDN", "File storage and CDN")
     System_Ext(turnstile, "Cloudflare Turnstile", "Bot-protection CAPTCHA")
     System_Ext(gtm, "Google Tag Manager", "Client-side tag orchestration")
@@ -52,7 +52,7 @@ C4Component
     Rel(server, spa, "Returns API responses and session cookies", "REST/JSON, HTTPS")
     Rel(server, postgres, "Reads and writes all platform data", "SQL via Drizzle ORM")
     Rel(server, fawaterk, "Creates payment invoices and receives webhooks", "HTTPS API")
-    Rel(server, plunk, "Sends OTP and invitation emails", "HTTPS API")
+    Rel(server, resend, "Sends OTP and invitation emails", "HTTPS API")
     Rel(server, bunny, "Uploads files", "HTTPS API")
     Rel(server, turnstile, "Validates CAPTCHA tokens", "HTTPS API")
     Rel(spa, bunny, "Loads static media assets", "HTTPS")

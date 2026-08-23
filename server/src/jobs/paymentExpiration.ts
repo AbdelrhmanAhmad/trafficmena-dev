@@ -15,24 +15,28 @@ const EXPIRATION_JOB_INTERVAL_MS = 60 * 60 * 1000;
 export async function expireAllStalePendingPayments(): Promise<number> {
   const expiryThreshold = new Date(Date.now() - PENDING_PAYMENT_EXPIRY_MS);
 
-  const result = await db
-    .update(payments)
-    .set({ status: 'expired' })
-    .where(and(eq(payments.status, 'pending'), lte(payments.createdAt, expiryThreshold)))
-    .returning({ id: payments.id });
+  // Atomic: marking a payment 'expired' and releasing its held reservations must commit together.
+  // A crash between the two would leave the holds orphaned, blocking capacity until their 72h TTL.
+  return db.transaction(async (tx) => {
+    const result = await tx
+      .update(payments)
+      .set({ status: 'expired' })
+      .where(and(eq(payments.status, 'pending'), lte(payments.createdAt, expiryThreshold)))
+      .returning({ id: payments.id });
 
-  if (result.length > 0) {
-    const expiredPaymentIds = result.map((row) => row.id);
-    await db
-      .delete(eventReservations)
-      .where(inArray(eventReservations.paymentId, expiredPaymentIds));
-    await db
-      .delete(trackReservations)
-      .where(inArray(trackReservations.paymentId, expiredPaymentIds));
-    console.log(`[payment-expiration] Expired ${result.length} stale pending payments`);
-  }
+    if (result.length > 0) {
+      const expiredPaymentIds = result.map((row) => row.id);
+      await tx
+        .delete(eventReservations)
+        .where(inArray(eventReservations.paymentId, expiredPaymentIds));
+      await tx
+        .delete(trackReservations)
+        .where(inArray(trackReservations.paymentId, expiredPaymentIds));
+      console.log(`[payment-expiration] Expired ${result.length} stale pending payments`);
+    }
 
-  return result.length;
+    return result.length;
+  });
 }
 
 /**

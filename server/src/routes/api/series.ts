@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  events,
   libraryAssets,
   series,
   seriesAccessGrants,
@@ -378,11 +379,12 @@ export function registerSeriesRoutes(app: Hono) {
     let hasTrackBooking = false;
     let hasTrackEventAttendance = false;
     let hasSeriesGrant = false;
+    let bookingTicketType: 'online_only' | 'online_offline' | 'offline_only' | null = null;
     if (!isStaff && !isSubscriber) {
       const [bookingRows, attendanceRows, grantRows] = await Promise.all([
         seriesRecord.trackId
           ? db
-              .select({ id: trackBookings.id })
+              .select({ id: trackBookings.id, ticketType: trackBookings.ticketType })
               .from(trackBookings)
               .where(
                 activeTrackBookingWhere(
@@ -433,6 +435,7 @@ export function registerSeriesRoutes(app: Hono) {
 
       hasTrackBooking = Boolean(bookingRows[0]);
       hasTrackEventAttendance = Boolean(attendanceRows[0]);
+      bookingTicketType = bookingRows[0]?.ticketType ?? null;
       hasSeriesGrant = Boolean(grantRows[0]);
     }
 
@@ -470,12 +473,14 @@ export function registerSeriesRoutes(app: Hono) {
           viewCount: libraryAssets.viewCount,
           createdAt: libraryAssets.createdAt,
           eventId: libraryAssets.eventId,
+          eventFormat: events.eventFormat,
           isPublic: libraryAssets.isPublic,
           isPremium: libraryAssets.isPremium,
         },
       })
       .from(seriesAssets)
       .innerJoin(libraryAssets, eq(libraryAssets.id, seriesAssets.assetId))
+      .leftJoin(events, eq(events.id, libraryAssets.eventId))
       .where(eq(seriesAssets.seriesId, id))
       .orderBy(seriesAssets.sortOrder);
 
@@ -487,16 +492,11 @@ export function registerSeriesRoutes(app: Hono) {
       assetCount: recordingCount,
     });
 
-    // Get user's registered event IDs for permission checking
+    // Get user's registered event IDs for permission checking. Booking holders are included now
+    // that the booking branch is ticket-aware: when their ticket doesn't cover an asset, the
+    // per-asset fallback honors a direct registration for that event (so it can't be empty for them).
     let userEventIds = new Set<string>();
-    if (
-      !isStaff &&
-      !isSubscriber &&
-      !hasTrackBooking &&
-      !hasTrackEventAttendance &&
-      !hasSeriesGrant &&
-      !isPremiumLocked
-    ) {
+    if (!isStaff && !isSubscriber && !hasSeriesGrant && !isPremiumLocked) {
       const registrations = await db
         .select({ eventId: eventAttendees.eventId })
         .from(eventAttendees)
@@ -510,9 +510,11 @@ export function registerSeriesRoutes(app: Hono) {
     const assets = seriesAssetsList.map((sa) => {
       const hasAccess = resolveSeriesAssetAccess({
         ...accessContext,
+        bookingTicketType,
         assetIsPremium: sa.asset.isPremium,
         assetIsPublic: sa.asset.isPublic,
         assetEventId: sa.asset.eventId,
+        assetEventFormat: sa.asset.eventFormat ?? null,
         userEventIds,
       });
 

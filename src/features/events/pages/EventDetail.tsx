@@ -42,6 +42,7 @@ import {
 import { CancellationConfirmDialog } from '../components/CancellationConfirmDialog';
 import { useEventBooking } from '../hooks/useEventBooking';
 import { useEvent } from '../hooks/useEvents';
+import { getEventPricePreviewGate } from '../utils/eventPricePreviewGate';
 
 const trustedMeetingDomains = [
   'zoom.us',
@@ -86,6 +87,8 @@ type SanitizedHtmlProps = {
 const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
   <div
     className={className}
+    // Base direction follows content's first strong char so mixed AR/EN keeps correct word order
+    dir="auto"
     // biome-ignore lint/security/noDangerouslySetInnerHtml: event descriptions are sanitized with DOMPurify
     dangerouslySetInnerHTML={{ __html: html }}
   />
@@ -105,10 +108,16 @@ const EventDetail: React.FC = () => {
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [promoAttemptKey, setPromoAttemptKey] = useState(0);
 
-  // Get price preview for logged-in users
-  // Skip for track events where individual booking is not allowed (avoids 400 errors)
-  const canFetchPricePreview =
-    user && id && (!event?.trackInfo || event?.trackInfo?.singleBookingStart);
+  // Gate the price preview until the event has loaded and the user can register — firing before
+  // `event` resolves misreads a track event as standalone and 400s INDIVIDUAL_BOOKING_DISABLED.
+  const canFetchPricePreview = getEventPricePreviewGate({
+    signedIn: Boolean(user),
+    hasItemId: Boolean(id),
+    eventLoaded: Boolean(event),
+    attending: Boolean(event?.attending),
+    isTrackEvent: Boolean(event?.trackInfo),
+    hasSingleBookingStart: Boolean(event?.trackInfo?.singleBookingStart),
+  });
   const { data: pricePreview, isLoading: pricePreviewLoading } = usePricePreview(
     canFetchPricePreview ? 'event' : undefined,
     id,
@@ -117,7 +126,7 @@ const EventDetail: React.FC = () => {
   );
 
   const isPaidEvent = !!(event?.price_in_cents && event.price_in_cents > 0);
-  const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
+  const isOnlineEvent = event?.event_format === 'online';
   const needsPayment = isPaidEvent && !(pricePreview?.isSubscriber && isOnlineEvent);
   const promoError = pricePreview?.promoError ?? null;
   const isPromoApplied =
@@ -184,7 +193,7 @@ const EventDetail: React.FC = () => {
         currency: 'EGP',
         item_location: event.location ?? undefined,
         item_date: event.date,
-        is_online: Boolean(event.meeting_link) && !event.location,
+        is_online: event.event_format === 'online',
         spots_remaining: spotsRemaining,
       },
     });

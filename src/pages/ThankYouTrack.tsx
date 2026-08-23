@@ -15,6 +15,7 @@ import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useBookTrack, usePublicTrack } from '@/features/tracks/hooks/useTracks';
+import { hasTicketTypes } from '@/features/tracks/ticketTypes';
 import { resolveTrackCalendarAnalyticsEvent } from '@/lib/analytics/calendar';
 import { trackAddToCalendar } from '@/lib/analytics/events';
 import DataLoader from '@/shared/components/DataLoader';
@@ -50,7 +51,8 @@ const ThankYouTrack: React.FC = () => {
   // Auto-book track for users arriving from post-signup flow
   useEffect(() => {
     const isFreeTrack = !track?.price_in_cents || track.price_in_cents <= 0;
-    if (user && id && track && isFreeTrack && !track.user_has_booked) {
+    const isTicketConfiguredTrack = track ? hasTicketTypes(track) : false;
+    if (user && id && track && isFreeTrack && !isTicketConfiguredTrack && !track.user_has_booked) {
       bookTrack(id);
     }
     clearPendingTrackContext();

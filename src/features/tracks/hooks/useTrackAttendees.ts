@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
+import type { TicketType } from '@/app/api/payments';
 import type { TrackAttendee } from '@/app/api/tracks';
 import { fetchTrackAttendees } from '@/app/api/tracks';
 
@@ -7,28 +8,35 @@ export const useTrackAttendees = (
   trackId: string | undefined,
   pageSize = 20,
   search: string | undefined = undefined,
+  ticketType: TicketType | undefined = undefined,
 ) => {
   const [page, setPage] = useState(1);
-  const previousScopeRef = useRef({ trackId, pageSize, search });
+  const previousScopeRef = useRef({ trackId, pageSize, search, ticketType });
 
   useEffect(() => {
     const previousScope = previousScopeRef.current;
     const scopeChanged =
       previousScope.trackId !== trackId ||
       previousScope.pageSize !== pageSize ||
-      previousScope.search !== search;
+      previousScope.search !== search ||
+      previousScope.ticketType !== ticketType;
 
     if (scopeChanged) {
       setPage(1);
-      previousScopeRef.current = { trackId, pageSize, search };
+      previousScopeRef.current = { trackId, pageSize, search, ticketType };
     }
-  }, [trackId, pageSize, search]);
+  }, [trackId, pageSize, search, ticketType]);
 
   const query = useQuery<{ items: TrackAttendee[]; total: number }>({
-    queryKey: ['track-attendees', trackId, page, pageSize, search],
+    queryKey: ['track-attendees', trackId, page, pageSize, search, ticketType],
     queryFn: async () => {
       if (!trackId) return { items: [], total: 0 };
-      const { items, pagination } = await fetchTrackAttendees(trackId, { page, pageSize, search });
+      const { items, pagination } = await fetchTrackAttendees(trackId, {
+        page,
+        pageSize,
+        search,
+        ticketType,
+      });
       return {
         items,
         total: pagination.total,

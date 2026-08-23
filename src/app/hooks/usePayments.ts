@@ -6,6 +6,7 @@ import type {
   PaymentItemType,
   PaymentMethod,
   PricePreview,
+  TicketType,
   VerifyPaymentRequest,
   VerifyPaymentResponse,
 } from '@/app/api/payments';
@@ -16,6 +17,7 @@ import {
   fetchPricePreview,
   verifyPayment,
 } from '@/app/api/payments';
+import { shouldRetryPricePreview } from '@/app/api/pricePreviewRetry';
 import { currentUserQueryKey } from '@/app/queryKeys';
 
 const PAYMENT_METHODS_KEY = ['payment-methods'];
@@ -50,7 +52,11 @@ export function useVerifyPayment() {
 
   return useMutation<VerifyPaymentResponse, Error, VerifyPaymentRequest>({
     mutationFn: verifyPayment,
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      // Always refresh the payment row so status transitions (expired/failed as well as paid) surface
+      // immediately — usePayment has no refetch interval and refetchOnWindowFocus is globally off, so
+      // without this the pending page shows a stale, apparently-redeemable code forever.
+      queryClient.invalidateQueries({ queryKey: [...PAYMENT_KEY, variables.paymentId] });
       if (data.status === 'paid') {
         // Invalidate all related queries on successful payment
         queryClient.invalidateQueries({ queryKey: ['subscription-info'] });
@@ -83,15 +89,24 @@ export function usePricePreview(
   itemType: PaymentItemType | undefined,
   itemId?: string,
   promoCode?: string,
-  options?: { enabled?: boolean; requestKey?: number | string },
+  options?: { enabled?: boolean; requestKey?: number | string; ticketType?: TicketType },
 ) {
   return useQuery<PricePreview>({
-    queryKey: [...PRICE_PREVIEW_KEY, itemType, itemId, promoCode, options?.requestKey ?? 'default'],
+    queryKey: [
+      ...PRICE_PREVIEW_KEY,
+      itemType,
+      itemId,
+      promoCode,
+      options?.ticketType ?? 'none',
+      options?.requestKey ?? 'default',
+    ],
     queryFn: ({ signal }) => {
       if (!itemType) throw new Error('Item type required');
-      return fetchPricePreview(itemType, itemId, promoCode, signal);
+      return fetchPricePreview(itemType, itemId, promoCode, signal, options?.ticketType);
     },
     enabled: (options?.enabled ?? true) && !!itemType,
     staleTime: 60 * 1000, // 1 minute - depends on subscription status
+    // Deterministic 4xx (premature/invalid preview) costs exactly one request, at every call site.
+    retry: shouldRetryPricePreview,
   });
 }

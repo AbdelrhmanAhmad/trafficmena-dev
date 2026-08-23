@@ -1,6 +1,7 @@
 // All analytics event tracking functions.
 // Each function maps to one event in the data model.
 
+import type { TicketType } from '../../app/api/payments';
 import { pushToDataLayer } from './gtm';
 import {
   type AnalyticsPaymentItemType,
@@ -234,6 +235,8 @@ export function trackApplyPromoCode(params: {
 
 type PurchaseData = {
   transactionId: string;
+  // Stable per-purchase id (= paymentId) used as the Meta event_id for pixel/CAPI deduplication.
+  eventId: string;
   currency: string;
   value: number;
   itemType: 'event' | 'track' | 'subscription' | AnalyticsPaymentItemType;
@@ -242,20 +245,25 @@ type PurchaseData = {
   coupon: string;
   discount: number;
   originalValue: number;
+  // Track ticket variant (online_only | online_offline | offline_only); null for non-track/legacy.
+  ticketType?: TicketType | null;
   item: PaymentEventItem;
 };
 
 export function buildPurchaseEvents(data: PurchaseData) {
   const customerType = getCustomerTypeForPurchase(data.priorNonSubscriptionPurchases);
   const analyticsItemType = toAnalyticsItemType(data.itemType);
+  const ticketType = data.ticketType ?? '';
   const purchaseEvent = {
     event: 'purchase',
     transaction_id: data.transactionId,
+    event_id: data.eventId,
     currency: data.currency,
     value: data.value,
     item_type: analyticsItemType,
     payment_type: data.paymentType,
     customer_type: customerType,
+    ticket_type: ticketType,
     coupon: data.coupon,
     discount: data.discount,
     original_value: data.originalValue,
@@ -269,11 +277,13 @@ export function buildPurchaseEvents(data: PurchaseData) {
     events.push({
       event: 'first_purchase',
       transaction_id: data.transactionId,
+      event_id: data.eventId,
       currency: data.currency,
       value: data.value,
       item_type: analyticsItemType,
       payment_type: data.paymentType,
       customer_type: 'new',
+      ticket_type: ticketType,
       coupon: data.coupon,
       discount: data.discount,
       original_value: data.originalValue,

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  formatAmountPaid,
   formatManualEnrollmentAmountEgp,
   parseManualEnrollmentAmountEgp,
 } from '../../src/features/tracks/utils/manualEnrollmentAmount.ts';
@@ -26,5 +27,21 @@ describe('track manual enrollment amount helpers', () => {
     assert.equal(parseManualEnrollmentAmountEgp('-5'), null);
     assert.equal(parseManualEnrollmentAmountEgp('100,50'), null);
     assert.equal(parseManualEnrollmentAmountEgp('100000.01'), null);
+  });
+});
+
+describe('formatAmountPaid display contract', () => {
+  it('renders null/undefined as an em dash (no captured amount)', () => {
+    assert.equal(formatAmountPaid(null), '—');
+    assert.equal(formatAmountPaid(undefined), '—');
+  });
+
+  it('renders 0 as "Free" (confirmed-free registration)', () => {
+    assert.equal(formatAmountPaid(0), 'Free');
+  });
+
+  it('renders positive cents as formatted EGP', () => {
+    assert.equal(formatAmountPaid(80000), '800 EGP');
+    assert.equal(formatAmountPaid(100050), '1000.5 EGP');
   });
 });

@@ -17,6 +17,10 @@ import {
 } from '@/app/api/tracks';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { trackSuccessfulTrackBooking } from '../trackBookingAnalytics';
+import { formatAddEventsDescription } from '../utils/formatAddEventsDescription';
+import { invalidateTrackAccessQueries } from './useTrackEnrollmentManagement';
+
+export { formatAddEventsDescription };
 
 export const useTracks = (page = 1, pageSize = 12, filters?: { search?: string }) => {
   const safePageSize = Math.min(pageSize, 50);
@@ -99,10 +103,11 @@ export const useUpdateTrack = () => {
       queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', track.id] });
       queryClient.invalidateQueries({ queryKey: ['tracks'] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: 'Update failed',
-        description: 'Could not update track. Please try again.',
+        description:
+          error instanceof Error ? error.message : 'Could not update track. Please try again.',
         variant: 'destructive',
       });
     },
@@ -142,12 +147,11 @@ export const useAddEventsToTrack = () => {
     mutationFn: ({ trackId, eventIds }: { trackId: string; eventIds: string[] }) =>
       addEventsToTrack(trackId, eventIds),
     onSuccess: (result, { trackId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', trackId] });
-      queryClient.invalidateQueries({ queryKey: ['tracks'] });
+      invalidateTrackAccessQueries(queryClient, trackId);
       if (result.addedCount > 0) {
         toast({
           title: 'Events added',
-          description: `Added ${result.addedCount} event${result.addedCount > 1 ? 's' : ''} to the track.`,
+          description: formatAddEventsDescription(result),
         });
       }
     },
@@ -166,14 +170,37 @@ export const useRemoveEventFromTrack = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ trackId, eventId }: { trackId: string; eventId: string }) =>
-      removeEventFromTrack(trackId, eventId),
-    onSuccess: (_, { trackId }) => {
-      queryClient.invalidateQueries({ queryKey: ['tracks', 'detail', trackId] });
-      queryClient.invalidateQueries({ queryKey: ['tracks'] });
+    mutationFn: ({
+      trackId,
+      eventId,
+      reason,
+    }: {
+      trackId: string;
+      eventId: string;
+      reason?: string;
+    }) => removeEventFromTrack(trackId, eventId, reason),
+    onSuccess: (result, { trackId }) => {
+      // A removal can cancel members' materialized sessions, so refresh the full access surface.
+      invalidateTrackAccessQueries(queryClient, trackId);
+
+      const cancelled = result.cancelledRegistrations ?? 0;
+      if (cancelled === 0) {
+        toast({
+          title: 'Event removed',
+          description: 'The event was removed from the track.',
+        });
+        return;
+      }
+
+      const pending = result.pendingRefundsUntouched ?? 0;
+      const cancelledLabel = `${cancelled} registration${cancelled === 1 ? '' : 's'} cancelled`;
+      const pendingLabel =
+        pending > 0
+          ? `, ${pending} pending refund request${pending === 1 ? '' : 's'} left in the review queue`
+          : '';
       toast({
-        title: 'Event removed',
-        description: 'The event was removed from the track.',
+        title: 'Session removed',
+        description: `Session removed. ${cancelledLabel}${pendingLabel}.`,
       });
     },
     onError: (error) => {

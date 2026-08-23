@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
+  events,
   libraryAssets,
   series,
   seriesAccessGrants,
@@ -19,6 +20,7 @@ import {
   resolveLibraryAssetAccess,
 } from './seriesAccess.js';
 import { hasActiveSubscription } from './subscriptionShared.js';
+import { type TicketType } from './ticketAccess.js';
 import { escapeLikePattern, getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const listQuerySchema = z.object({
@@ -213,6 +215,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedType: libraryAssets.embedType,
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
+        eventFormat: events.eventFormat,
         isPublic: libraryAssets.isPublic,
         isPremium: libraryAssets.isPremium,
         viewCount: libraryAssets.viewCount,
@@ -220,7 +223,8 @@ export function registerLibraryRoutes(app: Hono) {
         fileSizeBytes: libraryAssets.fileSizeBytes,
         createdAt: libraryAssets.createdAt,
       })
-      .from(libraryAssets);
+      .from(libraryAssets)
+      .leftJoin(events, eq(events.id, libraryAssets.eventId));
 
     const filteredItemsQuery = whereClause ? baseItemsQuery.where(whereClause) : baseItemsQuery;
 
@@ -244,7 +248,7 @@ export function registerLibraryRoutes(app: Hono) {
       recordingsAccessPolicy: ReturnType<typeof normalizeRecordingsAccessPolicy>;
     };
     const parentByAssetId = new Map<string, ParentSeriesContext>();
-    const bookedTrackIds = new Set<string>();
+    const bookingTicketTypeByTrackId = new Map<string, TicketType | null>();
     const attendedTrackIds = new Set<string>();
     const grantedSeriesIds = new Set<string>();
 
@@ -294,7 +298,10 @@ export function registerLibraryRoutes(app: Hono) {
         const [bookingRows, attendanceRows, grantRows] = await Promise.all([
           trackIds.length > 0
             ? db
-                .select({ trackId: trackBookings.trackId })
+                .select({
+                  trackId: trackBookings.trackId,
+                  ticketType: trackBookings.ticketType,
+                })
                 .from(trackBookings)
                 .where(
                   activeTrackBookingWhere(
@@ -330,7 +337,9 @@ export function registerLibraryRoutes(app: Hono) {
             : Promise.resolve([]),
         ]);
 
-        for (const row of bookingRows) bookedTrackIds.add(row.trackId);
+        for (const row of bookingRows) {
+          bookingTicketTypeByTrackId.set(row.trackId, row.ticketType ?? null);
+        }
         for (const row of attendanceRows) attendedTrackIds.add(row.trackId);
         for (const row of grantRows) grantedSeriesIds.add(row.seriesId);
       }
@@ -344,17 +353,23 @@ export function registerLibraryRoutes(app: Hono) {
         assetIsPremium: item.isPremium,
         assetIsPublic: item.isPublic,
         assetEventId: item.eventId,
+        assetEventFormat: item.eventFormat ?? null,
         hasEventRegistration: item.eventId ? registeredEventIds.has(item.eventId) : false,
         parentSeries: parent
           ? {
               isPremium: parent.isPremium,
               salesEnabled: parent.salesEnabled,
               recordingsAccessPolicy: parent.recordingsAccessPolicy,
-              hasTrackBooking: parent.trackId ? bookedTrackIds.has(parent.trackId) : false,
+              hasTrackBooking: parent.trackId
+                ? bookingTicketTypeByTrackId.has(parent.trackId)
+                : false,
               hasTrackEventAttendance: parent.trackId
                 ? attendedTrackIds.has(parent.trackId)
                 : false,
               hasSeriesGrant: grantedSeriesIds.has(parent.seriesId),
+              bookingTicketType: parent.trackId
+                ? (bookingTicketTypeByTrackId.get(parent.trackId) ?? null)
+                : null,
             }
           : null,
       });
@@ -428,6 +443,7 @@ export function registerLibraryRoutes(app: Hono) {
         embedType: libraryAssets.embedType,
         thumbnailUrl: libraryAssets.thumbnailUrl,
         eventId: libraryAssets.eventId,
+        eventFormat: events.eventFormat,
         isPublic: libraryAssets.isPublic,
         isPremium: libraryAssets.isPremium,
         viewCount: libraryAssets.viewCount,
@@ -436,6 +452,7 @@ export function registerLibraryRoutes(app: Hono) {
         createdAt: libraryAssets.createdAt,
       })
       .from(libraryAssets)
+      .leftJoin(events, eq(events.id, libraryAssets.eventId))
       .where(eq(libraryAssets.id, id))
       .limit(1);
 
@@ -491,7 +508,7 @@ export function registerLibraryRoutes(app: Hono) {
         registrationPromise,
         preferredParent?.trackId
           ? db
-              .select({ id: trackBookings.id })
+              .select({ id: trackBookings.id, ticketType: trackBookings.ticketType })
               .from(trackBookings)
               .where(
                 activeTrackBookingWhere(
@@ -536,6 +553,7 @@ export function registerLibraryRoutes(app: Hono) {
         assetIsPremium: asset[0].isPremium,
         assetIsPublic: asset[0].isPublic,
         assetEventId: asset[0].eventId,
+        assetEventFormat: asset[0].eventFormat ?? null,
         hasEventRegistration: Boolean(registrationRows[0]),
         parentSeries: preferredParent
           ? {
@@ -547,6 +565,7 @@ export function registerLibraryRoutes(app: Hono) {
               hasTrackBooking: Boolean(bookingRows[0]),
               hasTrackEventAttendance: Boolean(attendanceRows[0]),
               hasSeriesGrant: Boolean(seriesGrantRows[0]),
+              bookingTicketType: bookingRows[0]?.ticketType ?? null,
             }
           : null,
       });

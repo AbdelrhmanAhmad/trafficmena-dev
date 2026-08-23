@@ -22,6 +22,14 @@ export function normalizeAuthEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+// Strip everything except digits and cap at the 6-digit code length, so a pasted/typed code with
+// spaces or stray characters (e.g. "4 4 5 4 6 3") still matches. .trim() alone left internal spaces.
+export function sanitizeOtp(value: string): string {
+  return String(value ?? '')
+    .replace(/\D/g, '')
+    .slice(0, 6);
+}
+
 export async function requestSignInCode(params: {
   email: string;
   requestOtp: RequestOtpFn;
@@ -46,7 +54,7 @@ export async function completeSignInVerification(params: {
   const normalizedEmail = normalizeAuthEmail(params.email);
   const verifiedUser = await params.verifyOtp({
     email: normalizedEmail,
-    otp: params.otp.trim(),
+    otp: sanitizeOtp(params.otp),
     intent: 'signin',
   });
 

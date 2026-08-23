@@ -27,8 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
-import { CAIRO_TZ, getCairoOffsetString, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
+import { ToastAction } from '@/shared/components/ui/toast';
+import { useToast } from '@/shared/hooks/custom/use-toast';
+import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
+import { CAIRO_TZ, cairoLocalToUtcIso, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 
 const eventFormSchema = z.object({
   title: z
@@ -43,6 +47,8 @@ const eventFormSchema = z.object({
     .max(8000, 'Descriptions are limited to 8,000 characters.'),
   date: z.string().min(1, 'Pick a date and time.'),
   eventType: z.enum(['Event', 'Meetup', 'Mastermind', 'Retreat']),
+  eventFormat: z.enum(['online', 'offline']),
+  eventFormatOverrideReason: z.string().trim().max(500).optional(),
   location: z.string().trim().max(255).optional(),
   locationUrl: z
     .string()
@@ -92,6 +98,7 @@ const eventFormSchema = z.object({
         !value || (!Number.isNaN(Number(value)) && Number(value) >= 0 && Number(value) <= 100000),
       'Price must be between 0 and 100,000 EGP.',
     ),
+  isPublished: z.boolean(),
 });
 
 export type AdminEventFormValues = z.infer<typeof eventFormSchema>;
@@ -120,6 +127,8 @@ type SanitizedHtmlProps = {
 const SanitizedPreviewDescription = ({ className, html }: SanitizedHtmlProps) => (
   <div
     className={className}
+    // Base direction follows content's first strong char so mixed AR/EN keeps correct word order
+    dir="auto"
     // biome-ignore lint/security/noDangerouslySetInnerHtml: preview content is sanitized with DOMPurify
     dangerouslySetInnerHTML={{ __html: html }}
   />
@@ -158,6 +167,8 @@ export function AdminEventForm({
     description: (event?.description ?? '').trim(),
     date: toCairoDatetimeLocal(event?.date),
     eventType: event?.event_type ?? 'Event',
+    eventFormat: event?.event_format ?? 'offline',
+    eventFormatOverrideReason: '',
     location: event?.location ?? '',
     locationUrl: event?.location_url ?? '',
     meetingLink: event?.meeting_link ?? '',
@@ -165,6 +176,7 @@ export function AdminEventForm({
     imageUrl: event?.image_url ?? '',
     tags: event?.tags?.length ? event.tags.join(', ') : '',
     priceEgp: event?.price_in_cents ? String(event.price_in_cents / 100) : '',
+    isPublished: event?.is_published ?? false,
   };
 
   const form = useForm<AdminEventFormValues>({
@@ -172,6 +184,8 @@ export function AdminEventForm({
     defaultValues,
   });
 
+  const { toast } = useToast();
+  const isAdminOverrideAllowed = useRolePermissions().isAdmin;
   const values = form.watch();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -193,6 +207,7 @@ export function AdminEventForm({
     values.description || 'Add an engaging summary so members know what to expect.';
   const sanitizedPreviewDescription = DOMPurify.sanitize(previewDescription);
   const previewImageUrl = values.imageUrl?.trim() ? values.imageUrl.trim() : '';
+  const eventFormatChanged = Boolean(event && values.eventFormat !== event.event_format);
   const preview = {
     title: previewTitle,
     date: previewDateIso,
@@ -220,11 +235,18 @@ export function AdminEventForm({
   };
 
   const handleSubmit = async (formValues: AdminEventFormValues) => {
+    const formatOverrideReason = formValues.eventFormatOverrideReason?.trim() ?? '';
+
     const payload: CreateEventPayload = {
       title: formValues.title.trim(),
       description: DOMPurify.sanitize(formValues.description.trim()),
-      date: new Date(`${formValues.date}${getCairoOffsetString()}`).toISOString(),
+      date: cairoLocalToUtcIso(formValues.date),
       eventType: formValues.eventType,
+      eventFormat: formValues.eventFormat,
+      eventFormatOverrideReason:
+        event && formValues.eventFormat !== event.event_format && formatOverrideReason
+          ? formatOverrideReason
+          : undefined,
       location: formValues.location?.trim() ? formValues.location.trim() : null,
       locationUrl: formValues.locationUrl?.trim() ? formValues.locationUrl.trim() : null,
       meetingLink: formValues.meetingLink?.trim() ? formValues.meetingLink.trim() : null,
@@ -239,9 +261,44 @@ export function AdminEventForm({
             .slice(0, 12)
         : undefined,
       priceInCents: formValues.priceEgp ? Math.round(Number(formValues.priceEgp) * 100) : null,
+      isPublished: formValues.isPublished,
     };
 
     await onSubmit(payload);
+
+    // No-silent-draft safeguard (D-2): warn only when an event becomes newly hidden — a brand-new
+    // draft or a published event flipped to draft — not on every re-save of an existing draft.
+    const newlyHidden = !formValues.isPublished && event?.is_published !== false;
+    if (newlyHidden) {
+      toast({
+        title: 'Saved as draft — not visible to members',
+        description: "Members can't see or register for it until you publish.",
+        // Edit keeps the user on the form, so offer a one-click publish (a safe in-place re-save).
+        // Create navigates to the event page, so it gets the notice without an unsafe re-create.
+        action: event ? (
+          <ToastAction
+            altText="Publish now"
+            onClick={() => {
+              void handlePublishNow();
+            }}
+          >
+            Publish now
+          </ToastAction>
+        ) : undefined,
+      });
+    }
+  };
+
+  const handlePublishNow = async () => {
+    const previousIsPublished = form.getValues('isPublished');
+    const publishedValues = { ...form.getValues(), isPublished: true };
+    form.setValue('isPublished', true, { shouldDirty: true, shouldTouch: true });
+
+    try {
+      await handleSubmit(publishedValues);
+    } catch {
+      form.setValue('isPublished', previousIsPublished, { shouldDirty: true, shouldTouch: true });
+    }
   };
 
   return (
@@ -281,29 +338,80 @@ export function AdminEventForm({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="eventType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Event format</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="eventType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event type</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select event type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Event">Event</SelectItem>
+                          <SelectItem value="Meetup">Meetup</SelectItem>
+                          <SelectItem value="Mastermind">Mastermind</SelectItem>
+                          <SelectItem value="Retreat">Retreat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="eventFormat"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Delivery mode</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select delivery mode" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="online">Online (Zoom / live stream)</SelectItem>
+                          <SelectItem value="offline">Offline (in person)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Drives subscriber pricing and which sessions a ticket includes.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {eventFormatChanged && isAdminOverrideAllowed && (
+                <FormField
+                  control={form.control}
+                  name="eventFormatOverrideReason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Delivery mode change reason</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select event format" />
-                        </SelectTrigger>
+                        <Textarea
+                          {...field}
+                          placeholder="Required if this event is linked to sold ticketed tracks"
+                          rows={3}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Event">Event</SelectItem>
-                        <SelectItem value="Meetup">Meetup</SelectItem>
-                        <SelectItem value="Mastermind">Mastermind</SelectItem>
-                        <SelectItem value="Retreat">Retreat</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormDescription>
+                        Stored in server logs with the affected track report when an override is
+                        required.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <div className="grid gap-4 md:grid-cols-2">
                 <FormField
@@ -311,10 +419,13 @@ export function AdminEventForm({
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
+                      <FormLabel>Location (address)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Dubai, UAE or Online" {...field} />
+                        <Input placeholder="Dubai, UAE" {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Physical address for in-person events. Leave blank for online.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -467,6 +578,26 @@ export function AdminEventForm({
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isPublished"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Published</FormLabel>
+                      <FormDescription>
+                        {field.value
+                          ? 'Visible to members in event listings.'
+                          : 'Draft — saved but hidden from members until you publish.'}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
                   </FormItem>
                 )}
               />

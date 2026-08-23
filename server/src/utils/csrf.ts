@@ -6,7 +6,13 @@ import { env, isProduction } from '../config/env.js';
 const CSRF_COOKIE_NAME = 'tm_csrf';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const EXEMPT_PATHS = new Set(['/api/payments/webhook', '/api/payments/webhook_json']);
+const EXEMPT_PATHS = new Set([
+  '/api/payments/webhook',
+  '/api/payments/webhook_json',
+  '/api/payments/webhook_cancel',
+  '/api/payments/webhook_failed_json',
+  '/api/payments/webhook_refund',
+]);
 
 const csrfAllowlist = new Set(env.CORS_ALLOWLIST);
 try {

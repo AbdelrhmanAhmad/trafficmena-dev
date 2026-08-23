@@ -1,7 +1,9 @@
 import { CheckCircle2, Loader2 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useVerifyPayment } from '@/app/hooks/usePayments';
+import { clearCommerceCartStorage } from '@/features/series/context/SeriesCartContext';
 import { trackPurchase, trackSubscribe } from '@/lib/analytics/events';
 import { centsToUnits } from '@/lib/analytics/helpers';
 import {
@@ -18,21 +20,27 @@ import {
   CardTitle,
 } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
-import { usePaymentVerification } from './usePaymentVerification';
-import { clearCommerceCartStorage } from '@/features/series/context/SeriesCartContext';
 
 export default function PaymentSuccessPage() {
-  const { user, loading: authLoading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const paymentId = searchParams.get('payment_id');
+  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { verifyPayment, resolvedInvoiceId, hasInvoiceContext } = usePaymentVerification(
-    user,
-    authLoading,
-  );
+  const verifyPayment = useVerifyPayment();
+  const [verificationAttempted, setVerificationAttempted] = useState(false);
   const analyticsRetryCountRef = useRef(0);
+  const navigationHandledRef = useRef(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!resolvedInvoiceId) {
+    if (paymentId && user && !verificationAttempted) {
+      setVerificationAttempted(true);
+      verifyPayment.mutate({ paymentId });
+    }
+  }, [paymentId, user, verificationAttempted, verifyPayment]);
+
+  useEffect(() => {
+    if (!paymentId) {
       return;
     }
 
@@ -51,45 +59,13 @@ export default function PaymentSuccessPage() {
 
     analyticsRetryCountRef.current += 1;
     const retryTimer = window.setTimeout(() => {
-      verifyPayment.mutate({ invoiceId: resolvedInvoiceId });
+      verifyPayment.mutate({ paymentId });
     }, 500);
 
     return () => window.clearTimeout(retryTimer);
-  }, [resolvedInvoiceId, verifyPayment, verifyPayment.data]);
+  }, [paymentId, verifyPayment, verifyPayment.data]);
 
-  const navigationHandledRef = useRef(false);
-
-  // Invalidate caches and redirect as soon as payment is confirmed paid.
-  useEffect(() => {
-    const verifyData = verifyPayment.data;
-    if (!verifyData || verifyData.status !== 'paid' || navigationHandledRef.current) return;
-
-    if (verifyData.itemType === 'masterclass') {
-      queryClient.invalidateQueries({ queryKey: ['masterclasses'] });
-    }
-
-    navigationHandledRef.current = true;
-
-    if (verifyData.itemType === 'order') {
-      clearCommerceCartStorage();
-    }
-
-    if (verifyData.itemType === 'event' && verifyData.itemId) {
-      navigate(`/thank-you-event/${verifyData.itemId}?paid=1`, { replace: true });
-    } else if (verifyData.itemType === 'track' && verifyData.itemId) {
-      navigate(`/thank-you-track/${verifyData.itemId}?paid=1`, { replace: true });
-    } else if (verifyData.itemType === 'masterclass' && verifyData.itemId) {
-      navigate(`/dashboard/masterclasses/${verifyData.itemId}/learn`, { replace: true });
-    } else if (verifyData.itemType === 'subscription') {
-      navigate('/dashboard?subscribed=1', { replace: true });
-    } else if (verifyData.itemType === 'order' && verifyData.itemId) {
-      navigate(`/thank-you-order/${verifyData.itemId}?paid=1`, { replace: true });
-    } else if (verifyData.itemType === 'order') {
-      navigate('/dashboard/library?purchased=1', { replace: true });
-    }
-  }, [verifyPayment.data, navigate, queryClient]);
-
-  // Fire purchase analytics once enrichment payload is ready.
+  // Fire purchase analytics THEN navigate — single effect to avoid race conditions.
   useEffect(() => {
     const verifyData = verifyPayment.data;
     if (!isVerifiedPaymentAnalyticsReady(verifyData)) return;
@@ -117,6 +93,7 @@ export default function PaymentSuccessPage() {
       } else {
         trackPurchase({
           transactionId: verifyData.paymentId,
+          eventId: verifyData.paymentId,
           currency: 'EGP',
           value,
           itemType,
@@ -125,6 +102,7 @@ export default function PaymentSuccessPage() {
           coupon: verifyData.promoCode ?? '',
           discount,
           originalValue,
+          ticketType: verifyData.ticketType ?? null,
           item: {
             item_id: verifyData.itemId ?? '',
             item_name: verifyData.itemName ?? '',
@@ -136,11 +114,39 @@ export default function PaymentSuccessPage() {
         });
       }
     }
-  }, [verifyPayment.data]);
 
-  const isVerifying = verifyPayment.isPending || authLoading;
-  const hasInvoice = hasInvoiceContext;
-  const canVerify = Boolean(user && resolvedInvoiceId);
+    if (navigationHandledRef.current) {
+      return;
+    }
+
+    if (verifyData.itemType === 'masterclass') {
+      queryClient.invalidateQueries({ queryKey: ['masterclasses'] });
+    }
+
+    navigationHandledRef.current = true;
+
+    if (verifyData.itemType === 'order') {
+      clearCommerceCartStorage();
+    }
+
+    if (verifyData.itemType === 'event' && verifyData.itemId) {
+      navigate(`/thank-you-event/${verifyData.itemId}?paid=1`, { replace: true });
+    } else if (verifyData.itemType === 'track' && verifyData.itemId) {
+      navigate(`/thank-you-track/${verifyData.itemId}?paid=1`, { replace: true });
+    } else if (verifyData.itemType === 'masterclass' && verifyData.itemId) {
+      navigate(`/dashboard/masterclasses/${verifyData.itemId}/learn`, { replace: true });
+    } else if (verifyData.itemType === 'subscription') {
+      navigate('/dashboard?subscribed=1', { replace: true });
+    } else if (verifyData.itemType === 'order' && verifyData.itemId) {
+      navigate(`/thank-you-order/${verifyData.itemId}?paid=1`, { replace: true });
+    } else if (verifyData.itemType === 'order') {
+      navigate('/dashboard/library?purchased=1', { replace: true });
+    }
+  }, [verifyPayment.data, navigate, queryClient]);
+
+  const isVerifying = verifyPayment.isPending;
+  const hasPaymentId = Boolean(paymentId);
+  const canVerify = Boolean(user && paymentId);
   const isSuccess = verifyPayment.data?.status === 'paid';
   const isError = canVerify
     ? verifyPayment.isError || (verifyPayment.data && verifyPayment.data.status !== 'paid')
@@ -188,7 +194,7 @@ export default function PaymentSuccessPage() {
               </>
             )}
 
-            {hasInvoice && !canVerify && (
+            {hasPaymentId && !canVerify && (
               <>
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
                   <CheckCircle2 className="h-10 w-10 text-amber-600" />
@@ -198,13 +204,16 @@ export default function PaymentSuccessPage() {
               </>
             )}
 
-            {!hasInvoice && !isVerifying && (
+            {!hasPaymentId && !isVerifying && (
               <>
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                  <CheckCircle2 className="h-10 w-10 text-green-600" />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                  <CheckCircle2 className="h-10 w-10 text-amber-600" />
                 </div>
-                <CardTitle className="text-2xl text-green-700">Thank You!</CardTitle>
-                <CardDescription>Your transaction has been received.</CardDescription>
+                <CardTitle className="text-2xl text-amber-700">Payment Processing</CardTitle>
+                <CardDescription>
+                  Confirming your payment — this can take a moment. Check your dashboard for the
+                  latest status.
+                </CardDescription>
               </>
             )}
           </CardHeader>

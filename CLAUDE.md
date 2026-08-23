@@ -29,7 +29,7 @@ TrafficMENA Hub is a production digital marketing education platform for the MEN
 *   **Validation:** Zod for payload validation.
 *   **Sanitization:** DOMPurify for user content.
 *   **CSRF:** Token-based CSRF protection on all API routes.
-*   **Payments:** HMAC-verified Fawaterk webhooks. Fawaterk API key required in production.
+*   **Payments:** Fawaterk **API v3** (OAuth client-credentials auth + transaction-intent model). HMAC-verified webhooks (the vendor API key is the HMAC secret). OAuth client id/secret + API key required in production.
 
 ## Key Files for Reference
 *   `AGENTS.md`: Detailed "AI Coder" instructions and status reports.
@@ -110,8 +110,11 @@ npm run format                        # Ultracite format
 │   ├── unit/              # Unit test files
 │   └── node-loader.mjs    # Custom loader for TypeScript tests
 ├── local/postgres/bin/    # Project-scoped Postgres scripts
-└── docs/                  # Operational documentation + solution learnings
+└── docs/                  # Operational documentation
+    └── solutions/         # documented solutions to past problems (bugs, best practices, workflow patterns), by category w/ YAML frontmatter (module, tags, problem_type)
 ```
+
+`CONCEPTS.md` (repo root) — shared domain glossary; read when orienting to the codebase or discussing domain concepts.
 
 ### Key Architectural Patterns
 
@@ -133,7 +136,7 @@ npm run format                        # Ultracite format
 - Better Auth with email OTP plugin
 - Session cookies (7-day expiration, 1-day update age)
 - Auth endpoints: `/api/auth/otp/request`, `/api/auth/otp/verify`, `/api/auth/session`, `/api/auth/logout`
-- OTP sent via Plunk email service
+- OTP sent via Resend email service
 - Rate limiting: normal mode (3 OTPs/10min, 10/day), event mode (15/10min, 50/day)
 - Turnstile CAPTCHA support for high-load scenarios
 - Invite-only signup enforcement (toggleable in settings)
@@ -204,8 +207,8 @@ POST /api/tracks                       # Create track (manager+)
 PUT  /api/tracks/:id                   # Update track (manager+)
 DELETE /api/tracks/:id                 # Delete track (admin+)
 GET  /api/tracks/:id/events            # List events in track
-POST /api/tracks/:id/events            # Add event to track (manager+)
-DELETE /api/tracks/:id/events/:eventId # Remove event from track (manager+)
+POST /api/tracks/:id/events            # Add event to track; booked tracks backfill entitled buyers (manager+)
+DELETE /api/tracks/:id/events/:eventId # Remove event from track (manager+; on a track with active bookings, admin+ only, requires {reason}, atomically cancels buyers' sessions + unlinks series assets)
 POST /api/tracks/:id/book              # Book entire track
 
 # Series (Content Collections)
@@ -230,8 +233,11 @@ POST /api/payments/checkout            # Create payment invoice (rate limited)
 POST /api/payments/verify              # Poll for payment confirmation
 GET  /api/payments/price-preview       # Preview price with discounts
 GET  /api/payments/:id                 # Payment status
-POST /api/payments/webhook             # Fawaterk webhook (HMAC verified)
-POST /api/payments/webhook_json        # Alternative webhook
+POST /api/payments/webhook             # Fawaterk paid/pending TR webhook (HMAC verified)
+POST /api/payments/webhook_json        # Same handler, JSON delivery (dashboard-registered URL)
+POST /api/payments/webhook_cancel      # Cancel webhook (verify + log only)
+POST /api/payments/webhook_failed_json # Failed webhook (verify + log only)
+POST /api/payments/webhook_refund      # Refund webhook (verify + log only)
 
 # Subscriptions
 GET  /api/subscriptions/current        # User's active subscription
@@ -278,13 +284,15 @@ BETTER_AUTH_SECRET=...            # >=32 chars, unique in production
 BETTER_AUTH_ISSUER=http://localhost:3001
 APP_BASE_URL=http://localhost:8080
 CORS_ORIGIN=http://localhost:8080 # Comma-separated for multiple origins
-PLUNK_API_KEY=...                 # Email delivery
+RESEND_API_KEY=...                 # Email delivery
 BUNNY_STORAGE_ZONE=...           # CDN storage
 BUNNY_STORAGE_ACCESS_KEY=...
 BUNNY_STORAGE_CDN_URL=https://trafficmena.b-cdn.net
-FAWATERK_API_KEY=...              # Payment gateway (required in production)
+FAWATERK_API_KEY=...              # v3 webhook HMAC secret (required in production)
 FAWATERK_ENV=staging              # staging or live
-API_BASE_URL=...                  # For webhook callbacks (optional)
+FAWATERK_CLIENT_ID=...            # v3 OAuth client id (UUID; required in production)
+FAWATERK_CLIENT_SECRET=...        # v3 OAuth client secret (required in production)
+API_BASE_URL=...                  # Webhook callback base; PROD must be https://www.trafficmena.com
 TURNSTILE_SECRET_KEY=...          # Cloudflare CAPTCHA (optional)
 INVITE_SESSION_SECRET=...         # >=16 chars in production
 INVITATION_DAILY_LIMIT=1000       # Max invitations per admin per day
@@ -322,7 +330,7 @@ INVITATION_DAILY_LIMIT=1000       # Max invitations per admin per day
 
 5. **Security Headers** - CSP, HSTS (production), secure headers configured in `server/src/app.ts`.
 
-6. **Payment Flow** - Calculate price -> Create payment + reservation -> Fawaterk invoice -> Verify -> Atomic fulfillment -> Mark paid.
+6. **Payment Flow** - Calculate price -> Create payment + reservation -> Fawaterk v3 transaction intent (`fawaterk_intent_key`) -> Verify/webhook -> Atomic fulfillment -> Mark paid. `paymentId` (our UUID) is the sole SPA flow key.
 
 7. **Reservation System** - 72-hour TTL capacity holds for events and tracks. Background job cleans expired payments.
 
@@ -502,7 +510,7 @@ INVITATION_DAILY_LIMIT=1000       # Max invitations per admin per day
 
 ### API & Security Specific
 - Gate every Hono endpoint behind Better Auth sessions and role checks where required
-- Keep Plunk / Better Auth / Fawaterk secrets on the server only; never leak them into the bundle
+- Keep Resend / Better Auth / Fawaterk secrets on the server only; never leak them into the bundle
 - Validate request payloads with Zod (or equivalent) before touching the database
 - Use the shared `AppErrorHandler` helpers when raising API errors back to the SPA
 - Sanitize any user-generated HTML with DOMPurify before storage or rendering

@@ -4,7 +4,7 @@ import Papa from 'papaparse';
 import { env } from '../config/env.js';
 import { db } from '../db/client.js';
 import { invitations, profiles, users } from '../db/schema/index.js';
-import { sendInvitationEmail } from './email.js';
+import { EmailDeliveryError, sendInvitationEmail } from './email.js';
 
 const DAILY_LIMIT = env.INVITATION_DAILY_LIMIT;
 
@@ -161,11 +161,13 @@ export async function sendBulkInvitations(
       });
       created.push(invite);
     } catch (error) {
-      errors.push({
-        line: row.__line,
-        email,
-        reason: error instanceof InvitationError ? error.message : 'Unknown error',
-      });
+      let reason = 'Unknown error';
+      if (error instanceof InvitationError) {
+        reason = error.message;
+      } else if (error instanceof EmailDeliveryError) {
+        reason = mapEmailDeliveryReason(error.code);
+      }
+      errors.push({ line: row.__line, email, reason });
     }
   }
 
@@ -351,4 +353,22 @@ function parseCsv(text: string): {
 function isValidEmail(value: string) {
   if (!value) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+// Map Resend send-failure codes (EmailDeliveryError.code = Resend error.name) to actionable
+// per-row reasons, so a failed bulk row says what went wrong instead of "Unknown error".
+export function mapEmailDeliveryReason(code: string) {
+  switch (code) {
+    case 'rate_limit_exceeded':
+      return 'Email provider rate limit hit. Retry this row shortly.';
+    case 'validation_error':
+      return 'Email rejected (unverified sender domain or invalid recipient).';
+    case 'daily_quota_exceeded':
+    case 'monthly_quota_exceeded':
+      return 'Email sending quota exceeded. Try again later.';
+    case 'restricted_api_key':
+      return 'Email provider key lacks send permission. Contact an administrator.';
+    default:
+      return 'Email delivery failed.';
+  }
 }

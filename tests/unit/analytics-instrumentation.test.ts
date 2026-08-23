@@ -429,6 +429,7 @@ describe('payment analytics schema mapping', () => {
   it('builds purchase and first_purchase using prior non-subscription purchases', () => {
     const events = buildPurchaseEvents({
       transactionId: 'pay_1',
+      eventId: 'pay_1',
       currency: 'EGP',
       value: 200,
       itemType: 'event',
@@ -452,6 +453,66 @@ describe('payment analytics schema mapping', () => {
     assert.equal(events[0]?.item_type, 'event_ticket');
     assert.equal(events[0]?.customer_type, 'new');
     assert.equal(events[1]?.event, 'first_purchase');
+  });
+
+  it('carries a stable event_id and the ticket variant on track purchase events', () => {
+    const events = buildPurchaseEvents({
+      transactionId: 'pay_track_1',
+      eventId: 'pay_track_1',
+      currency: 'EGP',
+      value: 500,
+      itemType: 'track',
+      ticketType: 'online_offline',
+      paymentType: 'mobile_wallet',
+      priorNonSubscriptionPurchases: 0,
+      coupon: '',
+      discount: 0,
+      originalValue: 500,
+      item: {
+        item_id: 'trk_1',
+        item_name: 'Growth Track',
+        item_category: 'Track',
+        price: 500,
+        currency: 'EGP',
+        quantity: 1,
+      },
+    });
+
+    // event_id (= paymentId) is the dedup key the pixel and a future CAPI call share.
+    assert.equal(events[0]?.event, 'purchase');
+    assert.equal(events[0]?.event_id, 'pay_track_1');
+    assert.equal(events[0]?.ticket_type, 'online_offline');
+    // first_purchase mirrors the same dedup id + ticket variant.
+    assert.equal(events[1]?.event, 'first_purchase');
+    assert.equal(events[1]?.event_id, 'pay_track_1');
+    assert.equal(events[1]?.ticket_type, 'online_offline');
+  });
+
+  it('emits an empty ticket_type for non-track purchases', () => {
+    const events = buildPurchaseEvents({
+      transactionId: 'pay_evt_1',
+      eventId: 'pay_evt_1',
+      currency: 'EGP',
+      value: 200,
+      itemType: 'event',
+      paymentType: 'fawry',
+      priorNonSubscriptionPurchases: 2,
+      coupon: '',
+      discount: 0,
+      originalValue: 200,
+      item: {
+        item_id: 'evt_1',
+        item_name: 'Workshop',
+        item_category: 'Mastermind',
+        price: 200,
+        currency: 'EGP',
+        quantity: 1,
+      },
+    });
+
+    assert.equal(events.length, 1);
+    assert.equal(events[0]?.event_id, 'pay_evt_1');
+    assert.equal(events[0]?.ticket_type, '');
   });
 
   it('waits for a complete event payment verification payload before tracking purchase', () => {

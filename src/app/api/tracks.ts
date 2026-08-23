@@ -1,4 +1,5 @@
 import { API_BASE, fetchJson } from './client';
+import type { TicketType } from './payments';
 import type { PaginatedResult } from './types';
 
 // API response types (camelCase from server)
@@ -23,6 +24,10 @@ export interface ApiTrack {
   trackBookingSpotsRemaining?: number | null;
   userHasBooked?: boolean;
   priceInCents?: number | null;
+  // Per-ticket-type prices (non-null = offered). All null = legacy single-price track.
+  onlineOnlyPriceCents?: number | null;
+  onlineOfflinePriceCents?: number | null;
+  offlineOnlyPriceCents?: number | null;
   // Location fields
   location?: string | null;
   locationUrl?: string | null;
@@ -112,6 +117,9 @@ export interface TrackRecord {
   track_booking_spots_remaining: number | null;
   user_has_booked: boolean;
   price_in_cents: number | null;
+  online_only_price_cents: number | null;
+  online_offline_price_cents: number | null;
+  offline_only_price_cents: number | null;
   // Location fields
   location: string | null;
   location_url: string | null;
@@ -162,6 +170,9 @@ const mapTrack = (api: ApiTrack): TrackRecord => ({
   track_booking_spots_remaining: api.trackBookingSpotsRemaining ?? null,
   user_has_booked: api.userHasBooked ?? false,
   price_in_cents: api.priceInCents ?? null,
+  online_only_price_cents: api.onlineOnlyPriceCents ?? null,
+  online_offline_price_cents: api.onlineOfflinePriceCents ?? null,
+  offline_only_price_cents: api.offlineOnlyPriceCents ?? null,
   location: api.location ?? null,
   location_url: api.locationUrl ?? null,
 });
@@ -203,6 +214,9 @@ export type CreateTrackPayload = {
   allowIndividualBooking?: boolean;
   maxTrackBookings?: number | null;
   priceInCents?: number | null;
+  onlineOnlyPriceCents?: number | null;
+  onlineOfflinePriceCents?: number | null;
+  offlineOnlyPriceCents?: number | null;
   location?: string | null;
   locationUrl?: string | null;
 };
@@ -263,24 +277,47 @@ export async function deleteTrack(id: string): Promise<void> {
   });
 }
 
+export interface AddEventsToTrackResult {
+  addedCount: number;
+  backfilledCount?: number;
+  reactivatedCount?: number;
+  skippedExistingCount?: number;
+}
+
 export async function addEventsToTrack(
   trackId: string,
   eventIds: string[],
-): Promise<{ addedCount: number }> {
-  const data = await fetchJson<{ success: boolean; addedCount: number }>(
+): Promise<AddEventsToTrackResult> {
+  const data = await fetchJson<AddEventsToTrackResult & { success: boolean }>(
     `${API_BASE}/tracks/${trackId}/events`,
     {
       method: 'POST',
       body: JSON.stringify({ eventIds }),
     },
   );
-  return { addedCount: data.addedCount };
+  return {
+    addedCount: data.addedCount,
+    backfilledCount: data.backfilledCount,
+    reactivatedCount: data.reactivatedCount,
+    skippedExistingCount: data.skippedExistingCount,
+  };
 }
 
-export async function removeEventFromTrack(trackId: string, eventId: string): Promise<void> {
-  await fetchJson<{ success: boolean }>(`${API_BASE}/tracks/${trackId}/events/${eventId}`, {
-    method: 'DELETE',
-  });
+export interface RemoveEventFromTrackResult {
+  success: boolean;
+  cancelledRegistrations: number;
+  pendingRefundsUntouched: number;
+}
+
+export async function removeEventFromTrack(
+  trackId: string,
+  eventId: string,
+  reason?: string,
+): Promise<RemoveEventFromTrackResult> {
+  return fetchJson<RemoveEventFromTrackResult>(
+    `${API_BASE}/tracks/${trackId}/events/${eventId}`,
+    reason ? { method: 'DELETE', body: JSON.stringify({ reason }) } : { method: 'DELETE' },
+  );
 }
 
 export async function reorderTrackEvents(trackId: string, eventIds: string[]): Promise<void> {
@@ -307,21 +344,25 @@ export interface TrackAttendee {
   lastName: string | null;
   phoneNumber: string | null;
   bookedAt: string;
-  invoiceId: string | null;
+  invoiceId: number | null;
+  transactionId: number | null;
   invoiceNumber: string | null;
   source: TrackEnrollmentSource;
   reference: string | null;
+  amountPaidCents: number | null;
+  ticketType: TicketType | null;
 }
 
 // Fetch track attendees (manager+ only)
 export async function fetchTrackAttendees(
   trackId: string,
-  params: { page?: number; pageSize?: number; search?: string } = {},
+  params: { page?: number; pageSize?: number; search?: string; ticketType?: TicketType } = {},
 ): Promise<PaginatedResult<TrackAttendee>> {
   const query = new URLSearchParams();
   if (params.page) query.set('page', String(params.page));
   if (params.pageSize) query.set('pageSize', String(Math.min(params.pageSize, 50)));
   if (params.search?.trim()) query.set('search', params.search.trim());
+  if (params.ticketType) query.set('ticketType', params.ticketType);
 
   return fetchJson<PaginatedResult<TrackAttendee>>(
     `${API_BASE}/tracks/${trackId}/attendees${query.toString() ? `?${query.toString()}` : ''}`,
@@ -336,6 +377,7 @@ export async function createManualTrackEnrollment(
     reason: string;
     reference: string;
     amountPaidCents?: number | null;
+    ticketType?: TicketType;
   },
 ): Promise<{
   success: boolean;
@@ -407,8 +449,12 @@ export interface PublicTrackDetailRecord {
   user_has_booked: boolean;
   user_has_pending_payment: boolean;
   pending_payment_id?: string | null;
-  pending_invoice_id?: number | null;
+  pending_invoice_id?: string | null;
+  pending_ticket_type?: TicketType | null;
   price_in_cents: number | null;
+  online_only_price_cents: number | null;
+  online_offline_price_cents: number | null;
+  offline_only_price_cents: number | null;
   location: string | null;
   location_url: string | null;
   recordings_series: RecordingsSeriesSummaryRecord | null;
@@ -421,6 +467,7 @@ export interface PublicTrackEventRecord {
   date: string;
   location: string | null;
   event_type: string;
+  event_format: 'online' | 'offline';
   image_url: string | null;
   max_attendees: number | null;
   attendee_count: number;
@@ -496,8 +543,12 @@ export async function fetchPublicTrackById(
     userHasBooked: boolean;
     userHasPendingPayment: boolean;
     pendingPaymentId?: string | null;
-    pendingInvoiceId?: number | null;
+    pendingInvoiceId?: string | null;
+    pendingTicketType?: TicketType | null;
     priceInCents: number | null;
+    onlineOnlyPriceCents: number | null;
+    onlineOfflinePriceCents: number | null;
+    offlineOnlyPriceCents: number | null;
     location: string | null;
     locationUrl: string | null;
     recordingsSeries?: ApiRecordingsSeriesSummary | null;
@@ -510,6 +561,7 @@ export async function fetchPublicTrackById(
     date: string;
     location: string | null;
     eventType: string;
+    eventFormat: 'online' | 'offline';
     imageUrl: string | null;
     maxAttendees: number | null;
     attendeeCount: number;
@@ -546,7 +598,11 @@ export async function fetchPublicTrackById(
       user_has_pending_payment: data.track.userHasPendingPayment,
       pending_payment_id: data.track.pendingPaymentId ?? null,
       pending_invoice_id: data.track.pendingInvoiceId ?? null,
+      pending_ticket_type: data.track.pendingTicketType ?? null,
       price_in_cents: data.track.priceInCents,
+      online_only_price_cents: data.track.onlineOnlyPriceCents ?? null,
+      online_offline_price_cents: data.track.onlineOfflinePriceCents ?? null,
+      offline_only_price_cents: data.track.offlineOnlyPriceCents ?? null,
       location: data.track.location,
       location_url: data.track.locationUrl,
       recordings_series: mapRecordingsSeriesSummary(data.track.recordingsSeries),
@@ -558,6 +614,7 @@ export async function fetchPublicTrackById(
       date: event.date,
       location: event.location,
       event_type: event.eventType,
+      event_format: event.eventFormat ?? 'offline',
       image_url: event.imageUrl,
       max_attendees: event.maxAttendees,
       attendee_count: event.attendeeCount,

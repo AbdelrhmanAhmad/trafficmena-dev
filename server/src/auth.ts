@@ -61,6 +61,9 @@ export const auth = betterAuth({
         }
       },
       otpLength: 6,
+      // One code tolerates real-world fumbling (delayed emails, typos) before it's invalidated.
+      // Safe for a 6-digit code; see server/src/routes/api/otpRateLimits.ts for the rationale.
+      allowedAttempts: 10,
     }),
     inviteSessionPlugin(),
   ],

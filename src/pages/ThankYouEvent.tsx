@@ -41,7 +41,7 @@ const ThankYouEvent: React.FC = () => {
   const { bookEvent } = useEventBooking();
   const { data: subscription } = useCurrentSubscription({ enabled: Boolean(user) });
 
-  const isOnlineEvent = Boolean(event?.meeting_link) && !event?.location;
+  const isOnlineEvent = event?.event_format === 'online';
   const hasActiveSubscription = subscription?.status === 'active';
   const showMembershipCard = hasActiveSubscription || canAccessSubscriptionPages;
   const requiresPayment =

@@ -88,7 +88,7 @@
 
 | Service | Purpose |
 |---------|---------|
-| Plunk | Email delivery (OTP) |
+| Resend | Email delivery (OTP) |
 | BunnyCDN | File storage & CDN |
 
 
