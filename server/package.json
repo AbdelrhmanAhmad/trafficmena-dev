@@ -9,6 +9,10 @@
     "build": "tsc -p tsconfig.json",
     "db:gen": "drizzle-kit generate --config ./drizzle.config.ts",
     "db:migrate": "node ./scripts/guard-event-format-migration.mjs && drizzle-kit migrate --config ./drizzle.config.ts",
+    "db:migrate:audit": "node ./scripts/audit-migration-state.mjs",
+    "db:migrate:reconcile": "node ./scripts/reconcile-merged-migration-baseline.mjs",
+    "db:migrate:reconcile:apply": "node ./scripts/reconcile-merged-migration-baseline.mjs --apply",
+    "db:migrate:safe": "node ./scripts/guard-event-format-migration.mjs && node ./scripts/reconcile-merged-migration-baseline.mjs --apply && drizzle-kit migrate --config ./drizzle.config.ts",
     "db:preflight:event-format": "psql \"$DATABASE_URL\" -f ./drizzle/preflight_event_format_report.sql",
     "db:studio": "drizzle-kit studio --config ./drizzle.config.ts"
   },

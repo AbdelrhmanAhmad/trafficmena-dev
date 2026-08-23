@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, inArray, isNotNull, or } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { payments } from '../db/schema/index.js';
 import { confirmGatewayTransactionPayment } from '../routes/api/payments.js';
@@ -27,6 +27,35 @@ type ReconciliationSummary = {
 
 let reconciliationCursor: ReconciliationCursor | null = null;
 let reconciliationInProgress = false;
+let reconciliationSchemaReady: boolean | null = null;
+
+async function isReconciliationSchemaReady(): Promise<boolean> {
+  if (reconciliationSchemaReady !== null) {
+    return reconciliationSchemaReady;
+  }
+
+  try {
+    const result = await db.execute(sql`
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'payments'
+        AND column_name = 'fawaterk_intent_key'
+      LIMIT 1
+    `);
+    reconciliationSchemaReady = result.rows.length > 0;
+  } catch {
+    reconciliationSchemaReady = false;
+  }
+
+  if (!reconciliationSchemaReady) {
+    console.warn(
+      '[payment-reconciliation] Skipping until upstream migration 0021 is applied. Run: npm --prefix server run db:migrate:safe',
+    );
+  }
+
+  return reconciliationSchemaReady;
+}
 
 async function fetchReconciliationCandidatesPage(
   lookbackThreshold: Date,
@@ -159,6 +188,10 @@ export function startPaymentReconciliationJob(): void {
 
     reconciliationInProgress = true;
     try {
+      if (!(await isReconciliationSchemaReady())) {
+        return;
+      }
+
       const summary = await reconcileRecentAtRiskPayments();
       if (summary.pagesProcessed > 0 || summary.errors > 0) {
         console.info('[payment-reconciliation] Run complete', {
