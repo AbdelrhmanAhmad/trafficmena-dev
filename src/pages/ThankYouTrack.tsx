@@ -5,7 +5,6 @@ import {
   Calendar,
   CheckCircle,
   Crown,
-  Download,
   ExternalLink,
   MapPin,
   Users,
@@ -17,8 +16,8 @@ import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useBookTrack, usePublicTrack } from '@/features/tracks/hooks/useTracks';
 import { hasTicketTypes } from '@/features/tracks/ticketTypes';
 import { resolveTrackCalendarAnalyticsEvent } from '@/lib/analytics/calendar';
-import { trackAddToCalendar } from '@/lib/analytics/events';
 import DataLoader from '@/shared/components/DataLoader';
+import EventCalendarActions from '@/shared/components/calendar/EventCalendarActions';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -57,84 +56,6 @@ const ThankYouTrack: React.FC = () => {
     }
     clearPendingTrackContext();
   }, [user, id, track, bookTrack]);
-
-  // Generate ICS file for all track events
-  const downloadIcsFile = () => {
-    if (!track || events.length === 0) return;
-    if (calendarAnalyticsEvent) {
-      trackAddToCalendar({
-        itemId: calendarAnalyticsEvent.itemId,
-        itemName: calendarAnalyticsEvent.itemName,
-        calendarType: 'ics_download',
-      });
-    }
-
-    const calendarEvents = events.map((event) => {
-      const startDate = new Date(event.date);
-      const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-
-      const formatIcsDate = (date: Date) =>
-        `${date.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`;
-
-      const escapeIcs = (text: string) =>
-        text.replace(/[\\;,]/g, (match) => `\\${match}`).replace(/\n/g, '\\n');
-
-      return [
-        'BEGIN:VEVENT',
-        `UID:${event.id}@trafficmena.com`,
-        `DTSTART:${formatIcsDate(startDate)}`,
-        `DTEND:${formatIcsDate(endDate)}`,
-        `SUMMARY:${escapeIcs(event.title)}`,
-        `DESCRIPTION:${escapeIcs(event.description || '')}`,
-        `LOCATION:${escapeIcs(event.location || '')}`,
-        'STATUS:CONFIRMED',
-        'SEQUENCE:0',
-        'END:VEVENT',
-      ].join('\r\n');
-    });
-
-    const calendarData = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//TrafficMENA//Track//EN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
-      ...calendarEvents,
-      'END:VCALENDAR',
-    ].join('\r\n');
-
-    const blob = new Blob([calendarData], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.download = `${track.title.replace(/[^a-z0-9]/gi, '_')}.ics`;
-    link.click();
-    window.URL.revokeObjectURL(link.href);
-  };
-
-  // Generate Google Calendar URL for first session
-  const googleCalendarUrl = useMemo(() => {
-    if (!track || events.length === 0) return null;
-
-    const firstEvent = events[0];
-    const startDate = new Date(firstEvent.date);
-    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours
-
-    const formatGoogleDate = (date: Date) =>
-      date
-        .toISOString()
-        .replace(/[-:]/g, '')
-        .replace(/\.\d{3}/, '');
-
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: firstEvent.title,
-      dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
-      details: `Part of ${track.title} learning track.\n\n${firstEvent.description || ''}`,
-      location: firstEvent.location || track.location || '',
-    });
-
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
-  }, [track, events]);
 
   const trackImageUrl =
     track?.image_url && track.image_url.trim().length > 0
@@ -380,42 +301,13 @@ const ThankYouTrack: React.FC = () => {
                 <p className="text-center text-sm font-medium text-neutral-600">
                   Add sessions to your calendar
                 </p>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {googleCalendarUrl && (
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="flex h-12 items-center gap-2 border-neutral-300 hover:bg-neutral-50"
-                    >
-                      <a
-                        href={googleCalendarUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() =>
-                          calendarAnalyticsEvent &&
-                          trackAddToCalendar({
-                            itemId: calendarAnalyticsEvent.itemId,
-                            itemName: calendarAnalyticsEvent.itemName,
-                            calendarType: 'google_calendar',
-                          })
-                        }
-                      >
-                        <ExternalLink className="h-5 w-5" />
-                        Add First Session to Google Calendar
-                      </a>
-                    </Button>
-                  )}
-
-                  <Button
-                    onClick={downloadIcsFile}
-                    variant="outline"
-                    className="flex h-12 items-center gap-2 border-neutral-300 hover:bg-neutral-50"
-                    disabled={events.length === 0}
-                  >
-                    <Download className="h-5 w-5" />
-                    Download All Sessions (.ics)
-                  </Button>
-                </div>
+                {id && track && (
+                  <EventCalendarActions
+                    kind="track"
+                    resourceId={id}
+                    analyticsItemName={calendarAnalyticsEvent?.itemName ?? track.title}
+                  />
+                )}
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Button

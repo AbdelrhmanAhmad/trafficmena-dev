@@ -83,13 +83,36 @@ async function subscribeContact(email: string) {
   }
 }
 
-type TransactionalEmail = { to: string; subject: string; html: string; text: string };
+type TransactionalEmail = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  attachments?: Array<{ filename: string; content: string }>;
+};
+
+type RegistrationConfirmationEmailArgs = {
+  to: string;
+  subject: string;
+  headline: string;
+  intro: string;
+  googleCalendarUrl: string;
+  webCalendarUrl: string;
+  icsDownloadUrl: string;
+  attachment: { filename: string; content: string };
+};
 
 // Single transport for all three senders. Throws EmailDeliveryError on failure — callers (Better
 // Auth's sendVerificationOTP) rely on the throw to surface a failed delivery to the user. On
 // success, fires the contact upsert off the critical path so list-building never adds a Resend
 // round-trip to OTP-login latency and can never fail a send.
-async function sendTransactionalEmail({ to, subject, html, text }: TransactionalEmail) {
+async function sendTransactionalEmail({
+  to,
+  subject,
+  html,
+  text,
+  attachments,
+}: TransactionalEmail) {
   if (!hasValidKey()) {
     console.warn('[resend] Valid RESEND_API_KEY missing; email simulated (details redacted)');
     return;
@@ -101,6 +124,10 @@ async function sendTransactionalEmail({ to, subject, html, text }: Transactional
     subject,
     html,
     text,
+    attachments: attachments?.map((file) => ({
+      filename: file.filename,
+      content: Buffer.from(file.content, 'utf8'),
+    })),
   });
 
   if (error) {
@@ -248,4 +275,50 @@ export async function sendInvitationEmail({
 </html>`;
 
   await sendTransactionalEmail({ to: email, subject, html: htmlBody, text: textBody });
+}
+
+export async function sendRegistrationConfirmationEmail({
+  to,
+  subject,
+  headline,
+  intro,
+  googleCalendarUrl,
+  webCalendarUrl,
+  icsDownloadUrl,
+  attachment,
+}: RegistrationConfirmationEmailArgs) {
+  const textBody = `${headline}\n\n${intro}\n\nAdd to Google Calendar: ${googleCalendarUrl}\nView confirmation: ${webCalendarUrl}\nDownload ICS (requires sign-in): ${icsDownloadUrl}\n\nAn .ics file is attached for Apple Calendar and Outlook.`;
+  const htmlBody = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(subject)}</title>
+    <style>
+      body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 24px; }
+      .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 12px 24px rgba(16, 16, 16, 0.08); }
+      .cta { display: inline-block; margin-top: 16px; margin-right: 8px; padding: 12px 20px; background: linear-gradient(90deg, #05ef62 0%, #29cf9f 100%); color: #101010; text-decoration: none; border-radius: 8px; font-weight: 600; }
+      .secondary { display: inline-block; margin-top: 16px; padding: 12px 20px; border: 1px solid #d1d5db; color: #111827; text-decoration: none; border-radius: 8px; font-weight: 600; }
+      .subtitle { color: #4b5563; margin-top: 16px; line-height: 1.5; }
+      .footer { margin-top: 32px; font-size: 14px; color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>${escapeHtml(headline)}</h1>
+      <p class="subtitle">${escapeHtml(intro)}</p>
+      <a class="cta" href="${googleCalendarUrl}">Add to Google Calendar</a>
+      <a class="secondary" href="${webCalendarUrl}">View confirmation page</a>
+      <p class="subtitle">We attached a calendar file (.ics) for Apple Calendar and Outlook. Online sessions link to your TrafficMENA event page — not the raw meeting link.</p>
+      <p class="footer">TrafficMENA</p>
+    </div>
+  </body>
+</html>`;
+
+  await sendTransactionalEmail({
+    to,
+    subject,
+    html: htmlBody,
+    text: textBody,
+    attachments: [attachment],
+  });
 }

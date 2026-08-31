@@ -19,6 +19,8 @@ import {
 } from '../../db/schema/index.js';
 import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere, hasTrackBookingRow } from '../../utils/booking.js';
+import { loadTrackCalendarEvents, loadTrackTitle } from '../../services/eventCalendarAccess.js';
+import { queueTrackRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { extractJsonPayload } from './jsonPayload.js';
@@ -2146,6 +2148,16 @@ export function registerTrackRoutes(app: Hono) {
             alreadyRegisteredEvents: bookingResult.existingCount,
           };
         });
+
+        if (result.success && !('alreadyBooked' in result && result.alreadyBooked)) {
+          const [events, trackTitle] = await Promise.all([
+            loadTrackCalendarEvents(trackId),
+            loadTrackTitle(trackId),
+          ]);
+          if (trackTitle && events.length > 0) {
+            queueTrackRegistrationConfirmation(userId, trackId, trackTitle, events);
+          }
+        }
 
         return c.json(result);
       },
