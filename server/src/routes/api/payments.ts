@@ -23,6 +23,7 @@ import {
   tracks,
   users,
 } from '../../db/schema/index.js';
+import { queuePaymentRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
 import {
   createTransaction,
   getPaymentMethods,
@@ -903,7 +904,7 @@ async function processSuccessfulPayment(
 
   // CRITICAL: Fulfillment happens before status is marked paid so failures persist.
   try {
-    return await db.transaction(async (tx) => {
+    const result: ProcessSuccessfulPaymentResult = await db.transaction(async (tx) => {
       const [payment] = await tx
         .select()
         .from(payments)
@@ -1268,6 +1269,12 @@ async function processSuccessfulPayment(
       await tx.update(payments).set({ status: 'paid', paidAt }).where(eq(payments.id, paymentId));
       return { status: 'paid', alreadyProcessed };
     });
+
+    if (result.status === 'paid' && !result.alreadyProcessed) {
+      queuePaymentRegistrationConfirmation(paymentId);
+    }
+
+    return result;
   } catch (error) {
     // Gateway has already confirmed money movement before this function runs. Keep the local
     // payment retryable and preserve reservations; operators can resolve the dead-letter row.
