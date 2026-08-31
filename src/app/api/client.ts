@@ -15,6 +15,23 @@ const CSRF_COOKIE_NAME = 'tm_csrf';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+function normalizeHeaderRecord(headers: HeadersInit | undefined): Record<string, string> {
+  if (!headers) {
+    return {};
+  }
+  if (headers instanceof Headers) {
+    const record: Record<string, string> = {};
+    for (const [key, value] of headers.entries()) {
+      record[key] = value;
+    }
+    return record;
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  return { ...headers };
+}
+
 function getCookieValue(name: string) {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
@@ -28,19 +45,22 @@ export function getCsrfHeaders() {
 
 export async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? 'GET').toUpperCase();
+  const callerHeaders = normalizeHeaderRecord(init?.headers);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(init?.headers ?? {}),
+    ...callerHeaders,
   };
 
   if (!SAFE_METHODS.has(method)) {
     Object.assign(headers, getCsrfHeaders());
   }
 
+  const { headers: _ignoredHeaders, ...restInit } = init ?? {};
+
   const response = await fetch(input, {
-    credentials: 'include',
+    ...restInit,
+    credentials: restInit.credentials ?? 'include',
     headers,
-    ...init,
   });
 
   const contentType = response.headers.get('content-type') ?? '';

@@ -6,6 +6,9 @@ interface VideoEmbedProps {
   className?: string;
 }
 
+const LEGACY_IFRAME_SANDBOX =
+  'allow-scripts allow-same-origin allow-presentation allow-forms allow-popups allow-popups-to-escape-sandbox';
+
 const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
   // Bug #10 Fix: Add error boundaries and validation for YouTube video ID extraction
   const getYouTubeVideoId = (url: string): string | null => {
@@ -108,6 +111,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
         src={`https://www.youtube.com/embed/${videoId}?autoplay=0&mute=1&rel=0`}
         title="YouTube video"
         className="absolute inset-0 h-full w-full rounded-lg"
+        sandbox={LEGACY_IFRAME_SANDBOX}
         allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowFullScreen={true}
       />
@@ -154,6 +158,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
           src={embedUrl}
           title="Bunny CDN video"
           className="absolute inset-0 h-full w-full rounded-lg"
+          sandbox={LEGACY_IFRAME_SANDBOX}
           allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen={true}
         />
@@ -206,6 +211,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
           src={embedUrl}
           title="Video"
           className="absolute inset-0 h-full w-full rounded-lg border-0"
+          sandbox={LEGACY_IFRAME_SANDBOX}
           allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen={true}
           style={{
@@ -249,6 +255,7 @@ const VideoEmbed: React.FC<VideoEmbedProps> = ({ url, className = '' }) => {
           src={embedUrl}
           title="Video"
           className="absolute inset-0 h-full w-full rounded-lg object-cover"
+          sandbox={LEGACY_IFRAME_SANDBOX}
           allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen={true}
           style={{ border: 'none' }}
