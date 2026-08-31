@@ -52,12 +52,13 @@ import {
   TICKET_TYPES,
   type TicketType,
 } from './ticketAccess.js';
-import { executeTrackBookingWrite } from './trackBookingShared.js';
+import { executeTrackBookingWrite, registerFreeEventAttendee } from './trackBookingShared.js';
 import { isEgyptianMobileE164, normalizePhoneNumber, toFawaterkLocalPhone } from './users-phone.js';
 import { getOptionalUserRole, isKnownDatabaseConflict } from './utils.js';
 
 // --- Rate Limit Rules ---
 const CHECKOUT_RATE_LIMIT = { limit: 5, windowMs: 60_000 }; // 5 checkouts per minute
+const PROMO_PREVIEW_RATE_LIMIT = { limit: 30, windowMs: 10 * 60_000 }; // throttle promo probing
 const VERIFY_RATE_LIMIT = { limit: 30, windowMs: 60_000 }; // 30 verifications per minute
 const METHODS_RATE_LIMIT = { limit: 60, windowMs: 60_000 }; // 60 method fetches per minute
 const WEBHOOK_RATE_LIMIT = { limit: 100, windowMs: 60_000 }; // 100 webhooks per minute per IP
@@ -1804,13 +1805,11 @@ export function registerPaymentRoutes(app: Hono) {
 
           // Process based on item type
           if (itemType === 'event' && itemId) {
-            await tx.insert(eventAttendees).values({
+            await registerFreeEventAttendee(tx, {
               eventId: itemId,
               userId,
               paidAt,
-              pricePaidCents: 0,
               paymentId: payment.id,
-              sourceTrackBookingId: null,
             });
           }
 
@@ -2443,6 +2442,15 @@ export function registerPaymentRoutes(app: Hono) {
     const session = await getSessionFromRequest(c);
     if (!session?.user?.id) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
+    }
+
+    const { allowed, resetAt } = paymentRateLimiter.consume(
+      `price-preview:${session.user.id}`,
+      PROMO_PREVIEW_RATE_LIMIT,
+    );
+    if (!allowed) {
+      c.header('Retry-After', String(Math.ceil((resetAt - Date.now()) / 1000)));
+      return c.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, 429);
     }
 
     // Validate query parameters with Zod

@@ -17,6 +17,83 @@ const ACTIVE_EVENT_ATTENDEE_STATUSES = ['active', 'refund_requested'] as const;
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+type FreeEventRegistrationParams = {
+  eventId: string;
+  userId: string;
+  paidAt: Date;
+  paymentId: string;
+};
+
+export async function registerFreeEventAttendee(
+  tx: DbTransaction,
+  params: FreeEventRegistrationParams,
+): Promise<void> {
+  const [event] = await tx
+    .select({
+      id: events.id,
+      maxAttendees: events.maxAttendees,
+    })
+    .from(events)
+    .where(eq(events.id, params.eventId))
+    .for('update')
+    .limit(1);
+
+  if (!event) {
+    throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
+  }
+
+  const [existingRegistration] = await tx
+    .select({ id: eventAttendees.id, status: eventAttendees.status })
+    .from(eventAttendees)
+    .where(
+      and(eq(eventAttendees.eventId, params.eventId), eq(eventAttendees.userId, params.userId)),
+    )
+    .for('update')
+    .limit(1);
+
+  if (existingRegistration && existingRegistration.status !== 'cancelled') {
+    throw new ApiError('ALREADY_REGISTERED', 'Already registered for this event.', 400);
+  }
+
+  if (event.maxAttendees !== null) {
+    const [attendeeCount] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(eventAttendees)
+      .where(
+        and(
+          eq(eventAttendees.eventId, params.eventId),
+          inArray(eventAttendees.status, ACTIVE_EVENT_ATTENDEE_STATUSES),
+        ),
+      );
+
+    const [reservationCount] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(eventReservations)
+      .where(
+        and(
+          eq(eventReservations.eventId, params.eventId),
+          gt(eventReservations.expiresAt, params.paidAt),
+        ),
+      );
+
+    if (
+      Number(attendeeCount?.count ?? 0) + Number(reservationCount?.count ?? 0) >=
+      event.maxAttendees
+    ) {
+      throw new ApiError('EVENT_FULL', 'Event capacity reached.', 409);
+    }
+  }
+
+  await tx.insert(eventAttendees).values({
+    eventId: params.eventId,
+    userId: params.userId,
+    paidAt: params.paidAt,
+    pricePaidCents: 0,
+    paymentId: params.paymentId,
+    sourceTrackBookingId: null,
+  });
+}
+
 export type TrackBookingSource = 'paid' | 'free' | 'manual';
 
 type TrackBookingWriteParams = {
