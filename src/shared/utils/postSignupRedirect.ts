@@ -17,16 +17,12 @@ import {
   generateTrackRedirectUrl,
   getPendingTrackContext,
 } from './trackRedirectUtils';
+import { consumeAuthReturnPath, peekAuthReturnPath } from './authReturnPath';
 
 /**
- * Get the appropriate redirect URL after signup completion.
- * Checks for pending contexts in priority order:
- * 1. Subscription context → /dashboard/subscribe
- * 2. Event context → /thank-you-event/:id (free) or back to event checkout (paid)
- * 3. Track context → /thank-you-track/:id (free) or back to track checkout (paid)
- * 4. Default → /dashboard
+ * Legacy product-specific redirect after signup when no generic return path is stored.
  */
-export const getPostSignupRedirectUrl = (): string => {
+const getLegacyPostSignupRedirectUrl = (): string => {
   const appendCheckoutParam = (url: string): string => {
     const [path, query = ''] = url.split('?');
     const params = new URLSearchParams(query);
@@ -71,3 +67,17 @@ export const getPostSignupRedirectUrl = (): string => {
   // Default redirect
   return '/dashboard';
 };
+
+/**
+ * Resolve where to send the user after signup/sign-in completes.
+ * Generic internal return path (session-scoped) takes precedence over legacy product contexts.
+ */
+export const getPostSignupRedirectUrl = (): string => {
+  const genericReturn = peekAuthReturnPath();
+  if (genericReturn) {
+    return consumeAuthReturnPath();
+  }
+  return getLegacyPostSignupRedirectUrl();
+};
+
+export const resolvePostAuthRedirectUrl = getPostSignupRedirectUrl;

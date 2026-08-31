@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useEffect, useId, useState } from 'react';
-import { Link, type Location, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import { completeSignInVerification, requestSignInCode, sanitizeOtp } from '@/app/auth/signIn';
 import { trackLogin, trackLoginStart } from '@/lib/analytics/events';
@@ -11,6 +11,10 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import {
+  captureAuthReturnFromSignInEntry,
+  consumeAuthReturnPath,
+} from '@/shared/utils/authReturnPath';
 
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
@@ -28,13 +32,16 @@ const SignIn: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTurnstile, setShowTurnstile] = useState(false);
-  const redirectTo = (location.state as { from?: Location })?.from?.pathname ?? '/dashboard';
+
+  useEffect(() => {
+    captureAuthReturnFromSignInEntry(location);
+  }, [location]);
 
   useEffect(() => {
     if (!loading && user) {
-      navigate(redirectTo, { replace: true });
+      navigate(consumeAuthReturnPath(), { replace: true });
     }
-  }, [loading, user, navigate, redirectTo]);
+  }, [loading, user, navigate]);
 
   const requestLoginCode = async () => {
     if (!email.trim()) {
@@ -106,7 +113,7 @@ const SignIn: React.FC = () => {
       });
       trackLogin({ status: 'success', email: normalizedEmail, userId });
       toast({ title: 'Welcome back!', description: 'You are now signed in.' });
-      navigate(redirectTo, { replace: true });
+      navigate(consumeAuthReturnPath(), { replace: true });
     } catch (error) {
       trackLogin({ status: 'failure', email: email.trim().toLowerCase() });
       const message = error instanceof Error ? error.message : 'Invalid or expired code.';
