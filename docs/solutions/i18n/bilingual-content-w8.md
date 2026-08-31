@@ -42,8 +42,19 @@ No language detection. No machine translation.
 ## Frontend
 
 - i18next + react-i18next
-- Namespaces: `common`, `nav`, `auth` (expand as needed)
+- Namespaces: `common`, `nav`, `auth`, `events`, `tracks`, `library`, `commerce`, `payments`, `dashboard`, `calendar`, `errors`
 - `document.documentElement.lang` and `dir` updated on switch
+- Translation key parity enforced by `tests/unit/translation-parity.test.ts`
+
+## Emails (round 2)
+
+- Copy modules: `server/src/i18n/emailCopy.ts`, `subscriptionCopy.ts`
+- OTP locale via `otpLocaleContext.ts` (request cookie captured before Better Auth send)
+- Registration emails receive explicit locale at queue time
+
+## Public API (round 2)
+
+All major content routes use `contentPresentation.ts` + `resolveLocaleFromRequest`.
 
 ## Security
 
