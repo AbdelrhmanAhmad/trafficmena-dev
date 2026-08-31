@@ -183,28 +183,26 @@ interface AppLayoutProps {
 function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
   const location = useLocation();
   const { user } = useAuth();
-  const { loading, rank, isOwner, isAdmin, isManager, canAccessSubscriptionPages } =
-    useRolePermissions();
+  const { loading, rank, isOwner, isAdmin, isManager } = useRolePermissions();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
-  const { masterclassesEnabled, digitalProductsEnabled } = useModuleFlags();
+  const { masterclassesEnabled, digitalProductsEnabled, subscriptionsEnabled } = useModuleFlags();
   const hasActiveSubscription = subscription?.status === 'active';
 
-  const isModuleVisible = (module?: 'masterclasses' | 'digitalProducts') => {
+  const isMemberModuleVisible = (module?: 'masterclasses' | 'digitalProducts') => {
     if (!module) return true;
     if (module === 'masterclasses') return masterclassesEnabled;
     return digitalProductsEnabled;
   };
 
-  // Filter admin menu items based on user's role rank and module flags
   const filteredAdminMenuItems = useMemo(() => {
     return adminMenuItems.filter((item) => {
       const minRank = Math.min(...item.roles.map((r) => getRolePriority(r)));
-      return rank >= minRank && isModuleVisible(item.module);
+      return rank >= minRank;
     });
-  }, [rank, masterclassesEnabled, digitalProductsEnabled]);
+  }, [rank]);
 
   const filteredMemberMenuItems = useMemo(() => {
-    return memberMenuItems.filter((item) => isModuleVisible(item.module));
+    return memberMenuItems.filter((item) => isMemberModuleVisible(item.module));
   }, [masterclassesEnabled, digitalProductsEnabled]);
 
   // Select menu items based on variant
@@ -307,7 +305,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                 );
               })}
               {variant === 'member' && <SeriesCartNavButton variant="sidebar" />}
-              {variant === 'member' && canAccessSubscriptionPages && !hasActiveSubscription && (
+              {variant === 'member' && subscriptionsEnabled && !hasActiveSubscription && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild

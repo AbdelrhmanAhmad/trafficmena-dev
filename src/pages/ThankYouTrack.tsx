@@ -25,14 +25,14 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { isValidLocationUrl } from '@/shared/hooks/custom/useLocationVisibility';
-import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import { formatCardDate, formatDateWithDay, formatShortDate } from '@/shared/utils/dateUtils';
 import { clearPendingTrackContext } from '@/shared/utils/trackRedirectUtils';
 
 const ThankYouTrack: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { canAccessSubscriptionPages } = useRolePermissions();
+  const { subscriptionsEnabled } = useModuleFlags();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isPaidFlow = searchParams.get('paid') === '1';
@@ -141,7 +141,7 @@ const ThankYouTrack: React.FC = () => {
       ? track.image_url.trim()
       : '/uploads/trafficmena-track.png';
   const hasActiveSubscription = subscription?.status === 'active';
-  const showMembershipCard = hasActiveSubscription || canAccessSubscriptionPages;
+  const showMembershipCard = hasActiveSubscription || subscriptionsEnabled;
   const firstEventDate = events.length > 0 ? new Date(events[0].date) : null;
 
   return (

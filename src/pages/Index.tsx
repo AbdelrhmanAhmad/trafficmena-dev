@@ -29,7 +29,7 @@ import {
 import { trackSelectItem } from '@/lib/analytics/events';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
-import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
 
 const benefitItems = [
@@ -140,7 +140,7 @@ const Index: React.FC = () => {
   const { pathname } = useLocation();
   const shouldTrackDiscoveryLists = isCanonicalDiscoveryListPath(pathname);
   const { handleError } = useErrorHandler();
-  const { canAccessSubscriptionPages } = useRolePermissions();
+  const { subscriptionsEnabled } = useModuleFlags();
   const [visibleEvents, setVisibleEvents] = useState(6);
   const [isLoaded, setIsLoaded] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -223,10 +223,10 @@ const Index: React.FC = () => {
     () => tracks.map((track, index) => buildTrackDiscoveryItem(track, index)),
     [tracks],
   );
-  const visibleBenefitItems = canAccessSubscriptionPages
+  const visibleBenefitItems = subscriptionsEnabled
     ? benefitItems
     : benefitItems.filter((item) => !item.isPremium);
-  const visibleFreeFeatures = canAccessSubscriptionPages
+  const visibleFreeFeatures = subscriptionsEnabled
     ? FREE_FEATURES
     : FREE_FEATURES.filter((item) => !item.isSubscriptionFeature);
 
@@ -292,7 +292,7 @@ const Index: React.FC = () => {
                       </Link>
                     </Button>
 
-                    {canAccessSubscriptionPages && (
+                    {subscriptionsEnabled && (
                       <Button
                         className="group flex gap-2 transform rounded-xl border-2 border-amber-300 bg-amber-50 px-6 py-3.5 text-sm font-medium text-amber-700 transition-all duration-300 hover:bg-amber-100 hover:shadow-lg hover:scale-105 hover:-translate-y-1 active:scale-95"
                         asChild
@@ -512,12 +512,12 @@ const Index: React.FC = () => {
               <div className="mx-auto max-w-3xl text-center">
                 <span className="text-sm font-normal text-neutral-500">Your Growth Journey</span>
                 <h2 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
-                  {canAccessSubscriptionPages
+                  {subscriptionsEnabled
                     ? 'What You Get at Every Level'
                     : 'What You Get With Membership'}
                 </h2>
                 <p className="mt-3 text-sm text-neutral-600">
-                  {canAccessSubscriptionPages
+                  {subscriptionsEnabled
                     ? "Whether you start free or go premium, here's what's waiting for you."
                     : "Here's what members can access right now."}
                 </p>
@@ -543,7 +543,7 @@ const Index: React.FC = () => {
                     return (
                       <div key={benefit.id}>
                         {/* Timeline Transition Point - Insert after index 2 (item 03) */}
-                        {canAccessSubscriptionPages && index === 3 && (
+                        {subscriptionsEnabled && index === 3 && (
                           <div className="relative py-6 sm:py-8 mb-12 sm:mb-16">
                             {/* Transition card */}
                             <div className="ml-16 lg:ml-0 relative overflow-hidden rounded-3xl border border-neutral-200/60 bg-gradient-to-r from-[#05ef62]/8 via-white/95 to-amber-50/70 p-5 sm:p-7 shadow-xl shadow-neutral-900/[0.04]">
@@ -680,7 +680,7 @@ const Index: React.FC = () => {
                 Start Your Marketing Journey Today
               </h3>
               <p className="mt-2 text-sm text-white/70 max-w-2xl mx-auto">
-                {canAccessSubscriptionPages
+                {subscriptionsEnabled
                   ? "Whether you choose free or premium, you're joining 1,200+ marketers who are leveling up together."
                   : 'Join 1,200+ marketers who are leveling up together.'}
               </p>
@@ -691,7 +691,7 @@ const Index: React.FC = () => {
                 >
                   <Link to="/signup">Join Free</Link>
                 </Button>
-                {canAccessSubscriptionPages && (
+                {subscriptionsEnabled && (
                   <Button
                     className="group inline-flex items-center gap-2 transform rounded-xl border-2 border-amber-400/50 bg-amber-50/10 px-5 py-3 text-sm font-medium text-white transition-all duration-300 hover:bg-amber-50/20 hover:scale-105 hover:shadow-lg"
                     asChild
@@ -703,7 +703,7 @@ const Index: React.FC = () => {
                   </Button>
                 )}
               </div>
-              {canAccessSubscriptionPages && (
+              {subscriptionsEnabled && (
                 <p className="mt-4 text-xs text-white/50">
                   Free membership is genuinely valuable. Premium is for those ready to specialize.
                 </p>

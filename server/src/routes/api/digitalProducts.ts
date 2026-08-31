@@ -11,6 +11,11 @@ import {
   getPurchasedDigitalProductIds,
   isDigitalProductSellable,
 } from '../../services/digitalProductSales.js';
+import {
+  applyFirstPublishLaunch,
+  getEffectiveProductVisibility,
+  isDiscoveryBlocked,
+} from '../../services/productVisibility.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { requireManager, requireContentDelete } from './utils.js';
 
@@ -101,6 +106,13 @@ export function registerDigitalProductRoutes(app: Hono) {
     }
 
     const filter = c.req.query('filter') === 'mine' ? 'mine' : 'all';
+    const visibility = await getEffectiveProductVisibility();
+    const discoveryBlocked = isDiscoveryBlocked('digitalProducts', visibility);
+
+    if (discoveryBlocked && filter !== 'mine') {
+      return c.json({ data: { items: [] } });
+    }
+
     const purchasedIds = await getPurchasedDigitalProductIds(session.user.id);
 
     const rows = await db
@@ -159,6 +171,9 @@ export function registerDigitalProductRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_PARAM', message: 'Invalid product id.' } }, 400);
     }
 
+    const visibility = await getEffectiveProductVisibility();
+    const discoveryBlocked = isDiscoveryBlocked('digitalProducts', visibility);
+
     const [product] = await db
       .select()
       .from(digitalProducts)
@@ -173,6 +188,10 @@ export function registerDigitalProductRoutes(app: Hono) {
     const purchasedIds = await getPurchasedDigitalProductIds(session.user.id, [product.id]);
     const isPurchased = purchasedIds.has(product.id);
     const sellable = isDigitalProductSellable({ ...product, fileCount });
+
+    if (discoveryBlocked && !isPurchased) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Product not found.' } }, 404);
+    }
 
     if (!isPurchased && !sellable) {
       return c.json({ error: { code: 'NOT_AVAILABLE', message: 'Product not available.' } }, 404);
@@ -222,6 +241,16 @@ export function registerDigitalProductRoutes(app: Hono) {
   // --- Public catalog (guests + optional auth for purchase flags) ----------
 
   app.get('/digital-products/public', async (c) => {
+    const visibility = await getEffectiveProductVisibility();
+    if (isDiscoveryBlocked('digitalProducts', visibility)) {
+      return c.json({
+        data: {
+          items: [],
+          pagination: { page: 1, pageSize: 12, total: 0 },
+        },
+      });
+    }
+
     const parsed = publicListQuerySchema.safeParse({
       page: c.req.query('page'),
       pageSize: c.req.query('pageSize'),
@@ -299,6 +328,11 @@ export function registerDigitalProductRoutes(app: Hono) {
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
       return c.json({ error: { code: 'INVALID_PARAM', message: 'Invalid product id.' } }, 400);
+    }
+
+    const visibility = await getEffectiveProductVisibility();
+    if (isDiscoveryBlocked('digitalProducts', visibility)) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Product not found.' } }, 404);
     }
 
     const session = await getSessionFromRequest(c);
@@ -429,6 +463,8 @@ export function registerDigitalProductRoutes(app: Hono) {
       })
       .returning();
 
+    await applyFirstPublishLaunch('digitalProducts', false, product.isPublished);
+
     return c.json({ data: product }, 201);
   });
 
@@ -478,6 +514,16 @@ export function registerDigitalProductRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
 
+    const [existingProduct] = await db
+      .select({ isPublished: digitalProducts.isPublished })
+      .from(digitalProducts)
+      .where(eq(digitalProducts.id, idParsed.data))
+      .limit(1);
+
+    if (!existingProduct) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Product not found.' } }, 404);
+    }
+
     const [product] = await db
       .update(digitalProducts)
       .set({ ...parsed.data, updatedAt: new Date() })
@@ -487,6 +533,9 @@ export function registerDigitalProductRoutes(app: Hono) {
     if (!product) {
       return c.json({ error: { code: 'NOT_FOUND', message: 'Product not found.' } }, 404);
     }
+
+    const willBePublished = parsed.data.isPublished ?? product.isPublished;
+    await applyFirstPublishLaunch('digitalProducts', existingProduct.isPublished, willBePublished);
 
     return c.json({ data: product });
   });

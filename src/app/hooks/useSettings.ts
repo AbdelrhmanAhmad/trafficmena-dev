@@ -22,23 +22,10 @@ export function usePublicSettings() {
 export function useModuleFlags() {
   const { data, isLoading, isError } = usePublicSettings();
 
-  // While loading with no cached data, hide modules (avoid flashing disabled modules as visible).
-  // After load, use API values; default enabled only when data is missing after settle.
-  const masterclassesEnabled = data
-    ? data.masterclassesEnabled
-    : isLoading
-      ? false
-      : true;
-  const digitalProductsEnabled = data
-    ? data.digitalProductsEnabled
-    : isLoading
-      ? false
-      : true;
-  const libraryStoreEnabled = data
-    ? data.libraryStoreEnabled
-    : isLoading
-      ? false
-      : false;
+  const masterclassesEnabled = data ? data.masterclassesEnabled : !isLoading ? false : false;
+  const digitalProductsEnabled = data ? data.digitalProductsEnabled : !isLoading ? false : false;
+  const libraryStoreEnabled = data ? data.libraryStoreEnabled : !isLoading ? false : false;
+  const subscriptionsEnabled = data ? data.subscriptionsEnabled : !isLoading ? false : false;
 
   return {
     isLoading,
@@ -46,6 +33,7 @@ export function useModuleFlags() {
     masterclassesEnabled,
     digitalProductsEnabled,
     libraryStoreEnabled,
+    subscriptionsEnabled,
   };
 }
 
@@ -73,30 +61,39 @@ export function useUpdateAdminSettings() {
         variables.masterclassesEnabled ??
         previousAdmin?.masterclassesEnabled ??
         previousPublic?.masterclassesEnabled ??
-        true;
+        false;
       const nextDigitalProducts =
         variables.digitalProductsEnabled ??
         previousAdmin?.digitalProductsEnabled ??
         previousPublic?.digitalProductsEnabled ??
-        true;
+        false;
       const nextLibraryStore =
         variables.libraryStoreEnabled ??
         previousAdmin?.libraryStoreEnabled ??
         previousPublic?.libraryStoreEnabled ??
         false;
+      const nextSubscriptions =
+        variables.subscriptionsEnabled ??
+        previousAdmin?.subscriptionsEnabled ??
+        previousPublic?.subscriptionsEnabled ??
+        false;
 
       queryClient.setQueryData<AdminSettings>(ADMIN_SETTINGS_QUERY_KEY, (current) => ({
         inviteOnly: variables.inviteOnly ?? current?.inviteOnly ?? false,
         eventMode: variables.eventMode ?? current?.eventMode ?? false,
+        subscriptionsEnabled: nextSubscriptions,
         masterclassesEnabled: nextMasterclasses,
         digitalProductsEnabled: nextDigitalProducts,
         libraryStoreEnabled: nextLibraryStore,
+        masterclassesLaunched: current?.masterclassesLaunched ?? false,
+        digitalProductsLaunched: current?.digitalProductsLaunched ?? false,
         updatedAt: current?.updatedAt ?? null,
         updatedBy: current?.updatedBy ?? null,
       }));
 
       queryClient.setQueryData<PublicSettings>(PUBLIC_SETTINGS_QUERY_KEY, (current) => ({
         inviteOnly: variables.inviteOnly ?? current?.inviteOnly ?? false,
+        subscriptionsEnabled: nextSubscriptions,
         masterclassesEnabled: nextMasterclasses,
         digitalProductsEnabled: nextDigitalProducts,
         libraryStoreEnabled: nextLibraryStore,
@@ -116,6 +113,7 @@ export function useUpdateAdminSettings() {
       queryClient.setQueryData(ADMIN_SETTINGS_QUERY_KEY, data);
       queryClient.setQueryData<PublicSettings>(PUBLIC_SETTINGS_QUERY_KEY, {
         inviteOnly: data.inviteOnly,
+        subscriptionsEnabled: data.subscriptionsEnabled,
         masterclassesEnabled: data.masterclassesEnabled,
         digitalProductsEnabled: data.digitalProductsEnabled,
         libraryStoreEnabled: data.libraryStoreEnabled,

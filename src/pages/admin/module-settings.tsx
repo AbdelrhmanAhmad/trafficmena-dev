@@ -11,8 +11,8 @@ const AdminModuleSettingsPage = () => {
         <div>
           <h1 className="text-3xl font-bold text-primary">Module Settings</h1>
           <p className="mt-2 text-muted-foreground">
-            Enable or disable product modules site-wide. Disabled modules are hidden for members and
-            disabled for admins.
+            Enable or disable product modules for customers. Hidden modules stay manageable in admin
+            while draft content is prepared.
           </p>
         </div>
 

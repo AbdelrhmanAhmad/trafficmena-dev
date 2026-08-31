@@ -3,6 +3,7 @@ import type React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
 import {
   DropdownMenu,
@@ -18,14 +19,14 @@ import { getAdminDashboardPath } from '@/shared/utils/adminAccess';
 const UserProfileDropdown: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { canAccessAdmin, canAccessSubscriptionPages, isOwner, isAdmin, isManager, role } =
-    useRolePermissions();
+  const { canAccessAdmin, isOwner, isAdmin, isManager, role } = useRolePermissions();
+  const { subscriptionsEnabled } = useModuleFlags();
   const { data: currentUser } = useCurrentUser();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
   const profile = currentUser?.profile;
 
   const hasActiveSubscription = subscription?.status === 'active';
-  const showSubscriptionEntry = canAccessSubscriptionPages && !hasActiveSubscription;
+  const showSubscriptionEntry = subscriptionsEnabled && !hasActiveSubscription;
 
   const handleSignOut = async () => {
     try {
