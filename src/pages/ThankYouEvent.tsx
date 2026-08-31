@@ -5,20 +5,19 @@ import {
   CheckCircle,
   Clock,
   Crown,
-  Download,
   ExternalLink,
   MapPin,
   Users,
   Video,
 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useEventBooking } from '@/features/events/hooks/useEventBooking';
 import { useEvent } from '@/features/events/hooks/useEvents';
-import { trackAddToCalendar } from '@/lib/analytics/events';
 import DataLoader from '@/shared/components/DataLoader';
+import EventCalendarActions from '@/shared/components/calendar/EventCalendarActions';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -54,73 +53,6 @@ const ThankYouEvent: React.FC = () => {
     }
     clearPendingEventContext();
   }, [user, id, event, bookEvent, requiresPayment]);
-
-  // Generate Google Calendar URL
-  const googleCalendarUrl = useMemo(() => {
-    if (!event) return null;
-
-    const startDate = new Date(event.date);
-    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours
-
-    // Format: YYYYMMDDTHHMMSSZ
-    const formatGoogleDate = (date: Date) =>
-      date
-        .toISOString()
-        .replace(/[-:]/g, '')
-        .replace(/\.\d{3}/, '');
-
-    const params = new URLSearchParams({
-      action: 'TEMPLATE',
-      text: event.title,
-      dates: `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`,
-      details: event.description || `TrafficMENA Event: ${event.title}`,
-      location: event.location || (event.meeting_link ? 'Online Event' : ''),
-    });
-
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
-  }, [event]);
-
-  // Generate ICS file for Apple Calendar / Outlook
-  const downloadIcsFile = () => {
-    if (!event) return;
-    trackAddToCalendar({ itemId: event.id, itemName: event.title, calendarType: 'ics_download' });
-
-    const startDate = new Date(event.date);
-    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
-
-    const formatIcsDate = (date: Date) =>
-      `${date.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`;
-
-    // Escape special characters for ICS format
-    const escapeIcs = (text: string) =>
-      text.replace(/[\\;,]/g, (match) => `\\${match}`).replace(/\n/g, '\\n');
-
-    const calendarData = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//TrafficMENA//Event//EN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
-      'BEGIN:VEVENT',
-      `UID:${event.id}@trafficmena.com`,
-      `DTSTART:${formatIcsDate(startDate)}`,
-      `DTEND:${formatIcsDate(endDate)}`,
-      `SUMMARY:${escapeIcs(event.title)}`,
-      `DESCRIPTION:${escapeIcs(event.description || '')}`,
-      `LOCATION:${escapeIcs(event.location || '')}`,
-      'STATUS:CONFIRMED',
-      'SEQUENCE:0',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\r\n');
-
-    const blob = new Blob([calendarData], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.download = `${event.title.replace(/[^a-z0-9]/gi, '_')}.ics`;
-    link.click();
-    window.URL.revokeObjectURL(link.href);
-  };
 
   const locationLabel = event?.location || (isOnlineEvent ? 'Online Event' : 'Location TBD');
   const eventImageUrl =
@@ -364,39 +296,13 @@ const ThankYouEvent: React.FC = () => {
                 <p className="text-center text-sm font-medium text-neutral-600">
                   Add this event to your calendar
                 </p>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="flex h-12 items-center gap-2 border-neutral-300 hover:bg-neutral-50"
-                  >
-                    <a
-                      href={googleCalendarUrl ?? '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() =>
-                        event &&
-                        trackAddToCalendar({
-                          itemId: event.id,
-                          itemName: event.title,
-                          calendarType: 'google_calendar',
-                        })
-                      }
-                    >
-                      <ExternalLink className="h-5 w-5" />
-                      Add to Google Calendar
-                    </a>
-                  </Button>
-
-                  <Button
-                    onClick={downloadIcsFile}
-                    variant="outline"
-                    className="flex h-12 items-center gap-2 border-neutral-300 hover:bg-neutral-50"
-                  >
-                    <Download className="h-5 w-5" />
-                    Download .ics File
-                  </Button>
-                </div>
+                {id && event && (
+                  <EventCalendarActions
+                    kind="event"
+                    resourceId={id}
+                    analyticsItemName={event.title}
+                  />
+                )}
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Button

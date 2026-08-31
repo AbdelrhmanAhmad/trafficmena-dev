@@ -20,6 +20,7 @@ import { resolveRecordingsNavigationPath } from '@/features/series/utils/recordi
 import { trackClickMeetingLink, trackViewItem } from '@/lib/analytics/events';
 import { centsToUnits } from '@/lib/analytics/helpers';
 import DataLoader from '@/shared/components/DataLoader';
+import EventCalendarActions from '@/shared/components/calendar/EventCalendarActions';
 import Layout from '@/shared/components/layout/Layout';
 import {
   PaymentCheckoutDialog,
@@ -640,6 +641,19 @@ const EventDetail: React.FC = () => {
                         <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
                           <CheckCircle className="h-4 w-4" />
                           <span>You're registered</span>
+                        </div>
+                      )}
+
+                      {hasAccess && id && event.date && (
+                        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-4">
+                          <p className="mb-3 text-sm font-semibold text-neutral-900">
+                            Add to calendar
+                          </p>
+                          <EventCalendarActions
+                            kind="event"
+                            resourceId={id}
+                            analyticsItemName={event.title}
+                          />
                         </div>
                       )}
 
