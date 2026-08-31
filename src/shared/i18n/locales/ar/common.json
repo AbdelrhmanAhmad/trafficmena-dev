@@ -1,0 +1,21 @@
+{
+  "language": {
+    "english": "English",
+    "arabic": "العربية",
+    "switchLabel": "اللغة"
+  },
+  "actions": {
+    "signIn": "تسجيل الدخول",
+    "signUp": "إنشاء حساب",
+    "signOut": "تسجيل الخروج",
+    "continue": "متابعة",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "back": "رجوع",
+    "loading": "جاري التحميل…",
+    "tryAgain": "حاول مرة أخرى"
+  },
+  "status": {
+    "errorGeneric": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+  }
+}

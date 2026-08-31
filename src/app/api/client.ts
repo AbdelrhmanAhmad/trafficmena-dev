@@ -1,3 +1,5 @@
+import { readStoredLocale } from '@/shared/i18n/localeManager';
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -43,8 +45,21 @@ export function getCsrfHeaders() {
   return csrfToken ? { [CSRF_HEADER_NAME]: csrfToken } : {};
 }
 
+function appendLocaleToApiUrl(input: RequestInfo): RequestInfo {
+  if (typeof input !== 'string' || !input.startsWith('/api')) {
+    return input;
+  }
+  const locale = readStoredLocale();
+  const url = new URL(input, 'http://local.internal');
+  if (!url.searchParams.has('lang')) {
+    url.searchParams.set('lang', locale);
+  }
+  return `${url.pathname}${url.search}`;
+}
+
 export async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? 'GET').toUpperCase();
+  const requestUrl = appendLocaleToApiUrl(input);
   const callerHeaders = normalizeHeaderRecord(init?.headers);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -57,7 +72,7 @@ export async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Prom
 
   const { headers: _ignoredHeaders, ...restInit } = init ?? {};
 
-  const response = await fetch(input, {
+  const response = await fetch(requestUrl, {
     ...restInit,
     credentials: restInit.credentials ?? 'include',
     headers,

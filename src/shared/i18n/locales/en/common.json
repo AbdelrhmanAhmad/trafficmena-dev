@@ -1,0 +1,21 @@
+{
+  "language": {
+    "english": "English",
+    "arabic": "Arabic",
+    "switchLabel": "Language"
+  },
+  "actions": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signOut": "Sign out",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "save": "Save",
+    "back": "Back",
+    "loading": "Loading…",
+    "tryAgain": "Try again"
+  },
+  "status": {
+    "errorGeneric": "Something went wrong. Please try again."
+  }
+}

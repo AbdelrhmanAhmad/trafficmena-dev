@@ -16,7 +16,9 @@ import {
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
+import LanguageSwitcher from '@/shared/components/LanguageSwitcher';
 import { useModuleFlags } from '@/app/hooks/useSettings';
 import { SeriesCartNavButton } from '@/features/series/components/SeriesCartNavButton';
 import { Button } from '@/shared/components/ui/button';
@@ -34,16 +36,15 @@ type NavItem = {
 };
 
 const NAVIGATION_ITEMS: NavItem[] = [
-  { href: '/', label: 'Home', icon: Home },
-  { href: '/meetups', label: 'Events', icon: Calendar },
-  // { href: '/library', label: 'Library', icon: Library },
-  { href: '/tracks', label: 'Tracks', icon: BookOpen },
-  { href: '/digital-products', label: 'Digital Products', icon: FileStack, module: 'digitalProducts' },
-  // { href: '/community', label: 'Community', icon: MessageSquare },
-  { href: '/about', label: 'About Us', icon: Info },
+  { href: '/', label: 'home', icon: Home },
+  { href: '/meetups', label: 'events', icon: Calendar },
+  { href: '/tracks', label: 'tracks', icon: BookOpen },
+  { href: '/digital-products', label: 'digitalProducts', icon: FileStack, module: 'digitalProducts' },
+  { href: '/about', label: 'about', icon: Info },
 ];
 
 const Header: React.FC = () => {
+  const { t } = useTranslation(['nav', 'common']);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { canAccessAdmin, isOwner, isAdmin, isManager } = useRolePermissions();
@@ -115,7 +116,7 @@ const Header: React.FC = () => {
                     isActive ? 'text-neutral-900' : 'text-neutral-700 hover:text-neutral-900'
                   }`}
                 >
-                  {item.label}
+                  {t(`nav:${item.label}`)}
                 </Link>
               );
             })}
@@ -124,6 +125,7 @@ const Header: React.FC = () => {
           {/* Desktop Auth - Only show on large screens */}
           <div className="flex items-center gap-2">
             <div className="hidden md:inline-flex items-center gap-2">
+              <LanguageSwitcher />
               <SeriesCartNavButton variant="icon" />
               {showSubscriptionEntry && (
                 <Link to={user ? '/dashboard/subscribe' : '/subscribe'}>
@@ -132,7 +134,7 @@ const Header: React.FC = () => {
                     className="inline-flex items-center gap-2 rounded-xl border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 hover:border-amber-400 transition-colors"
                   >
                     <Crown className="h-4 w-4" />
-                    <span>Subscribe</span>
+                    <span>{t('nav:subscribe')}</span>
                   </Button>
                 </Link>
               )}
@@ -145,12 +147,12 @@ const Header: React.FC = () => {
                       variant="outline"
                       className="rounded-lg border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
                     >
-                      Sign In
+                      {t('common:actions.signIn')}
                     </Button>
                   </Link>
                   <Link to="/signup" onClick={captureAuthReturn}>
                     <Button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] hover:brightness-95 transition-colors">
-                      <span>Join Community</span>
+                      <span>{t('common:actions.signUp')}</span>
                       <Users className="h-4 w-4" />
                     </Button>
                   </Link>
@@ -207,7 +209,7 @@ const Header: React.FC = () => {
                             : 'text-neutral-800 hover:bg-neutral-50'
                         }`}
                       >
-                        <span>{item.label}</span>
+                        <span>{t(`nav:${item.label}`)}</span>
                         <Icon
                           className={`h-4 w-4 ${isActive ? 'text-neutral-700' : 'text-neutral-500'}`}
                         />
@@ -218,6 +220,7 @@ const Header: React.FC = () => {
 
                 {/* Mobile/Tablet Auth */}
                 <div className="flex flex-col space-y-3 border-t border-neutral-200 pt-4">
+                  <LanguageSwitcher className="w-full" />
                   {showSubscriptionEntry && (
                     <Link to={user ? '/dashboard/subscribe' : '/subscribe'} onClick={closeDrawer}>
                       <Button className="w-full justify-start rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm font-medium text-amber-700 hover:bg-amber-100">
@@ -276,12 +279,12 @@ const Header: React.FC = () => {
                           variant="outline"
                           className="w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                         >
-                          Sign In
+                          {t('common:actions.signIn')}
                         </Button>
                       </Link>
                       <Link to="/signup" onClick={() => { captureAuthReturn(); closeDrawer(); }}>
                         <Button className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-3 py-3 text-sm font-medium text-[#101010] hover:brightness-95">
-                          Sign Up
+                          {t('common:actions.signUp')}
                         </Button>
                       </Link>
                     </>
