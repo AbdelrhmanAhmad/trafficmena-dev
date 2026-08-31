@@ -48,7 +48,8 @@ const envSchema = z.object({
   TURNSTILE_SECRET_KEY: z.string().optional(),
   // Invitation daily limit per admin (default: 1000 for launch)
   INVITATION_DAILY_LIMIT: z.coerce.number().int().min(1).max(10000).default(1000),
-  // Dev/test only: use fixed OTP (000000) for Better Auth email OTP. Blocked in production.
+  // Dev/test only: explicit opt-in fixed OTP (000000) for Better Auth email OTP. Blocked in production.
+  // Never inferred from NODE_ENV=test alone — staging misconfigs must stay random unless opted in.
   AUTH_TEST_FIXED_OTP: z
     .enum(['true', 'false'])
     .optional()
