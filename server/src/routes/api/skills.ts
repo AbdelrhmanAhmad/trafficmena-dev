@@ -1,5 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm';
-import type { Hono } from 'hono';
+import type { Context, Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { skills, userSkills } from '../../db/schema/index.js';
@@ -11,7 +11,20 @@ import {
 import {
   optionalBilingualDescriptionFields,
 } from '../../utils/bilingualSchemas.js';
+import { presentPublicNameRow } from '../../utils/contentPresentation.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { getOptionalUserRole } from './utils.js';
+
+const STAFF_ROLES = new Set(['owner', 'admin', 'manager']);
+
+async function resolvePresentationContext(c: Context) {
+  const locale = resolveLocaleFromRequest(c);
+  const session = await getSessionFromRequest(c);
+  const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
+  const isStaff = Boolean(role && STAFF_ROLES.has(role));
+  return { locale, isStaff };
+}
 
 const createSkillSchema = z
   .object({
@@ -32,17 +45,22 @@ const userSkillBodySchema = z.object({
 
 export function registerSkillRoutes(app: Hono) {
   app.get('/skills', async (c) => {
+    const { locale, isStaff } = await resolvePresentationContext(c);
+
     const rows = await db
       .select({
         id: skills.id,
-        name: skills.name,
+        nameEn: skills.nameEn,
+        nameAr: skills.nameAr,
         category: skills.category,
         description: skills.description,
       })
       .from(skills)
-      .orderBy(skills.name);
+      .orderBy(skills.nameEn);
 
-    return c.json({ items: rows });
+    return c.json({
+      items: rows.map((row) => presentPublicNameRow(row, locale, isStaff)),
+    });
   });
 
   app.post('/skills', async (c) => {
@@ -132,18 +150,34 @@ export function registerSkillRoutes(app: Hono) {
       );
     }
 
+    const { locale, isStaff } = await resolvePresentationContext(c);
+
     const rows = await db
       .select({
         skillId: userSkills.skillId,
-        name: skills.name,
+        nameEn: skills.nameEn,
+        nameAr: skills.nameAr,
         category: skills.category,
       })
       .from(userSkills)
       .innerJoin(skills, eq(userSkills.skillId, skills.id))
       .where(eq(userSkills.userId, session.user.id))
-      .orderBy(skills.name);
+      .orderBy(skills.nameEn);
 
-    return c.json({ items: rows });
+    return c.json({
+      items: rows.map((row) => {
+        const presented = presentPublicNameRow(
+          { nameEn: row.nameEn, nameAr: row.nameAr },
+          locale,
+          isStaff,
+        );
+        return {
+          skillId: row.skillId,
+          ...presented,
+          category: row.category,
+        };
+      }),
+    });
   });
 
   app.post('/user/skills', async (c) => {

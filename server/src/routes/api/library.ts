@@ -24,6 +24,12 @@ import {
   optionalBilingualDescriptionFields,
   requiredBilingualTitleFields,
 } from '../../utils/bilingualSchemas.js';
+import {
+  presentAdminContent,
+  presentPublicContent,
+  presentPublicRow,
+} from '../../utils/contentPresentation.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import {
   normalizeRecordingsAccessPolicy,
@@ -160,6 +166,7 @@ export function registerLibraryRoutes(app: Hono) {
 
     const { page, pageSize, search, type, eventIds, excludeInTracks, accessibleOnly } =
       parsed.data;
+    const locale = resolveLocaleFromRequest(c);
     const filters: SQL<unknown>[] = [];
 
     // Permission filtering: staff/subscribers see all, free users see accessible + premium assets
@@ -199,7 +206,14 @@ export function registerLibraryRoutes(app: Hono) {
     }
 
     if (search) {
-      filters.push(ilike(libraryAssets.title, `%${escapeLikePattern(search)}%`));
+      const pattern = `%${escapeLikePattern(search)}%`;
+      filters.push(
+        or(
+          ilike(libraryAssets.titleEn, pattern),
+          ilike(libraryAssets.titleAr, pattern),
+          ilike(libraryAssets.title, pattern),
+        )!,
+      );
     }
 
     // Filter by event IDs (comma-separated UUIDs)
@@ -223,8 +237,10 @@ export function registerLibraryRoutes(app: Hono) {
     const baseItemsQuery = db
       .select({
         id: libraryAssets.id,
-        title: libraryAssets.title,
-        description: libraryAssets.description,
+        titleEn: libraryAssets.titleEn,
+        titleAr: libraryAssets.titleAr,
+        descriptionEn: libraryAssets.descriptionEn,
+        descriptionAr: libraryAssets.descriptionAr,
         fileType: libraryAssets.fileType,
         fileUrl: libraryAssets.fileUrl,
         videoUrl: libraryAssets.videoUrl,
@@ -392,12 +408,14 @@ export function registerLibraryRoutes(app: Hono) {
           : null,
       });
 
+      const presented = presentPublicRow(item, locale, Boolean(isStaff));
+
       if (hasAccess) {
-        return { ...item, hasAccess };
+        return { ...presented, hasAccess };
       }
 
       return {
-        ...item,
+        ...presented,
         fileUrl: null,
         videoUrl: null,
         documentUrl: null,
@@ -447,12 +465,15 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
     const id = idParsed.data;
+    const locale = resolveLocaleFromRequest(c);
 
     const asset = await db
       .select({
         id: libraryAssets.id,
-        title: libraryAssets.title,
-        description: libraryAssets.description,
+        titleEn: libraryAssets.titleEn,
+        titleAr: libraryAssets.titleAr,
+        descriptionEn: libraryAssets.descriptionEn,
+        descriptionAr: libraryAssets.descriptionAr,
         fileType: libraryAssets.fileType,
         fileUrl: libraryAssets.fileUrl,
         videoUrl: libraryAssets.videoUrl,
@@ -589,11 +610,12 @@ export function registerLibraryRoutes(app: Hono) {
       });
 
       if (!hasAccess) {
+        const deniedAsset = presentPublicContent(asset[0], locale);
         return c.json(
           {
-            id: asset[0].id,
-            title: asset[0].title,
-            description: asset[0].description,
+            id: deniedAsset.id,
+            title: deniedAsset.title,
+            description: deniedAsset.description,
             fileType: asset[0].fileType,
             thumbnailUrl: asset[0].thumbnailUrl,
             eventId: asset[0].eventId,
@@ -614,7 +636,8 @@ export function registerLibraryRoutes(app: Hono) {
       }
     }
 
-    return c.json({ ...asset[0], hasAccess: true });
+    const presentedAsset = presentPublicRow(asset[0], locale, Boolean(isStaff));
+    return c.json({ ...presentedAsset, hasAccess: true });
   });
 
   app.post('/library', async (c) => {
@@ -669,8 +692,10 @@ export function registerLibraryRoutes(app: Hono) {
       })
       .returning({
         id: libraryAssets.id,
-        title: libraryAssets.title,
-        description: libraryAssets.description,
+        titleEn: libraryAssets.titleEn,
+        titleAr: libraryAssets.titleAr,
+        descriptionEn: libraryAssets.descriptionEn,
+        descriptionAr: libraryAssets.descriptionAr,
         fileType: libraryAssets.fileType,
         fileUrl: libraryAssets.fileUrl,
         videoUrl: libraryAssets.videoUrl,
@@ -687,7 +712,7 @@ export function registerLibraryRoutes(app: Hono) {
         createdAt: libraryAssets.createdAt,
       });
 
-    return c.json({ asset: created }, 201);
+    return c.json({ asset: presentAdminContent(created) }, 201);
   });
 
   app.put('/library/:id', async (c) => {
@@ -760,8 +785,10 @@ export function registerLibraryRoutes(app: Hono) {
       .where(eq(libraryAssets.id, id))
       .returning({
         id: libraryAssets.id,
-        title: libraryAssets.title,
-        description: libraryAssets.description,
+        titleEn: libraryAssets.titleEn,
+        titleAr: libraryAssets.titleAr,
+        descriptionEn: libraryAssets.descriptionEn,
+        descriptionAr: libraryAssets.descriptionAr,
         fileType: libraryAssets.fileType,
         fileUrl: libraryAssets.fileUrl,
         videoUrl: libraryAssets.videoUrl,
@@ -790,7 +817,7 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
 
-    return c.json({ asset: updated });
+    return c.json({ asset: presentAdminContent(updated) });
   });
 
   app.delete('/library/:id', async (c) => {

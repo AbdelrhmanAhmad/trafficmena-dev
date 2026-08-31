@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
-import type { Hono } from 'hono';
+import type { Context, Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
@@ -29,8 +29,60 @@ import {
   optionalBilingualDisplayNameFields,
   requiredBilingualTitleFields,
 } from '../../utils/bilingualSchemas.js';
+import {
+  presentAdminContent,
+  presentAdminDisplayName,
+  presentPublicContent,
+  presentPublicDisplayName,
+  presentPublicTitleOnly,
+} from '../../utils/contentPresentation.js';
+import { resolveLocaleFromRequest, type AppLocale } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { requireManager, requireContentDelete } from './utils.js';
+import { getOptionalUserRole, requireManager, requireContentDelete } from './utils.js';
+
+const STAFF_ROLES = new Set(['owner', 'admin', 'manager']);
+
+type BilingualProductRow = {
+  id: string;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
+};
+
+async function resolvePresentationContext(c: Context) {
+  const locale = resolveLocaleFromRequest(c);
+  const session = await getSessionFromRequest(c);
+  const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
+  const isStaff = Boolean(role && STAFF_ROLES.has(role));
+  return { locale, isStaff };
+}
+
+function presentProductFields(row: BilingualProductRow, locale: AppLocale, isStaff: boolean) {
+  const contentRow = {
+    id: row.id,
+    titleEn: row.titleEn,
+    titleAr: row.titleAr,
+    descriptionEn: row.descriptionEn,
+    descriptionAr: row.descriptionAr,
+  };
+  if (isStaff) {
+    return presentAdminContent(contentRow);
+  }
+  const presented = presentPublicContent(contentRow, locale);
+  return { title: presented.title, description: presented.description };
+}
+
+function presentVideoFields(
+  row: { id: string; titleEn: string; titleAr: string },
+  locale: AppLocale,
+  isStaff: boolean,
+) {
+  if (isStaff) {
+    return { id: row.id, titleEn: row.titleEn, titleAr: row.titleAr };
+  }
+  return presentPublicTitleOnly(row, locale);
+}
 
 const fileTypeSchema = z.enum(['excel', 'markdown', 'html', 'text', 'powerpoint']);
 
@@ -140,6 +192,7 @@ export function registerDigitalProductRoutes(app: Hono) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
     }
 
+    const { locale, isStaff } = await resolvePresentationContext(c);
     const filter = c.req.query('filter') === 'mine' ? 'mine' : 'all';
     const visibility = await getEffectiveProductVisibility();
     const discoveryBlocked = isDiscoveryBlocked('digitalProducts', visibility);
@@ -153,8 +206,10 @@ export function registerDigitalProductRoutes(app: Hono) {
     const rows = await db
       .select({
         id: digitalProducts.id,
-        title: digitalProducts.title,
-        description: digitalProducts.description,
+        titleEn: digitalProducts.titleEn,
+        titleAr: digitalProducts.titleAr,
+        descriptionEn: digitalProducts.descriptionEn,
+        descriptionAr: digitalProducts.descriptionAr,
         imageUrl: digitalProducts.imageUrl,
         priceInCents: digitalProducts.priceInCents,
         salesEnabled: digitalProducts.salesEnabled,
@@ -181,9 +236,8 @@ export function registerDigitalProductRoutes(app: Hono) {
         return isDigitalProductSellable(row) || purchased;
       })
       .map((row) => ({
+        ...presentProductFields(row, locale, isStaff),
         id: row.id,
-        title: row.title,
-        description: row.description,
         image_url: row.imageUrl,
         price_in_cents: row.priceInCents,
         is_purchased: purchasedIds.has(row.id),
@@ -200,6 +254,8 @@ export function registerDigitalProductRoutes(app: Hono) {
     if (!session?.user?.id) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
     }
+
+    const { locale, isStaff } = await resolvePresentationContext(c);
 
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
@@ -242,12 +298,13 @@ export function registerDigitalProductRoutes(app: Hono) {
 
     const videos = isPurchased ? await loadProductVideos(product.id) : [];
 
+    const productFields = presentProductFields(product, locale, isStaff);
+
     return c.json({
       data: {
         product: {
+          ...productFields,
           id: product.id,
-          title: product.title,
-          description: product.description,
           image_url: product.imageUrl,
           price_in_cents: product.priceInCents,
           is_purchased: isPurchased,
@@ -255,17 +312,29 @@ export function registerDigitalProductRoutes(app: Hono) {
           file_count: fileCount,
         },
         files: isPurchased
-          ? files.map((f) => ({
-              id: f.id,
-              file_type: f.fileType,
-              display_name: f.displayName,
-              file_url: f.fileUrl,
-            }))
+          ? files.map((f) => {
+              if (isStaff) {
+                const adminFields = presentAdminDisplayName(f);
+                return {
+                  id: f.id,
+                  file_type: f.fileType,
+                  displayNameEn: adminFields.displayNameEn,
+                  displayNameAr: adminFields.displayNameAr,
+                  file_url: f.fileUrl,
+                };
+              }
+              const { displayName } = presentPublicDisplayName(f, locale);
+              return {
+                id: f.id,
+                file_type: f.fileType,
+                display_name: displayName,
+                file_url: f.fileUrl,
+              };
+            })
           : [],
         videos: isPurchased
           ? videos.map((v) => ({
-              id: v.id,
-              title: v.title,
+              ...presentVideoFields(v, locale, isStaff),
               video_url: v.videoUrl,
             }))
           : [],
@@ -276,6 +345,7 @@ export function registerDigitalProductRoutes(app: Hono) {
   // --- Public catalog (guests + optional auth for purchase flags) ----------
 
   app.get('/digital-products/public', async (c) => {
+    const { locale, isStaff } = await resolvePresentationContext(c);
     const visibility = await getEffectiveProductVisibility();
     if (isDiscoveryBlocked('digitalProducts', visibility)) {
       return c.json({
@@ -301,8 +371,10 @@ export function registerDigitalProductRoutes(app: Hono) {
     const rows = await db
       .select({
         id: digitalProducts.id,
-        title: digitalProducts.title,
-        description: digitalProducts.description,
+        titleEn: digitalProducts.titleEn,
+        titleAr: digitalProducts.titleAr,
+        descriptionEn: digitalProducts.descriptionEn,
+        descriptionAr: digitalProducts.descriptionAr,
         imageUrl: digitalProducts.imageUrl,
         priceInCents: digitalProducts.priceInCents,
         salesEnabled: digitalProducts.salesEnabled,
@@ -325,9 +397,8 @@ export function registerDigitalProductRoutes(app: Hono) {
     let items = rows
       .filter((row) => isDigitalProductSellable(row))
       .map((row) => ({
+        ...presentProductFields(row, locale, isStaff),
         id: row.id,
-        title: row.title,
-        description: row.description,
         image_url: row.imageUrl,
         price_in_cents: row.priceInCents,
         is_sellable: true,
@@ -360,6 +431,7 @@ export function registerDigitalProductRoutes(app: Hono) {
   });
 
   app.get('/digital-products/public/:id', async (c) => {
+    const { locale, isStaff } = await resolvePresentationContext(c);
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
       return c.json({ error: { code: 'INVALID_PARAM', message: 'Invalid product id.' } }, 400);
@@ -400,7 +472,8 @@ export function registerDigitalProductRoutes(app: Hono) {
       db
         .select({
           id: digitalProductFiles.id,
-          displayName: digitalProductFiles.displayName,
+          displayNameEn: digitalProductFiles.displayNameEn,
+          displayNameAr: digitalProductFiles.displayNameAr,
           fileType: digitalProductFiles.fileType,
         })
         .from(digitalProductFiles)
@@ -409,19 +482,21 @@ export function registerDigitalProductRoutes(app: Hono) {
       db
         .select({
           id: digitalProductVideos.id,
-          title: digitalProductVideos.title,
+          titleEn: digitalProductVideos.titleEn,
+          titleAr: digitalProductVideos.titleAr,
         })
         .from(digitalProductVideos)
         .where(eq(digitalProductVideos.productId, product.id))
         .orderBy(asc(digitalProductVideos.sortOrder), asc(digitalProductVideos.createdAt)),
     ]);
 
+    const productFields = presentProductFields(product, locale, isStaff);
+
     return c.json({
       data: {
         product: {
+          ...productFields,
           id: product.id,
-          title: product.title,
-          description: product.description,
           image_url: product.imageUrl,
           price_in_cents: product.priceInCents,
           is_purchased: isPurchased,
@@ -429,15 +504,24 @@ export function registerDigitalProductRoutes(app: Hono) {
           file_count: fileCount,
           video_count: videos.length,
         },
-        files: files.map((f) => ({
-          id: f.id,
-          display_name: f.displayName,
-          file_type: f.fileType,
-        })),
-        videos: videos.map((v) => ({
-          id: v.id,
-          title: v.title,
-        })),
+        files: files.map((f) => {
+          if (isStaff) {
+            const adminFields = presentAdminDisplayName(f);
+            return {
+              id: f.id,
+              displayNameEn: adminFields.displayNameEn,
+              displayNameAr: adminFields.displayNameAr,
+              file_type: f.fileType,
+            };
+          }
+          const { displayName } = presentPublicDisplayName(f, locale);
+          return {
+            id: f.id,
+            display_name: displayName,
+            file_type: f.fileType,
+          };
+        }),
+        videos: videos.map((v) => presentVideoFields(v, locale, isStaff)),
       },
     });
   });
@@ -451,8 +535,10 @@ export function registerDigitalProductRoutes(app: Hono) {
     const rows = await db
       .select({
         id: digitalProducts.id,
-        title: digitalProducts.title,
-        description: digitalProducts.description,
+        titleEn: digitalProducts.titleEn,
+        titleAr: digitalProducts.titleAr,
+        descriptionEn: digitalProducts.descriptionEn,
+        descriptionAr: digitalProducts.descriptionAr,
         imageUrl: digitalProducts.imageUrl,
         priceInCents: digitalProducts.priceInCents,
         salesEnabled: digitalProducts.salesEnabled,
@@ -472,7 +558,28 @@ export function registerDigitalProductRoutes(app: Hono) {
       .groupBy(digitalProducts.id)
       .orderBy(asc(digitalProducts.sortOrder), desc(digitalProducts.createdAt));
 
-    return c.json({ data: { items: rows } });
+    return c.json({
+      data: {
+        items: rows.map((row) => ({
+          ...presentAdminContent({
+            id: row.id,
+            titleEn: row.titleEn,
+            titleAr: row.titleAr,
+            descriptionEn: row.descriptionEn,
+            descriptionAr: row.descriptionAr,
+          }),
+          imageUrl: row.imageUrl,
+          priceInCents: row.priceInCents,
+          salesEnabled: row.salesEnabled,
+          isPublished: row.isPublished,
+          sortOrder: row.sortOrder,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          fileCount: row.fileCount,
+          videoCount: row.videoCount,
+        })),
+      },
+    });
   });
 
   app.post('/digital-products', async (c) => {
@@ -543,7 +650,29 @@ export function registerDigitalProductRoutes(app: Hono) {
       loadProductVideos(product.id),
     ]);
 
-    return c.json({ data: { product, files, videos } });
+    return c.json({
+      data: {
+        product: presentAdminContent(product),
+        files: files.map((f) => ({
+          id: f.id,
+          productId: f.productId,
+          fileType: f.fileType,
+          fileUrl: f.fileUrl,
+          sortOrder: f.sortOrder,
+          createdAt: f.createdAt,
+          ...presentAdminDisplayName(f),
+        })),
+        videos: videos.map((v) => ({
+          id: v.id,
+          productId: v.productId,
+          titleEn: v.titleEn,
+          titleAr: v.titleAr,
+          videoUrl: v.videoUrl,
+          sortOrder: v.sortOrder,
+          createdAt: v.createdAt,
+        })),
+      },
+    });
   });
 
   app.put('/digital-products/:id', async (c) => {
