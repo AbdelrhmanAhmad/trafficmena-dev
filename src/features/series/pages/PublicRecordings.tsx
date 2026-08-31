@@ -1,18 +1,23 @@
 import { FolderOpen } from 'lucide-react';
 import type React from 'react';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { PublicRecordingCard } from '@/features/series/components/PublicRecordingCard';
 import { useStoreSeries } from '@/features/series/hooks/useSeries';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
+import { prepareSignInFromCurrentPage } from '@/shared/utils/authNavigation';
 import { Card, CardContent } from '@/shared/components/ui/card';
 
 const PAGE_SIZE = 12;
 
 const PublicRecordingsPage: React.FC = () => {
+  const location = useLocation();
   const navigate = useNavigate();
+  const goToSignIn = useCallback(() => {
+    navigate('/signin', prepareSignInFromCurrentPage(location));
+  }, [location, navigate]);
   const [currentPage, setCurrentPage] = useState(1);
   const { data, isLoading, error } = useStoreSeries(currentPage, PAGE_SIZE);
 
@@ -135,7 +140,7 @@ const PublicRecordingsPage: React.FC = () => {
                 <Button
                   variant="outline"
                   className="rounded-xl border-white/30 bg-white/10 text-white hover:bg-white/20"
-                  onClick={() => navigate('/signin')}
+                  onClick={goToSignIn}
                 >
                   Sign in
                 </Button>

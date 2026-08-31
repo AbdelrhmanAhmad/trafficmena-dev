@@ -7,6 +7,8 @@ import { acceptInvitation } from '@/app/api/invitations';
 import Header from '@/shared/components/layout/Header';
 import { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
+import { prepareSignInNavigation } from '@/shared/utils/authNavigation';
+import { peekAuthReturnPath } from '@/shared/utils/authReturnPath';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getPendingEventContext } from '@/shared/utils/eventRedirectUtils';
@@ -359,7 +361,13 @@ const Step0: React.FC = () => {
                 <Button
                   variant="ghost"
                   className="w-full text-[#05ef62] hover:text-[#29cf9f]"
-                  onClick={() => navigate('/signin')}
+                  onClick={() => {
+                    const stored = peekAuthReturnPath();
+                    navigate(
+                      '/signin',
+                      stored ? prepareSignInNavigation(stored) : undefined,
+                    );
+                  }}
                 >
                   Already a member? Sign in
                 </Button>

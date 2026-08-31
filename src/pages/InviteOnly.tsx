@@ -1,12 +1,14 @@
 import { ArrowRight, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
+import { prepareSignInFromCurrentPage } from '@/shared/utils/authNavigation';
 
 const INVITATION_CACHE_KEY = 'trafficmena:last-invitation-token';
 
 export default function InviteOnlyPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [cachedInvitePath, setCachedInvitePath] = useState<string | null>(null);
 
@@ -48,7 +50,7 @@ export default function InviteOnlyPage() {
                 if (cachedInvitePath) {
                   navigate(cachedInvitePath);
                 } else {
-                  navigate('/signin');
+                  navigate('/signin', prepareSignInFromCurrentPage(location));
                 }
               }}
             >

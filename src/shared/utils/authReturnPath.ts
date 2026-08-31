@@ -169,6 +169,11 @@ export function captureAuthReturnFromSignUpEntry(location: LocationLike & { sear
     return storeAuthReturnPath(returnTo);
   }
 
+  const from = (location as { state?: { from?: LocationLike } }).state?.from;
+  if (from?.pathname) {
+    return storeAuthReturnPath(buildReturnPathFromLocation(from));
+  }
+
   return peekAuthReturnPath();
 }
 
