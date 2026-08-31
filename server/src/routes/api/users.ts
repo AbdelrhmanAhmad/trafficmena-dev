@@ -116,6 +116,18 @@ export function registerUserRoutes(app: Hono) {
     const { page, pageSize, role, search, subscription, fields } = parsed.data;
     const offset = (page - 1) * pageSize;
     const isBasicFields = fields === 'basic';
+    const isManagerOnly = normalizedRole === 'manager';
+
+    const redactManagerPii = <
+      T extends { email?: string | null; phoneNumber?: string | null },
+    >(
+      item: T,
+    ): T => {
+      if (!isManagerOnly) {
+        return item;
+      }
+      return { ...item, email: null, phoneNumber: null };
+    };
 
     const now = new Date();
     const subscriptionSelectors = getActiveSubscriptionSelectors(now);
@@ -177,7 +189,7 @@ export function registerUserRoutes(app: Hono) {
       ]);
 
       return c.json({
-        items,
+        items: items.map(redactManagerPii),
         pagination: {
           page,
           pageSize,
@@ -209,7 +221,7 @@ export function registerUserRoutes(app: Hono) {
     ]);
 
     return c.json({
-      items,
+      items: items.map(redactManagerPii),
       pagination: {
         page,
         pageSize,
@@ -520,6 +532,18 @@ export function registerUserRoutes(app: Hono) {
       .limit(1);
 
     const currentRole = normalizeRole(target?.role);
+
+    if (actor.role === 'admin' && currentRole === 'owner') {
+      return c.json(
+        {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Admins cannot modify owner roles.',
+          },
+        },
+        403,
+      );
+    }
 
     if (actor.userId === targetId && desiredRole !== 'owner') {
       return c.json(

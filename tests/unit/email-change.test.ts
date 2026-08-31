@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   generateEmailChangeOtp,
+  hashEmailChangeCurrentOtp,
   hashEmailChangeOtp,
   maskEmail,
   safeCompareHex,
@@ -42,5 +43,15 @@ describe('email change OTP logic', () => {
     assert.equal(maskEmail('alice@example.com'), 'a****@example.com');
     assert.match(maskEmail('ab@x.com'), /^a\*+@x\.com$/);
     assert.equal(maskEmail('not-an-email'), '***');
+  });
+
+  it('hashes current-email OTP separately from new-email OTP', () => {
+    const current = hashEmailChangeCurrentOtp('secret', 'u1', 'old@b.com', '123456');
+    const next = hashEmailChangeOtp('secret', 'u1', 'new@b.com', '123456');
+    assert.notEqual(current, next);
+    assert.equal(
+      current,
+      hashEmailChangeCurrentOtp('secret', 'u1', 'OLD@b.com', '123456'),
+    );
   });
 });

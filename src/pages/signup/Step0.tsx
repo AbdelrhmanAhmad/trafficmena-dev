@@ -6,7 +6,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { acceptInvitation } from '@/app/api/invitations';
 import Header from '@/shared/components/layout/Header';
 import { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
-import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -293,12 +292,6 @@ const Step0: React.FC = () => {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="space-y-2">
-                    <p className="text-sm text-blue-700">
-                      Token:{' '}
-                      <Badge variant="outline" className="border-blue-200 text-blue-700">
-                        {invitationToken}
-                      </Badge>
-                    </p>
                     {acceptanceDetails?.email ? (
                       <>
                         <p className="text-sm text-blue-600">

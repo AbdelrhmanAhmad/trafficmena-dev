@@ -1,9 +1,11 @@
 import { getConnInfo } from '@hono/node-server/conninfo';
 import { eq, sql } from 'drizzle-orm';
 import type { Context } from 'hono';
+import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { profiles } from '../../db/schema/index.js';
 import { paymentRateLimiter } from '../../services/rateLimiter.js';
+import { resolveClientIp } from '../../utils/requestIp.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 
 export type UserRole = 'owner' | 'admin' | 'manager' | 'expert' | 'user';
@@ -58,40 +60,30 @@ export function normalizeEmail(email: string) {
 }
 
 export function getRequestIp(c: Context) {
-  const cfConnectingIp = c.req.header('cf-connecting-ip');
-  if (cfConnectingIp) {
-    return cfConnectingIp.split(',')[0]?.trim() ?? cfConnectingIp.trim();
-  }
-
-  const forwardedFor = c.req.header('x-forwarded-for');
-  if (forwardedFor) {
-    return forwardedFor.split(',')[0]?.trim() ?? forwardedFor.trim();
-  }
-
-  const realIp = c.req.header('x-real-ip');
-  if (realIp) {
-    return realIp.trim();
-  }
-
+  let socketAddress: string | undefined;
   try {
     const info = getConnInfo(c);
     if (info?.remote?.address) {
-      return info.remote.address;
+      socketAddress = info.remote.address;
     }
   } catch {
     // getConnInfo is unavailable when running in certain environments; fall back to socket data below
   }
 
-  const incoming: unknown = (c.env as { incoming?: { socket?: { remoteAddress?: string } } })
-    ?.incoming;
-  const socketAddress = (incoming as { socket?: { remoteAddress?: string } } | undefined)?.socket
-    ?.remoteAddress;
-
-  if (socketAddress) {
-    return socketAddress;
+  if (!socketAddress) {
+    const incoming: unknown = (c.env as { incoming?: { socket?: { remoteAddress?: string } } })
+      ?.incoming;
+    socketAddress = (incoming as { socket?: { remoteAddress?: string } } | undefined)?.socket
+      ?.remoteAddress;
   }
 
-  return 'unknown';
+  return resolveClientIp({
+    trustProxy: env.TRUST_PROXY,
+    cfConnectingIp: c.req.header('cf-connecting-ip'),
+    forwardedFor: c.req.header('x-forwarded-for'),
+    realIp: c.req.header('x-real-ip'),
+    socketAddress,
+  });
 }
 
 export function normalizeRole(value: string | null | undefined): UserRole {

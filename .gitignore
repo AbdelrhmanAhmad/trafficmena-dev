@@ -55,3 +55,8 @@ server/drizzle/_archive/
 
 # Private dev notes — local only, never sync to remote
 abdelrhman-changes/
+abdelrhman-changes-local/
+
+# Never commit real invite/PII CSV fixtures
+*invites*.csv
+*- Sheet1.csv

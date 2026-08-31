@@ -15,6 +15,10 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((value) => value === 'true'),
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
   CORS_ORIGIN: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM: z.string().optional(),
@@ -48,6 +52,12 @@ const envSchema = z.object({
   TURNSTILE_SECRET_KEY: z.string().optional(),
   // Invitation daily limit per admin (default: 1000 for launch)
   INVITATION_DAILY_LIMIT: z.coerce.number().int().min(1).max(10000).default(1000),
+  // Dev/test only: explicit opt-in fixed OTP (000000) for Better Auth email OTP. Blocked in production.
+  // Never inferred from NODE_ENV=test alone — staging misconfigs must stay random unless opted in.
+  AUTH_TEST_FIXED_OTP: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -119,6 +129,13 @@ if (
   throw new Error(
     'RESEND_API_KEY (re_-prefixed) is required in production for transactional email.',
   );
+}
+
+// SECURITY: encrypted DB transport is mandatory in production. Certificate verification
+// (rejectUnauthorized + CA bundle) is an infrastructure deployment concern — see
+// docs/solutions/security-issues/db-tls-production-checklist.md.
+if (parsed.data.NODE_ENV === 'production' && !parsed.data.DB_SSL) {
+  throw new Error('DB_SSL must be true in production.');
 }
 
 data.CORS_ORIGIN = corsAllowlist[0];

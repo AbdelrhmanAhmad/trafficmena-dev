@@ -82,6 +82,13 @@ const PAGE_TYPE_MAP: Array<[RegExp, string]> = [
   [/^\/refund-policy\/?$/, 'refund_policy'],
 ];
 
+export function sanitizeAnalyticsPath(pathname: string): string {
+  if (pathname.startsWith('/invitation/')) {
+    return '/invitation/[redacted]';
+  }
+  return pathname;
+}
+
 export function getPageType(pathname: string): string {
   for (const [pattern, pageType] of PAGE_TYPE_MAP) {
     if (pattern.test(pathname)) return pageType;
@@ -185,7 +192,7 @@ export function buildGlobalVariablesPayload(
     customer_type: getCustomerType(input.totalPaidPurchases),
     event_source: 'Web',
     page_type: getPageType(input.pathname),
-    page_path: input.pathname,
+    page_path: sanitizeAnalyticsPath(input.pathname),
     currency: 'EGP',
     total_registrations: input.totalRegistrations,
     total_purchases: input.totalPaidPurchases,

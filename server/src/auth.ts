@@ -3,6 +3,10 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP } from 'better-auth/plugins/email-otp';
 import { inviteSessionPlugin } from './auth/plugins/inviteSession.js';
+import {
+  assertFixedAuthOtpNotEnabledInProduction,
+  generateAuthOtp,
+} from './auth/otpConfig.js';
 import { env, isProduction } from './config/env.js';
 import { db } from './db/client.js';
 import { authAccounts, authSessions, authVerifications, users } from './db/schema/index.js';
@@ -31,6 +35,8 @@ if (!isProduction && authSecret === placeholderSecret) {
   );
 }
 
+assertFixedAuthOtpNotEnabledInProduction();
+
 export const auth = betterAuth({
   secret: authSecret,
   url: env.BETTER_AUTH_ISSUER ?? 'http://localhost:3001',
@@ -54,10 +60,12 @@ export const auth = betterAuth({
   plugins: [
     emailOTP({
       expiresIn: OTP_TTL_SECONDS,
+      storeOTP: 'hashed',
+      generateOTP: () => generateAuthOtp(),
       sendVerificationOTP: async ({ email, otp, type }) => {
         await sendOtpEmail({ email, otp, ttlMinutes: OTP_TTL_MINUTES });
         if (!isProduction) {
-          console.info('[auth] OTP dispatched', { email, type });
+          console.info('[auth] OTP dispatched', { type });
         }
       },
       otpLength: 6,

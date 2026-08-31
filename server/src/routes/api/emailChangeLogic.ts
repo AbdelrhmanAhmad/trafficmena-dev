@@ -21,6 +21,17 @@ export function hashEmailChangeOtp(
     .digest('hex');
 }
 
+export function hashEmailChangeCurrentOtp(
+  secret: string,
+  userId: string,
+  currentEmail: string,
+  otp: string,
+): string {
+  return createHmac('sha256', secret)
+    .update(`${userId}:current:${currentEmail.toLowerCase()}:${otp}`)
+    .digest('hex');
+}
+
 // Constant-time comparison of two hex-encoded hashes (length-checked first to avoid throwing).
 export function safeCompareHex(a: string, b: string): boolean {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length === 0 || a.length !== b.length) {

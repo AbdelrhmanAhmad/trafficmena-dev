@@ -443,7 +443,7 @@ export function registerTrackRoutes(app: Hono) {
     '/tracks/:id/public',
     handleRoute(
       async (c) => {
-        const idValidation = validateUuid(c.req.param('id'), 'track ID');
+        const idValidation = validateUuid(c.req.param('id')!, 'track ID');
         if (!idValidation.valid) {
           return c.json({ error: idValidation.error }, 400);
         }
@@ -497,7 +497,7 @@ export function registerTrackRoutes(app: Hono) {
           })
           .from(trackEvents)
           .innerJoin(events, eq(events.id, trackEvents.eventId))
-          .where(eq(trackEvents.trackId, id))
+          .where(and(eq(trackEvents.trackId, id), eq(events.isPublished, true)))
           .orderBy(trackEvents.sortOrder);
 
         // Get attendee counts for each event
@@ -788,7 +788,7 @@ export function registerTrackRoutes(app: Hono) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } }, 401);
     }
 
-    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    const idValidation = validateUuid(c.req.param('id')!, 'track ID');
     if (!idValidation.valid) {
       return c.json({ error: idValidation.error }, 400);
     }
@@ -937,7 +937,7 @@ export function registerTrackRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    const idValidation = validateUuid(c.req.param('id')!, 'track ID');
     if (!idValidation.valid) {
       return c.json({ error: idValidation.error }, 400);
     }
@@ -1096,7 +1096,7 @@ export function registerTrackRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const idValidation = validateUuid(c.req.param('id'), 'track ID');
+        const idValidation = validateUuid(c.req.param('id')!, 'track ID');
         if (!idValidation.valid) {
           throw new ApiError('INVALID_ID', idValidation.error.message, 400);
         }
@@ -1308,7 +1308,7 @@ export function registerTrackRoutes(app: Hono) {
     const admin = await requireAdmin(c);
     if ('response' in admin) return admin.response;
 
-    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    const idValidation = validateUuid(c.req.param('id')!, 'track ID');
     if (!idValidation.valid) {
       return c.json({ error: idValidation.error }, 400);
     }
@@ -1330,7 +1330,7 @@ export function registerTrackRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const idValidation = validateUuid(c.req.param('id'), 'track ID');
+        const idValidation = validateUuid(c.req.param('id')!, 'track ID');
         if (!idValidation.valid) {
           throw new ApiError('INVALID_ID', idValidation.error.message, 400);
         }
@@ -1812,13 +1812,13 @@ export function registerTrackRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const trackIdValidation = validateUuid(c.req.param('id'), 'track ID');
+        const trackIdValidation = validateUuid(c.req.param('id')!, 'track ID');
         if (!trackIdValidation.valid) {
           throw new ApiError('INVALID_ID', trackIdValidation.error.message, 400);
         }
         const trackId = trackIdValidation.value;
 
-        const eventIdValidation = validateUuid(c.req.param('eventId'), 'event ID');
+        const eventIdValidation = validateUuid(c.req.param('eventId')!, 'event ID');
         if (!eventIdValidation.valid) {
           throw new ApiError('INVALID_ID', eventIdValidation.error.message, 400);
         }
@@ -1981,7 +1981,7 @@ export function registerTrackRoutes(app: Hono) {
     const staff = await requireManager(c);
     if ('response' in staff) return staff.response;
 
-    const idValidation = validateUuid(c.req.param('id'), 'track ID');
+    const idValidation = validateUuid(c.req.param('id')!, 'track ID');
     if (!idValidation.valid) {
       return c.json({ error: idValidation.error }, 400);
     }
@@ -2060,7 +2060,7 @@ export function registerTrackRoutes(app: Hono) {
           throw new ApiError('UNAUTHORIZED', 'Authentication required.', 401);
         }
 
-        const idValidation = validateUuid(c.req.param('id'), 'track ID');
+        const idValidation = validateUuid(c.req.param('id')!, 'track ID');
         if (!idValidation.valid) {
           throw new ApiError('INVALID_ID', idValidation.error.message, 400);
         }

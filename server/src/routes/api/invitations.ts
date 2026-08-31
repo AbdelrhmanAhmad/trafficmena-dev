@@ -1,9 +1,8 @@
-import { and, count, desc, eq, ilike, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, ilike, isNull, or, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import { auth } from '../../auth.js';
-import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { invitations, profiles, users } from '../../db/schema/index.js';
 import {
@@ -14,6 +13,10 @@ import {
   sendBulkInvitations,
   sendSingleInvitation,
 } from '../../services/invitations.js';
+import {
+  getActivationBlockReason,
+  isInvitationExpired,
+} from '../../services/invitationLifecycle.js';
 import { invitationRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { parseInvitationListQuery } from './invitations-list.js';
@@ -111,7 +114,7 @@ export function registerInvitationRoutes(app: Hono) {
             );
           }
         }
-        const { invitation, userId } = await acceptInvitation(token, payload);
+        const { invitation, userId } = await acceptInvitation(token!, payload);
         try {
           await auth.api.sendVerificationOTP({
             body: { email: normalizeEmail(payload.email), type: 'sign-in' },
@@ -139,12 +142,21 @@ export function registerInvitationRoutes(app: Hono) {
       async (c) => {
         const token = c.req.param('token');
         const payload = await parseJson(c, activateSchema);
-        const result = await activateInvitation(c, token, payload.email);
-        if (result.setCookie) {
-          for (const value of result.setCookie) {
-            c.header('set-cookie', value, { append: true });
+        const requestIp = getRequestIp(c);
+        if (requestIp !== 'unknown') {
+          const rateCheck = invitationRateLimiter.consume(`invite:activate:${requestIp}`, {
+            limit: 5,
+            windowMs: 60 * 60 * 1000,
+          });
+          if (!rateCheck.allowed) {
+            throw new InvitationError(
+              'INVITATION_RATE_LIMITED',
+              'Too many attempts from this network. Please try again later.',
+              429,
+            );
           }
         }
+        const result = await activateInvitation(c, token!, payload.email);
         return c.json({
           invitation: result.invitation,
           alreadyActivated: result.alreadyActivated,
@@ -349,7 +361,23 @@ async function fetchInvitations(params: InvitationListParams) {
   const whereClause = filters.length > 0 ? and(...filters) : undefined;
 
   const items = await db
-    .select()
+    .select({
+      id: invitations.id,
+      email: invitations.email,
+      firstName: invitations.firstName,
+      lastName: invitations.lastName,
+      status: invitations.status,
+      source: invitations.source,
+      createdAt: invitations.createdAt,
+      sentAt: invitations.sentAt,
+      acceptedAt: invitations.acceptedAt,
+      acceptedUserId: invitations.acceptedUserId,
+      activatedAt: invitations.activatedAt,
+      expiresAt: invitations.expiresAt,
+      customMessage: invitations.customMessage,
+      createdBy: invitations.createdBy,
+      updatedAt: invitations.updatedAt,
+    })
     .from(invitations)
     .where(whereClause)
     .orderBy(desc(invitations.createdAt))
@@ -390,7 +418,7 @@ async function acceptInvitation(
     );
   }
 
-  if (existing.expiresAt && existing.expiresAt.getTime() < Date.now()) {
+  if (isInvitationExpired(existing)) {
     await db
       .update(invitations)
       .set({ status: 'expired', updatedAt: new Date() })
@@ -398,6 +426,14 @@ async function acceptInvitation(
     throw new InvitationError(
       'INVITATION_EXPIRED',
       'This invitation has expired. Please request a new link.',
+      410,
+    );
+  }
+
+  if (existing.status === 'failed') {
+    throw new InvitationError(
+      'INVITATION_INVALID',
+      'Invitation is invalid or already revoked.',
       410,
     );
   }
@@ -420,6 +456,19 @@ async function acceptInvitation(
     return { invitation: existing, userId };
   }
 
+  const [existingUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+  if (existingUser) {
+    throw new InvitationError(
+      'ACCOUNT_EXISTS',
+      'An account with this email already exists. Sign in with a login code instead.',
+      409,
+    );
+  }
+
   const userId = await getOrCreateMember(email, {
     firstName: payload.firstName,
     lastName: payload.lastName,
@@ -436,10 +485,41 @@ async function acceptInvitation(
       lastName: optional(payload.lastName),
       updatedAt: now,
     })
-    .where(eq(invitations.id, existing.id))
+    .where(
+      and(
+        eq(invitations.id, existing.id),
+        isNull(invitations.acceptedAt),
+        or(eq(invitations.status, 'pending'), eq(invitations.status, 'sent')),
+        or(isNull(invitations.expiresAt), gt(invitations.expiresAt, now)),
+      ),
+    )
     .returning();
 
-  return { invitation: updated, userId };
+  if (updated) {
+    return { invitation: updated, userId };
+  }
+
+  const [refetched] = await db
+    .select()
+    .from(invitations)
+    .where(eq(invitations.id, existing.id))
+    .limit(1);
+
+  if (refetched?.acceptedAt) {
+    const resolvedUserId =
+      refetched.acceptedUserId ??
+      (await getOrCreateMember(email, {
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+      }));
+    return { invitation: refetched, userId: resolvedUserId };
+  }
+
+  throw new InvitationError(
+    'INVITATION_ACCEPT_FAILED',
+    'Unable to accept invitation. Please try again.',
+    409,
+  );
 }
 
 type ActivationResult = {
@@ -447,11 +527,10 @@ type ActivationResult = {
   alreadyActivated: boolean;
   sessionCreated: boolean;
   userId?: string;
-  setCookie?: string[];
 };
 
 async function activateInvitation(
-  c: Context,
+  _c: Context,
   token: string,
   email: string,
 ): Promise<ActivationResult> {
@@ -470,10 +549,36 @@ async function activateInvitation(
     );
   }
 
-  if (!existing.acceptedAt) {
+  const activationBlock = getActivationBlockReason(existing);
+  if (activationBlock === 'expired') {
+    await db
+      .update(invitations)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(eq(invitations.id, existing.id));
+    throw new InvitationError(
+      'INVITATION_EXPIRED',
+      'This invitation has expired. Please request a new link.',
+      410,
+    );
+  }
+  if (activationBlock === 'invalid_status') {
+    throw new InvitationError(
+      'INVITATION_INVALID',
+      'Invitation is invalid or already revoked.',
+      410,
+    );
+  }
+  if (activationBlock === 'not_accepted') {
     throw new InvitationError(
       'INVITATION_NOT_ACCEPTED',
       'This invitation has not been accepted yet.',
+      409,
+    );
+  }
+  if (activationBlock === 'already_activated') {
+    throw new InvitationError(
+      'INVITATION_ALREADY_ACTIVATED',
+      'This invitation has already been activated.',
       409,
     );
   }
@@ -490,71 +595,45 @@ async function activateInvitation(
       .where(eq(invitations.id, existing.id));
   }
 
-  let sessionCreated = false;
-  const setCookieValues: string[] = [];
+  const now = new Date();
+  const [updated] = await db
+    .update(invitations)
+    .set({ activatedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(invitations.id, existing.id),
+        isNull(invitations.activatedAt),
+        or(isNull(invitations.expiresAt), gt(invitations.expiresAt, now)),
+        eq(invitations.status, 'accepted'),
+      ),
+    )
+    .returning();
 
-  if (inviteeUserId && env.INVITE_SESSION_SECRET) {
-    try {
-      const headers = new Headers(c.req.raw.headers);
-      headers.set('x-invite-session-secret', env.INVITE_SESSION_SECRET);
-
-      const sessionResponse = await (auth.api as any).internalInviteSession({
-        body: { userId: inviteeUserId },
-        request: c.req.raw,
-        headers,
-        asResponse: true,
-      });
-
-      if (sessionResponse.ok) {
-        sessionCreated = true;
-        const rawSetCookie: string[] | undefined =
-          typeof (sessionResponse.headers as unknown as { raw?: () => Record<string, string[]> })
-            .raw === 'function'
-            ? (sessionResponse.headers as unknown as { raw: () => Record<string, string[]> }).raw()[
-                'set-cookie'
-              ]
-            : undefined;
-
-        if (rawSetCookie && rawSetCookie.length > 0) {
-          setCookieValues.push(...rawSetCookie);
-        } else {
-          const singleCookie = sessionResponse.headers.get('set-cookie');
-          if (singleCookie) {
-            setCookieValues.push(singleCookie);
-          }
-        }
-      } else {
-        const errorBody = await sessionResponse.text();
-        console.error('[invitations] auto session creation failed', {
-          status: sessionResponse.status,
-          body: errorBody,
-        });
-      }
-    } catch (error) {
-      sessionCreated = false;
-      console.error('[invitations] auto session creation failed', error);
-    }
-  } else if (!env.INVITE_SESSION_SECRET) {
-    console.warn('[invitations] invite session secret not configured; skipping auto session setup');
-  }
-
-  let updatedInvitation = existing;
-  if (!existing.activatedAt) {
-    const now = new Date();
-    const [updated] = await db
-      .update(invitations)
-      .set({ activatedAt: now, updatedAt: now })
+  if (!updated) {
+    const [refetched] = await db
+      .select()
+      .from(invitations)
       .where(eq(invitations.id, existing.id))
-      .returning();
-    updatedInvitation = updated ?? existing;
+      .limit(1);
+    if (refetched?.activatedAt) {
+      throw new InvitationError(
+        'INVITATION_ALREADY_ACTIVATED',
+        'This invitation has already been activated.',
+        409,
+      );
+    }
+    throw new InvitationError(
+      'INVITATION_ACTIVATE_FAILED',
+      'Unable to activate invitation. Please try again.',
+      409,
+    );
   }
 
   return {
-    invitation: updatedInvitation,
-    alreadyActivated: existing.activatedAt !== null,
-    sessionCreated,
+    invitation: updated,
+    alreadyActivated: false,
+    sessionCreated: false,
     userId: inviteeUserId ?? undefined,
-    setCookie: setCookieValues.length > 0 ? setCookieValues : undefined,
   };
 }
 
