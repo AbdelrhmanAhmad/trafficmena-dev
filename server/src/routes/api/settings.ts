@@ -3,6 +3,13 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { platformSettings } from '../../db/schema/index.js';
+import {
+  fetchProductVisibilityRecord,
+  mergeVisibilityPatch,
+  PRODUCT_VISIBILITY_DEFAULTS,
+  resolveEffectiveProductVisibility,
+} from '../../services/productVisibility.js';
+import { ApiError, respondError } from '../../utils/errors.js';
 import { requireAdmin } from './utils.js';
 
 type SettingsRecord = {
@@ -12,6 +19,9 @@ type SettingsRecord = {
   masterclassesEnabled: boolean;
   digitalProductsEnabled: boolean;
   libraryStoreEnabled: boolean;
+  subscriptionsEnabled: boolean;
+  masterclassesLaunched: boolean;
+  digitalProductsLaunched: boolean;
   updatedAt: Date | null;
   updatedBy: string | null;
 };
@@ -25,6 +35,9 @@ async function fetchSettings(): Promise<SettingsRecord | null> {
       masterclassesEnabled: platformSettings.masterclassesEnabled,
       digitalProductsEnabled: platformSettings.digitalProductsEnabled,
       libraryStoreEnabled: platformSettings.libraryStoreEnabled,
+      subscriptionsEnabled: platformSettings.subscriptionsEnabled,
+      masterclassesLaunched: platformSettings.masterclassesLaunched,
+      digitalProductsLaunched: platformSettings.digitalProductsLaunched,
       updatedAt: platformSettings.updatedAt,
       updatedBy: platformSettings.updatedBy,
     })
@@ -38,14 +51,57 @@ async function fetchSettings(): Promise<SettingsRecord | null> {
   return record;
 }
 
+function toPublicPayload(record: SettingsRecord | null) {
+  const effective = resolveEffectiveProductVisibility(
+    record
+      ? {
+          subscriptionsEnabled: record.subscriptionsEnabled,
+          masterclassesEnabled: record.masterclassesEnabled,
+          digitalProductsEnabled: record.digitalProductsEnabled,
+          masterclassesLaunched: record.masterclassesLaunched,
+          digitalProductsLaunched: record.digitalProductsLaunched,
+        }
+      : null,
+  );
+  return {
+    inviteOnly: record?.inviteOnlySignup ?? false,
+    subscriptionsEnabled: effective.subscriptionsEnabled,
+    masterclassesEnabled: effective.masterclassesEnabled,
+    digitalProductsEnabled: effective.digitalProductsEnabled,
+    libraryStoreEnabled: record?.libraryStoreEnabled ?? false,
+  };
+}
+
 function toAdminPayload(record: SettingsRecord | null, fallbacks?: Partial<SettingsRecord>) {
+  const effective = resolveEffectiveProductVisibility(
+    record
+      ? {
+          subscriptionsEnabled: record.subscriptionsEnabled,
+          masterclassesEnabled: record.masterclassesEnabled,
+          digitalProductsEnabled: record.digitalProductsEnabled,
+          masterclassesLaunched: record.masterclassesLaunched,
+          digitalProductsLaunched: record.digitalProductsLaunched,
+        }
+      : fallbacks
+        ? {
+            subscriptionsEnabled: fallbacks.subscriptionsEnabled ?? false,
+            masterclassesEnabled: fallbacks.masterclassesEnabled ?? false,
+            digitalProductsEnabled: fallbacks.digitalProductsEnabled ?? false,
+            masterclassesLaunched: fallbacks.masterclassesLaunched ?? false,
+            digitalProductsLaunched: fallbacks.digitalProductsLaunched ?? false,
+          }
+        : null,
+  );
   return {
     inviteOnly: record?.inviteOnlySignup ?? fallbacks?.inviteOnlySignup ?? false,
     eventMode: record?.eventMode ?? fallbacks?.eventMode ?? false,
-    masterclassesEnabled: record?.masterclassesEnabled ?? fallbacks?.masterclassesEnabled ?? true,
-    digitalProductsEnabled:
-      record?.digitalProductsEnabled ?? fallbacks?.digitalProductsEnabled ?? true,
+    subscriptionsEnabled: effective.subscriptionsEnabled,
+    masterclassesEnabled: effective.masterclassesEnabled,
+    digitalProductsEnabled: effective.digitalProductsEnabled,
     libraryStoreEnabled: record?.libraryStoreEnabled ?? fallbacks?.libraryStoreEnabled ?? false,
+    masterclassesLaunched: record?.masterclassesLaunched ?? fallbacks?.masterclassesLaunched ?? false,
+    digitalProductsLaunched:
+      record?.digitalProductsLaunched ?? fallbacks?.digitalProductsLaunched ?? false,
     updatedAt: record?.updatedAt ?? null,
     updatedBy: record?.updatedBy ?? null,
   };
@@ -56,21 +112,11 @@ export function registerSettingsRoutes(app: Hono) {
     try {
       const record = await fetchSettings();
       c.header('Cache-Control', 'no-store');
-      return c.json({
-        inviteOnly: record?.inviteOnlySignup ?? false,
-        masterclassesEnabled: record?.masterclassesEnabled ?? true,
-        digitalProductsEnabled: record?.digitalProductsEnabled ?? true,
-        libraryStoreEnabled: record?.libraryStoreEnabled ?? false,
-      });
+      return c.json(toPublicPayload(record));
     } catch (error) {
       console.error('[settings] public fetch failed', error);
       c.header('Cache-Control', 'no-store');
-      return c.json({
-        inviteOnly: false,
-        masterclassesEnabled: true,
-        digitalProductsEnabled: true,
-        libraryStoreEnabled: false,
-      });
+      return c.json(toPublicPayload(null));
     }
   });
 
@@ -99,6 +145,7 @@ export function registerSettingsRoutes(app: Hono) {
       .object({
         inviteOnly: z.boolean().optional(),
         eventMode: z.boolean().optional(),
+        subscriptionsEnabled: z.boolean().optional(),
         masterclassesEnabled: z.boolean().optional(),
         digitalProductsEnabled: z.boolean().optional(),
         libraryStoreEnabled: z.boolean().optional(),
@@ -107,6 +154,7 @@ export function registerSettingsRoutes(app: Hono) {
         (data) =>
           data.inviteOnly !== undefined ||
           data.eventMode !== undefined ||
+          data.subscriptionsEnabled !== undefined ||
           data.masterclassesEnabled !== undefined ||
           data.digitalProductsEnabled !== undefined ||
           data.libraryStoreEnabled !== undefined,
@@ -135,21 +183,27 @@ export function registerSettingsRoutes(app: Hono) {
     try {
       const now = new Date();
       const existing = await fetchSettings();
+      const visibilityRecord = await fetchProductVisibilityRecord();
+      const nextVisibility = mergeVisibilityPatch(visibilityRecord, {
+        subscriptionsEnabled: validatedData.subscriptionsEnabled,
+        masterclassesEnabled: validatedData.masterclassesEnabled,
+        digitalProductsEnabled: validatedData.digitalProductsEnabled,
+      });
+
       const nextInviteOnly = validatedData.inviteOnly ?? existing?.inviteOnlySignup ?? false;
       const nextEventMode = validatedData.eventMode ?? existing?.eventMode ?? false;
-      const nextMasterclassesEnabled =
-        validatedData.masterclassesEnabled ?? existing?.masterclassesEnabled ?? true;
-      const nextDigitalProductsEnabled =
-        validatedData.digitalProductsEnabled ?? existing?.digitalProductsEnabled ?? true;
       const nextLibraryStoreEnabled =
         validatedData.libraryStoreEnabled ?? existing?.libraryStoreEnabled ?? false;
 
       const values = {
         inviteOnlySignup: nextInviteOnly,
         eventMode: nextEventMode,
-        masterclassesEnabled: nextMasterclassesEnabled,
-        digitalProductsEnabled: nextDigitalProductsEnabled,
+        subscriptionsEnabled: nextVisibility.subscriptionsEnabled,
+        masterclassesEnabled: nextVisibility.masterclassesEnabled,
+        digitalProductsEnabled: nextVisibility.digitalProductsEnabled,
         libraryStoreEnabled: nextLibraryStoreEnabled,
+        masterclassesLaunched: nextVisibility.masterclassesLaunched,
+        digitalProductsLaunched: nextVisibility.digitalProductsLaunched,
         updatedAt: now,
         updatedBy: result.userId,
       };
@@ -168,6 +222,9 @@ export function registerSettingsRoutes(app: Hono) {
             masterclassesEnabled: platformSettings.masterclassesEnabled,
             digitalProductsEnabled: platformSettings.digitalProductsEnabled,
             libraryStoreEnabled: platformSettings.libraryStoreEnabled,
+            subscriptionsEnabled: platformSettings.subscriptionsEnabled,
+            masterclassesLaunched: platformSettings.masterclassesLaunched,
+            digitalProductsLaunched: platformSettings.digitalProductsLaunched,
             updatedAt: platformSettings.updatedAt,
             updatedBy: platformSettings.updatedBy,
           });
@@ -175,7 +232,10 @@ export function registerSettingsRoutes(app: Hono) {
       } else {
         const [row] = await db
           .insert(platformSettings)
-          .values(values)
+          .values({
+            ...PRODUCT_VISIBILITY_DEFAULTS,
+            ...values,
+          })
           .returning({
             id: platformSettings.id,
             inviteOnlySignup: platformSettings.inviteOnlySignup,
@@ -183,22 +243,20 @@ export function registerSettingsRoutes(app: Hono) {
             masterclassesEnabled: platformSettings.masterclassesEnabled,
             digitalProductsEnabled: platformSettings.digitalProductsEnabled,
             libraryStoreEnabled: platformSettings.libraryStoreEnabled,
+            subscriptionsEnabled: platformSettings.subscriptionsEnabled,
+            masterclassesLaunched: platformSettings.masterclassesLaunched,
+            digitalProductsLaunched: platformSettings.digitalProductsLaunched,
             updatedAt: platformSettings.updatedAt,
             updatedBy: platformSettings.updatedBy,
           });
         updated = row ?? null;
       }
 
-      return c.json(
-        toAdminPayload(updated, {
-          inviteOnlySignup: nextInviteOnly,
-          eventMode: nextEventMode,
-          masterclassesEnabled: nextMasterclassesEnabled,
-          digitalProductsEnabled: nextDigitalProductsEnabled,
-          libraryStoreEnabled: nextLibraryStoreEnabled,
-        }),
-      );
+      return c.json(toAdminPayload(updated));
     } catch (error) {
+      if (error instanceof ApiError) {
+        return respondError(c, error);
+      }
       console.error('[settings] admin update failed', error);
       return c.json(
         { error: { code: 'INTERNAL_ERROR', message: 'Unable to update settings right now.' } },

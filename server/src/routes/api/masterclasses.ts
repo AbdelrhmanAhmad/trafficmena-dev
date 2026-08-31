@@ -23,6 +23,11 @@ import {
   grantMasterclassEnrollment,
   isMasterclassSellable,
 } from '../../services/masterclassSales.js';
+import {
+  applyFirstPublishLaunch,
+  getEffectiveProductVisibility,
+  isDiscoveryBlocked,
+} from '../../services/productVisibility.js';
 import { getLearnerCertificateStatus, tryIssueCertificateOnCompletion } from '../../services/certificates.js';
 import { ApiError } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
@@ -253,6 +258,13 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const filter = c.req.query('filter') === 'mine' ? 'mine' : 'all';
+    const visibility = await getEffectiveProductVisibility();
+    const discoveryBlocked = isDiscoveryBlocked('masterclasses', visibility);
+
+    if (discoveryBlocked && filter !== 'mine') {
+      return c.json({ data: { items: [] } });
+    }
+
     const enrolledIds = await getEnrolledMasterclassIds(session.user.id);
 
     const rows = await db
@@ -297,6 +309,9 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_PARAM', message: 'Invalid masterclass id.' } }, 400);
     }
 
+    const visibility = await getEffectiveProductVisibility();
+    const discoveryBlocked = isDiscoveryBlocked('masterclasses', visibility);
+
     const [masterclass] = await db
       .select()
       .from(masterclasses)
@@ -311,6 +326,10 @@ export function registerMasterclassRoutes(app: Hono) {
     const enrolledIds = await getEnrolledMasterclassIds(session.user.id, [masterclass.id]);
     const isEnrolled = enrolledIds.has(masterclass.id);
     const sellable = isMasterclassSellable({ ...masterclass, lessonCount });
+
+    if (discoveryBlocked && !isEnrolled) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Masterclass not found.' } }, 404);
+    }
 
     if (!isEnrolled && !sellable) {
       return c.json({ error: { code: 'NOT_AVAILABLE', message: 'Masterclass not available.' } }, 404);
@@ -709,6 +728,8 @@ export function registerMasterclassRoutes(app: Hono) {
         sortOrder: parsed.data.sortOrder ?? 0,
       })
       .returning();
+
+    await applyFirstPublishLaunch('masterclasses', false, created.isPublished);
 
     return c.json({ data: created }, 201);
   });
@@ -1449,6 +1470,16 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
 
+    const [existingMasterclass] = await db
+      .select({ isPublished: masterclasses.isPublished })
+      .from(masterclasses)
+      .where(eq(masterclasses.id, idParsed.data))
+      .limit(1);
+
+    if (!existingMasterclass) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Masterclass not found.' } }, 404);
+    }
+
     const [updated] = await db
       .update(masterclasses)
       .set({ ...parsed.data, updatedAt: new Date() })
@@ -1458,6 +1489,13 @@ export function registerMasterclassRoutes(app: Hono) {
     if (!updated) {
       return c.json({ error: { code: 'NOT_FOUND', message: 'Masterclass not found.' } }, 404);
     }
+
+    const willBePublished = parsed.data.isPublished ?? updated.isPublished;
+    await applyFirstPublishLaunch(
+      'masterclasses',
+      existingMasterclass.isPublished,
+      willBePublished,
+    );
 
     return c.json({ data: updated });
   });

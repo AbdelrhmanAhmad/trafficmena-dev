@@ -37,6 +37,11 @@ import {
   getEnrolledMasterclassIds,
   grantMasterclassEnrollment,
 } from '../../services/masterclassSales.js';
+import {
+  assertCheckoutAllowed,
+  resolveEffectiveProductVisibility,
+  type ProductVisibilityRecord,
+} from '../../services/productVisibility.js';
 import { paymentRateLimiter } from '../../services/rateLimiter.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { ApiError } from '../../utils/errors.js';
@@ -484,6 +489,25 @@ async function reportPaidFulfillmentFailure(
   }
 }
 
+function toVisibilityRecord(
+  settings: {
+    subscriptionsEnabled: boolean;
+    masterclassesEnabled: boolean;
+    digitalProductsEnabled: boolean;
+    masterclassesLaunched: boolean;
+    digitalProductsLaunched: boolean;
+  } | undefined,
+): ProductVisibilityRecord | null {
+  if (!settings) return null;
+  return {
+    subscriptionsEnabled: settings.subscriptionsEnabled,
+    masterclassesEnabled: settings.masterclassesEnabled,
+    digitalProductsEnabled: settings.digitalProductsEnabled,
+    masterclassesLaunched: settings.masterclassesLaunched,
+    digitalProductsLaunched: settings.digitalProductsLaunched,
+  };
+}
+
 async function calculatePrice(
   userId: string,
   itemType: 'event' | 'track' | 'subscription' | 'order' | 'masterclass',
@@ -512,6 +536,7 @@ async function calculatePrice(
   ]);
   const [subscription] = subscriptionResult;
   const [settings] = settingsResult;
+  const visibility = resolveEffectiveProductVisibility(toVisibilityRecord(settings));
   const isSubscriber = !!subscription;
   const rawDiscount = settings?.subscriberDiscountPercent;
   const discountPercent =
@@ -520,6 +545,7 @@ async function calculatePrice(
       : 20;
 
   if (itemType === 'subscription') {
+    assertCheckoutAllowed(visibility, 'subscription');
     if (isSubscriber) {
       throw new ApiError(
         'ALREADY_SUBSCRIBED',
@@ -812,6 +838,10 @@ async function calculatePrice(
       .innerJoin(digitalProducts, eq(digitalProducts.id, orderItems.digitalProductId))
       .where(and(eq(orderItems.orderId, order.id), eq(orderItems.itemType, 'digital_product')));
 
+    if (productLines.length > 0) {
+      assertCheckoutAllowed(visibility, 'digital_product_order');
+    }
+
     const lineTitles = [...seriesLines, ...productLines].map((row) => row.title);
 
     const itemName =
@@ -832,6 +862,7 @@ async function calculatePrice(
   }
 
   if (itemType === 'masterclass' && itemId) {
+    assertCheckoutAllowed(visibility, 'masterclass');
     const sellable = await assertMasterclassSellable(itemId);
     const enrolledIds = await getEnrolledMasterclassIds(userId, [itemId]);
     if (enrolledIds.has(itemId)) {

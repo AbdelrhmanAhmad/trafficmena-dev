@@ -12,6 +12,7 @@ import {
   users,
 } from '../../db/schema/index.js';
 import { assertDigitalProductIdsSellable, getPurchasedDigitalProductIds } from '../../services/digitalProductSales.js';
+import { assertCheckoutAllowed, getEffectiveProductVisibility } from '../../services/productVisibility.js';
 import { assertSeriesIdsSellable, getPurchasedSeriesIds } from '../../services/seriesSales.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { ApiError } from '../../utils/errors.js';
@@ -248,6 +249,11 @@ export function registerOrderRoutes(app: Hono) {
     const uniqueSeriesIds = [...new Set(parsed.data.seriesIds ?? [])];
     const uniqueProductIds = [...new Set(parsed.data.digitalProductIds ?? [])];
     const userId = session.user.id;
+
+    if (uniqueProductIds.length > 0) {
+      const visibility = await getEffectiveProductVisibility();
+      assertCheckoutAllowed(visibility, 'digital_product_order');
+    }
 
     const [sellableSeries, sellableProducts, purchasedSeries, purchasedProducts] = await Promise.all([
       assertSeriesIdsSellable(uniqueSeriesIds),
