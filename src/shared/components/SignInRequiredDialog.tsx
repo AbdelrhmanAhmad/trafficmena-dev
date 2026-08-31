@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/components/ui/dialog';
+import { prepareSignInNavigation } from '@/shared/utils/authNavigation';
 
 type SignInRequiredDialogProps = {
   open: boolean;
@@ -25,7 +26,7 @@ export function SignInRequiredDialog({
   title = 'Sign in required',
   description = 'You need to sign in before continuing. Create a free account or sign in to purchase products and access your dashboard.',
 }: SignInRequiredDialogProps) {
-  const authState = { from: { pathname: returnPath } };
+  const signInTarget = prepareSignInNavigation(returnPath);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,7 +50,7 @@ export function SignInRequiredDialog({
             asChild
             className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:brightness-95"
           >
-            <Link to="/signin" state={authState} onClick={() => onOpenChange(false)}>
+            <Link to="/signin" state={signInTarget.state} onClick={() => onOpenChange(false)}>
               Sign in
             </Link>
           </Button>

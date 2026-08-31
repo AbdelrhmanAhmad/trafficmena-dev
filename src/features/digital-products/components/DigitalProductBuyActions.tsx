@@ -13,6 +13,7 @@ import { PaymentCheckoutDialog } from '@/shared/components/payment/PaymentChecko
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { prepareSignInNavigation } from '@/shared/utils/authNavigation';
 
 type DigitalProductBuyActionsProps = {
   product: DigitalProductStoreItem;
@@ -50,13 +51,7 @@ export function DigitalProductBuyActions({
       onRequireAuth();
       return true;
     }
-    navigate('/signin', {
-      state: {
-        from: {
-          pathname: signInReturnPath ?? `/dashboard/digital-products/${product.id}`,
-        },
-      },
-    });
+    navigate('/signin', prepareSignInNavigation(signInReturnPath ?? `/digital-products/${product.id}`));
     return true;
   };
 

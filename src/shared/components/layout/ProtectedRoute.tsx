@@ -1,7 +1,8 @@
 import type React from 'react';
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/shared/context/AuthContext';
+import { redirectToSignIn } from '@/shared/utils/authNavigation';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,12 +11,13 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/signin');
+      redirectToSignIn(navigate, location);
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, location]);
 
   // Show loading spinner while checking authentication
   if (loading) {
