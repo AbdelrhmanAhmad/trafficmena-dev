@@ -1,0 +1,10 @@
+{
+  "title": "المسارات",
+  "subtitle": "مسارات تعليمية منظمة تجمع عدة فعاليات.",
+  "bookTrack": "حجز المسار",
+  "booked": "محجوز",
+  "viewTrack": "عرض المسار",
+  "eventsIncluded": "{{count}} فعاليات مشمولة",
+  "noTracks": "لا توجد مسارات.",
+  "searchPlaceholder": "ابحث في المسارات…"
+}

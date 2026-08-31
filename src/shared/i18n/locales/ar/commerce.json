@@ -1,0 +1,14 @@
+{
+  "cartTitle": "سلة التسوق",
+  "cartSubtitle": "السلاسل والمنتجات الرقمية — دفعة واحدة للوصول الدائم.",
+  "emptyCart": "سلتك فارغة.",
+  "digitalProductsLink": "المنتجات الرقمية",
+  "libraryLink": "المكتبة",
+  "total": "الإجمالي",
+  "preparing": "جاري التحضير…",
+  "completePurchase": "إتمام الشراء",
+  "removeItem": "إزالة {{title}}",
+  "checkoutFailed": "فشل الدفع",
+  "checkoutError": "تعذّر بدء عملية الدفع. يرجى المحاولة مرة أخرى.",
+  "orderLabel": "طلب ({{count}} عناصر)"
+}

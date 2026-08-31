@@ -44,7 +44,7 @@ const NAVIGATION_ITEMS: NavItem[] = [
 ];
 
 const Header: React.FC = () => {
-  const { t } = useTranslation(['nav', 'common']);
+  const { t } = useTranslation(['nav', 'common', 'dashboard']);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { canAccessAdmin, isOwner, isAdmin, isManager } = useRolePermissions();
@@ -170,8 +170,8 @@ const Header: React.FC = () => {
                 className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 md:hidden"
               >
                 <Menu className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
-                <span className="ml-2 text-sm font-medium text-neutral-800">Menu</span>
+                <span className="sr-only">{t('nav:menuOpen')}</span>
+                <span className="ml-2 text-sm font-medium text-neutral-800">{t('nav:menu')}</span>
               </Button>
             </DrawerTrigger>
             <DrawerContent className="border-neutral-200 bg-white">
@@ -180,7 +180,7 @@ const Header: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center gap-2">
                     <Menu className="h-4 w-4 text-neutral-600" />
-                    <span className="text-sm font-medium text-neutral-700">Menu</span>
+                    <span className="text-sm font-medium text-neutral-700">{t('nav:menu')}</span>
                   </div>
                   <Button
                     variant="ghost"
@@ -225,7 +225,7 @@ const Header: React.FC = () => {
                     <Link to={user ? '/dashboard/subscribe' : '/subscribe'} onClick={closeDrawer}>
                       <Button className="w-full justify-start rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm font-medium text-amber-700 hover:bg-amber-100">
                         <Crown className="mr-2 h-4 w-4" />
-                        Subscribe
+                        {t('nav:subscribe')}
                       </Button>
                     </Link>
                   )}
@@ -236,7 +236,7 @@ const Header: React.FC = () => {
                           variant="ghost"
                           className="w-full justify-start rounded-xl px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                         >
-                          Edit Profile
+                          {t('dashboard:editProfile')}
                         </Button>
                       </Link>
                       <Link to="/dashboard/library" onClick={closeDrawer}>
@@ -244,7 +244,7 @@ const Header: React.FC = () => {
                           variant="ghost"
                           className="w-full justify-start rounded-xl px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                         >
-                          Content Library
+                          {t('dashboard:contentLibrary')}
                         </Button>
                       </Link>
                       {canAccessAdmin && (
@@ -254,12 +254,12 @@ const Header: React.FC = () => {
                             className="w-full justify-start rounded-xl px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                           >
                             {isOwner
-                              ? 'Owner Dashboard'
+                              ? t('dashboard:adminOwner')
                               : isAdmin
-                                ? 'Admin Dashboard'
+                                ? t('dashboard:adminAdmin')
                                 : isManager
-                                  ? 'Manager Dashboard'
-                                  : 'Admin Dashboard'}
+                                  ? t('dashboard:adminManager')
+                                  : t('dashboard:adminAdmin')}
                           </Button>
                         </Link>
                       )}
@@ -269,7 +269,7 @@ const Header: React.FC = () => {
                         className="w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                       >
                         <LogOut className="mr-2 h-4 w-4" />
-                        Sign Out
+                        {t('common:actions.signOut')}
                       </Button>
                     </>
                   ) : (

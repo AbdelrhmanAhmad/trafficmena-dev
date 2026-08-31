@@ -1,5 +1,6 @@
 import { XCircle } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/shared/components/ui/card';
 
 export default function PaymentFailedPage() {
+  const { t } = useTranslation('payments');
   const [searchParams] = useSearchParams();
   const errorMessage = searchParams.get('error');
 
@@ -22,28 +24,25 @@ export default function PaymentFailedPage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <XCircle className="h-10 w-10 text-red-600" />
             </div>
-            <CardTitle className="text-2xl text-red-700">Payment Failed</CardTitle>
-            <CardDescription>
-              {errorMessage ||
-                "We couldn't process your payment. No charges were made to your account."}
-            </CardDescription>
+            <CardTitle className="text-2xl text-red-700">{t('failedTitle')}</CardTitle>
+            <CardDescription>{errorMessage || t('failedDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-              Common reasons for payment failure:
+              {t('failedReasonsTitle')}
               <ul className="mt-2 list-inside list-disc text-left">
-                <li>Insufficient funds</li>
-                <li>Card declined by issuing bank</li>
-                <li>Incorrect card details</li>
-                <li>Transaction limit exceeded</li>
+                <li>{t('failedReasonFunds')}</li>
+                <li>{t('failedReasonDeclined')}</li>
+                <li>{t('failedReasonDetails')}</li>
+                <li>{t('failedReasonLimit')}</li>
               </ul>
             </div>
             <div className="flex flex-col gap-2">
               <Button asChild className="w-full">
-                <Link to="/dashboard">Return to Dashboard</Link>
+                <Link to="/dashboard">{t('returnToDashboard')}</Link>
               </Button>
               <Button asChild variant="outline" className="w-full">
-                <Link to="/meetups">Browse Events</Link>
+                <Link to="/meetups">{t('browseEvents')}</Link>
               </Button>
             </div>
           </CardContent>

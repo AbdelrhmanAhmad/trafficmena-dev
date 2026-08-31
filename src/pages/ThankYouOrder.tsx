@@ -10,6 +10,7 @@ import {
 import type React from 'react';
 import { useEffect } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import type { OrderItem } from '@/app/api/orders';
 import { useOrder } from '@/app/hooks/useOrders';
@@ -26,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { useAuth } from '@/shared/context/AuthContext';
 
 function OrderItemCard({ item }: { item: OrderItem }) {
+  const { t } = useTranslation('dashboard');
   const href = getOrderItemDashboardPath(item);
   const imageUrl = item.imageUrl?.trim() || '/placeholder.svg';
   const typeLabel = getOrderItemTypeLabel(item.itemType);
@@ -56,10 +58,10 @@ function OrderItemCard({ item }: { item: OrderItem }) {
         <div className="flex flex-1 items-center justify-between gap-4 p-5">
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Open in dashboard
+              {t('openInDashboard')}
             </p>
             <h3 className="mt-1 text-lg font-semibold text-neutral-900 group-hover:text-[#059640]">
-              {item.title ?? 'Purchased item'}
+              {item.title ?? t('purchasedItem')}
             </h3>
             <p className="mt-1 text-sm font-medium text-neutral-700">
               {formatSeriesPriceLabel(item.lineTotalCents)}
@@ -75,6 +77,7 @@ function OrderItemCard({ item }: { item: OrderItem }) {
 }
 
 function ThankYouOrderContent() {
+  const { t } = useTranslation('dashboard');
   const { orderId = '' } = useParams();
   const [searchParams] = useSearchParams();
   const isPaidFlow = searchParams.get('paid') === '1';
@@ -99,8 +102,8 @@ function ThankYouOrderContent() {
     <Layout>
       <DataLoader
         loading={isLoading}
-        error={error ? 'Failed to load your order' : !order ? 'Order not found' : null}
-        loadingText="Loading your order..."
+        error={error ? t('loadOrderFailed') : !order ? t('orderNotFound') : null}
+        loadingText={t('loadingOrder')}
         onRetry={() => window.location.reload()}
       >
         {order && (
@@ -113,22 +116,22 @@ function ThankYouOrderContent() {
                 <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62]/20 to-[#29cf9f]/20 ring-4 ring-[#05ef62]/30">
                   <CheckCircle className="h-10 w-10 text-[#05ef62]" />
                 </div>
-                <h1 className="mb-4 text-4xl font-bold text-gray-900">Thank you for your order!</h1>
+                <h1 className="mb-4 text-4xl font-bold text-gray-900">{t('thankYouTitle')}</h1>
                 <p className="mb-2 text-xl text-gray-600">
                   {user?.user_metadata?.first_name
-                    ? `Thanks, ${user.user_metadata.first_name}!`
-                    : 'Your purchase is complete.'}
+                    ? t('thankYouWithName', { name: user.user_metadata.first_name })
+                    : t('thankYouGeneric')}
                 </p>
                 <p className="text-lg text-gray-600">
                   {items.length === 1
-                    ? 'Your item is ready in your dashboard.'
-                    : `${items.length} items are ready in your dashboard.`}
+                    ? t('itemsReadyOne')
+                    : t('itemsReadyMany', { count: items.length })}
                 </p>
 
                 {isPaidFlow && (
                   <div className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800">
                     <BadgeCheck className="h-4 w-4" />
-                    Payment successful · Order confirmed
+                    {t('paymentConfirmed')}
                   </div>
                 )}
               </div>
@@ -137,19 +140,19 @@ function ThankYouOrderContent() {
                 <CardHeader className="bg-gradient-to-r from-[#05ef62]/10 to-[#29cf9f]/10">
                   <div className="mb-2 flex items-center gap-2 text-[#059640]">
                     <ShoppingBag className="h-5 w-5" />
-                    <span className="font-medium">Order summary</span>
+                    <span className="font-medium">{t('orderSummary')}</span>
                   </div>
                   <CardTitle className="text-2xl text-gray-900">
                     {formatSeriesPriceLabel(order.totalCents)}
                   </CardTitle>
                   <p className="text-sm text-neutral-600">
-                    {items.length} {items.length === 1 ? 'item' : 'items'} ·{' '}
-                    {order.status === 'paid' ? 'Paid' : order.status}
+                    {t('itemCount', { count: items.length })} ·{' '}
+                    {order.status === 'paid' ? t('paid') : order.status}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-6">
                   {items.length === 0 ? (
-                    <p className="text-sm text-neutral-500">No items found for this order.</p>
+                    <p className="text-sm text-neutral-500">{t('noItems')}</p>
                   ) : (
                     items.map((item) => <OrderItemCard key={item.id} item={item} />)
                   )}
@@ -161,7 +164,7 @@ function ThankYouOrderContent() {
                   <Button asChild className="rounded-full">
                     <Link to="/dashboard/library">
                       <FolderOpen className="mr-2 h-4 w-4" />
-                      Go to Library
+                      {t('goToLibrary')}
                     </Link>
                   </Button>
                 )}
@@ -169,14 +172,14 @@ function ThankYouOrderContent() {
                   <Button asChild className="rounded-full" variant={hasSeries ? 'outline' : 'default'}>
                     <Link to="/dashboard/digital-products">
                       <FileStack className="mr-2 h-4 w-4" />
-                      My digital products
+                      {t('myDigitalProducts')}
                     </Link>
                   </Button>
                 )}
                 <Button asChild variant="outline" className="rounded-full">
                   <Link to="/dashboard">
                     <LayoutDashboard className="mr-2 h-4 w-4" />
-                    Dashboard
+                    {t('title')}
                   </Link>
                 </Button>
               </div>

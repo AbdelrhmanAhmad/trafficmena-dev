@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/app/api/client';
 import { createCommerceOrder } from '@/app/api/orders';
 import {
@@ -18,6 +19,7 @@ import { useToast } from '@/shared/hooks/custom/use-toast';
 import { prepareSignInNavigation } from '@/shared/utils/authNavigation';
 
 export default function SeriesCartPage() {
+  const { t } = useTranslation('commerce');
   const cart = useCommerceCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -54,8 +56,8 @@ export default function SeriesCartPage() {
       setCheckoutOpen(true);
     } catch (error) {
       const message =
-        error instanceof ApiError ? error.message : 'Could not start checkout. Please try again.';
-      toast({ title: 'Checkout failed', description: message, variant: 'destructive' });
+        error instanceof ApiError ? error.message : t('checkoutError');
+      toast({ title: t('checkoutFailed'), description: message, variant: 'destructive' });
     } finally {
       setIsCreatingOrder(false);
     }
@@ -65,21 +67,19 @@ export default function SeriesCartPage() {
     <ProtectedRoute>
       <Layout>
         <div className="mx-auto max-w-3xl px-4 py-10">
-          <h1 className="text-3xl font-bold text-neutral-900">Shopping cart</h1>
-          <p className="mt-2 text-neutral-600">
-            Series and digital products , one checkout for permanent access.
-          </p>
+          <h1 className="text-3xl font-bold text-neutral-900">{t('cartTitle')}</h1>
+          <p className="mt-2 text-neutral-600">{t('cartSubtitle')}</p>
 
           {cart.items.length === 0 ? (
             <Card className="mt-8 rounded-2xl">
               <CardContent className="py-12 text-center text-muted-foreground">
-                Your cart is empty.{' '}
+                {t('emptyCart')}{' '}
                 <Link to="/dashboard/digital-products" className="text-indigo-600 hover:underline">
-                  Digital products
+                  {t('digitalProductsLink')}
                 </Link>
                 {' · '}
                 <Link to="/dashboard/library" className="text-indigo-600 hover:underline">
-                  Library
+                  {t('libraryLink')}
                 </Link>
               </CardContent>
             </Card>
@@ -93,7 +93,7 @@ export default function SeriesCartPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => cart.removeItem(item.kind, item.itemId)}
-                      aria-label={`Remove ${item.title}`}
+                      aria-label={t('removeItem', { title: item.title })}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -106,11 +106,11 @@ export default function SeriesCartPage() {
 
               <div className="flex items-center justify-between rounded-2xl border bg-white p-6">
                 <div>
-                  <p className="text-sm text-neutral-500">Total</p>
+                  <p className="text-sm text-neutral-500">{t('total')}</p>
                   <p className="text-2xl font-bold">{formatSeriesPriceLabel(cart.totalCents)}</p>
                 </div>
                 <Button disabled={isCreatingOrder} onClick={() => void handleCheckout()}>
-                  {isCreatingOrder ? 'Preparing...' : 'Complete purchase'}
+                  {isCreatingOrder ? t('preparing') : t('completePurchase')}
                 </Button>
               </div>
             </div>
@@ -122,7 +122,7 @@ export default function SeriesCartPage() {
               onOpenChange={setCheckoutOpen}
               itemType="order"
               itemId={orderId}
-              itemName={`Order (${cart.itemCount} items)`}
+              itemName={t('orderLabel', { count: cart.itemCount })}
               itemCategory="Order"
               basePriceCents={cart.totalCents}
               onSuccess={() => {

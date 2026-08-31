@@ -1,0 +1,15 @@
+{
+  "title": "Events",
+  "subtitle": "Discover upcoming meetups, workshops, and conferences.",
+  "upcoming": "Upcoming events",
+  "past": "Past events",
+  "register": "Register",
+  "registered": "Registered",
+  "soldOut": "Sold out",
+  "free": "Free",
+  "online": "Online",
+  "offline": "In person",
+  "viewDetails": "View details",
+  "noEvents": "No events found.",
+  "searchPlaceholder": "Search events…"
+}

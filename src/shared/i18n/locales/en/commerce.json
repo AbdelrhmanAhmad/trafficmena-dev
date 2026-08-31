@@ -1,0 +1,14 @@
+{
+  "cartTitle": "Shopping cart",
+  "cartSubtitle": "Series and digital products — one checkout for permanent access.",
+  "emptyCart": "Your cart is empty.",
+  "digitalProductsLink": "Digital products",
+  "libraryLink": "Library",
+  "total": "Total",
+  "preparing": "Preparing…",
+  "completePurchase": "Complete purchase",
+  "removeItem": "Remove {{title}}",
+  "checkoutFailed": "Checkout failed",
+  "checkoutError": "Could not start checkout. Please try again.",
+  "orderLabel": "Order ({{count}} items)"
+}

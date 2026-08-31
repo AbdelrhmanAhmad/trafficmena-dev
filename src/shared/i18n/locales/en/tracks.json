@@ -1,0 +1,10 @@
+{
+  "title": "Tracks",
+  "subtitle": "Structured learning paths combining multiple events.",
+  "bookTrack": "Book track",
+  "booked": "Booked",
+  "viewTrack": "View track",
+  "eventsIncluded": "{{count}} events included",
+  "noTracks": "No tracks found.",
+  "searchPlaceholder": "Search tracks…"
+}

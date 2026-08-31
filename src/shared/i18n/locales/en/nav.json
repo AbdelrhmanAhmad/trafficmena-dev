@@ -11,5 +11,7 @@
   "subscribe": "Subscribe",
   "dashboard": "Dashboard",
   "admin": "Admin",
-  "community": "Community"
+  "community": "Community",
+  "menu": "Menu",
+  "menuOpen": "Open menu"
 }

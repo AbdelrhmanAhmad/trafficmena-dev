@@ -11,5 +11,7 @@
   "subscribe": "اشترك",
   "dashboard": "لوحة التحكم",
   "admin": "الإدارة",
-  "community": "المجتمع"
+  "community": "المجتمع",
+  "menu": "القائمة",
+  "menuOpen": "فتح القائمة"
 }
