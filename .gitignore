@@ -55,3 +55,4 @@ server/drizzle/_archive/
 
 # Private dev notes — local only, never sync to remote
 abdelrhman-changes/
+abdelrhman-changes-local/
