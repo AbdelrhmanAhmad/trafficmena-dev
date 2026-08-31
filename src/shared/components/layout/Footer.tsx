@@ -198,8 +198,8 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="mt-8 border-t border-gray-700 pt-8 text-center">
           <p className="text-gray-300">
-            © 2024 TrafficMENA. All rights reserved. | Digital Marketing Community for the MENA
-            Region
+            © {new Date().getFullYear()} TrafficMENA, a brand of Orion Growth for Technology. All
+            rights reserved. | Digital Marketing Community for the MENA Region
           </p>
         </div>
       </div>
