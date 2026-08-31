@@ -497,7 +497,7 @@ export function registerTrackRoutes(app: Hono) {
           })
           .from(trackEvents)
           .innerJoin(events, eq(events.id, trackEvents.eventId))
-          .where(eq(trackEvents.trackId, id))
+          .where(and(eq(trackEvents.trackId, id), eq(events.isPublished, true)))
           .orderBy(trackEvents.sortOrder);
 
         // Get attendee counts for each event
