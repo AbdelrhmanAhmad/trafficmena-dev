@@ -7,7 +7,7 @@ process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@localhost:5433/traf
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-value-with-at-least-32-characters';
 process.env.RESEND_API_KEY = 're_test_key_for_unit_tests';
 
-const { sendOtpEmail, sendInvitationEmail, sendEmailChangeNotice } = await import(
+const { sendOtpEmail, sendInvitationEmail, sendEmailChangeNotice, sendRegistrationConfirmationEmail } = await import(
   '../../server/src/services/email.ts'
 );
 const { env } = await import('../../server/src/config/env.ts');
@@ -229,6 +229,38 @@ describe('Resend transactional sends', () => {
       env.RESEND_API_KEY = original;
       restore();
     }
+  });
+});
+
+describe('sendRegistrationConfirmationEmail', () => {
+  it('includes Google Calendar CTA, ICS attachment, and no meeting link in body', async () => {
+    const { calls, restore } = installFetch();
+    try {
+      await sendRegistrationConfirmationEmail({
+        to: 'attendee@example.com',
+        subject: "You're registered: Test Event",
+        headline: "You're registered!",
+        intro: 'Your registration is confirmed.',
+        googleCalendarUrl: 'https://calendar.google.com/calendar/render?action=TEMPLATE',
+        webCalendarUrl: 'http://localhost:8080/thank-you-event/evt-1',
+        icsDownloadUrl: 'http://localhost:3001/api/events/evt-1/calendar.ics',
+        attachment: {
+          filename: 'trafficmena-test.ics',
+          content: 'BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n',
+        },
+      });
+      await flush();
+    } finally {
+      restore();
+    }
+    const send = calls.find((c) => c.url === EMAILS_URL);
+    assert.ok(send);
+    assert.equal(send.body.to, 'attendee@example.com');
+    assert.ok(send.body.html.includes('Add to Google Calendar'));
+    assert.ok(send.body.text.includes('calendar.google.com'));
+    assert.ok(!send.body.html.includes('zoom.us'));
+    assert.equal(send.body.attachments?.length, 1);
+    assert.equal(send.body.attachments[0].filename, 'trafficmena-test.ics');
   });
 });
 
