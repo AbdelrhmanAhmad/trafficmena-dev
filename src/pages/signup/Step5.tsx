@@ -63,40 +63,10 @@ const Step5: React.FC = () => {
 
       if (formData.invitationToken) {
         try {
-          const activationResult = await activateInvitation({
+          await activateInvitation({
             token: formData.invitationToken,
             email: formData.email,
           });
-          if (activationResult.sessionCreated) {
-            await persistSignupProfile({
-              ...formData,
-              primaryChallenge,
-            });
-            try {
-              sessionStorage.removeItem(acceptanceCacheKey);
-            } catch {
-              // ignore storage errors
-            }
-            const trackingParams = buildCompletedSignUpTrackingParams({
-              authUserId: activationResult.userId,
-              invitationUserId: formData.invitationUserId,
-              email: formData.email,
-              phone: formData.phoneNumber,
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-            });
-            if (trackingParams) {
-              trackSignUp(trackingParams);
-            } else {
-              console.warn('[analytics] skipped sign_up because no invited user id was available');
-            }
-            toast({
-              title: 'Welcome to TrafficMENA',
-              description: 'Your account is active and you are signed in.',
-            });
-            navigate('/dashboard');
-            return;
-          }
         } catch (activationError) {
           console.warn('[signup] failed to mark invitation activated', activationError);
         }
