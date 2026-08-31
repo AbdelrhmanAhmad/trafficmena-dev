@@ -19,6 +19,7 @@ import {
 } from '../../services/invitationLifecycle.js';
 import { invitationRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { parseInvitationListQuery } from './invitations-list.js';
 import { escapeLikePattern, getRequestIp, normalizeEmail } from './utils.js';
 
@@ -65,7 +66,7 @@ export function registerInvitationRoutes(app: Hono) {
     adminRoute(
       async (c, admin) => {
         const payload = await parseJson(c, singleInviteSchema);
-        const invitation = await sendSingleInvitation(admin, payload);
+        const invitation = await sendSingleInvitation(admin, payload, resolveLocaleFromRequest(c));
         return c.json({ invitation });
       },
       'INVITATION_SEND_FAILED',

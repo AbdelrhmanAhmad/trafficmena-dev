@@ -5,6 +5,8 @@ import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { authSessions, emailChangeRequests, users } from '../../db/schema/index.js';
 import { sendEmailChangeNotice, sendOtpEmail } from '../../services/email.js';
+import { setPendingOtpLocale } from '../../i18n/otpLocaleContext.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { otpRateLimiter, otpVerificationRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import {
@@ -145,6 +147,7 @@ export function registerEmailChangeRoutes(app: Hono) {
           email: newEmail,
           otp: resendOtp,
           ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES,
+          locale: resolveLocaleFromRequest(c),
         });
         return c.json({ success: true, phase: 'new_email' as const });
       }
@@ -181,10 +184,12 @@ export function registerEmailChangeRoutes(app: Hono) {
         .returning({ id: emailChangeRequests.id });
 
       try {
+        const locale = resolveLocaleFromRequest(c);
         await sendOtpEmail({
           email: currentEmail,
           otp,
           ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES,
+          locale,
         });
       } catch (error) {
         if (createdRequest?.id) {
@@ -204,6 +209,7 @@ export function registerEmailChangeRoutes(app: Hono) {
           email: currentEmail,
           status: 'requested',
           maskedNewEmail: maskEmail(newEmail),
+          locale: resolveLocaleFromRequest(c),
         });
       } catch {
         console.error('[auth] email-change request notice failed');
@@ -342,6 +348,7 @@ export function registerEmailChangeRoutes(app: Hono) {
         email: newEmail,
         otp: newOtp,
         ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES,
+        locale: resolveLocaleFromRequest(c),
       });
     } catch (error) {
       otpVerificationRateLimiter.decrement(verifyKey);
@@ -543,6 +550,7 @@ export function registerEmailChangeRoutes(app: Hono) {
         email: oldEmail,
         status: 'completed',
         maskedNewEmail: maskEmail(newEmail),
+        locale: resolveLocaleFromRequest(c),
       });
     } catch {
       console.error('[auth] email-change completion notice failed');

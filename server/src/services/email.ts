@@ -1,10 +1,20 @@
 import { Resend } from 'resend';
 import { env, isProduction } from '../config/env.js';
+import {
+  emailHtmlDir,
+  emailHtmlLang,
+  getEmailChangeCopy,
+  getInvitationEmailCopy,
+  getOtpEmailCopy,
+} from '../i18n/emailCopy.js';
+import type { AppLocale } from '../utils/locale.js';
+import { DEFAULT_LOCALE } from '../utils/locale.js';
 
 type SendOtpEmailArgs = {
   email: string;
   otp: string;
   ttlMinutes: number;
+  locale?: AppLocale;
 };
 
 type SendInvitationEmailArgs = {
@@ -14,12 +24,14 @@ type SendInvitationEmailArgs = {
   firstName?: string | null;
   inviterName?: string | null;
   customMessage?: string | null;
+  locale?: AppLocale;
 };
 
 type SendEmailChangeNoticeArgs = {
   email: string; // the current (old) address being notified
   status: 'requested' | 'completed';
   maskedNewEmail: string;
+  locale?: AppLocale;
 };
 
 // Sender MUST be on a Resend-verified domain. The apex trafficmena.com is not verified — only the
@@ -100,6 +112,11 @@ type RegistrationConfirmationEmailArgs = {
   webCalendarUrl: string;
   icsDownloadUrl: string;
   attachment: { filename: string; content: string };
+  locale?: AppLocale;
+  googleCalendarLabel?: string;
+  viewConfirmationLabel?: string;
+  icsNote?: string;
+  footer?: string;
 };
 
 // Single transport for all three senders. Throws EmailDeliveryError on failure — callers (Better
@@ -148,14 +165,16 @@ async function sendTransactionalEmail({
   void subscribeContact(to);
 }
 
-export async function sendOtpEmail({ email, otp, ttlMinutes }: SendOtpEmailArgs) {
-  const subject = 'Your TrafficMENA verification code';
-  const textBody = `Your TrafficMENA verification code is ${otp}. It expires in ${ttlMinutes} minutes.`;
+export async function sendOtpEmail({ email, otp, ttlMinutes, locale = DEFAULT_LOCALE }: SendOtpEmailArgs) {
+  const copy = getOtpEmailCopy(locale, otp, ttlMinutes);
+  const dir = emailHtmlDir(locale);
+  const lang = emailHtmlLang(locale);
+  const textBody = `${copy.headline}\n\n${copy.body}\n\n${otp}\n\n${copy.footer ?? ''}`;
   const htmlBody = `<!doctype html>
-<html>
+<html lang="${lang}" dir="${dir}">
   <head>
     <meta charset="utf-8" />
-    <title>TrafficMENA Verification Code</title>
+    <title>${copy.headline}</title>
     <style>
       body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 24px; }
       .card { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 12px 24px rgba(16, 16, 16, 0.08); }
@@ -166,15 +185,15 @@ export async function sendOtpEmail({ email, otp, ttlMinutes }: SendOtpEmailArgs)
   </head>
   <body>
     <div class="card">
-      <h1>TrafficMENA Verification Code</h1>
-      <p class="subtitle">Use the code below to access your account. This code expires in ${ttlMinutes} minutes.</p>
+      <h1>${copy.headline}</h1>
+      <p class="subtitle">${copy.body}</p>
       <p class="otp">${otp}</p>
-      <p class="brand">If you didn’t request this code, you can safely ignore this email.</p>
+      <p class="brand">${copy.footer ?? ''}</p>
     </div>
   </body>
 </html>`;
 
-  await sendTransactionalEmail({ to: email, subject, html: htmlBody, text: textBody });
+  await sendTransactionalEmail({ to: email, subject: copy.subject, html: htmlBody, text: textBody });
 }
 
 // Out-of-band notice to the CURRENT address when an email change is requested/completed — an
@@ -183,22 +202,17 @@ export async function sendEmailChangeNotice({
   email,
   status,
   maskedNewEmail,
+  locale = DEFAULT_LOCALE,
 }: SendEmailChangeNoticeArgs) {
-  const requested = status === 'requested';
-  const subject = requested
-    ? 'Security alert: a change to your TrafficMENA email was requested'
-    : 'Your TrafficMENA email address was changed';
-  const sentence = requested
-    ? `We received a request to change your TrafficMENA email to ${escapeHtml(maskedNewEmail)}. If this wasn't you, do not share any code and contact support immediately — your account may be targeted.`
-    : `Your TrafficMENA email was changed to ${escapeHtml(maskedNewEmail)}. If you did not make this change, contact support immediately.`;
-  const textBody = requested
-    ? `We received a request to change your TrafficMENA email to ${maskedNewEmail}. If this wasn't you, contact support immediately.`
-    : `Your TrafficMENA email was changed to ${maskedNewEmail}. If you did not make this change, contact support immediately.`;
+  const copy = getEmailChangeCopy(locale, status, maskedNewEmail);
+  const dir = emailHtmlDir(locale);
+  const lang = emailHtmlLang(locale);
+  const textBody = `${copy.headline}\n\n${copy.body}\n\n${copy.footer}`;
   const htmlBody = `<!doctype html>
-<html>
+<html lang="${lang}" dir="${dir}">
   <head>
     <meta charset="utf-8" />
-    <title>${subject}</title>
+    <title>${copy.subject}</title>
     <style>
       body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 24px; }
       .card { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 12px 24px rgba(16, 16, 16, 0.08); }
@@ -208,14 +222,14 @@ export async function sendEmailChangeNotice({
   </head>
   <body>
     <div class="card">
-      <h1>${requested ? 'Email change requested' : 'Email address changed'}</h1>
-      <p class="subtitle">${sentence}</p>
-      <p class="footer">This is an automated security notice from TrafficMENA.</p>
+      <h1>${copy.headline}</h1>
+      <p class="subtitle">${escapeHtml(copy.body)}</p>
+      <p class="footer">${copy.footer}</p>
     </div>
   </body>
 </html>`;
 
-  await sendTransactionalEmail({ to: email, subject, html: htmlBody, text: textBody });
+  await sendTransactionalEmail({ to: email, subject: copy.subject, html: htmlBody, text: textBody });
 }
 
 export async function sendInvitationEmail({
@@ -225,29 +239,30 @@ export async function sendInvitationEmail({
   firstName,
   inviterName,
   customMessage,
+  locale = DEFAULT_LOCALE,
 }: SendInvitationEmailArgs) {
-  const friendlyExpiry = expiresAt.toLocaleString('en-GB', {
+  const copy = getInvitationEmailCopy(locale, { firstName, inviterName, expiresAt });
+  const dir = emailHtmlDir(locale);
+  const lang = emailHtmlLang(locale);
+  const friendlyExpiry = expiresAt.toLocaleString(locale === 'ar' ? 'ar-EG' : 'en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    timeZone: 'Africa/Cairo',
   });
-
-  const greetingName = firstName?.trim() ? firstName.trim() : 'there';
-  const inviter = inviterName?.trim() || 'A TrafficMENA host';
-  const subject = `${inviter} invited you to TrafficMENA`;
   const safeCustomMessage =
     customMessage && customMessage.trim().length > 0
       ? escapeHtml(customMessage.trim()).replace(/\r?\n/g, '<br />')
       : null;
 
-  const textBody = `Hi ${greetingName},\n\n${inviter} invited you to join TrafficMENA. Complete your profile and unlock the event and library experience using the secure link below.\n\nAccept your invitation: ${invitationLink}\n\nThe invitation expires on ${friendlyExpiry}.\n\n${
+  const textBody = `${copy.greeting}\n\n${copy.intro}\n\n${copy.cta}: ${invitationLink}\n\n${copy.expiryLabel} ${friendlyExpiry}\n\n${
     customMessage && customMessage.trim().length > 0 ? `${customMessage.trim()}\n\n` : ''
   }— TrafficMENA team`;
 
   const htmlBody = `<!doctype html>
-<html>
+<html lang="${lang}" dir="${dir}">
   <head>
     <meta charset="utf-8" />
-    <title>You're invited to TrafficMENA</title>
+    <title>${copy.headline}</title>
     <style>
       body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 24px; }
       .card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 12px 24px rgba(16, 16, 16, 0.08); }
@@ -258,23 +273,23 @@ export async function sendInvitationEmail({
   </head>
   <body>
     <div class="card">
-      <h1>You're invited to TrafficMENA</h1>
-      <p class="subtitle">Hi ${greetingName},</p>
-      <p class="subtitle">${inviter} would like you to join the TrafficMENA community. Click below to confirm your account and access upcoming events and the knowledge library.</p>
+      <h1>${copy.headline}</h1>
+      <p class="subtitle">${copy.greeting}</p>
+      <p class="subtitle">${copy.intro}</p>
       ${
         safeCustomMessage
           ? `<blockquote class="subtitle" style="border-left: 3px solid #05ef62; margin: 24px 0; padding-left: 16px; font-style: italic;">${safeCustomMessage}</blockquote>`
           : ''
       }
-      <a class="cta" href="${invitationLink}">Accept invitation</a>
-      <p class="subtitle">This invitation expires on <strong>${friendlyExpiry}</strong>. If the button does not work, copy and paste this link into your browser:</p>
+      <a class="cta" href="${invitationLink}">${copy.cta}</a>
+      <p class="subtitle">${copy.expiryLabel} <strong>${friendlyExpiry}</strong></p>
       <p class="subtitle" style="word-break: break-all;">${invitationLink}</p>
-      <p class="footer">If you didn’t expect this email, you can safely ignore it.</p>
+      <p class="footer">${copy.footer}</p>
     </div>
   </body>
 </html>`;
 
-  await sendTransactionalEmail({ to: email, subject, html: htmlBody, text: textBody });
+  await sendTransactionalEmail({ to: email, subject: copy.subject, html: htmlBody, text: textBody });
 }
 
 export async function sendRegistrationConfirmationEmail({
@@ -286,10 +301,17 @@ export async function sendRegistrationConfirmationEmail({
   webCalendarUrl,
   icsDownloadUrl,
   attachment,
+  locale = DEFAULT_LOCALE,
+  googleCalendarLabel = 'Add to Google Calendar',
+  viewConfirmationLabel = 'View confirmation page',
+  icsNote = 'We attached a calendar file (.ics) for Apple Calendar and Outlook. Online sessions link to your TrafficMENA event page — not the raw meeting link.',
+  footer = 'TrafficMENA',
 }: RegistrationConfirmationEmailArgs) {
-  const textBody = `${headline}\n\n${intro}\n\nAdd to Google Calendar: ${googleCalendarUrl}\nView confirmation: ${webCalendarUrl}\nDownload ICS (requires sign-in): ${icsDownloadUrl}\n\nAn .ics file is attached for Apple Calendar and Outlook.`;
+  const dir = emailHtmlDir(locale);
+  const lang = emailHtmlLang(locale);
+  const textBody = `${headline}\n\n${intro}\n\n${googleCalendarLabel}: ${googleCalendarUrl}\n${viewConfirmationLabel}: ${webCalendarUrl}\nDownload ICS (requires sign-in): ${icsDownloadUrl}\n\n${icsNote}`;
   const htmlBody = `<!doctype html>
-<html>
+<html lang="${lang}" dir="${dir}">
   <head>
     <meta charset="utf-8" />
     <title>${escapeHtml(subject)}</title>
@@ -306,10 +328,10 @@ export async function sendRegistrationConfirmationEmail({
     <div class="card">
       <h1>${escapeHtml(headline)}</h1>
       <p class="subtitle">${escapeHtml(intro)}</p>
-      <a class="cta" href="${googleCalendarUrl}">Add to Google Calendar</a>
-      <a class="secondary" href="${webCalendarUrl}">View confirmation page</a>
-      <p class="subtitle">We attached a calendar file (.ics) for Apple Calendar and Outlook. Online sessions link to your TrafficMENA event page — not the raw meeting link.</p>
-      <p class="footer">TrafficMENA</p>
+      <a class="cta" href="${googleCalendarUrl}">${googleCalendarLabel}</a>
+      <a class="secondary" href="${webCalendarUrl}">${viewConfirmationLabel}</a>
+      <p class="subtitle">${icsNote}</p>
+      <p class="footer">${footer}</p>
     </div>
   </body>
 </html>`;

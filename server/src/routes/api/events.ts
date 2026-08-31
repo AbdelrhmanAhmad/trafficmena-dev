@@ -18,7 +18,6 @@ import {
 } from '../../db/schema/index.js';
 import { attendeeAmountCents } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
-import { loadEventCalendarSource } from '../../services/eventCalendarAccess.js';
 import { queueEventRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { presentAdminEvent, presentPublicEvent } from '../../utils/eventPresentation.js';
@@ -1292,10 +1291,7 @@ export function registerEventRoutes(app: Hono) {
         });
 
         if (result.success && !('alreadyRegistered' in result && result.alreadyRegistered)) {
-          const source = await loadEventCalendarSource(eventId);
-          if (source) {
-            queueEventRegistrationConfirmation(userId, source);
-          }
+          queueEventRegistrationConfirmation(userId, eventId, resolveLocaleFromRequest(c));
         }
 
         return c.json(result);

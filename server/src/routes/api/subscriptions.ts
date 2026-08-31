@@ -3,7 +3,9 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { platformSettings, subscriptions } from '../../db/schema/index.js';
+import { getSubscriptionBenefits } from '../../i18n/subscriptionCopy.js';
 import { paymentRateLimiter } from '../../services/rateLimiter.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
 import { getRequestIp, requireAdmin, requireManager } from './utils.js';
@@ -155,19 +157,16 @@ export function registerSubscriptionRoutes(app: Hono) {
     }
 
     const [settings] = await db.select().from(platformSettings).limit(1);
+    const locale = resolveLocaleFromRequest(c);
+    const discountPercent = getEffectiveDiscountPercent(settings?.subscriberDiscountPercent);
 
     return c.json({
       data: {
         priceEgp: settings?.annualSubscriptionPriceCents
           ? settings.annualSubscriptionPriceCents / 100
           : null,
-        discountPercent: getEffectiveDiscountPercent(settings?.subscriberDiscountPercent),
-        benefits: [
-          'Free access to all online events',
-          `${getEffectiveDiscountPercent(settings?.subscriberDiscountPercent)}% discount on offline events`,
-          `${getEffectiveDiscountPercent(settings?.subscriberDiscountPercent)}% discount on track bundles`,
-          'Full access to the knowledge library',
-        ],
+        discountPercent,
+        benefits: getSubscriptionBenefits(locale, discountPercent),
       },
     });
   });

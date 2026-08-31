@@ -5,6 +5,8 @@ import { env } from '../config/env.js';
 import { db } from '../db/client.js';
 import { invitations, profiles, users } from '../db/schema/index.js';
 import { EmailDeliveryError, sendInvitationEmail } from './email.js';
+import type { AppLocale } from '../utils/locale.js';
+import { DEFAULT_LOCALE } from '../utils/locale.js';
 
 const DAILY_LIMIT = env.INVITATION_DAILY_LIMIT;
 
@@ -45,6 +47,7 @@ export class InvitationError extends Error {
 export async function sendSingleInvitation(
   admin: AdminContext,
   input: InvitationInput,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<InvitationRecord> {
   await ensureDailyLimit(admin.id);
 
@@ -85,6 +88,7 @@ export async function sendSingleInvitation(
     firstName: firstName ?? undefined,
     inviterName: buildAdminName(admin),
     customMessage: customMessage ?? undefined,
+    locale,
   });
 
   return invite;

@@ -56,3 +56,17 @@ export function resolveLocaleFromRequest(c: Context): AppLocale {
 export function localeToDir(locale: AppLocale): 'ltr' | 'rtl' {
   return locale === 'ar' ? 'rtl' : 'ltr';
 }
+
+/** Resolve locale from raw Cookie / Accept-Language headers (no Hono context). */
+export function resolveLocaleFromHeaders(
+  cookieHeader: string | null | undefined,
+  acceptLanguage: string | null | undefined,
+): AppLocale {
+  const cookieLocale = parseAppLocale(readCookieValue(cookieHeader ?? undefined, LOCALE_COOKIE_NAME));
+  if (cookieLocale) return cookieLocale;
+
+  const acceptLocale = readAcceptLanguage(acceptLanguage ?? undefined);
+  if (acceptLocale) return acceptLocale;
+
+  return DEFAULT_LOCALE;
+}

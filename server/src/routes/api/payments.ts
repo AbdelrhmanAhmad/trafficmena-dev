@@ -24,6 +24,8 @@ import {
   users,
 } from '../../db/schema/index.js';
 import { queuePaymentRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
+import type { AppLocale } from '../../utils/locale.js';
+import { DEFAULT_LOCALE, resolveLocaleFromRequest } from '../../utils/locale.js';
 import {
   createTransaction,
   getPaymentMethods,
@@ -889,6 +891,7 @@ async function calculatePrice(
 type ProcessSuccessfulPaymentOptions = {
   allowExpiredRecovery?: boolean;
   confirmationSource?: ConfirmationSource;
+  locale?: AppLocale;
 };
 
 type ProcessSuccessfulPaymentResult = {
@@ -900,7 +903,8 @@ async function processSuccessfulPayment(
   paymentId: string,
   options: ProcessSuccessfulPaymentOptions = {},
 ): Promise<ProcessSuccessfulPaymentResult> {
-  const { allowExpiredRecovery = false, confirmationSource = 'verify' } = options;
+  const { allowExpiredRecovery = false, confirmationSource = 'verify', locale = DEFAULT_LOCALE } =
+    options;
 
   // CRITICAL: Fulfillment happens before status is marked paid so failures persist.
   try {
@@ -1271,7 +1275,7 @@ async function processSuccessfulPayment(
     });
 
     if (result.status === 'paid' && !result.alreadyProcessed) {
-      queuePaymentRegistrationConfirmation(paymentId);
+      queuePaymentRegistrationConfirmation(paymentId, locale);
     }
 
     return result;
@@ -1327,6 +1331,7 @@ export async function confirmGatewayTransactionPayment(args: {
   intentKey?: string;
   source: ConfirmationSource;
   userId?: string;
+  locale?: AppLocale;
 }): Promise<ConfirmGatewayInvoiceResult> {
   let identifierClause: SQL;
   if (args.paymentId) {
@@ -1472,6 +1477,7 @@ export async function confirmGatewayTransactionPayment(args: {
   const processResult = await processSuccessfulPayment(payment.id, {
     allowExpiredRecovery: initialStatus === 'expired',
     confirmationSource: args.source,
+    locale: args.locale ?? DEFAULT_LOCALE,
   });
   const processStatus = processResult.status;
   const alreadyProcessed = Boolean(processResult.alreadyProcessed);
@@ -2454,6 +2460,7 @@ export function registerPaymentRoutes(app: Hono) {
         paymentId,
         source: 'verify',
         userId: session.user.id,
+        locale: resolveLocaleFromRequest(c),
       });
       return c.json({ data: processResult });
     } catch (error) {
