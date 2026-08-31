@@ -4,7 +4,11 @@ import type { PaginatedResult } from './types';
 type ApiLibraryAsset = {
   id: string;
   title: string;
+  titleEn?: string;
+  titleAr?: string;
   description: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   fileType: 'Document' | 'Video' | 'Presentation' | string;
   fileUrl: string | null;
   videoUrl: string | null;
@@ -25,7 +29,11 @@ type ApiLibraryAsset = {
 export type LibraryAssetRecord = {
   id: string;
   title: string;
+  titleEn?: string;
+  titleAr?: string;
   description: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   file_type: ApiLibraryAsset['fileType'];
   file_url: string | null;
   video_url: string | null;
@@ -46,7 +54,11 @@ export type LibraryAssetRecord = {
 const mapAsset = (asset: ApiLibraryAsset): LibraryAssetRecord => ({
   id: asset.id,
   title: asset.title,
+  titleEn: asset.titleEn,
+  titleAr: asset.titleAr,
   description: asset.description,
+  descriptionEn: asset.descriptionEn ?? asset.description ?? null,
+  descriptionAr: asset.descriptionAr ?? asset.description ?? null,
   file_type: asset.fileType,
   file_url: asset.fileUrl,
   video_url: asset.videoUrl,
@@ -75,8 +87,10 @@ export type FetchLibraryParams = {
 };
 
 export type CreateLibraryAssetPayload = {
-  title: string;
-  description?: string | null;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   fileType: ApiLibraryAsset['fileType'];
   videoUrl?: string | null;
   documentUrl?: string | null;

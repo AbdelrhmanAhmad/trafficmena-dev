@@ -6,7 +6,11 @@ import type { PaginatedResult } from './types';
 export interface ApiSeries {
   id: string;
   title: string;
+  titleEn?: string;
+  titleAr?: string;
   description: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   imageUrl: string | null;
   sortOrder: number;
   isPublished: boolean;
@@ -58,7 +62,11 @@ export type ApiStoreSeriesDetail = ApiSeriesDetail & {
 export interface SeriesRecord {
   id: string;
   title: string;
+  titleEn?: string;
+  titleAr?: string;
   description: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   image_url: string | null;
   sort_order: number;
   is_published: boolean;
@@ -110,7 +118,11 @@ export type StoreSeriesDetailRecord = SeriesDetailRecord & {
 const mapSeries = (api: ApiSeries): SeriesRecord => ({
   id: api.id,
   title: api.title,
+  titleEn: api.titleEn,
+  titleAr: api.titleAr,
   description: api.description,
+  descriptionEn: api.descriptionEn ?? api.description ?? null,
+  descriptionAr: api.descriptionAr ?? api.description ?? null,
   image_url: api.imageUrl,
   sort_order: api.sortOrder,
   is_published: api.isPublished,
@@ -169,8 +181,10 @@ export type FetchSeriesParams = {
 };
 
 export type CreateSeriesPayload = {
-  title: string;
-  description?: string | null;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   imageUrl?: string | null;
   isPublished?: boolean;
   isPremium?: boolean;

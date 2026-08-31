@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import DOMPurify from 'dompurify';
 import { Loader2, Upload } from 'lucide-react';
 import { type ChangeEvent, useRef, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { uploadFile } from '@/app/api/uploads';
-import { LazyEditor } from '@/shared/components/LazyEditor';
+import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
+import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { Button } from '@/shared/components/ui/button';
 import {
   Form,
@@ -20,14 +22,24 @@ import { Switch } from '@/shared/components/ui/switch';
 import type { Series } from '../types';
 
 const seriesFormSchema = z.object({
-  title: z.string().min(3, 'Title must be at least 3 characters').max(180),
-  description: z.string().max(4000).optional(),
+  titleEn: z
+    .string()
+    .trim()
+    .min(3, 'Title (English) is required.')
+    .max(180, 'Keep titles under 180 characters.'),
+  titleAr: z
+    .string()
+    .trim()
+    .min(3, 'Title (Arabic) is required.')
+    .max(180, 'Keep titles under 180 characters.'),
+  descriptionEn: z.string().max(4000).optional(),
+  descriptionAr: z.string().max(4000).optional(),
   imageUrl: z.string().url('Enter a valid URL').or(z.literal('')).optional(),
   isPublished: z.boolean(),
   isPremium: z.boolean(),
 });
 
-type SeriesFormValues = z.infer<typeof seriesFormSchema>;
+export type SeriesFormValues = z.infer<typeof seriesFormSchema>;
 
 interface SeriesFormProps {
   series?: Series;
@@ -40,14 +52,17 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
   const form = useForm<SeriesFormValues>({
     resolver: zodResolver(seriesFormSchema),
     defaultValues: {
-      title: series?.title || '',
-      description: series?.description || '',
+      titleEn: series?.titleEn ?? series?.title ?? '',
+      titleAr: series?.titleAr ?? series?.title ?? '',
+      descriptionEn: series?.descriptionEn ?? series?.description ?? '',
+      descriptionAr: series?.descriptionAr ?? series?.description ?? '',
       imageUrl: series?.image_url || '',
       isPublished: series?.is_published ?? true,
       isPremium: series?.is_premium ?? false,
     },
   });
 
+  const values = form.watch();
   const [imagePreview, setImagePreview] = useState<string | null>(series?.image_url || null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,48 +95,46 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
     }
   };
 
-  const handleSubmit = async (values: SeriesFormValues) => {
-    await onSubmit(values);
+  const handleSubmit = async (formValues: SeriesFormValues) => {
+    const sanitizeDescription = (value: string | undefined) => {
+      const trimmed = value?.trim();
+      return trimmed ? DOMPurify.sanitize(trimmed) : undefined;
+    };
+
+    await onSubmit({
+      ...formValues,
+      descriptionEn: sanitizeDescription(formValues.descriptionEn),
+      descriptionAr: sanitizeDescription(formValues.descriptionAr),
+    });
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter series title" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+        <BilingualTextField
+          label="Series title"
+          englishLabel="Title (English)"
+          arabicLabel="Title (Arabic)"
+          required
+          valueEn={values.titleEn}
+          valueAr={values.titleAr}
+          onChangeEn={(value) => form.setValue('titleEn', value, { shouldDirty: true })}
+          onChangeAr={(value) => form.setValue('titleAr', value, { shouldDirty: true })}
+          englishPlaceholder="Enter series title"
+          arabicPlaceholder="أدخل عنوان السلسلة"
         />
+        {(form.formState.errors.titleEn || form.formState.errors.titleAr) && (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.titleEn?.message ?? form.formState.errors.titleAr?.message}
+          </p>
+        )}
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={() => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <Controller
-                control={form.control}
-                name="description"
-                render={({ field: editorField }) => (
-                  <LazyEditor
-                    value={editorField.value ?? ''}
-                    onChange={editorField.onChange}
-                    placeholder="Describe what this series covers..."
-                    maxLength={4000}
-                  />
-                )}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
+        <BilingualRichTextField
+          label="Description"
+          valueEn={values.descriptionEn ?? ''}
+          valueAr={values.descriptionAr ?? ''}
+          onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
+          onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
         />
 
         <FormField

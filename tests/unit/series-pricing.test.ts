@@ -27,13 +27,16 @@ describe('series pricing', () => {
 
   it('maps admin library form values without price or sales fields', () => {
     const payload = mapSeriesFormToContentPayload({
-      title: 'Growth Series',
-      description: 'Notes',
+      titleEn: 'Growth Series',
+      titleAr: 'سلسلة النمو',
+      descriptionEn: 'Notes',
+      descriptionAr: 'ملاحظات',
       isPublished: true,
       isPremium: true,
     });
 
-    assert.equal(payload.title, 'Growth Series');
+    assert.equal(payload.titleEn, 'Growth Series');
+    assert.equal(payload.titleAr, 'سلسلة النمو');
     assert.equal(payload.isPublished, true);
     assert.equal(payload.isPremium, true);
     assert.equal('priceInCents' in payload, false);

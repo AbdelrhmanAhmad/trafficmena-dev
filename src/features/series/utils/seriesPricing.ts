@@ -1,19 +1,16 @@
 import type { CreateSeriesPayload } from '@/app/api/series';
+import type { SeriesFormValues } from '../components/SeriesForm';
 import type { Series } from '../types';
 
-export type SeriesFormContentValues = {
-  title: string;
-  description?: string;
-  imageUrl?: string;
-  isPublished: boolean;
-  isPremium: boolean;
-};
+export type SeriesFormContentValues = SeriesFormValues;
 
 /** Admin library Series form — content only; price/sales live on Track/Event publish card. */
 export function mapSeriesFormToContentPayload(values: SeriesFormContentValues): CreateSeriesPayload {
   return {
-    title: values.title,
-    description: values.description || null,
+    titleEn: values.titleEn.trim(),
+    titleAr: values.titleAr.trim(),
+    descriptionEn: values.descriptionEn?.trim() || null,
+    descriptionAr: values.descriptionAr?.trim() || null,
     imageUrl: values.imageUrl || null,
     isPublished: values.isPublished,
     isPremium: values.isPremium,

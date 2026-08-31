@@ -5,7 +5,11 @@ export type DigitalProductFileType = 'excel' | 'markdown' | 'html' | 'text' | 'p
 export type DigitalProductAdmin = {
   id: string;
   title: string;
+  titleEn?: string;
+  titleAr?: string;
   description: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   imageUrl: string | null;
   priceInCents: number | null;
   salesEnabled: boolean;
@@ -71,8 +75,10 @@ export async function fetchAdminDigitalProduct(id: string): Promise<{
 }
 
 export async function createDigitalProduct(payload: {
-  title: string;
-  description?: string | null;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   imageUrl?: string | null;
   priceInCents?: number | null;
   salesEnabled?: boolean;
@@ -89,8 +95,10 @@ export async function createDigitalProduct(payload: {
 export async function updateDigitalProduct(
   id: string,
   payload: Partial<{
-    title: string;
-    description: string | null;
+    titleEn: string;
+    titleAr: string;
+    descriptionEn: string | null;
+    descriptionAr: string | null;
     imageUrl: string | null;
     priceInCents: number | null;
     salesEnabled: boolean;

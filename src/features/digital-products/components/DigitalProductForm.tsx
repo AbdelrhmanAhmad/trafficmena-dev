@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import DOMPurify from 'dompurify';
 import { Loader2, Upload } from 'lucide-react';
 import { type ChangeEvent, useRef, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type {
   DigitalProductAdmin,
@@ -11,7 +12,8 @@ import type {
 import { uploadFile } from '@/app/api/uploads';
 import { DigitalProductFilesCrud } from '@/features/digital-products/components/DigitalProductFilesCrud';
 import { DigitalProductVideosCrud } from '@/features/digital-products/components/DigitalProductVideosCrud';
-import { LazyEditor } from '@/shared/components/LazyEditor';
+import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
+import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { Button } from '@/shared/components/ui/button';
 import {
   Form,
@@ -25,8 +27,18 @@ import { Input } from '@/shared/components/ui/input';
 import { Switch } from '@/shared/components/ui/switch';
 
 const productFormSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
-  description: z.string().max(8000).optional(),
+  titleEn: z
+    .string()
+    .trim()
+    .min(1, 'Title (English) is required.')
+    .max(200, 'Keep titles under 200 characters.'),
+  titleAr: z
+    .string()
+    .trim()
+    .min(1, 'Title (Arabic) is required.')
+    .max(200, 'Keep titles under 200 characters.'),
+  descriptionEn: z.string().max(8000).optional(),
+  descriptionAr: z.string().max(8000).optional(),
   imageUrl: z.string().url('Enter a valid URL').or(z.literal('')).optional(),
   priceEgp: z
     .string()
@@ -65,8 +77,10 @@ export function DigitalProductForm({
   const form = useForm<DigitalProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
-      title: product?.title ?? '',
-      description: product?.description ?? '',
+      titleEn: product?.titleEn ?? product?.title ?? '',
+      titleAr: product?.titleAr ?? product?.title ?? '',
+      descriptionEn: product?.descriptionEn ?? product?.description ?? '',
+      descriptionAr: product?.descriptionAr ?? product?.description ?? '',
       imageUrl: product?.imageUrl ?? '',
       priceEgp: product?.priceInCents ? String(product.priceInCents / 100) : '',
       salesEnabled: product?.salesEnabled ?? false,
@@ -75,6 +89,7 @@ export function DigitalProductForm({
     },
   });
 
+  const values = form.watch();
   const [imagePreview, setImagePreview] = useState<string | null>(product?.imageUrl ?? null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -105,36 +120,30 @@ export function DigitalProductForm({
           onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-6"
         >
-          <FormField
-            control={form.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Title</FormLabel>
-                <FormControl>
-                  <Input placeholder="Product title" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+          <BilingualTextField
+            label="Title"
+            englishLabel="Title (English)"
+            arabicLabel="Title (Arabic)"
+            required
+            valueEn={values.titleEn}
+            valueAr={values.titleAr}
+            onChangeEn={(value) => form.setValue('titleEn', value, { shouldDirty: true })}
+            onChangeAr={(value) => form.setValue('titleAr', value, { shouldDirty: true })}
+            englishPlaceholder="Product title"
+            arabicPlaceholder="عنوان المنتج"
           />
+          {(form.formState.errors.titleEn || form.formState.errors.titleAr) && (
+            <p className="text-sm text-destructive">
+              {form.formState.errors.titleEn?.message ?? form.formState.errors.titleAr?.message}
+            </p>
+          )}
 
-          <FormField
-            control={form.control}
-            name="description"
-            render={() => (
-              <FormItem>
-                <FormLabel>Description</FormLabel>
-                <Controller
-                  control={form.control}
-                  name="description"
-                  render={({ field: editorField }) => (
-                    <LazyEditor value={editorField.value ?? ''} onChange={editorField.onChange} />
-                  )}
-                />
-                <FormMessage />
-              </FormItem>
-            )}
+          <BilingualRichTextField
+            label="Description"
+            valueEn={values.descriptionEn ?? ''}
+            valueAr={values.descriptionAr ?? ''}
+            onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
+            onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
           />
 
           <FormField
@@ -282,9 +291,16 @@ export function digitalProductFormValuesToPayload(values: DigitalProductFormValu
       ? Math.round(Number(values.priceEgp) * 100)
       : null;
 
+  const sanitizeDescription = (value: string | undefined) => {
+    const trimmed = value?.trim();
+    return trimmed ? DOMPurify.sanitize(trimmed) : null;
+  };
+
   return {
-    title: values.title.trim(),
-    description: values.description?.trim() || null,
+    titleEn: values.titleEn.trim(),
+    titleAr: values.titleAr.trim(),
+    descriptionEn: sanitizeDescription(values.descriptionEn),
+    descriptionAr: sanitizeDescription(values.descriptionAr),
     imageUrl: values.imageUrl?.trim() || null,
     priceInCents,
     salesEnabled: values.salesEnabled,

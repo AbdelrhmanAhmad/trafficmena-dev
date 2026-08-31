@@ -1,10 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import DOMPurify from 'dompurify';
 import { Loader2, Upload } from 'lucide-react';
 import { type ChangeEvent, useRef, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import type { CreateTrackPayload } from '@/app/api/tracks';
 import { uploadFile } from '@/app/api/uploads';
-import { LazyEditor } from '@/shared/components/LazyEditor';
+import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
+import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { Button } from '@/shared/components/ui/button';
 import {
   Form,
@@ -31,8 +34,18 @@ const egpPriceSchema = z
 
 const trackFormSchema = z
   .object({
-    title: z.string().min(3, 'Title must be at least 3 characters').max(180),
-    description: z.string().max(4000).optional(),
+    titleEn: z
+      .string()
+      .trim()
+      .min(3, 'Title (English) is required.')
+      .max(180, 'Keep titles under 180 characters.'),
+    titleAr: z
+      .string()
+      .trim()
+      .min(3, 'Title (Arabic) is required.')
+      .max(180, 'Keep titles under 180 characters.'),
+    descriptionEn: z.string().max(4000).optional(),
+    descriptionAr: z.string().max(4000).optional(),
     imageUrl: z.string().url('Enter a valid URL').or(z.literal('')).optional(),
     isPublished: z.boolean(),
     // Booking fields
@@ -52,7 +65,8 @@ const trackFormSchema = z
     offlineOnlyEnabled: z.boolean(),
     offlineOnlyPriceEgp: egpPriceSchema,
     // Location fields
-    location: z.string().trim().max(255).optional(),
+    locationEn: z.string().trim().max(255).optional(),
+    locationAr: z.string().trim().max(255).optional(),
     locationUrl: z
       .string()
       .url('Enter a valid URL')
@@ -124,6 +138,34 @@ export function mapTrackTicketPrices(values: TrackFormValues) {
   };
 }
 
+export function trackFormValuesToPayload(values: TrackFormValues): CreateTrackPayload {
+  const toUtc = (value: string | null | undefined) => (value ? cairoLocalToUtcIso(value) : null);
+  const sanitizeDescription = (value: string | undefined) => {
+    const trimmed = value?.trim();
+    return trimmed ? DOMPurify.sanitize(trimmed) : null;
+  };
+
+  return {
+    titleEn: values.titleEn.trim(),
+    titleAr: values.titleAr.trim(),
+    descriptionEn: sanitizeDescription(values.descriptionEn),
+    descriptionAr: sanitizeDescription(values.descriptionAr),
+    imageUrl: values.imageUrl || null,
+    isPublished: values.isPublished,
+    maxTrackBookings: values.maxTrackBookings ?? null,
+    trackBookingStart: toUtc(values.trackBookingStart),
+    trackBookingEnd: toUtc(values.trackBookingEnd),
+    singleBookingStart: toUtc(values.singleBookingStart),
+    singleBookingEnd: toUtc(values.singleBookingEnd),
+    allowIndividualBooking: values.allowIndividualBooking,
+    priceInCents: values.priceEgp ? Math.round(Number(values.priceEgp) * 100) : null,
+    locationEn: values.locationEn?.trim() || null,
+    locationAr: values.locationAr?.trim() || null,
+    locationUrl: values.locationUrl?.trim() || null,
+    ...mapTrackTicketPrices(values),
+  };
+}
+
 const TICKET_TYPE_ROWS = [
   {
     enabledField: 'onlineOnlyEnabled',
@@ -152,7 +194,7 @@ const TICKET_TYPE_ROWS = [
 
 interface TrackFormProps {
   track?: Track;
-  onSubmit: (values: TrackFormValues) => Promise<void>;
+  onSubmit: (payload: CreateTrackPayload) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -165,8 +207,10 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
   const form = useForm<TrackFormValues>({
     resolver: zodResolver(trackFormSchema),
     defaultValues: {
-      title: track?.title || '',
-      description: track?.description || '',
+      titleEn: track?.titleEn ?? track?.title ?? '',
+      titleAr: track?.titleAr ?? track?.title ?? '',
+      descriptionEn: track?.descriptionEn ?? track?.description ?? '',
+      descriptionAr: track?.descriptionAr ?? track?.description ?? '',
       imageUrl: track?.image_url || '',
       isPublished: track?.is_published ?? false, // Default to false - can't publish without events
       maxTrackBookings: track?.max_track_bookings ?? null,
@@ -187,10 +231,13 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
       offlineOnlyEnabled: track?.offline_only_price_cents != null,
       offlineOnlyPriceEgp:
         track?.offline_only_price_cents != null ? String(track.offline_only_price_cents / 100) : '',
-      location: track?.location || '',
+      locationEn: track?.locationEn ?? track?.location ?? '',
+      locationAr: track?.locationAr ?? track?.location ?? '',
       locationUrl: track?.location_url || '',
     },
   });
+
+  const values = form.watch();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -212,57 +259,37 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
     }
   };
 
-  const handleSubmit = async (values: TrackFormValues) => {
-    // Convert Cairo wall-clock inputs to UTC using the correct per-date offset before submit.
-    const toUtc = (value: string | null | undefined) => (value ? cairoLocalToUtcIso(value) : value);
-    await onSubmit({
-      ...values,
-      trackBookingStart: toUtc(values.trackBookingStart),
-      trackBookingEnd: toUtc(values.trackBookingEnd),
-      singleBookingStart: toUtc(values.singleBookingStart),
-      singleBookingEnd: toUtc(values.singleBookingEnd),
-    });
+  const handleSubmit = async (formValues: TrackFormValues) => {
+    await onSubmit(trackFormValuesToPayload(formValues));
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Track Title</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Content Marketing Masterclass" {...field} />
-              </FormControl>
-              <FormDescription>The name members will see in the library.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+        <BilingualTextField
+          label="Track title"
+          englishLabel="Title (English)"
+          arabicLabel="Title (Arabic)"
+          required
+          valueEn={values.titleEn}
+          valueAr={values.titleAr}
+          onChangeEn={(value) => form.setValue('titleEn', value, { shouldDirty: true })}
+          onChangeAr={(value) => form.setValue('titleAr', value, { shouldDirty: true })}
+          englishPlaceholder="Content Marketing Masterclass"
+          arabicPlaceholder="ماستركلاس تسويق المحتوى"
         />
+        {(form.formState.errors.titleEn || form.formState.errors.titleAr) && (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.titleEn?.message ?? form.formState.errors.titleAr?.message}
+          </p>
+        )}
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={() => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <Controller
-                control={form.control}
-                name="description"
-                render={({ field: editorField }) => (
-                  <LazyEditor
-                    value={editorField.value ?? ''}
-                    onChange={editorField.onChange}
-                    placeholder="Describe what members will learn in this track..."
-                    maxLength={4000}
-                  />
-                )}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
+        <BilingualRichTextField
+          label="Description"
+          valueEn={values.descriptionEn ?? ''}
+          valueAr={values.descriptionAr ?? ''}
+          onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
+          onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
         />
 
         <FormField
@@ -379,20 +406,18 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
           ))}
         </div>
 
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input placeholder="Dubai, UAE or Online" {...field} value={field.value ?? ''} />
-              </FormControl>
-              <FormDescription>Where the track sessions will take place.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+        <BilingualTextField
+          label="Location"
+          englishLabel="Location (English)"
+          arabicLabel="Location (Arabic)"
+          valueEn={values.locationEn ?? ''}
+          valueAr={values.locationAr ?? ''}
+          onChangeEn={(value) => form.setValue('locationEn', value, { shouldDirty: true })}
+          onChangeAr={(value) => form.setValue('locationAr', value, { shouldDirty: true })}
+          englishPlaceholder="Dubai, UAE or Online"
+          arabicPlaceholder="دبي، الإمارات أو أونلاين"
         />
+        <p className="text-sm text-muted-foreground">Where the track sessions will take place.</p>
 
         <FormField
           control={form.control}
