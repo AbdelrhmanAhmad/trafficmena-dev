@@ -6,7 +6,8 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { CreateEventPayload, EventDetailRecord } from '@/app/api/events';
 import { uploadFile } from '@/app/api/uploads';
-import { LazyEditor } from '@/shared/components/LazyEditor';
+import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
+import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -35,21 +36,32 @@ import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
 import { CAIRO_TZ, cairoLocalToUtcIso, toCairoDatetimeLocal } from '@/shared/utils/dateUtils';
 
 const eventFormSchema = z.object({
-  title: z
+  titleEn: z
     .string()
     .trim()
-    .min(3, 'Title is required.')
+    .min(3, 'Title (English) is required.')
     .max(180, 'Keep titles under 180 characters.'),
-  description: z
+  titleAr: z
     .string()
     .trim()
-    .min(1, 'Add a short description to help members understand the event.')
+    .min(3, 'Title (Arabic) is required.')
+    .max(180, 'Keep titles under 180 characters.'),
+  descriptionEn: z
+    .string()
+    .trim()
+    .min(1, 'Add an English description.')
+    .max(8000, 'Descriptions are limited to 8,000 characters.'),
+  descriptionAr: z
+    .string()
+    .trim()
+    .min(1, 'Add an Arabic description.')
     .max(8000, 'Descriptions are limited to 8,000 characters.'),
   date: z.string().min(1, 'Pick a date and time.'),
   eventType: z.enum(['Event', 'Meetup', 'Mastermind', 'Retreat']),
   eventFormat: z.enum(['online', 'offline']),
   eventFormatOverrideReason: z.string().trim().max(500).optional(),
-  location: z.string().trim().max(255).optional(),
+  locationEn: z.string().trim().max(255).optional(),
+  locationAr: z.string().trim().max(255).optional(),
   locationUrl: z
     .string()
     .url()
@@ -163,13 +175,16 @@ export function AdminEventForm({
       : '';
 
   const defaultValues: AdminEventFormValues = {
-    title: event?.title ?? '',
-    description: (event?.description ?? '').trim(),
+    titleEn: event?.titleEn ?? event?.title ?? '',
+    titleAr: event?.titleAr ?? event?.title ?? '',
+    descriptionEn: (event?.descriptionEn ?? event?.description ?? '').trim(),
+    descriptionAr: (event?.descriptionAr ?? event?.description ?? '').trim(),
     date: toCairoDatetimeLocal(event?.date),
     eventType: event?.event_type ?? 'Event',
     eventFormat: event?.event_format ?? 'offline',
     eventFormatOverrideReason: '',
-    location: event?.location ?? '',
+    locationEn: event?.locationEn ?? event?.location ?? '',
+    locationAr: event?.locationAr ?? event?.location ?? '',
     locationUrl: event?.location_url ?? '',
     meetingLink: event?.meeting_link ?? '',
     maxAttendees: defaultCapacity,
@@ -199,12 +214,14 @@ export function AdminEventForm({
 
   const previewDate = values.date ? new Date(values.date) : null;
   const previewDateIso = previewDate ? previewDate.toISOString() : undefined;
-  const previewTitle = values.title || 'Event title';
-  const previewLocation = values.location || 'Location TBC';
+  const previewTitle = values.titleEn || values.titleAr || 'Event title';
+  const previewLocation = values.locationEn || values.locationAr || 'Location TBC';
   const previewCapacity = values.maxAttendees;
   const previewType = values.eventType;
   const previewDescription =
-    values.description || 'Add an engaging summary so members know what to expect.';
+    values.descriptionEn ||
+    values.descriptionAr ||
+    'Add an engaging summary so members know what to expect.';
   const sanitizedPreviewDescription = DOMPurify.sanitize(previewDescription);
   const previewImageUrl = values.imageUrl?.trim() ? values.imageUrl.trim() : '';
   const eventFormatChanged = Boolean(event && values.eventFormat !== event.event_format);
@@ -238,8 +255,10 @@ export function AdminEventForm({
     const formatOverrideReason = formValues.eventFormatOverrideReason?.trim() ?? '';
 
     const payload: CreateEventPayload = {
-      title: formValues.title.trim(),
-      description: DOMPurify.sanitize(formValues.description.trim()),
+      titleEn: formValues.titleEn.trim(),
+      titleAr: formValues.titleAr.trim(),
+      descriptionEn: DOMPurify.sanitize(formValues.descriptionEn.trim()),
+      descriptionAr: DOMPurify.sanitize(formValues.descriptionAr.trim()),
       date: cairoLocalToUtcIso(formValues.date),
       eventType: formValues.eventType,
       eventFormat: formValues.eventFormat,
@@ -247,7 +266,8 @@ export function AdminEventForm({
         event && formValues.eventFormat !== event.event_format && formatOverrideReason
           ? formatOverrideReason
           : undefined,
-      location: formValues.location?.trim() ? formValues.location.trim() : null,
+      locationEn: formValues.locationEn?.trim() ? formValues.locationEn.trim() : null,
+      locationAr: formValues.locationAr?.trim() ? formValues.locationAr.trim() : null,
       locationUrl: formValues.locationUrl?.trim() ? formValues.locationUrl.trim() : null,
       meetingLink: formValues.meetingLink?.trim() ? formValues.meetingLink.trim() : null,
       maxAttendees: formValues.maxAttendees ? Number(formValues.maxAttendees) : null,
@@ -310,19 +330,23 @@ export function AdminEventForm({
               <CardTitle>Create or edit an event</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Event title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Growth Workshop: MENA Edition" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <BilingualTextField
+                label="Event title"
+                englishLabel="Title (English)"
+                arabicLabel="Title (Arabic)"
+                required
+                valueEn={values.titleEn}
+                valueAr={values.titleAr}
+                onChangeEn={(value) => form.setValue('titleEn', value, { shouldDirty: true })}
+                onChangeAr={(value) => form.setValue('titleAr', value, { shouldDirty: true })}
+                englishPlaceholder="Growth Workshop: MENA Edition"
+                arabicPlaceholder="ورشة النمو: نسخة الشرق الأوسط"
               />
+              {(form.formState.errors.titleEn || form.formState.errors.titleAr) && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.titleEn?.message ?? form.formState.errors.titleAr?.message}
+                </p>
+              )}
 
               <FormField
                 control={form.control}
@@ -413,24 +437,19 @@ export function AdminEventForm({
                 />
               )}
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location (address)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Dubai, UAE" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Physical address for in-person events. Leave blank for online.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <BilingualTextField
+                label="Location (address)"
+                englishLabel="Location (English)"
+                arabicLabel="Location (Arabic)"
+                valueEn={values.locationEn ?? ''}
+                valueAr={values.locationAr ?? ''}
+                onChangeEn={(value) => form.setValue('locationEn', value, { shouldDirty: true })}
+                onChangeAr={(value) => form.setValue('locationAr', value, { shouldDirty: true })}
+                englishPlaceholder="Dubai, UAE"
+                arabicPlaceholder="دبي، الإمارات"
+              />
 
+              <div className="grid gap-4 md:grid-cols-1">
                 <FormField
                   control={form.control}
                   name="locationUrl"
@@ -562,25 +581,20 @@ export function AdminEventForm({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field: _field }) => (
-                  <FormItem>
-                    <FormLabel>Event description</FormLabel>
-                    <FormControl>
-                      <Controller
-                        control={form.control}
-                        name="description"
-                        render={({ field: editorField }) => (
-                          <LazyEditor value={editorField.value} onChange={editorField.onChange} />
-                        )}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <BilingualRichTextField
+                label="Event description"
+                required
+                valueEn={values.descriptionEn}
+                valueAr={values.descriptionAr}
+                onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
+                onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
               />
+              {(form.formState.errors.descriptionEn || form.formState.errors.descriptionAr) && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.descriptionEn?.message ??
+                    form.formState.errors.descriptionAr?.message}
+                </p>
+              )}
 
               <FormField
                 control={form.control}

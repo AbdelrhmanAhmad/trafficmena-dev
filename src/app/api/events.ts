@@ -7,10 +7,17 @@ import {
 
 type ApiEvent = {
   id: string;
-  title: string;
-  eventDescription: string | null;
+  title?: string;
+  description?: string | null;
+  titleEn?: string;
+  titleAr?: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
+  locationEn?: string | null;
+  locationAr?: string | null;
+  eventDescription?: string | null;
   date: string;
-  location: string | null;
+  location?: string | null;
   locationUrl: string | null;
   maxAttendees: number | null;
   meetingLink: string | null;
@@ -52,6 +59,12 @@ export type EventRecord = {
   id: string;
   title: string;
   description: string | null;
+  titleEn?: string;
+  titleAr?: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
+  locationEn?: string | null;
+  locationAr?: string | null;
   date: string;
   location: string | null;
   location_url: string | null;
@@ -86,10 +99,16 @@ export interface EventDetailRecord extends EventRecord {
 
 const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
   id: event.id,
-  title: event.title,
-  description: event.eventDescription,
+  title: event.title ?? event.titleEn ?? '',
+  description: event.description ?? event.eventDescription ?? event.descriptionEn ?? null,
+  titleEn: event.titleEn,
+  titleAr: event.titleAr,
+  descriptionEn: event.descriptionEn ?? event.eventDescription ?? null,
+  descriptionAr: event.descriptionAr ?? event.eventDescription ?? null,
+  locationEn: event.locationEn ?? event.location ?? null,
+  locationAr: event.locationAr ?? event.location ?? null,
   date: event.date,
-  location: event.location,
+  location: event.location ?? event.locationEn ?? null,
   location_url: event.locationUrl ?? null,
   max_attendees: event.maxAttendees ?? null,
   meeting_link: event.meetingLink ?? null,
@@ -136,10 +155,13 @@ export function mapApiEventDetailToRecord(api: ApiEventDetail): EventDetailRecor
 }
 
 export type CreateEventPayload = {
-  title: string;
-  description: string;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn: string;
+  descriptionAr: string;
   date: string;
-  location?: string | null;
+  locationEn?: string | null;
+  locationAr?: string | null;
   locationUrl?: string | null;
   meetingLink?: string | null;
   maxAttendees?: number | null;
