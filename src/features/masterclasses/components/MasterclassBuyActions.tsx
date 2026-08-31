@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { MasterclassStoreItem } from '@/app/api/masterclasses';
 import { formatSeriesPriceLabel } from '@/features/series/utils/seriesPricing';
 import { PaymentCheckoutDialog } from '@/shared/components/payment/PaymentCheckoutDialog';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
+import { prepareSignInNavigation } from '@/shared/utils/authNavigation';
+import { buildReturnPathFromLocation } from '@/shared/utils/authReturnPath';
 
 type MasterclassBuyActionsProps = {
   masterclass: MasterclassStoreItem;
@@ -14,6 +16,7 @@ type MasterclassBuyActionsProps = {
 export function MasterclassBuyActions({ masterclass, layout = 'inline' }: MasterclassBuyActionsProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const stackClass = layout === 'stack' ? 'flex-col w-full' : 'flex-wrap';
 
@@ -23,9 +26,8 @@ export function MasterclassBuyActions({ masterclass, layout = 'inline' }: Master
 
   const startCheckout = () => {
     if (!user) {
-      navigate('/signin', {
-        state: { from: { pathname: `/dashboard/masterclasses/${masterclass.id}` } },
-      });
+      const returnPath = buildReturnPathFromLocation(location);
+      navigate('/signin', prepareSignInNavigation(returnPath));
       return;
     }
     setCheckoutOpen(true);

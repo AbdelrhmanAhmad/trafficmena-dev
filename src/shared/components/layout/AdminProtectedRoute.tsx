@@ -1,7 +1,8 @@
 import type React from 'react';
 import { useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/context/AuthContext';
+import { captureAuthReturnFromLocation } from '@/shared/utils/authReturnPath';
 import {
   getRolePriority,
   type UserRole,
@@ -21,6 +22,7 @@ const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({
 }) => {
   const { user, loading: authLoading } = useAuth();
   const { loading: roleLoading, rank } = useRolePermissions();
+  const location = useLocation();
 
   const minimumRank = useMemo(() => {
     if (!allowedRoles.length) return getRolePriority('admin');
@@ -41,7 +43,8 @@ const AdminProtectedRoute: React.FC<AdminProtectedRouteProps> = ({
 
   // Redirect if not authenticated
   if (!user) {
-    return <Navigate to="/signin" replace />;
+    captureAuthReturnFromLocation(location);
+    return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
   // Redirect if not admin

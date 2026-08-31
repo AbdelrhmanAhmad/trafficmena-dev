@@ -10,32 +10,43 @@ import {
   storePendingTrackContext,
 } from '../../src/shared/utils/trackRedirectUtils.ts';
 
-const installLocalStorageMock = () => {
-  const store = new Map<string, string>();
-  const mock = {
-    getItem: (key) => (store.has(key) ? (store.get(key) ?? null) : null),
-    setItem: (key, value) => {
-      store.set(key, value);
-    },
-    removeItem: (key) => {
-      store.delete(key);
-    },
-    clear: () => {
-      store.clear();
-    },
+const installStorageMocks = () => {
+  const install = (name: 'localStorage' | 'sessionStorage') => {
+    const store = new Map<string, string>();
+    const mock = {
+      getItem: (key: string) => (store.has(key) ? (store.get(key) ?? null) : null),
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+      clear: () => {
+        store.clear();
+      },
+    };
+    Object.defineProperty(globalThis, name, {
+      value: mock,
+      configurable: true,
+    });
   };
-
-  Object.defineProperty(globalThis, 'localStorage', {
-    value: mock,
-    configurable: true,
-  });
+  install('localStorage');
+  install('sessionStorage');
 };
 
 beforeEach(() => {
-  installLocalStorageMock();
+  installStorageMocks();
 });
 
 describe('post signup redirect', () => {
+  it('prefers generic auth return path when stored in sessionStorage', () => {
+    sessionStorage.setItem('trafficmena:auth-return-path', '/meetups/evt-789?checkout=1');
+
+    const redirectUrl = getPostSignupRedirectUrl();
+
+    assert.equal(redirectUrl, '/meetups/evt-789?checkout=1');
+  });
+
   it('redirects paid event signups back to the event with checkout open', () => {
     storePendingEventContext({
       eventId: 'evt-123',

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import type { PublicTrackEventRecord } from '@/app/api/tracks';
 import { usePricePreview } from '@/app/hooks/usePayments';
 import { trackViewItem } from '@/lib/analytics/events';
@@ -35,6 +35,7 @@ import {
   useLocationVisibility,
 } from '@/shared/hooks/custom/useLocationVisibility';
 import { storePendingTrackContext } from '@/shared/utils/trackRedirectUtils';
+import { buildReturnPathFromLocation, storeAuthReturnPath } from '@/shared/utils/authReturnPath';
 import { TrackTicketSelector } from '../components/TrackTicketSelector';
 import { useBookTrack, usePublicTrack } from '../hooks/useTracks';
 import {
@@ -134,6 +135,7 @@ function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
 const TrackDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -366,6 +368,8 @@ const TrackDetail: React.FC = () => {
           console.warn('Failed to capture track context prior to signup redirect.');
         }
       }
+
+      storeAuthReturnPath(buildReturnPathFromLocation(location));
 
       navigate('/signup?source=track');
       return;

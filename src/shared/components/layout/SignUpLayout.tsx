@@ -1,7 +1,7 @@
 import { ChevronLeft } from 'lucide-react';
 import type React from 'react';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '@/shared/components/layout/Header';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -9,6 +9,7 @@ import {
   removeLocalStorageItem,
   setLocalStorageItem,
 } from '@/shared/utils/localStorage';
+import { captureAuthReturnFromSignUpEntry } from '@/shared/utils/authReturnPath';
 import { SIGNUP_TOTAL_STEPS } from './signupSteps';
 
 export { SIGNUP_OTP_STEP, SIGNUP_TOTAL_STEPS } from './signupSteps';
@@ -160,6 +161,12 @@ const SignUpLayout: React.FC<SignUpLayoutProps> = ({
 
 // Bug #12 Fix: Provider component with improved localStorage error handling
 export const SignUpProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const location = useLocation();
+
+  useEffect(() => {
+    captureAuthReturnFromSignUpEntry(location);
+  }, [location]);
+
   // Load initial form data from localStorage with error handling
   const getInitialFormData = (): SignUpFormData => {
     const result = getLocalStorageItem<SignUpFormData>(SIGNUP_FORM_DATA_KEY);

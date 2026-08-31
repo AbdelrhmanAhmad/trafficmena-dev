@@ -46,7 +46,7 @@ const CheckEmail: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard', { replace: true });
+      navigate(getPostSignupRedirectUrl(), { replace: true });
     }
   }, [navigate, user]);
 

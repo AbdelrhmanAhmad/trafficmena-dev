@@ -14,13 +14,17 @@ import { trackSelectItem } from '@/lib/analytics/events';
 import DataLoader from '@/shared/components/DataLoader';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
+import { prepareSignInFromCurrentPage } from '@/shared/utils/authNavigation';
 import { Card, CardContent } from '@/shared/components/ui/card';
 
 const PAGE_SIZE = 12;
 
 const PublicTracksPage: React.FC = () => {
-  const { pathname } = useLocation();
+  const location = useLocation();
   const navigate = useNavigate();
+  const goToSignIn = useCallback(() => {
+    navigate('/signin', prepareSignInFromCurrentPage(location));
+  }, [location, navigate]);
   const [currentPage, setCurrentPage] = useState(1);
   const { data, isLoading, error } = usePublicTracks(currentPage, PAGE_SIZE);
 
@@ -32,7 +36,7 @@ const PublicTracksPage: React.FC = () => {
     () => items.map((track, index) => buildTrackDiscoveryItem(track, index)),
     [items],
   );
-  const shouldTrackDiscoveryLists = isCanonicalDiscoveryListPath(pathname);
+  const shouldTrackDiscoveryLists = isCanonicalDiscoveryListPath(location.pathname);
 
   useTrackedItemListView(TRACKS_LIST_CONTEXT, trackListItems, {
     enabled: shouldTrackDiscoveryLists,
@@ -174,7 +178,7 @@ const PublicTracksPage: React.FC = () => {
                 <Button
                   variant="outline"
                   className="rounded-xl border-white/30 bg-white/10 text-white hover:bg-white/20"
-                  onClick={() => navigate('/signin')}
+                  onClick={goToSignIn}
                 >
                   Sign in
                 </Button>

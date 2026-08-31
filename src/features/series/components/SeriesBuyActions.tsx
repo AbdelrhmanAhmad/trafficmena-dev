@@ -10,6 +10,7 @@ import { PaymentCheckoutDialog } from '@/shared/components/payment/PaymentChecko
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { prepareSignInNavigation } from '@/shared/utils/authNavigation';
 
 type SeriesBuyActionsProps = {
   series: Pick<
@@ -50,9 +51,7 @@ export function SeriesBuyActions({
       onRequireAuth();
       return true;
     }
-    navigate('/signin', {
-      state: { from: { pathname: signInReturnPath ?? `/series/${series.id}` } },
-    });
+    navigate('/signin', prepareSignInNavigation(signInReturnPath ?? `/recordings/${series.id}`));
     return true;
   };
 

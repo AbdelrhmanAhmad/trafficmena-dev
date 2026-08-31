@@ -23,6 +23,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Drawer, DrawerContent, DrawerTrigger } from '@/shared/components/ui/drawer';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
+import { captureAuthReturnFromLocation } from '@/shared/utils/authReturnPath';
 import UserProfileDropdown from './UserProfileDropdown';
 
 type NavItem = {
@@ -75,6 +76,10 @@ const Header: React.FC = () => {
   }, [pathname]);
 
   const closeDrawer = () => setIsDrawerOpen(false);
+
+  const captureAuthReturn = () => {
+    captureAuthReturnFromLocation(location);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -135,7 +140,7 @@ const Header: React.FC = () => {
                 <UserProfileDropdown />
               ) : (
                 <>
-                  <Link to="/signin">
+                  <Link to="/signin" onClick={captureAuthReturn}>
                     <Button
                       variant="outline"
                       className="rounded-lg border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
@@ -143,7 +148,7 @@ const Header: React.FC = () => {
                       Sign In
                     </Button>
                   </Link>
-                  <Link to="/signup">
+                  <Link to="/signup" onClick={captureAuthReturn}>
                     <Button className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] hover:brightness-95 transition-colors">
                       <span>Join Community</span>
                       <Users className="h-4 w-4" />
@@ -266,7 +271,7 @@ const Header: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <Link to="/signin" onClick={closeDrawer}>
+                      <Link to="/signin" onClick={() => { captureAuthReturn(); closeDrawer(); }}>
                         <Button
                           variant="outline"
                           className="w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
@@ -274,7 +279,7 @@ const Header: React.FC = () => {
                           Sign In
                         </Button>
                       </Link>
-                      <Link to="/signup" onClick={closeDrawer}>
+                      <Link to="/signup" onClick={() => { captureAuthReturn(); closeDrawer(); }}>
                         <Button className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-3 py-3 text-sm font-medium text-[#101010] hover:brightness-95">
                           Sign Up
                         </Button>

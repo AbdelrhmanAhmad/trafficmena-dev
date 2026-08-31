@@ -15,6 +15,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+import { prepareSignInNavigation } from '@/shared/utils/authNavigation';
 
 export default function SeriesCartPage() {
   const cart = useCommerceCart();
@@ -27,7 +28,7 @@ export default function SeriesCartPage() {
 
   const handleCheckout = async () => {
     if (!user) {
-      navigate('/signin', { state: { from: { pathname: '/series/cart' } } });
+      navigate('/signin', prepareSignInNavigation('/series/cart'));
       return;
     }
     if (cart.items.length === 0) return;

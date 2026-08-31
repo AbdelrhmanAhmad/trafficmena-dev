@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { usePricePreview } from '@/app/hooks/usePayments';
 import { formatSeriesPriceLabel } from '@/features/series/utils/seriesPricing';
 import { resolveRecordingsNavigationPath } from '@/features/series/utils/recordingsNavigation';
@@ -40,6 +40,7 @@ import {
   clearPendingEventContext,
   storePendingEventContext,
 } from '@/shared/utils/eventRedirectUtils';
+import { buildReturnPathFromLocation, storeAuthReturnPath } from '@/shared/utils/authReturnPath';
 import { CancellationConfirmDialog } from '../components/CancellationConfirmDialog';
 import { useEventBooking } from '../hooks/useEventBooking';
 import { useEvent } from '../hooks/useEvents';
@@ -98,6 +99,7 @@ const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
 const EventDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -245,6 +247,8 @@ const EventDetail: React.FC = () => {
       if (!stored) {
         console.warn('Failed to capture event context prior to signup redirect.');
       }
+
+      storeAuthReturnPath(buildReturnPathFromLocation(location));
 
       navigate('/signup?source=event');
       return;
