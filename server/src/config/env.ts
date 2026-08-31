@@ -127,6 +127,13 @@ if (
   );
 }
 
+// SECURITY: encrypted DB transport is mandatory in production. Certificate verification
+// (rejectUnauthorized + CA bundle) is an infrastructure deployment concern — see
+// docs/solutions/security-issues/db-tls-production-checklist.md.
+if (parsed.data.NODE_ENV === 'production' && !parsed.data.DB_SSL) {
+  throw new Error('DB_SSL must be true in production.');
+}
+
 data.CORS_ORIGIN = corsAllowlist[0];
 
 export const env = {
