@@ -3,7 +3,7 @@ import { Crown, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useAuth } from '@/shared/context/AuthContext';
-import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import { cn } from '@/shared/lib/utils';
 
 interface SubscriptionStatusBadgeProps {
@@ -16,7 +16,7 @@ export function SubscriptionStatusBadge({
   showLink = true,
 }: SubscriptionStatusBadgeProps) {
   const { user } = useAuth();
-  const { canAccessSubscriptionPages } = useRolePermissions();
+  const { subscriptionsEnabled } = useModuleFlags();
   const { data: subscription, isLoading } = useCurrentSubscription({ enabled: !!user });
 
   if (isLoading) {
@@ -30,7 +30,7 @@ export function SubscriptionStatusBadge({
   }
 
   if (!subscription || subscription.status !== 'active') {
-    if (!showLink || !canAccessSubscriptionPages) return null;
+    if (!showLink || !subscriptionsEnabled) return null;
 
     const subscribePath = user ? '/dashboard/subscribe' : '/subscribe';
 

@@ -45,17 +45,16 @@ const NAVIGATION_ITEMS: NavItem[] = [
 const Header: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const { canAccessAdmin, canAccessSubscriptionPages, isOwner, isAdmin, isManager } =
-    useRolePermissions();
+  const { canAccessAdmin, isOwner, isAdmin, isManager } = useRolePermissions();
   const { data: subscription } = useCurrentSubscription({ enabled: !!user });
-  const { digitalProductsEnabled } = useModuleFlags();
+  const { digitalProductsEnabled, subscriptionsEnabled } = useModuleFlags();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
 
   // Check if user has an active subscription
   const hasActiveSubscription = subscription?.status === 'active';
-  const showSubscriptionEntry = canAccessSubscriptionPages && !hasActiveSubscription;
+  const showSubscriptionEntry = subscriptionsEnabled && !hasActiveSubscription;
 
   const visibleNavItems = NAVIGATION_ITEMS.filter((item) => {
     if (item.module === 'digitalProducts') return digitalProductsEnabled;

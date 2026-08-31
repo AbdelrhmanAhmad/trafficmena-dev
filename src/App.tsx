@@ -16,6 +16,7 @@ import ErrorBoundary from '@/shared/components/ErrorBoundary';
 import FloatingWhatsApp from '@/shared/components/FloatingWhatsApp';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import { ModuleGate } from '@/shared/components/ModuleGate';
+import { SubscriptionFeatureGate } from '@/shared/components/SubscriptionFeatureGate';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { SignUpGuard } from '@/shared/components/layout/SignUpGuard';
@@ -305,9 +306,7 @@ const App = () => {
                     path="/dashboard/digital-products/:id"
                     element={
                       <ErrorBoundary>
-                        <ModuleGate module="digitalProducts" fallbackHref="/dashboard">
-                          <DigitalProductDetailPage />
-                        </ModuleGate>
+                        <DigitalProductDetailPage />
                       </ErrorBoundary>
                     }
                   />
@@ -335,9 +334,7 @@ const App = () => {
                     path="/dashboard/masterclasses/:id/learn"
                     element={
                       <ErrorBoundary>
-                        <ModuleGate module="masterclasses" fallbackHref="/dashboard">
-                          <MasterclassLearnPage />
-                        </ModuleGate>
+                        <MasterclassLearnPage />
                       </ErrorBoundary>
                     }
                   />
@@ -345,9 +342,7 @@ const App = () => {
                     path="/dashboard/masterclasses/lessons/:lessonId"
                     element={
                       <ErrorBoundary>
-                        <ModuleGate module="masterclasses" fallbackHref="/dashboard">
-                          <MasterclassLessonPage />
-                        </ModuleGate>
+                        <MasterclassLessonPage />
                       </ErrorBoundary>
                     }
                   />
@@ -355,9 +350,7 @@ const App = () => {
                     path="/dashboard/masterclasses/:id"
                     element={
                       <ErrorBoundary>
-                        <ModuleGate module="masterclasses" fallbackHref="/dashboard">
-                          <MasterclassDetailPage />
-                        </ModuleGate>
+                        <MasterclassDetailPage />
                       </ErrorBoundary>
                     }
                   />
@@ -384,11 +377,13 @@ const App = () => {
                   <Route
                     path="/dashboard/subscribe"
                     element={
-                      <AdminProtectedRoute allowedRoles={['owner', 'admin']}>
-                        <ErrorBoundary>
-                          <DashboardSubscribePage />
-                        </ErrorBoundary>
-                      </AdminProtectedRoute>
+                      <ProtectedRoute>
+                        <SubscriptionFeatureGate fallbackHref="/dashboard">
+                          <ErrorBoundary>
+                            <DashboardSubscribePage />
+                          </ErrorBoundary>
+                        </SubscriptionFeatureGate>
+                      </ProtectedRoute>
                     }
                   />
                   <Route
@@ -518,11 +513,11 @@ const App = () => {
                   <Route
                     path="/subscribe"
                     element={
-                      <AdminProtectedRoute allowedRoles={['owner', 'admin']} redirectPath="/">
+                      <SubscriptionFeatureGate fallbackHref="/">
                         <ErrorBoundary>
                           <SubscribeLanding />
                         </ErrorBoundary>
-                      </AdminProtectedRoute>
+                      </SubscriptionFeatureGate>
                     }
                   />
                   <Route
@@ -698,9 +693,7 @@ const App = () => {
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
-                          <ModuleGate module="digitalProducts" fallbackHref="/admin">
-                            <AdminDigitalProductsPage />
-                          </ModuleGate>
+                          <AdminDigitalProductsPage />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }
@@ -710,9 +703,7 @@ const App = () => {
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
-                          <ModuleGate module="digitalProducts" fallbackHref="/admin">
-                            <AdminNewDigitalProductPage />
-                          </ModuleGate>
+                          <AdminNewDigitalProductPage />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }
@@ -722,9 +713,7 @@ const App = () => {
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
-                          <ModuleGate module="digitalProducts" fallbackHref="/admin">
-                            <AdminDigitalProductDetailPage />
-                          </ModuleGate>
+                          <AdminDigitalProductDetailPage />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }
@@ -734,9 +723,7 @@ const App = () => {
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
-                          <ModuleGate module="masterclasses" fallbackHref="/admin">
-                            <AdminMasterclassesPage />
-                          </ModuleGate>
+                          <AdminMasterclassesPage />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }
@@ -746,9 +733,7 @@ const App = () => {
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
-                          <ModuleGate module="masterclasses" fallbackHref="/admin">
-                            <AdminNewMasterclassPage />
-                          </ModuleGate>
+                          <AdminNewMasterclassPage />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }
@@ -758,9 +743,7 @@ const App = () => {
                     element={
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
-                          <ModuleGate module="masterclasses" fallbackHref="/admin">
-                            <AdminMasterclassDetailPage />
-                          </ModuleGate>
+                          <AdminMasterclassDetailPage />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }

@@ -2,6 +2,7 @@ import { API_BASE, ApiError, fetchJson } from './client';
 
 export type PublicSettings = {
   inviteOnly: boolean;
+  subscriptionsEnabled: boolean;
   masterclassesEnabled: boolean;
   digitalProductsEnabled: boolean;
   libraryStoreEnabled: boolean;
@@ -16,9 +17,12 @@ export async function fetchPublicSettings(): Promise<PublicSettings> {
 export type AdminSettings = {
   inviteOnly: boolean;
   eventMode: boolean;
+  subscriptionsEnabled: boolean;
   masterclassesEnabled: boolean;
   digitalProductsEnabled: boolean;
   libraryStoreEnabled: boolean;
+  masterclassesLaunched: boolean;
+  digitalProductsLaunched: boolean;
   updatedAt: string | null;
   updatedBy: string | null;
 };
@@ -32,6 +36,7 @@ export async function fetchAdminSettings(): Promise<AdminSettings> {
 export async function updateAdminSettings(payload: {
   inviteOnly?: boolean;
   eventMode?: boolean;
+  subscriptionsEnabled?: boolean;
   masterclassesEnabled?: boolean;
   digitalProductsEnabled?: boolean;
   libraryStoreEnabled?: boolean;

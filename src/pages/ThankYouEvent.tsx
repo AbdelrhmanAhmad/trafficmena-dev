@@ -25,14 +25,14 @@ import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import { useAuth } from '@/shared/context/AuthContext';
 import { isValidLocationUrl } from '@/shared/hooks/custom/useLocationVisibility';
-import { useRolePermissions } from '@/shared/hooks/custom/useRolePermissions';
+import { useModuleFlags } from '@/app/hooks/useSettings';
 import { formatDateWithDay, formatShortDate, formatTime } from '@/shared/utils/dateUtils';
 import { clearPendingEventContext } from '@/shared/utils/eventRedirectUtils';
 
 const ThankYouEvent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { canAccessSubscriptionPages } = useRolePermissions();
+  const { subscriptionsEnabled } = useModuleFlags();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isPaidFlow = searchParams.get('paid') === '1';
@@ -43,7 +43,7 @@ const ThankYouEvent: React.FC = () => {
 
   const isOnlineEvent = event?.event_format === 'online';
   const hasActiveSubscription = subscription?.status === 'active';
-  const showMembershipCard = hasActiveSubscription || canAccessSubscriptionPages;
+  const showMembershipCard = hasActiveSubscription || subscriptionsEnabled;
   const requiresPayment =
     (event?.price_in_cents ?? 0) > 0 && !(hasActiveSubscription && isOnlineEvent);
 
