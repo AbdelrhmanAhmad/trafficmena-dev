@@ -138,6 +138,20 @@ export function registerInvitationRoutes(app: Hono) {
       async (c) => {
         const token = c.req.param('token');
         const payload = await parseJson(c, activateSchema);
+        const requestIp = getRequestIp(c);
+        if (requestIp !== 'unknown') {
+          const rateCheck = invitationRateLimiter.consume(`invite:activate:${requestIp}`, {
+            limit: 5,
+            windowMs: 60 * 60 * 1000,
+          });
+          if (!rateCheck.allowed) {
+            throw new InvitationError(
+              'INVITATION_RATE_LIMITED',
+              'Too many attempts from this network. Please try again later.',
+              429,
+            );
+          }
+        }
         const result = await activateInvitation(c, token!, payload.email);
         return c.json({
           invitation: result.invitation,
