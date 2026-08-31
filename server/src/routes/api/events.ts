@@ -628,7 +628,7 @@ export function registerEventRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const eventId = parseEventIdParam(c.req.param('id'));
+        const eventId = parseEventIdParam(c.req.param('id')!);
         const parsed = listQuerySchema.safeParse({
           page: c.req.query('page'),
           pageSize: c.req.query('pageSize'),
@@ -811,7 +811,7 @@ export function registerEventRoutes(app: Hono) {
         const staff = await requireManager(c);
         if ('response' in staff) return staff.response;
 
-        const eventId = parseEventIdParam(c.req.param('id'));
+        const eventId = parseEventIdParam(c.req.param('id')!);
         const body = await c.req.json().catch(() => ({}));
         const parsed = updateEventSchema.safeParse(body);
 
@@ -974,7 +974,7 @@ export function registerEventRoutes(app: Hono) {
         const admin = await requireAdmin(c);
         if ('response' in admin) return admin.response;
 
-        const eventId = parseEventIdParam(c.req.param('id'));
+        const eventId = parseEventIdParam(c.req.param('id')!);
 
         const deleted = await db
           .delete(events)
@@ -998,7 +998,7 @@ export function registerEventRoutes(app: Hono) {
     '/events/:id/register',
     handleRoute(
       async (c) => {
-        const eventId = parseEventIdParam(c.req.param('id'));
+        const eventId = parseEventIdParam(c.req.param('id')!);
         const session = await getSessionFromRequest(c);
 
         if (!session || !session.user) {
@@ -1238,7 +1238,7 @@ export function registerEventRoutes(app: Hono) {
     '/events/:id/register',
     handleRoute(
       async (c) => {
-        const eventId = parseEventIdParam(c.req.param('id'));
+        const eventId = parseEventIdParam(c.req.param('id')!);
         const session = await getSessionFromRequest(c);
 
         if (!session || !session.user) {

@@ -110,7 +110,7 @@ export function registerInvitationRoutes(app: Hono) {
             );
           }
         }
-        const { invitation, userId } = await acceptInvitation(token, payload);
+        const { invitation, userId } = await acceptInvitation(token!, payload);
         try {
           await auth.api.sendVerificationOTP({
             body: { email: normalizeEmail(payload.email), type: 'sign-in' },
@@ -138,7 +138,7 @@ export function registerInvitationRoutes(app: Hono) {
       async (c) => {
         const token = c.req.param('token');
         const payload = await parseJson(c, activateSchema);
-        const result = await activateInvitation(c, token, payload.email);
+        const result = await activateInvitation(c, token!, payload.email);
         return c.json({
           invitation: result.invitation,
           alreadyActivated: result.alreadyActivated,
