@@ -54,7 +54,7 @@ import {
 } from './ticketAccess.js';
 import { executeTrackBookingWrite, registerFreeEventAttendee } from './trackBookingShared.js';
 import { isEgyptianMobileE164, normalizePhoneNumber, toFawaterkLocalPhone } from './users-phone.js';
-import { getOptionalUserRole, isKnownDatabaseConflict } from './utils.js';
+import { getOptionalUserRole, getRequestIp, isKnownDatabaseConflict } from './utils.js';
 
 // --- Rate Limit Rules ---
 const CHECKOUT_RATE_LIMIT = { limit: 5, windowMs: 60_000 }; // 5 checkouts per minute
@@ -2581,10 +2581,7 @@ export function registerPaymentRoutes(app: Hono) {
   // Shared per-IP webhook throttle. All four webhook routes are unauthenticated public POSTs, so
   // none may ship unthrottled. Returns a 429 response to short-circuit, or null to proceed.
   const enforceWebhookRateLimit = (c: Context): Response | null => {
-    const clientIp =
-      c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
-      c.req.header('x-real-ip') ||
-      'unknown';
+    const clientIp = getRequestIp(c);
     const { allowed, resetAt } = paymentRateLimiter.consume(
       `webhook:${clientIp}`,
       WEBHOOK_RATE_LIMIT,

@@ -18,9 +18,9 @@ export function registerHealthRoutes(app: Hono) {
       return c.json(
         {
           ok: false,
-          error: (error as Error).message,
+          error: 'database_unavailable',
         },
-        500,
+        503,
       );
     }
   });

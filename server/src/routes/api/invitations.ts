@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, ilike, isNull, or, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -13,6 +13,10 @@ import {
   sendBulkInvitations,
   sendSingleInvitation,
 } from '../../services/invitations.js';
+import {
+  getActivationBlockReason,
+  isInvitationExpired,
+} from '../../services/invitationLifecycle.js';
 import { invitationRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { parseInvitationListQuery } from './invitations-list.js';
@@ -414,7 +418,7 @@ async function acceptInvitation(
     );
   }
 
-  if (existing.expiresAt && existing.expiresAt.getTime() < Date.now()) {
+  if (isInvitationExpired(existing)) {
     await db
       .update(invitations)
       .set({ status: 'expired', updatedAt: new Date() })
@@ -422,6 +426,14 @@ async function acceptInvitation(
     throw new InvitationError(
       'INVITATION_EXPIRED',
       'This invitation has expired. Please request a new link.',
+      410,
+    );
+  }
+
+  if (existing.status === 'failed') {
+    throw new InvitationError(
+      'INVITATION_INVALID',
+      'Invitation is invalid or already revoked.',
       410,
     );
   }
@@ -473,10 +485,41 @@ async function acceptInvitation(
       lastName: optional(payload.lastName),
       updatedAt: now,
     })
-    .where(eq(invitations.id, existing.id))
+    .where(
+      and(
+        eq(invitations.id, existing.id),
+        isNull(invitations.acceptedAt),
+        or(eq(invitations.status, 'pending'), eq(invitations.status, 'sent')),
+        or(isNull(invitations.expiresAt), gt(invitations.expiresAt, now)),
+      ),
+    )
     .returning();
 
-  return { invitation: updated, userId };
+  if (updated) {
+    return { invitation: updated, userId };
+  }
+
+  const [refetched] = await db
+    .select()
+    .from(invitations)
+    .where(eq(invitations.id, existing.id))
+    .limit(1);
+
+  if (refetched?.acceptedAt) {
+    const resolvedUserId =
+      refetched.acceptedUserId ??
+      (await getOrCreateMember(email, {
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+      }));
+    return { invitation: refetched, userId: resolvedUserId };
+  }
+
+  throw new InvitationError(
+    'INVITATION_ACCEPT_FAILED',
+    'Unable to accept invitation. Please try again.',
+    409,
+  );
 }
 
 type ActivationResult = {
@@ -506,10 +549,36 @@ async function activateInvitation(
     );
   }
 
-  if (!existing.acceptedAt) {
+  const activationBlock = getActivationBlockReason(existing);
+  if (activationBlock === 'expired') {
+    await db
+      .update(invitations)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(eq(invitations.id, existing.id));
+    throw new InvitationError(
+      'INVITATION_EXPIRED',
+      'This invitation has expired. Please request a new link.',
+      410,
+    );
+  }
+  if (activationBlock === 'invalid_status') {
+    throw new InvitationError(
+      'INVITATION_INVALID',
+      'Invitation is invalid or already revoked.',
+      410,
+    );
+  }
+  if (activationBlock === 'not_accepted') {
     throw new InvitationError(
       'INVITATION_NOT_ACCEPTED',
       'This invitation has not been accepted yet.',
+      409,
+    );
+  }
+  if (activationBlock === 'already_activated') {
+    throw new InvitationError(
+      'INVITATION_ALREADY_ACTIVATED',
+      'This invitation has already been activated.',
       409,
     );
   }
@@ -526,20 +595,43 @@ async function activateInvitation(
       .where(eq(invitations.id, existing.id));
   }
 
-  let updatedInvitation = existing;
-  if (!existing.activatedAt) {
-    const now = new Date();
-    const [updated] = await db
-      .update(invitations)
-      .set({ activatedAt: now, updatedAt: now })
+  const now = new Date();
+  const [updated] = await db
+    .update(invitations)
+    .set({ activatedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(invitations.id, existing.id),
+        isNull(invitations.activatedAt),
+        or(isNull(invitations.expiresAt), gt(invitations.expiresAt, now)),
+        eq(invitations.status, 'accepted'),
+      ),
+    )
+    .returning();
+
+  if (!updated) {
+    const [refetched] = await db
+      .select()
+      .from(invitations)
       .where(eq(invitations.id, existing.id))
-      .returning();
-    updatedInvitation = updated ?? existing;
+      .limit(1);
+    if (refetched?.activatedAt) {
+      throw new InvitationError(
+        'INVITATION_ALREADY_ACTIVATED',
+        'This invitation has already been activated.',
+        409,
+      );
+    }
+    throw new InvitationError(
+      'INVITATION_ACTIVATE_FAILED',
+      'Unable to activate invitation. Please try again.',
+      409,
+    );
   }
 
   return {
-    invitation: updatedInvitation,
-    alreadyActivated: existing.activatedAt !== null,
+    invitation: updated,
+    alreadyActivated: false,
     sessionCreated: false,
     userId: inviteeUserId ?? undefined,
   };

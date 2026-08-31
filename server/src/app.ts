@@ -188,11 +188,12 @@ export function createApp() {
       c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
       const forwardedProto = c.req.header('x-forwarded-proto');
       if (forwardedProto && forwardedProto !== 'https') {
-        const host = c.req.header('host');
-        if (host) {
-          const requestUrl = new URL(c.req.url, `http://${host}`);
-          return c.redirect(`https://${host}${requestUrl.pathname}${requestUrl.search}`, 301);
-        }
+        const requestUrl = new URL(c.req.url);
+        const canonicalOrigin = (env.API_BASE_URL ?? env.BETTER_AUTH_ISSUER ?? env.APP_BASE_URL).replace(
+          /\/+$/,
+          '',
+        );
+        return c.redirect(`${canonicalOrigin}${requestUrl.pathname}${requestUrl.search}`, 301);
       }
     }
     await next();

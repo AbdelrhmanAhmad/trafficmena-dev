@@ -2,6 +2,7 @@ import { and, count, eq, gte } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { auth } from '../../auth.js';
+import { buildOtpVerificationIdentifier, type OtpVerificationType } from '../../auth/otpIdentifier.js';
 import { db } from '../../db/client.js';
 import { authVerifications, invitations, platformSettings, users } from '../../db/schema/index.js';
 import { otpRateLimiter, otpVerificationRateLimiter } from '../../services/rateLimiter.js';
@@ -69,6 +70,7 @@ export function registerAuthRoutes(app: Hono) {
         .limit(1);
       const shortLimit = settings?.eventMode ? OTP_SHORT_LIMIT_EVENT_MODE : OTP_SHORT_LIMIT;
       const dailyLimit = settings?.eventMode ? OTP_DAILY_LIMIT_EVENT_MODE : OTP_DAILY_LIMIT;
+      const otpIdentifier = buildOtpVerificationIdentifier(type as OtpVerificationType, email);
 
       const [recentOtpStats, dailyOtpStats] = await Promise.all([
         db
@@ -76,7 +78,7 @@ export function registerAuthRoutes(app: Hono) {
           .from(authVerifications)
           .where(
             and(
-              eq(authVerifications.identifier, email),
+              eq(authVerifications.identifier, otpIdentifier),
               gte(authVerifications.createdAt, new Date(now - OTP_SHORT_WINDOW_MS)),
             ),
           ),
@@ -85,7 +87,7 @@ export function registerAuthRoutes(app: Hono) {
           .from(authVerifications)
           .where(
             and(
-              eq(authVerifications.identifier, email),
+              eq(authVerifications.identifier, otpIdentifier),
               gte(authVerifications.createdAt, new Date(now - OTP_DAILY_WINDOW_MS)),
             ),
           ),

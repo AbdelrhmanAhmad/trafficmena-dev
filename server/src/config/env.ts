@@ -15,6 +15,10 @@ const envSchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((value) => value === 'true'),
+  TRUST_PROXY: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
   CORS_ORIGIN: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM: z.string().optional(),
