@@ -576,6 +576,7 @@ export const emailChangeRequests = pgTable(
       .notNull(),
     newEmail: text('new_email').notNull(),
     otpHash: text('otp_hash').notNull(),
+    currentEmailVerifiedAt: timestamp('current_email_verified_at', { withTimezone: true }),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     consumedAt: timestamp('consumed_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

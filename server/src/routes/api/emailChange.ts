@@ -11,6 +11,7 @@ import {
   EMAIL_CHANGE_OTP_TTL_MINUTES,
   EMAIL_CHANGE_OTP_TTL_MS,
   generateEmailChangeOtp,
+  hashEmailChangeCurrentOtp,
   hashEmailChangeOtp,
   maskEmail,
   safeCompareHex,
@@ -30,6 +31,10 @@ import {
 import { isKnownDatabaseConflict, normalizeEmail } from './utils.js';
 
 const requestSchema = z.object({ newEmail: z.string().email() });
+const verifyCurrentSchema = z.object({
+  newEmail: z.string().email(),
+  otp: z.string().min(4).max(8),
+});
 const verifySchema = z.object({
   newEmail: z.string().email(),
   otp: z.string().min(4).max(8),
@@ -112,6 +117,38 @@ export function registerEmailChangeRoutes(app: Hono) {
         );
       }
 
+      const [pendingVerifiedCurrent] = await db
+        .select()
+        .from(emailChangeRequests)
+        .where(
+          and(
+            eq(emailChangeRequests.userId, userId),
+            eq(emailChangeRequests.newEmail, newEmail),
+            isNull(emailChangeRequests.consumedAt),
+            gt(emailChangeRequests.expiresAt, new Date()),
+          ),
+        )
+        .orderBy(desc(emailChangeRequests.createdAt))
+        .limit(1);
+
+      if (pendingVerifiedCurrent?.currentEmailVerifiedAt) {
+        const resendOtp = generateEmailChangeOtp();
+        const resendHash = hashEmailChangeOtp(env.BETTER_AUTH_SECRET, userId, newEmail, resendOtp);
+        await db
+          .update(emailChangeRequests)
+          .set({
+            otpHash: resendHash,
+            expiresAt: new Date(Date.now() + EMAIL_CHANGE_OTP_TTL_MS),
+          })
+          .where(eq(emailChangeRequests.id, pendingVerifiedCurrent.id));
+        await sendOtpEmail({
+          email: newEmail,
+          otp: resendOtp,
+          ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES,
+        });
+        return c.json({ success: true, phase: 'new_email' as const });
+      }
+
       // Per-destination limits (shared with the sign-in OTP budget) close the email-bombing vector.
       const destShort = otpRateLimiter.consume(emailChangeRateKeys.destShort(newEmail), {
         limit: EMAIL_CHANGE_DEST_SHORT_LIMIT,
@@ -126,7 +163,12 @@ export function registerEmailChangeRoutes(app: Hono) {
       if (!destDaily.allowed) return rateLimited(c, destDaily.resetAt);
 
       const otp = generateEmailChangeOtp();
-      const otpHash = hashEmailChangeOtp(env.BETTER_AUTH_SECRET, userId, newEmail, otp);
+      const otpHash = hashEmailChangeCurrentOtp(env.BETTER_AUTH_SECRET, userId, currentEmail, otp);
+
+      await db
+        .update(emailChangeRequests)
+        .set({ consumedAt: new Date() })
+        .where(and(eq(emailChangeRequests.userId, userId), isNull(emailChangeRequests.consumedAt)));
 
       const [createdRequest] = await db
         .insert(emailChangeRequests)
@@ -139,7 +181,11 @@ export function registerEmailChangeRoutes(app: Hono) {
         .returning({ id: emailChangeRequests.id });
 
       try {
-        await sendOtpEmail({ email: newEmail, otp, ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES });
+        await sendOtpEmail({
+          email: currentEmail,
+          otp,
+          ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES,
+        });
       } catch (error) {
         if (createdRequest?.id) {
           try {
@@ -163,7 +209,7 @@ export function registerEmailChangeRoutes(app: Hono) {
         console.error('[auth] email-change request notice failed');
       }
 
-      return c.json({ success: true });
+      return c.json({ success: true, phase: 'current_email' as const });
     } catch (error) {
       // Log the message only, never the raw error: a DB error's detail can contain the new email.
       console.error(
@@ -175,6 +221,147 @@ export function registerEmailChangeRoutes(app: Hono) {
         500,
       );
     }
+  });
+
+  app.post('/auth/email-change/verify-current', async (c) => {
+    const session = await getSessionFromRequest(c);
+    if (!session?.session || !session.user) {
+      return c.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Sign in to change your email.' } },
+        401,
+      );
+    }
+
+    const body = verifyCurrentSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) {
+      return c.json(
+        {
+          error: {
+            code: 'INVALID_REQUEST',
+            message: 'Email and verification code are required.',
+          },
+        },
+        400,
+      );
+    }
+
+    const userId = session.user.id;
+    const currentEmail = normalizeEmail(session.user.email);
+    const newEmail = normalizeEmail(body.data.newEmail);
+
+    const verifyKey = emailChangeRateKeys.verify(userId);
+    const verifyAttempt = otpVerificationRateLimiter.consume(verifyKey, {
+      limit: EMAIL_CHANGE_VERIFY_LIMIT,
+      windowMs: SHORT_WINDOW_MS,
+    });
+    if (!verifyAttempt.allowed) {
+      return c.json(
+        {
+          error: {
+            code: 'OTP_VERIFY_RATE_LIMITED',
+            message: 'Too many attempts. Please request a new code.',
+          },
+        },
+        429,
+      );
+    }
+
+    let request: typeof emailChangeRequests.$inferSelect | undefined;
+    try {
+      [request] = await db
+        .select()
+        .from(emailChangeRequests)
+        .where(
+          and(
+            eq(emailChangeRequests.userId, userId),
+            eq(emailChangeRequests.newEmail, newEmail),
+            isNull(emailChangeRequests.consumedAt),
+            isNull(emailChangeRequests.currentEmailVerifiedAt),
+            gt(emailChangeRequests.expiresAt, new Date()),
+          ),
+        )
+        .orderBy(desc(emailChangeRequests.createdAt))
+        .limit(1);
+    } catch (error) {
+      otpVerificationRateLimiter.decrement(verifyKey);
+      console.error(
+        '[auth] email-change verify-current lookup failed:',
+        error instanceof Error ? error.message : 'unknown error',
+      );
+      return c.json(
+        {
+          error: {
+            code: 'EMAIL_CHANGE_FAILED',
+            message: 'Unable to verify your current email. Please try again.',
+          },
+        },
+        500,
+      );
+    }
+
+    if (!request) {
+      return c.json(
+        {
+          error: {
+            code: 'OTP_INVALID',
+            message: 'No pending email change found or it has expired. Request a new code.',
+          },
+        },
+        400,
+      );
+    }
+
+    const candidateHash = hashEmailChangeCurrentOtp(
+      env.BETTER_AUTH_SECRET,
+      userId,
+      currentEmail,
+      body.data.otp,
+    );
+    if (!safeCompareHex(candidateHash, request.otpHash)) {
+      return c.json(
+        { error: { code: 'OTP_INVALID', message: 'That code is incorrect or has expired.' } },
+        400,
+      );
+    }
+
+    const newOtp = generateEmailChangeOtp();
+    const newOtpHash = hashEmailChangeOtp(env.BETTER_AUTH_SECRET, userId, newEmail, newOtp);
+    const refreshedExpiry = new Date(Date.now() + EMAIL_CHANGE_OTP_TTL_MS);
+
+    try {
+      await db
+        .update(emailChangeRequests)
+        .set({
+          currentEmailVerifiedAt: new Date(),
+          otpHash: newOtpHash,
+          expiresAt: refreshedExpiry,
+        })
+        .where(eq(emailChangeRequests.id, request.id));
+
+      await sendOtpEmail({
+        email: newEmail,
+        otp: newOtp,
+        ttlMinutes: EMAIL_CHANGE_OTP_TTL_MINUTES,
+      });
+    } catch (error) {
+      otpVerificationRateLimiter.decrement(verifyKey);
+      console.error(
+        '[auth] email-change verify-current failed:',
+        error instanceof Error ? error.message : 'unknown error',
+      );
+      return c.json(
+        {
+          error: {
+            code: 'EMAIL_CHANGE_FAILED',
+            message: 'Unable to verify your current email. Please try again.',
+          },
+        },
+        500,
+      );
+    }
+
+    otpVerificationRateLimiter.reset(verifyKey);
+    return c.json({ success: true, phase: 'new_email' as const });
   });
 
   app.post('/auth/email-change/verify', async (c) => {
@@ -261,6 +448,18 @@ export function registerEmailChangeRoutes(app: Hono) {
           },
         },
         400,
+      );
+    }
+
+    if (!request.currentEmailVerifiedAt) {
+      return c.json(
+        {
+          error: {
+            code: 'CURRENT_EMAIL_NOT_VERIFIED',
+            message: 'Verify the code sent to your current email before continuing.',
+          },
+        },
+        403,
       );
     }
 

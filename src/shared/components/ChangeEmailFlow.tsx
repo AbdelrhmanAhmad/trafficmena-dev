@@ -1,14 +1,18 @@
 import { Loader2 } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
-import { requestEmailChange, verifyEmailChange } from '@/app/api/auth';
+import {
+  requestEmailChange,
+  verifyCurrentEmailChange,
+  verifyEmailChange,
+} from '@/app/api/auth';
 import { ApiError } from '@/app/api/client';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 
-type Mode = 'view' | 'editEmail' | 'verify';
+type Mode = 'view' | 'editEmail' | 'verifyCurrent' | 'verifyNew';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -38,17 +42,15 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
   const newEmailRef = useRef<HTMLInputElement>(null);
   const otpRef = useRef<HTMLInputElement>(null);
 
-  // Resend cooldown countdown (matches the backend short-window rate limit).
   useEffect(() => {
     if (resendIn <= 0) return;
     const id = setInterval(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1000);
     return () => clearInterval(id);
   }, [resendIn]);
 
-  // Move focus to the active step's input so keyboard users land in the right place.
   useEffect(() => {
     if (mode === 'editEmail') newEmailRef.current?.focus();
-    if (mode === 'verify') otpRef.current?.focus();
+    if (mode === 'verifyCurrent' || mode === 'verifyNew') otpRef.current?.focus();
   }, [mode]);
 
   const resetFlow = () => {
@@ -59,24 +61,43 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
     setResendIn(0);
   };
 
-  const sendCode = async (email: string) => {
+  const sendInitialCode = async (email: string) => {
     setError(null);
     setIsSubmitting(true);
     try {
-      await requestEmailChange(email);
+      const result = await requestEmailChange(email);
       setOtp('');
-      setMode('verify');
+      setMode(result.phase === 'current_email' ? 'verifyCurrent' : 'verifyNew');
       setResendIn(RESEND_COOLDOWN_SECONDS);
     } catch (sendError) {
       setError(messageFor(sendError, 'Unable to send the verification code. Please try again.'));
-      // Align the resend countdown with the server's actual window so we don't invite a retry that
-      // just 429s again (C-8). The server returns retryAfterSeconds on a rate-limit response.
       if (sendError instanceof ApiError && sendError.status === 429) {
         const retryAfter = Number(sendError.extra?.retryAfterSeconds);
         setResendIn(retryAfter > 0 ? retryAfter : RESEND_COOLDOWN_SECONDS);
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const resendCode = async () => {
+    if (mode === 'verifyCurrent') {
+      await sendInitialCode(newEmail.trim().toLowerCase());
+      return;
+    }
+    if (mode === 'verifyNew') {
+      setError(null);
+      setIsSubmitting(true);
+      try {
+        const result = await requestEmailChange(newEmail.trim().toLowerCase());
+        setOtp('');
+        setMode(result.phase === 'new_email' ? 'verifyNew' : 'verifyCurrent');
+        setResendIn(RESEND_COOLDOWN_SECONDS);
+      } catch (sendError) {
+        setError(messageFor(sendError, 'Unable to resend the verification code.'));
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -91,10 +112,35 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
       setError('That is already your email address.');
       return;
     }
-    await sendCode(trimmed);
+    await sendInitialCode(trimmed);
   };
 
-  const handleVerify = async (event: FormEvent) => {
+  const handleVerifyCurrent = async (event: FormEvent) => {
+    event.preventDefault();
+    const code = otp.trim();
+    if (code.length < 4) {
+      setError('Enter the 6-digit code sent to your current email.');
+      return;
+    }
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      await verifyCurrentEmailChange(newEmail.trim().toLowerCase(), code);
+      setOtp('');
+      setMode('verifyNew');
+      setResendIn(RESEND_COOLDOWN_SECONDS);
+      toast({
+        title: 'Current email verified',
+        description: 'We sent a code to your new email address.',
+      });
+    } catch (verifyError) {
+      setError(messageFor(verifyError, 'That code is incorrect or has expired.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyNew = async (event: FormEvent) => {
     event.preventDefault();
     const code = otp.trim();
     if (code.length < 4) {
@@ -128,7 +174,7 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
         <Input disabled id={currentEmailId} name="email" value={currentEmail} />
         <div className="mt-1 flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
-            Changing your email requires a verification code sent to the new address.
+            Changing your email requires verification codes sent to your current and new addresses.
           </p>
           <Button
             type="button"
@@ -150,7 +196,7 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
   if (mode === 'editEmail') {
     return (
       <form className="space-y-2" onSubmit={handleRequest}>
-        <h3 className="text-sm font-medium">Change email — step 1 of 2</h3>
+        <h3 className="text-sm font-medium">Change email — step 1 of 3</h3>
         <Label htmlFor={newEmailId}>New email address</Label>
         <Input
           ref={newEmailRef}
@@ -167,7 +213,50 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
         <div className="flex items-center gap-2 pt-1">
           <Button type="submit" size="sm" disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Send code
+            Send code to current email
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={resetFlow}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  if (mode === 'verifyCurrent') {
+    return (
+      <form className="space-y-2" onSubmit={handleVerifyCurrent}>
+        <h3 className="text-sm font-medium">Change email — step 2 of 3</h3>
+        <p className="text-xs text-muted-foreground">
+          Enter the 6-digit code sent to <span className="font-medium">{currentEmail}</span>.
+        </p>
+        <Label htmlFor={otpId}>Verification code</Label>
+        <Input
+          ref={otpRef}
+          id={otpId}
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          value={otp}
+          onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+          placeholder="123456"
+        />
+        {errorBanner}
+        <div className="flex items-center gap-2 pt-1">
+          <Button type="submit" size="sm" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Verify current email
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={resendIn > 0 || isSubmitting}
+            onClick={resendCode}
+          >
+            {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
           </Button>
           <Button type="button" variant="ghost" size="sm" onClick={resetFlow}>
             Cancel
@@ -178,8 +267,8 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
   }
 
   return (
-    <form className="space-y-2" onSubmit={handleVerify}>
-      <h3 className="text-sm font-medium">Change email — step 2 of 2</h3>
+    <form className="space-y-2" onSubmit={handleVerifyNew}>
+      <h3 className="text-sm font-medium">Change email — step 3 of 3</h3>
       <p className="text-xs text-muted-foreground">
         Enter the 6-digit code sent to <span className="font-medium">{newEmail}</span>.
       </p>
@@ -207,7 +296,7 @@ export function ChangeEmailFlow({ currentEmail, onChanged }: ChangeEmailFlowProp
           variant="ghost"
           size="sm"
           disabled={resendIn > 0 || isSubmitting}
-          onClick={() => sendCode(newEmail.trim().toLowerCase())}
+          onClick={resendCode}
         >
           {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
         </Button>
