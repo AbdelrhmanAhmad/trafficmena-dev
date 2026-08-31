@@ -14,6 +14,16 @@ import {
   trackEvents,
 } from '../../db/schema/index.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import {
   getActiveSeriesGrantIds,
@@ -51,16 +61,22 @@ const priceInCentsSchema = z
 
 const recordingsAccessPolicySchema = z.enum(RECORDINGS_ACCESS_POLICIES);
 
-const createSeriesSchema = z.object({
-  title: z.string().trim().min(3, 'Title is required.').max(180),
-  description: z.union([z.string().trim().max(4000), z.null()]).optional(),
-  imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
-  isPublished: z.boolean().default(true),
-  isPremium: z.boolean().default(false),
-  priceInCents: priceInCentsSchema,
-  salesEnabled: z.boolean().default(false),
-  recordingsAccessPolicy: recordingsAccessPolicySchema.default('free_for_prior_buyers'),
-});
+const createSeriesSchema = z
+  .object({
+    title: z.string().trim().min(3, 'Title is required.').max(180).optional(),
+    description: z.union([z.string().trim().max(4000), z.null()]).optional(),
+    imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
+    isPublished: z.boolean().default(true),
+    isPremium: z.boolean().default(false),
+    priceInCents: priceInCentsSchema,
+    salesEnabled: z.boolean().default(false),
+    recordingsAccessPolicy: recordingsAccessPolicySchema.default('free_for_prior_buyers'),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields)
+  .refine((data) => (data.titleEn && data.titleAr) || data.title, {
+    message: 'Provide title or titleEn/titleAr.',
+  });
 
 const updateSeriesSchema = z
   .object({
@@ -74,6 +90,8 @@ const updateSeriesSchema = z
     recordingsAccessPolicy: recordingsAccessPolicySchema.optional(),
     sortOrder: z.number().int().min(0).optional(),
   })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields)
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
 const addAssetsSchema = z.object({
@@ -565,11 +583,23 @@ export function registerSeriesRoutes(app: Hono) {
 
     const payload = parsed.data;
 
+    const titleFields =
+      payload.titleEn && payload.titleAr
+        ? bilingualTitleFields(payload.titleEn, payload.titleAr)
+        : bilingualTitleFromLegacy(payload.title!);
+    const descriptionFields =
+      payload.descriptionEn !== undefined || payload.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            payload.descriptionEn ?? payload.description ?? null,
+            payload.descriptionAr ?? payload.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(payload.description);
+
     const [created] = await db
       .insert(series)
       .values({
-        title: payload.title,
-        description: payload.description ?? null,
+        ...titleFields,
+        ...descriptionFields,
         imageUrl: payload.imageUrl || null,
         isPublished: payload.isPublished,
         isPremium: payload.isPremium,

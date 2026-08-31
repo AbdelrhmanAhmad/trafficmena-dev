@@ -3,13 +3,28 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { skills, userSkills } from '../../db/schema/index.js';
+import {
+  bilingualDescriptionFromLegacy,
+  bilingualNameFields,
+  bilingualNameFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+} from '../../utils/bilingualSchemas.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 
-const createSkillSchema = z.object({
-  name: z.string().trim().min(1).max(255),
-  category: z.string().trim().max(255).optional(),
-  description: z.string().trim().max(500).optional(),
-});
+const createSkillSchema = z
+  .object({
+    name: z.string().trim().min(1).max(255).optional(),
+    nameEn: z.string().trim().min(1).max(255).optional(),
+    nameAr: z.string().trim().min(1).max(255).optional(),
+    category: z.string().trim().max(255).optional(),
+    description: z.string().trim().max(500).optional(),
+  })
+  .merge(optionalBilingualDescriptionFields)
+  .refine((data) => (data.nameEn && data.nameAr) || data.name, {
+    message: 'Provide name or nameEn/nameAr.',
+  });
 
 const userSkillBodySchema = z.object({
   skillId: z.string().uuid(),
@@ -59,7 +74,7 @@ export function registerSkillRoutes(app: Hono) {
       );
     }
 
-    const normalizedName = body.data.name.trim();
+    const normalizedName = (body.data.name ?? body.data.nameEn ?? '').trim();
     const lowerName = normalizedName.toLowerCase();
 
     const existing = await db
@@ -80,12 +95,17 @@ export function registerSkillRoutes(app: Hono) {
       );
     }
 
+    const nameFields =
+      body.data.nameEn && body.data.nameAr
+        ? bilingualNameFields(body.data.nameEn.trim(), body.data.nameAr.trim())
+        : bilingualNameFromLegacy(normalizedName);
+
     const inserted = await db
       .insert(skills)
       .values({
-        name: normalizedName,
+        ...nameFields,
+        ...bilingualDescriptionFromLegacy(body.data.description),
         category: body.data.category,
-        description: body.data.description,
       })
       .returning({
         id: skills.id,

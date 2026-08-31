@@ -14,6 +14,16 @@ import {
   trackEvents,
 } from '../../db/schema/index.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import {
   normalizeRecordingsAccessPolicy,
@@ -47,25 +57,33 @@ const urlSchema = z
 
 const optionalShortString = z.union([z.string().trim().max(120), z.null()]).optional();
 
-const assetObjectSchema = z.object({
-  title: z.string().trim().min(3, 'Title is required.').max(200),
-  description: optionalText,
-  fileType: z.enum(['Document', 'Video', 'Presentation']),
-  videoUrl: urlSchema,
-  documentUrl: urlSchema,
-  embedUrl: urlSchema,
-  embedType: optionalShortString,
-  thumbnailUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
-  eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
-  isPublic: z.boolean().optional().default(false),
-  isPremium: z.boolean().optional().default(false),
-  fileSizeBytes: z
-    .union([z.number().int().min(0), z.null()])
-    .optional()
-    .refine((value) => value == null || value <= 20 * 1024 * 1024, {
-      message: 'File size must be 20 MB or less.',
-    }),
-});
+const assetFieldsSchema = z
+  .object({
+    title: z.string().trim().min(3, 'Title is required.').max(200).optional(),
+    description: optionalText,
+    fileType: z.enum(['Document', 'Video', 'Presentation']),
+    videoUrl: urlSchema,
+    documentUrl: urlSchema,
+    embedUrl: urlSchema,
+    embedType: optionalShortString,
+    thumbnailUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
+    eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
+    isPublic: z.boolean().optional().default(false),
+    isPremium: z.boolean().optional().default(false),
+    fileSizeBytes: z
+      .union([z.number().int().min(0), z.null()])
+      .optional()
+      .refine((value) => value == null || value <= 20 * 1024 * 1024, {
+        message: 'File size must be 20 MB or less.',
+      }),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
+
+const assetObjectSchema = assetFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
 const uuidParamSchema = z.string().uuid();
 
@@ -99,7 +117,7 @@ const createAssetSchema = assetObjectSchema.superRefine((payload, ctx) => {
   }
 });
 
-const updateAssetSchema = assetObjectSchema
+const updateAssetSchema = assetFieldsSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
@@ -620,11 +638,23 @@ export function registerLibraryRoutes(app: Hono) {
 
     const payload = parsed.data;
 
+    const titleFields =
+      payload.titleEn && payload.titleAr
+        ? bilingualTitleFields(payload.titleEn, payload.titleAr)
+        : bilingualTitleFromLegacy(payload.title!);
+    const descriptionFields =
+      payload.descriptionEn !== undefined || payload.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            payload.descriptionEn ?? payload.description ?? null,
+            payload.descriptionAr ?? payload.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(payload.description);
+
     const [created] = await db
       .insert(libraryAssets)
       .values({
-        title: payload.title,
-        description: payload.description ?? null,
+        ...titleFields,
+        ...descriptionFields,
         fileType: payload.fileType,
         fileUrl: payload.documentUrl ?? payload.videoUrl ?? payload.embedUrl ?? null,
         videoUrl: payload.videoUrl ?? null,

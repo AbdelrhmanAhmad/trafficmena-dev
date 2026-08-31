@@ -19,6 +19,16 @@ import {
 } from '../../db/schema/index.js';
 import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere, hasTrackBookingRow } from '../../utils/booking.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
 import { loadTrackCalendarEvents, loadTrackTitle } from '../../services/eventCalendarAccess.js';
 import { queueTrackRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
@@ -81,24 +91,30 @@ const locationUrlSchema = z
   .optional()
   .or(z.literal(''));
 
-const createTrackSchema = z.object({
-  title: z.string().trim().min(3, 'Title is required.').max(180),
-  description: z.union([z.string().trim().max(4000), z.null()]).optional(),
-  imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
-  isPublished: z.boolean().default(false),
-  trackBookingStart: z.coerce.date().nullable().optional(),
-  trackBookingEnd: z.coerce.date().nullable().optional(),
-  singleBookingStart: z.coerce.date().nullable().optional(),
-  singleBookingEnd: z.coerce.date().nullable().optional(),
-  allowIndividualBooking: z.boolean().default(false),
-  maxTrackBookings: z.number().int().positive().nullable().optional(),
-  priceInCents: priceInCentsSchema,
-  onlineOnlyPriceCents: priceInCentsSchema,
-  onlineOfflinePriceCents: priceInCentsSchema,
-  offlineOnlyPriceCents: priceInCentsSchema,
-  location: locationSchema,
-  locationUrl: locationUrlSchema,
-});
+const createTrackSchema = z
+  .object({
+    title: z.string().trim().min(3, 'Title is required.').max(180).optional(),
+    description: z.union([z.string().trim().max(4000), z.null()]).optional(),
+    imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
+    isPublished: z.boolean().default(false),
+    trackBookingStart: z.coerce.date().nullable().optional(),
+    trackBookingEnd: z.coerce.date().nullable().optional(),
+    singleBookingStart: z.coerce.date().nullable().optional(),
+    singleBookingEnd: z.coerce.date().nullable().optional(),
+    allowIndividualBooking: z.boolean().default(false),
+    maxTrackBookings: z.number().int().positive().nullable().optional(),
+    priceInCents: priceInCentsSchema,
+    onlineOnlyPriceCents: priceInCentsSchema,
+    onlineOfflinePriceCents: priceInCentsSchema,
+    offlineOnlyPriceCents: priceInCentsSchema,
+    location: locationSchema,
+    locationUrl: locationUrlSchema,
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields)
+  .refine((data) => (data.titleEn && data.titleAr) || data.title, {
+    message: 'Provide title or titleEn/titleAr.',
+  });
 
 const updateTrackSchema = z
   .object({
@@ -136,6 +152,8 @@ const updateTrackSchema = z
       ])
       .optional(),
   })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields)
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
 type BookingFields = {
@@ -1047,13 +1065,27 @@ export function registerTrackRoutes(app: Hono) {
           );
         }
 
+        const titleFields =
+          payload.titleEn && payload.titleAr
+            ? bilingualTitleFields(payload.titleEn, payload.titleAr)
+            : bilingualTitleFromLegacy(payload.title!);
+        const descriptionFields =
+          payload.descriptionEn !== undefined || payload.descriptionAr !== undefined
+            ? bilingualDescriptionFields(
+                payload.descriptionEn ?? payload.description ?? null,
+                payload.descriptionAr ?? payload.description ?? null,
+              )
+            : bilingualDescriptionFromLegacy(payload.description);
+        const titleEn = titleFields.titleEn;
+        const titleAr = titleFields.titleAr;
+
         // Use transaction to ensure track + auto-created series are atomic
         const created = await db.transaction(async (tx) => {
           const [track] = await tx
             .insert(tracks)
             .values({
-              title: payload.title,
-              description: payload.description ?? null,
+              ...titleFields,
+              ...descriptionFields,
               imageUrl: payload.imageUrl || null,
               isPublished: false,
               trackBookingStart: payload.trackBookingStart ?? null,
@@ -1073,8 +1105,11 @@ export function registerTrackRoutes(app: Hono) {
 
           // Auto-create Series for track recordings
           await tx.insert(series).values({
-            title: `${payload.title} Recordings`,
-            description: `Session recordings and materials from ${payload.title}`,
+            ...bilingualTitleFields(`${titleEn} Recordings`, `${titleAr} Recordings`),
+            ...bilingualDescriptionFields(
+              `Session recordings and materials from ${titleEn}`,
+              `Session recordings and materials from ${titleAr}`,
+            ),
             trackId: track.id,
             isPublished: false,
           });

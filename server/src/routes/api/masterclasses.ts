@@ -29,6 +29,19 @@ import {
   isDiscoveryBlocked,
 } from '../../services/productVisibility.js';
 import { getLearnerCertificateStatus, tryIssueCertificateOnCompletion } from '../../services/certificates.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualDisplayNameFields,
+  bilingualDisplayNameFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  optionalBilingualDisplayNameFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
 import { ApiError } from '../../utils/errors.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { requireManager, requireContentDelete } from './utils.js';
@@ -36,43 +49,83 @@ import { requireManager, requireContentDelete } from './utils.js';
 const fileTypeSchema = z.enum(['excel', 'markdown', 'html', 'text', 'powerpoint']);
 const uuidParamSchema = z.string().uuid();
 
-const createMasterclassSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
-  priceInCents: z.number().int().min(0).optional().nullable(),
-  isPublished: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
-});
+const masterclassFieldsSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    imageUrl: z.string().url().optional().nullable(),
+    priceInCents: z.number().int().min(0).optional().nullable(),
+    isPublished: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
 
-const updateMasterclassSchema = createMasterclassSchema.partial();
+const createMasterclassSchema = masterclassFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
-const moduleInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional().nullable(),
-  sortOrder: z.number().int().optional(),
-});
+const updateMasterclassSchema = masterclassFieldsSchema
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
-const lessonInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional().nullable(),
-  sortOrder: z.number().int().optional(),
-});
+const moduleFieldsSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
 
-const videoInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  videoUrl: z.string().trim().min(1).max(1000),
-  sortOrder: z.number().int().optional(),
-});
+const moduleInputSchema = moduleFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
+
+const lessonFieldsSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
+
+const lessonInputSchema = lessonFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
+
+const baseVideoInputSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    videoUrl: z.string().trim().min(1).max(1000),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial());
+
+const videoInputSchema = baseVideoInputSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
 const MAX_VIDEOS_PER_LESSON = 20;
 
-const fileInputSchema = z.object({
-  fileType: fileTypeSchema,
-  displayName: z.string().min(1).max(200),
-  fileUrl: z.string().url(),
-  sortOrder: z.number().int().optional(),
-});
+const baseFileInputSchema = z
+  .object({
+    fileType: fileTypeSchema,
+    displayName: z.string().min(1).max(200).optional(),
+    fileUrl: z.string().url(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(optionalBilingualDisplayNameFields.partial());
+
+const fileInputSchema = baseFileInputSchema.refine(
+  (data) => (data.displayNameEn && data.displayNameAr) || data.displayName,
+  { message: 'Provide displayName or displayNameEn/displayNameAr.' },
+);
 
 const reorderSchema = z.object({
   orderedIds: z.array(z.string().uuid()),
@@ -717,11 +770,23 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
 
+    const titleFields =
+      parsed.data.titleEn && parsed.data.titleAr
+        ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+        : bilingualTitleFromLegacy(parsed.data.title!);
+    const descriptionFields =
+      parsed.data.descriptionEn !== undefined || parsed.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            parsed.data.descriptionEn ?? parsed.data.description ?? null,
+            parsed.data.descriptionAr ?? parsed.data.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(parsed.data.description);
+
     const [created] = await db
       .insert(masterclasses)
       .values({
-        title: parsed.data.title,
-        description: parsed.data.description ?? null,
+        ...titleFields,
+        ...descriptionFields,
         imageUrl: parsed.data.imageUrl ?? null,
         priceInCents: parsed.data.priceInCents ?? null,
         isPublished: parsed.data.isPublished ?? false,
@@ -948,12 +1013,24 @@ export function registerMasterclassRoutes(app: Hono) {
       .from(masterclassModules)
       .where(eq(masterclassModules.masterclassId, idParsed.data));
 
+    const moduleTitleFields =
+      parsed.data.titleEn && parsed.data.titleAr
+        ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+        : bilingualTitleFromLegacy(parsed.data.title!);
+    const moduleDescriptionFields =
+      parsed.data.descriptionEn !== undefined || parsed.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            parsed.data.descriptionEn ?? parsed.data.description ?? null,
+            parsed.data.descriptionAr ?? parsed.data.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(parsed.data.description);
+
     const [created] = await db
       .insert(masterclassModules)
       .values({
         masterclassId: idParsed.data,
-        title: parsed.data.title,
-        description: parsed.data.description ?? null,
+        ...moduleTitleFields,
+        ...moduleDescriptionFields,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
       .returning();
@@ -984,7 +1061,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const parsed = moduleInputSchema.partial().safeParse(body);
+    const parsed = moduleFieldsSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
@@ -1120,12 +1197,24 @@ export function registerMasterclassRoutes(app: Hono) {
       .from(masterclassLessons)
       .where(eq(masterclassLessons.moduleId, moduleIdParsed.data));
 
+    const lessonTitleFields =
+      parsed.data.titleEn && parsed.data.titleAr
+        ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+        : bilingualTitleFromLegacy(parsed.data.title!);
+    const lessonDescriptionFields =
+      parsed.data.descriptionEn !== undefined || parsed.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            parsed.data.descriptionEn ?? parsed.data.description ?? null,
+            parsed.data.descriptionAr ?? parsed.data.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(parsed.data.description);
+
     const [created] = await db
       .insert(masterclassLessons)
       .values({
         moduleId: moduleIdParsed.data,
-        title: parsed.data.title,
-        description: parsed.data.description ?? null,
+        ...lessonTitleFields,
+        ...lessonDescriptionFields,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
       .returning();
@@ -1158,7 +1247,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const parsed = lessonInputSchema.partial().safeParse(body);
+    const parsed = lessonFieldsSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
@@ -1252,7 +1341,9 @@ export function registerMasterclassRoutes(app: Hono) {
       .insert(masterclassLessonVideos)
       .values({
         lessonId: lessonIdParsed.data,
-        title: parsed.data.title,
+        ...(parsed.data.titleEn && parsed.data.titleAr
+          ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+          : bilingualTitleFromLegacy(parsed.data.title!)),
         videoUrl: parsed.data.videoUrl,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
@@ -1272,7 +1363,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const parsed = videoInputSchema.partial().safeParse(body);
+    const parsed = baseVideoInputSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
@@ -1362,7 +1453,9 @@ export function registerMasterclassRoutes(app: Hono) {
       .values({
         lessonId: lessonIdParsed.data,
         fileType: parsed.data.fileType,
-        displayName: parsed.data.displayName,
+        ...(parsed.data.displayNameEn && parsed.data.displayNameAr
+          ? bilingualDisplayNameFields(parsed.data.displayNameEn, parsed.data.displayNameAr)
+          : bilingualDisplayNameFromLegacy(parsed.data.displayName!)),
         fileUrl: parsed.data.fileUrl,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
@@ -1382,7 +1475,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const parsed = fileInputSchema.partial().safeParse(body);
+    const parsed = baseFileInputSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }

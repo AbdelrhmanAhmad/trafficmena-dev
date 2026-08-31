@@ -16,35 +16,70 @@ import {
   getEffectiveProductVisibility,
   isDiscoveryBlocked,
 } from '../../services/productVisibility.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualDisplayNameFields,
+  bilingualDisplayNameFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  optionalBilingualDisplayNameFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { requireManager, requireContentDelete } from './utils.js';
 
 const fileTypeSchema = z.enum(['excel', 'markdown', 'html', 'text', 'powerpoint']);
 
-const createProductSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(8000).optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
-  priceInCents: z.number().int().min(0).optional().nullable(),
-  salesEnabled: z.boolean().optional(),
-  isPublished: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
-});
+const productFieldsSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(8000).optional().nullable(),
+    imageUrl: z.string().url().optional().nullable(),
+    priceInCents: z.number().int().min(0).optional().nullable(),
+    salesEnabled: z.boolean().optional(),
+    isPublished: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
 
-const updateProductSchema = createProductSchema.partial();
+const createProductSchema = productFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
-const fileInputSchema = z.object({
-  fileType: fileTypeSchema,
-  displayName: z.string().min(1).max(200),
-  fileUrl: z.string().url(),
-  sortOrder: z.number().int().optional(),
-});
+const updateProductSchema = productFieldsSchema.partial();
 
-const videoInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  videoUrl: z.string().trim().min(1).max(1000),
-  sortOrder: z.number().int().optional(),
-});
+const baseFileInputSchema = z
+  .object({
+    fileType: fileTypeSchema,
+    displayName: z.string().min(1).max(200).optional(),
+    fileUrl: z.string().url(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(optionalBilingualDisplayNameFields.partial());
+
+const fileInputSchema = baseFileInputSchema.refine(
+  (data) => (data.displayNameEn && data.displayNameAr) || data.displayName,
+  { message: 'Provide displayName or displayNameEn/displayNameAr.' },
+);
+
+const baseVideoInputSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    videoUrl: z.string().trim().min(1).max(1000),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial());
+
+const videoInputSchema = baseVideoInputSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
 /** Max downloadable files attached to one digital product */
 const MAX_FILES_PER_PRODUCT = 30;
@@ -450,11 +485,23 @@ export function registerDigitalProductRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
 
+    const titleFields =
+      parsed.data.titleEn && parsed.data.titleAr
+        ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+        : bilingualTitleFromLegacy(parsed.data.title!);
+    const descriptionFields =
+      parsed.data.descriptionEn !== undefined || parsed.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            parsed.data.descriptionEn ?? parsed.data.description ?? null,
+            parsed.data.descriptionAr ?? parsed.data.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(parsed.data.description);
+
     const [product] = await db
       .insert(digitalProducts)
       .values({
-        title: parsed.data.title,
-        description: parsed.data.description ?? null,
+        ...titleFields,
+        ...descriptionFields,
         imageUrl: parsed.data.imageUrl ?? null,
         priceInCents: parsed.data.priceInCents ?? null,
         salesEnabled: parsed.data.salesEnabled ?? false,
@@ -610,7 +657,9 @@ export function registerDigitalProductRoutes(app: Hono) {
         incomingFiles.map((entry, index) => ({
           productId: product.id,
           fileType: entry.fileType,
-          displayName: entry.displayName,
+          ...(entry.displayNameEn && entry.displayNameAr
+            ? bilingualDisplayNameFields(entry.displayNameEn, entry.displayNameAr)
+            : bilingualDisplayNameFromLegacy(entry.displayName!)),
           fileUrl: entry.fileUrl,
           sortOrder: entry.sortOrder ?? baseSortOrder + index,
         })),
@@ -635,12 +684,14 @@ export function registerDigitalProductRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const updateFileSchema = fileInputSchema
+    const updateFileSchema = baseFileInputSchema
       .partial()
       .refine(
         (data) =>
           data.fileType !== undefined ||
           data.displayName !== undefined ||
+          data.displayNameEn !== undefined ||
+          data.displayNameAr !== undefined ||
           data.fileUrl !== undefined ||
           data.sortOrder !== undefined,
         'Provide at least one field to update.',
@@ -743,7 +794,9 @@ export function registerDigitalProductRoutes(app: Hono) {
       .values(
         incomingVideos.map((entry, index) => ({
           productId: product.id,
-          title: entry.title.trim(),
+          ...(entry.titleEn && entry.titleAr
+            ? bilingualTitleFields(entry.titleEn.trim(), entry.titleAr.trim())
+            : bilingualTitleFromLegacy(entry.title!.trim())),
           videoUrl: entry.videoUrl.trim(),
           sortOrder: entry.sortOrder ?? baseSortOrder + index,
         })),
@@ -768,11 +821,15 @@ export function registerDigitalProductRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const updateVideoSchema = videoInputSchema
+    const updateVideoSchema = baseVideoInputSchema
       .partial()
       .refine(
         (data) =>
-          data.title !== undefined || data.videoUrl !== undefined || data.sortOrder !== undefined,
+          data.title !== undefined ||
+          data.titleEn !== undefined ||
+          data.titleAr !== undefined ||
+          data.videoUrl !== undefined ||
+          data.sortOrder !== undefined,
         'Provide at least one field to update.',
       );
     const parsed = updateVideoSchema.safeParse(body);

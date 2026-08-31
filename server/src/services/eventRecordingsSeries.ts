@@ -1,6 +1,10 @@
 import { and, count, eq } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { libraryAssets, series, seriesAssets, trackEvents } from '../db/schema/index.js';
+import {
+  bilingualDescriptionFromLegacy,
+  bilingualTitleFromLegacy,
+} from '../utils/bilingualDb.js';
 import { normalizeRecordingsAccessPolicy } from '../routes/api/seriesAccess.js';
 import { isSeriesSellable } from './seriesSales.js';
 import {
@@ -26,11 +30,13 @@ export async function createEventRecordingsSeriesInTx(
   eventTitle: string,
   recordingAssetId: string,
 ): Promise<string> {
+  const seriesTitle = `${eventTitle} Recordings`;
+  const seriesDescription = `Recording from ${eventTitle}`;
   const [eventSeries] = await tx
     .insert(series)
     .values({
-      title: `${eventTitle} Recordings`,
-      description: `Recording from ${eventTitle}`,
+      ...bilingualTitleFromLegacy(seriesTitle),
+      ...bilingualDescriptionFromLegacy(seriesDescription),
       eventId,
       isPublished: false,
     })
@@ -90,11 +96,13 @@ export async function ensureEventRecordingsSeries(eventId: string, eventTitle: s
 
     let recordingAssetId = eventAssets[0]?.id;
     if (!recordingAssetId) {
+      const recordingTitle = `${eventTitle} - Recording`;
+      const recordingDescription = `Recording from ${eventTitle}`;
       const [createdAsset] = await tx
         .insert(libraryAssets)
         .values({
-          title: `${eventTitle} - Recording`,
-          description: `Recording from ${eventTitle}`,
+          ...bilingualTitleFromLegacy(recordingTitle),
+          ...bilingualDescriptionFromLegacy(recordingDescription),
           fileType: 'Video',
           eventId,
           isPublic: false,
