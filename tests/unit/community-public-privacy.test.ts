@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
-process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@localhost:5433/trafficmena_dev';
+process.env.DATABASE_URL ??= 'postgres://postgres:0000@127.0.0.1:5432/trafficmena_dev';
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-value-with-at-least-32-characters';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,12 +16,12 @@ const communityRoutesSource = readFileSync(
 describe('community public privacy', () => {
   it('member channel routes call requireAuthUser', () => {
     assert.match(communityRoutesSource, /async function requireAuthUser/);
-    assert.match(communityRoutesSource, /await requireAuthUser\(c\)/);
+    assert.match(communityRoutesSource, /await requireAuthUser\(c, deps\)/);
   });
 
   it('registers member routes under /community with auth guard', () => {
     assert.match(communityRoutesSource, /app\.get\(\s*['"]\/community\/channels['"]/);
-    assert.match(communityRoutesSource, /await requireAuthUser\(c\)/);
+    assert.match(communityRoutesSource, /await requireAuthUser\(c, deps\)/);
   });
 
   it('filters accessible channels server-side', () => {

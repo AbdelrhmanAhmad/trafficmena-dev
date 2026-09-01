@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Hono } from 'hono';
 
-process.env.DATABASE_URL ??= 'postgresql://postgres:postgres@localhost:5433/trafficmena_test';
+process.env.DATABASE_URL ??= 'postgres://postgres:0000@127.0.0.1:5432/trafficmena_dev';
 process.env.BETTER_AUTH_SECRET ??= 'test-secret-value-with-at-least-32-characters';
 
 describe('community post RBAC (HTTP)', () => {
