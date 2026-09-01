@@ -19,7 +19,7 @@ import {
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const MoMGrowthCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -68,19 +68,19 @@ const MoMGrowthCalculator = () => {
     const hasResults = momGrowth !== null || cmgr !== null;
     if (!hasResults) return;
 
-    let results = 'Month-Over-Month Growth Calculator Results\n';
+    let results = `${t('calcs.mom-growth.share.result')}\n`;
     if (momGrowth !== null) {
-      results += `{t('calcs.mom-growth.fields.previousValue')}: ${formatCurrency(previousValue, currency)}\n`;
-      results += `{t('calcs.mom-growth.fields.currentValue')}: ${formatCurrency(currentValue, currency)}\n`;
-      results += `MoM Growth: ${momGrowth.toFixed(2)}%\n\n`;
+      results += `${t('calcs.mom-growth.fields.previousValue')}: ${formatCurrency(previousValue, currency)}\n`;
+      results += `${t('calcs.mom-growth.fields.currentValue')}: ${formatCurrency(currentValue, currency)}\n`;
+      results += `${t('calcs.mom-growth.share.mom', { value: momGrowth.toFixed(2) })}\n\n`;
     }
     if (cmgr !== null) {
-      results += `Start Value: ${formatCurrency(startValue, currency)}\n`;
-      results += `End Value: ${formatCurrency(endValue, currency)}\n`;
-      results += `Number of Months: ${numberOfMonths}\n`;
-      results += `CMGR: ${cmgr.toFixed(2)}%\n`;
+      results += `${t('calcs.mom-growth.fields.startValue')}: ${formatCurrency(startValue, currency)}\n`;
+      results += `${t('calcs.mom-growth.fields.endValue')}: ${formatCurrency(endValue, currency)}\n`;
+      results += `${t('calcs.mom-growth.fields.numberOfMonths')}: ${numberOfMonths}\n`;
+      results += t('calcs.mom-growth.share.cmgr', { value: cmgr.toFixed(2) });
     }
-    shareToClipboard(hasResults ? results : null);
+    shareToClipboard(results);
   };
 
   const handleClear = () => {
@@ -100,182 +100,9 @@ const MoMGrowthCalculator = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 p-5 lg:p-6">
       {/* Left Column - Educational Content */}
-      <div className="space-y-4 lg:space-y-6">
-        <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h2 className="text-lg lg:text-xl font-semibold mb-3 text-neutral-800">
-            What is Month-Over-Month Growth?
-          </h2>
-          <p className="text-neutral-600 leading-relaxed">
-            Month-over-month (MoM) growth measures the percentage change in a specific metric from
-            one month to the next. It's a critical indicator used by businesses to understand quick
-            changes in market conditions, operational results, and overall performance trajectories.
-          </p>
-          <p className="text-neutral-600 leading-relaxed mt-3">
-            MoM calculations are commonly used across business functions including finance (revenue
-            monitoring), marketing (follower growth), sales (customer acquisition), and production
-            (volume tracking).
-          </p>
-        </Card>
+        <CalculatorEducationPanel slug="mom-growth" />
 
-        <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h2 className="text-lg lg:text-xl font-semibold mb-3 text-neutral-800">
-            Why is MoM Growth Important?
-          </h2>
-          <ul className="text-neutral-600 space-y-2">
-            <li>
-              <strong className="text-neutral-800">Identify Short-term Trends:</strong> Detect
-              changes that aren't apparent from longer periods, allowing rapid adaptation
-            </li>
-            <li>
-              <strong className="text-neutral-800">Spot Seasonal Patterns:</strong> Understand
-              cyclicality for inventory, staffing, and marketing planning
-            </li>
-            <li>
-              <strong className="text-neutral-800">Set Measurable Targets:</strong> Provides
-              actionable KPIs to motivate teams and align efforts
-            </li>
-            <li>
-              <strong className="text-neutral-800">Startup Validation:</strong> Evaluate whether
-              products are gaining market traction
-            </li>
-            <li>
-              <strong className="text-neutral-800">Distress Monitoring:</strong> Track if business
-              is improving or deteriorating for strategic decisions
-            </li>
-          </ul>
-        </Card>
-
-        <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h2 className="text-lg lg:text-xl font-semibold mb-3 text-neutral-800">
-            How to Calculate MoM Growth
-          </h2>
-          <p className="text-neutral-600 mb-3">The formula to calculate month-over-month growth:</p>
-          <code className="block bg-neutral-50 border border-neutral-100 rounded-xl p-3 text-sm mb-3">
-            MoM Growth = (Current Month - Previous Month) / Previous Month × 100
-          </code>
-          <p className="text-neutral-600 mb-3">Alternatively:</p>
-          <code className="block bg-neutral-50 border border-neutral-100 rounded-xl p-3 text-sm mb-3">
-            MoM Growth = (Current Month / Previous Month) - 1
-          </code>
-          <p className="text-neutral-600">
-            <strong>Example:</strong> If you had 200 active users in January and 240 in February:
-          </p>
-          <code className="block bg-neutral-50 border border-neutral-100 rounded-xl p-3 text-sm mt-2">
-            MoM Growth = (240 - 200) / 200 × 100 = 20%
-          </code>
-        </Card>
-
-        <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h2 className="text-lg lg:text-xl font-semibold mb-3 text-neutral-800">
-            {t('calcs.mom-growth.panelTitleCmgr')}
-          </h2>
-          <p className="text-neutral-600 mb-3">
-            CMGR measures the average month-over-month growth over a longer period, accounting for
-            compounding effects. It's similar to CAGR but on a monthly basis.
-          </p>
-          <code className="block bg-neutral-50 border border-neutral-100 rounded-xl p-3 text-sm mb-3">
-            CMGR = (End Value / Start Value)^(1/n) - 1
-          </code>
-          <p className="text-neutral-600">
-            Where <strong>n</strong> is the number of months between measurements.
-          </p>
-          <p className="text-neutral-600 mt-3">
-            <strong>Example:</strong> If users grew from 10,000 in January to 20,000 in December (11
-            months):
-          </p>
-          <code className="block bg-neutral-50 border border-neutral-100 rounded-xl p-3 text-sm mt-2">
-            CMGR = (20,000 / 10,000)^(1/11) - 1 = 6.5%
-          </code>
-        </Card>
-
-        <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h2 className="text-lg lg:text-xl font-semibold mb-3 text-neutral-800">
-            What is Good MoM Growth?
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-neutral-200/60">
-                  <th className="text-left py-2 text-neutral-800">Business Stage</th>
-                  <th className="text-left py-2 text-neutral-800">Good MoM Growth</th>
-                  <th className="text-left py-2 text-neutral-800">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-neutral-600">
-                <tr className="border-b border-neutral-200/60">
-                  <td className="py-2">Early-stage Startup</td>
-                  <td className="py-2">15-20%+</td>
-                  <td className="py-2 text-performance-excellent">Excellent</td>
-                </tr>
-                <tr className="border-b border-neutral-200/60">
-                  <td className="py-2">SaaS (Pre-$1M ARR)</td>
-                  <td className="py-2">10-20%</td>
-                  <td className="py-2 text-performance-good">Good</td>
-                </tr>
-                <tr className="border-b border-neutral-200/60">
-                  <td className="py-2">SaaS (Post-$1M ARR)</td>
-                  <td className="py-2">5-15%</td>
-                  <td className="py-2 text-performance-good">Healthy</td>
-                </tr>
-                <tr className="border-b border-neutral-200/60">
-                  <td className="py-2">Mature Company</td>
-                  <td className="py-2">2-5%</td>
-                  <td className="py-2 text-performance-breakeven">Stable</td>
-                </tr>
-                <tr>
-                  <td className="py-2">Any Stage</td>
-                  <td className="py-2">&lt; 0%</td>
-                  <td className="py-2 text-performance-loss">Declining</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-neutral-500 mt-3">
-            Source: Wall Street Prep, Corporate Finance Institute, SaaS Insights
-          </p>
-        </Card>
-
-        <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h2 className="text-lg lg:text-xl font-semibold mb-3 text-neutral-800">
-            MoM vs Other Growth Metrics
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-neutral-200/60">
-                  <th className="text-left py-2 text-neutral-800">Metric</th>
-                  <th className="text-left py-2 text-neutral-800">Time Frame</th>
-                  <th className="text-left py-2 text-neutral-800">Best For</th>
-                </tr>
-              </thead>
-              <tbody className="text-neutral-600">
-                <tr className="border-b border-neutral-200/60">
-                  <td className="py-2 font-medium text-neutral-800">MoM</td>
-                  <td className="py-2">Monthly</td>
-                  <td className="py-2">Short-term trends, quick decisions</td>
-                </tr>
-                <tr className="border-b border-neutral-200/60">
-                  <td className="py-2 font-medium text-neutral-800">QoQ</td>
-                  <td className="py-2">Quarterly</td>
-                  <td className="py-2">Quarterly planning, investor updates</td>
-                </tr>
-                <tr className="border-b border-neutral-200/60">
-                  <td className="py-2 font-medium text-neutral-800">YoY</td>
-                  <td className="py-2">Yearly</td>
-                  <td className="py-2">Long-term trends, removing seasonality</td>
-                </tr>
-                <tr>
-                  <td className="py-2 font-medium text-neutral-800">CMGR</td>
-                  <td className="py-2">Multi-month avg</td>
-                  <td className="py-2">Smoothed growth rate over time</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-
-      {/* Right Column - Calculator */}
+        {/* Right Column - Calculator */}
       <div className="space-y-4 lg:space-y-6">
         <Card className="border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <Accordion type="single" collapsible defaultValue="mom-calculator">
@@ -353,7 +180,7 @@ const MoMGrowthCalculator = () => {
 
                   {/* MoM Growth Result */}
                   <div className="space-y-2">
-                    <Label>{t('calcs.mom-growth.results.momGrowth')}</Label>
+                    <Label>${t('calcs.mom-growth.results.momGrowth')}</Label>
                     <Input
                       readOnly
                       value={momGrowth !== null ? `${momGrowth.toFixed(2)}%` : '—'}
@@ -485,7 +312,7 @@ const MoMGrowthCalculator = () => {
 
                   {/* CMGR Result */}
                   <div className="space-y-2">
-                    <Label>{t('calcs.mom-growth.results.cmgr')}</Label>
+                    <Label>${t('calcs.mom-growth.results.cmgr')}</Label>
                     <Input
                       readOnly
                       value={cmgr !== null ? `${cmgr.toFixed(2)}%` : '—'}

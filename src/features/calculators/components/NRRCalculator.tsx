@@ -19,7 +19,7 @@ import {
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const NRRCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -71,7 +71,11 @@ const NRRCalculator = () => {
   const handleShare = () => {
     const text =
       nrr !== null
-        ? `My NRR: ${nrr.toFixed(1)}% | Starting MRR: ${formatCurrency(startingMRR, currency)}${grr !== null ? ` | GRR: ${grr.toFixed(1)}%` : ''}${endingMRR !== null ? ` | Ending MRR: ${formatCurrency(endingMRR, currency)}` : ''}`
+        ? t('calcs.nrr.share.result', {
+      nrr: nrr.toFixed(1),
+      starting: formatCurrency(startingMRR, currency),
+      ending: formatCurrency(endingMRR, currency),
+    })
         : null;
     shareToClipboard(text);
   };
@@ -93,234 +97,7 @@ const NRRCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-6 lg:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is {t('calcs.nrr.results.nrr')}?
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              {t('calcs.nrr.results.nrr')}, also called Net Dollar Retention (NDR), measures{' '}
-              <strong className="text-neutral-800">
-                how much recurring revenue you retain and grow from existing customers
-              </strong>{' '}
-              over a specific period.
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              <strong className="text-neutral-800">The simplest way to think about NRR:</strong> How
-              much would your revenue grow or shrink if you acquired zero new customers? According
-              to research, SaaS companies with high NRR grow{' '}
-              <strong className="text-neutral-800">2.5x faster</strong> than low-NRR counterparts.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Why is NRR Important?
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Predicts Sustainable Growth:</strong>{' '}
-                  Companies with NRR above 110% can grow significantly without new acquisition
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Investor Priority:</strong> Often the single
-                  most important metric after revenue growth for VCs
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Cost Efficiency:</strong> Expanding existing
-                  customers costs 5x less than acquiring new ones
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Product-Market Fit:</strong> NRR above 100%
-                  indicates customers see enough value to invest more
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate NRR: The Formula
-            </h2>
-            <p className="text-neutral-600 mb-4">The standard NRR formula is:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">
-                NRR = (Starting MRR + Expansion - Contraction - Churn) / Starting MRR × 100
-              </code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              For example, with{' '}
-              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('100,000', currency)} starting MRR
-              </span>
-              ,{' '}
-              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('25,000', currency)} expansion
-              </span>
-              ,{' '}
-              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('8,000', currency)} contraction
-              </span>
-              , and{' '}
-              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('7,000', currency)} churn
-              </span>
-              :
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-2">
-              NRR = ({formatCurrency('100,000', currency)} + {formatCurrency('25,000', currency)} -{' '}
-              {formatCurrency('8,000', currency)} - {formatCurrency('7,000', currency)}) /{' '}
-              {formatCurrency('100,000', currency)} × 100 ={' '}
-              <strong className="text-neutral-800">110%</strong>
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              NRR Benchmarks (2025)
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              Industry benchmarks from SaaS Capital and Fullview:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">Below 100%:</strong> Poor. Revenue shrinking
-                  from existing customers
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">100-105%:</strong> Fair. Maintaining revenue
-                  with limited expansion
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">106-115%:</strong> Good. Solid expansion
-                  offsetting churn
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">116-120%+:</strong> Excellent. Best-in-class
-                  expansion engine
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Source: SaaS Capital 2025 Retention Benchmarks, Fullview (2025)
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              NRR by Average Contract Value (ACV)
-            </h2>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4">
-              <ul className="space-y-2 text-neutral-600 text-sm">
-                <li className="flex justify-between">
-                  <span>$0-$5K ACV (SMB)</span>
-                  <span className="text-neutral-800 font-medium">Median: 95-100%</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>$5K-$25K ACV (Mid-Market)</span>
-                  <span className="text-neutral-800 font-medium">Median: 100-106%</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>$25K-$100K ACV</span>
-                  <span className="text-neutral-800 font-medium">Median: 102-110%</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>$100K+ ACV (Enterprise)</span>
-                  <span className="text-neutral-800 font-medium">Median: 110-115%</span>
-                </li>
-              </ul>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Higher ACV correlates with higher NRR due to stickier enterprise customers.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">NRR vs GRR</h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              Both metrics matter but measure different things:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">NRR:</strong> Includes expansion. Shows total
-                  growth potential from existing customers
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">GRR (Gross Revenue Retention):</strong>{' '}
-                  Excludes expansion. Reveals core retention without upsells masking churn
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              <strong className="text-neutral-800">Why track both:</strong> A strong upsell motion
-              can mask underlying retention problems. If NRR is 110% but GRR is 70%, you have a
-              serious churn problem that expansion is covering up.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Improve NRR
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Reduce Churn:</strong> Improve onboarding,
-                  proactive customer success, and cancel flow optimization
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Drive Expansion:</strong> Upsell higher
-                  tiers, add seats, cross-sell new products, usage-based pricing
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Reduce Contraction:</strong> Monitor usage
-                  drops, intervene before downgrades, demonstrate value continuously
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Target Enterprise:</strong> Higher ACV
-                  customers have stickier contracts and more expansion potential
-                </span>
-              </li>
-            </ul>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="nrr" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4 lg:space-y-6">
@@ -448,7 +225,7 @@ const NRRCalculator = () => {
                     {/* NRR Output */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-600">
-                        {t('calcs.nrr.results.nrr')}
+                        ${t('calcs.nrr.results.nrr')}
                       </Label>
                       <div className="relative">
                         <Input
@@ -464,7 +241,7 @@ const NRRCalculator = () => {
                     {grr !== null && startingMRR && (
                       <div className="space-y-2">
                         <Label className="text-sm text-neutral-600">
-                          {t('calcs.nrr.results.grr')}
+                          ${t('calcs.nrr.results.grr')}
                         </Label>
                         <div className="relative">
                           <Input

@@ -124,6 +124,155 @@
         ]
       }
     },
+    "comparisonSection": {
+      "label": "Compare Plans",
+      "title": "What's Included at Each Level",
+      "subtitle": "Free gives you the foundation. Premium gives you specialization.",
+      "featureColumn": "Feature",
+      "freeColumn": "FREE",
+      "premiumColumn": "PREMIUM",
+      "features": [
+        { "name": "E-commerce Business Track (7 sessions)", "free": true, "premium": true },
+        { "name": "AI for Marketers Track (5 sessions)", "free": true, "premium": true },
+        { "name": "23 Marketing Calculators", "free": true, "premium": true },
+        { "name": "Monthly Q&A Sessions", "free": "1/month", "premium": "2/month", "highlight": true },
+        { "name": "Community Access", "free": true, "premium": true },
+        { "name": "Content Marketing Track (6 sessions + offline day)", "free": false, "premium": true, "highlight": true },
+        { "name": "Performance Marketing Track (7 sessions + offline day)", "free": false, "premium": true, "highlight": true },
+        { "name": "Exclusive Guides & Playbooks", "free": false, "premium": true, "highlight": true },
+        { "name": "Templates & Checklists", "free": false, "premium": true, "highlight": true },
+        { "name": "Specialty Subgroups", "free": false, "premium": true, "highlight": true },
+        { "name": "Offline Event Discounts (20%+)", "free": false, "premium": true, "highlight": true },
+        { "name": "All Future Tracks Included", "free": "6+ months later", "premium": "Immediately", "highlight": true }
+      ]
+    },
+    "valueMathSection": {
+      "label": "The Value Equation",
+      "title": "The Numbers Don't Lie",
+      "subtitle": "Here's what you're actually getting with premium membership",
+      "whatYouGetting": "What You're Getting",
+      "totalValue": "TOTAL VALUE",
+      "yourInvestment": "Your Investment",
+      "regularPrice": "Regular Price",
+      "foundingMemberPrice": "Founding Member Price",
+      "valueToPriceRatio": "Value-to-Price Ratio",
+      "valueRatio": "{{ratio}}x value",
+      "monthlyBreakdown": "Monthly Breakdown",
+      "perMonth": "/month",
+      "approxUsdMonth": "That's approximately $8 USD/month",
+      "egpYear": "EGP/year",
+      "items": [
+        "Content Marketing Track + Offline Day Materials",
+        "Performance Marketing Track + Offline Day Materials",
+        "24 Monthly Q&A Sessions (value at 1000 EGP avg each)",
+        "Offline Discount Savings (8 events × avg 350 EGP Discount)",
+        "Exclusive Resources (playbooks, templates, guides) avg",
+        "All Future Online Tracks & Offline Recordings (estimated 5-8 new tracks/year)"
+      ]
+    },
+    "roiSection": {
+      "label": "Return on Investment",
+      "title": "The Real Question: What's NOT Investing Worth?",
+      "subtitle": "The real cost isn't the subscription. It's 12 months of staying exactly where you are.",
+      "scenarios": [
+        {
+          "icon": "briefcase",
+          "title": "You're Job Hunting",
+          "metric": "8-20x ROI",
+          "description": "Average salary increase for skilled digital marketer: 2,000-5,000 EGP/month. Premium helps you build portfolio and specialize."
+        },
+        {
+          "icon": "users",
+          "title": "You're Freelancing",
+          "metric": "Pays for itself",
+          "description": "One client closed using skills from Performance Marketing Track: 3,000-10,000 EGP/month. Premium pays for itself with one client."
+        },
+        {
+          "icon": "trendingUp",
+          "title": "You Want a Promotion",
+          "metric": "Priceless",
+          "description": "Specialization is what gets noticed. The person who \"knows Meta Ads deeply\" gets promoted over the generalist."
+        }
+      ]
+    },
+    "differentiationSection": {
+      "label": "Why TrafficMENA",
+      "title": "What Makes TrafficMENA Different",
+      "items": [
+        {
+          "icon": "users2",
+          "title": "Multiple Experts, Not One Instructor",
+          "description": "Every track features different specialists. When you learn Performance Marketing, you hear from a strategist, a Meta ads expert, a Google ads specialist, and more. That's 7+ different perspectives, not one person's opinion."
+        },
+        {
+          "icon": "briefcase",
+          "title": "Practitioners, Not Professors",
+          "description": "Every expert who presents at TrafficMENA is actively working in marketing. They're not academics teaching theory. They're professionals sharing what's working NOW."
+        },
+        {
+          "icon": "globe",
+          "title": "Your Market, Not Generic Content",
+          "description": "Western marketing tactics don't always translate. Our experts have succeeded HERE. They understand the market, the audience psychology, and what actually converts in this region."
+        },
+        {
+          "icon": "users",
+          "title": "Community, Not Just Content",
+          "description": "You're not buying videos to watch alone. You're joining 1,200+ marketers who share wins, ask questions, and support each other. That network becomes your professional advantage."
+        }
+      ]
+    },
+    "foundingMember": {
+      "badge": "Founding Member",
+      "headline": "Lock In 50% Off",
+      "description": "We're launching TrafficMENA Premium and offering founding members 50% off. This isn't a gimmick. It's our thank-you to early believers. Founding member pricing is available now but won't last forever. Your premium access, however, will.",
+      "percentOff": "{{savings}}% OFF",
+      "becomeFoundingMember": "Become a Founding Member",
+      "processing": "Processing...",
+      "egpYear": "EGP/year",
+      "egpMonth": "EGP/month",
+      "features": [
+        "Instant access to all premium content",
+        "Founding member pricing locked for this year",
+        "Cancel anytime (but you won't want to)"
+      ]
+    },
+    "premiumBenefits": [
+      {
+        "id": "01",
+        "icon": "calendar",
+        "title": "2x Monthly Sessions",
+        "description": "Two Q&A or topic-based sessions every month (vs one for free members). Topics chosen by premium member votes with direct access to experts.",
+        "value": "24 sessions per year × 50 EGP = 1,200 EGP/year"
+      },
+      {
+        "id": "02",
+        "icon": "mic",
+        "title": "Offline Event Discounts",
+        "description": "20%+ discount on all offline events and intensive days. Typical event savings: 200-450+ EGP per event.",
+        "value": "Attend 2 events/year = 400-900 EGP saved"
+      },
+      {
+        "id": "03",
+        "icon": "fileText",
+        "title": "Exclusive Resources",
+        "description": "Ready-to-use templates, step-by-step playbooks, exclusive guides, and checklists that save hours of work.",
+        "value": "New resources added throughout the year"
+      },
+      {
+        "id": "04",
+        "icon": "users",
+        "title": "Specialty Subgroups",
+        "description": "Access to focused communities: Performance Marketing, Content Marketing, E-commerce, and more as the community grows.",
+        "value": "Connect with members who share your specialization"
+      },
+      {
+        "id": "05",
+        "icon": "rocket",
+        "title": "All Future Tracks",
+        "description": "Every new online track we create is included. No additional payments as we expand our curriculum.",
+        "value": "Early access before content becomes available to free members"
+      }
+    ],
     "faqSection": {
       "label": "FAQ",
       "title": "Questions? We've Got Answers",

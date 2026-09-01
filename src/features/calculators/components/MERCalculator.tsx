@@ -19,7 +19,7 @@ import {
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const MERCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -60,7 +60,12 @@ const MERCalculator = () => {
   const handleShare = () => {
     const text =
       mer !== null
-        ? `My MER: ${mer.toFixed(2)}x (${merPercentage?.toFixed(0)}%) | Revenue: ${formatCurrency(totalRevenue, currency)} | Marketing Spend: ${formatCurrency(totalMarketingSpend, currency)}`
+        ? t('calcs.mer.share.result', {
+      mer: mer.toFixed(2),
+      percent: merPercentage?.toFixed(0),
+      revenue: formatCurrency(totalRevenue, currency),
+      spend: formatCurrency(totalMarketingSpend, currency),
+    })
         : null;
     shareToClipboard(text);
   };
@@ -80,167 +85,7 @@ const MERCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-2xl md:text-3xl font-bold text-neutral-800 mb-4">
-              What is MER?: Marketing Efficiency Ratio
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              {t('calcs.mer.panelTitle')}, also known as{' '}
-              <strong className="text-neutral-800">Blended ROAS</strong> or{' '}
-              <strong className="text-neutral-800">Ecosystem ROAS</strong>, measures{' '}
-              <strong className="text-neutral-800">
-                how many dollars in revenue your business generates for every $1 spent on marketing
-              </strong>
-              , regardless of which platform or channel drove the conversion.
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              Unlike channel-specific ROAS, MER gives you a{' '}
-              <strong className="text-neutral-800">
-                holistic, big-picture view of your entire marketing performance
-              </strong>{' '}
-              across all channels combined.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              MER vs ROAS: What's the Difference?
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">ROAS</strong> is channel-specific and
-                  attribution-dependent (e.g., Facebook ROAS, Google ROAS)
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">MER</strong> includes ALL revenue regardless
-                  of attribution and ALL marketing costs
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  MER accounts for the full marketing ecosystem including team salaries, software,
-                  agencies, and creative costs
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate MER: The Formula
-            </h2>
-            <p className="text-neutral-600 mb-4">The MER formula is:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">MER = Total Revenue / Total Marketing Spend</code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              For example, if your business generated{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('300,000', currency)}
-              </span>{' '}
-              in revenue and spent{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('100,000', currency)}
-              </span>{' '}
-              on all marketing efforts, your MER is{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('300,000', currency)} / {formatCurrency('100,000', currency)} = 3.0x
-                (or 300%)
-              </span>
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              This means you generate{' '}
-              <strong className="text-neutral-800">
-                $3 in revenue for every $1 spent on marketing
-              </strong>
-              .
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              What's Included in Total Marketing Spend?
-            </h2>
-            <p className="text-neutral-600 mb-3">
-              For accurate MER calculation, include all marketing-related costs:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
-                Ad spend across all platforms
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
-                Marketing team salaries
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
-                Agency fees
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
-                Creative production costs
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
-                Software & tool subscriptions
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-neutral-600"></span>
-                Market research
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              What is a Good MER?
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              A "good" MER varies by industry, but as a rule of thumb:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">Below 2x:</strong> Difficult to be profitable
-                  (spending 50%+ of revenue)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">2x - 3x:</strong> Acceptable, room for
-                  improvement
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">3x - 5x:</strong> Good efficiency (spending
-                  20-33% of revenue)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">5x+:</strong> Excellent efficiency
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Industry benchmarks (2025): Apparel 2.8x, Health & Wellness 2.0x, Food & Beverage
-              2.1x, Electronics 2.4x, Pets 1.9x
-            </p>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="mer" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4 lg:space-y-6">
@@ -311,7 +156,7 @@ const MERCalculator = () => {
 
                     {/* MER Output - Ratio */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">{t('calcs.mer.results.merRatio')}</Label>
+                      <Label className="text-sm text-neutral-600">${t('calcs.mer.results.merRatio')}</Label>
                       <div className="relative">
                         <Input
                           readOnly

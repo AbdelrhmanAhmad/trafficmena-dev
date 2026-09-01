@@ -21,7 +21,7 @@ import { Slider } from '@/shared/components/ui/slider';
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const ROASCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -74,7 +74,11 @@ const ROASCalculator = () => {
   const handleShare = () => {
     const text =
       roas !== null
-        ? `My ROAS: ${roas.toFixed(1)}% | Ad Spend: ${formatCurrency(adSpend, currency)} | Revenue: ${formatCurrency(adRevenue, currency)}`
+        ? t('calcs.roas.share.result', {
+      roas: roas.toFixed(1),
+      spend: formatCurrency(adSpend, currency),
+      revenue: formatCurrency(adRevenue, currency),
+    })
         : null;
     shareToClipboard(text);
   };
@@ -102,111 +106,7 @@ const ROASCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-6 lg:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is ROAS?: ROAS meaning
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              Return on ad spend or ROAS is the{' '}
-              <strong className="text-neutral-800">
-                amount of revenue a company generates for every dollar spent on an advertising
-                source
-              </strong>
-              .
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              When a business tests a new advertising source for a campaign, it may{' '}
-              <strong className="text-neutral-800">
-                compare the ROAS at different stages of the campaign with other advertising sources
-                to gauge their performance
-              </strong>{' '}
-              and determine which should get renewed.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to calculate ROAS: ROAS calculation formula
-            </h2>
-            <p className="text-neutral-600 mb-4">The ROAS formula is:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">
-                ROAS = (Revenue from advertising / Cost of advertising) × 100
-              </code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              That means that if you spent{' '}
-              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency(exampleSpend, currency)}
-              </span>{' '}
-              on Facebook ads in one month and your revenue for that month is{' '}
-              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency(exampleRevenue, currency)}
-              </span>
-              , your ROAS is{' '}
-              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-mono text-sm">
-                ({formatCurrency(exampleRevenue, currency)}/{formatCurrency(exampleSpend, currency)}
-                ) × 100 = {currentCurrency.symbol}3 × 100 = 300%
-              </span>{' '}
-              per {currentCurrency.name.toLowerCase()} spent on advertising.
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              But if you made {formatCurrency(exampleLowRevenue, currency)} in revenue in the same
-              month, your ROAS is{' '}
-              <span className="bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-mono text-sm">
-                ({formatCurrency(exampleLowRevenue, currency)}/
-                {formatCurrency(exampleSpend, currency)}) × 100 = {currentCurrency.symbol}0.9 × 100
-                = 90%
-              </span>
-              .
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              90% may look acceptable at face value, but don't be fooled by anyone throwing such
-              ROAS numbers. Anything less than 100% is a loss when evaluating ROAS.{' '}
-              <strong className="text-neutral-800">
-                The ROAS calculator will help you make sure you don't interpret your ROAS results
-                wrongly or confusing
-              </strong>
-              .
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              What is a good ROAS?
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              A good ROAS varies by industry, but generally:
-            </p>
-            <ul className="mt-4 space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">Below 100%:</strong> You're losing money
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">100-300%:</strong> Break-even to moderate
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">400-800%:</strong> Good performance
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">800%+:</strong> Excellent performance
-                </span>
-              </li>
-            </ul>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="roas" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4 lg:space-y-6">

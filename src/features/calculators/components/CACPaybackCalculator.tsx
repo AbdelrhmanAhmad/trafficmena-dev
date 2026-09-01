@@ -19,7 +19,7 @@ import {
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const CACPaybackCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -66,7 +66,13 @@ const CACPaybackCalculator = () => {
   const handleShare = () => {
     const text =
       paybackPeriod !== null
-        ? `My ${t('calcs.cac-payback.results.paybackPeriod')}: ${paybackPeriod.toFixed(1)} months | CAC: ${formatCurrency(cac, currency)} | Monthly Revenue: ${formatCurrency(monthlyRevenue, currency)} | Gross Margin: ${grossMargin}%`
+        ? t('calcs.cac-payback.share.result', {
+            payback: paybackPeriod.toFixed(1),
+            cac: formatCurrency(cac, currency),
+            revenue: formatCurrency(monthlyRevenue, currency),
+            margin: grossMargin,
+            paybackLabel: t('calcs.cac-payback.results.paybackPeriod'),
+          })
         : null;
     shareToClipboard(text);
   };
@@ -87,231 +93,7 @@ const CACPaybackCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is {t('calcs.cac-payback.results.paybackPeriod')}?
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              {t('calcs.cac-payback.results.paybackPeriod')} measures{' '}
-              <strong className="text-neutral-800">
-                how many months it takes to recover the cost of acquiring a customer
-              </strong>
-              . It's a critical cash flow metric that shows how quickly your acquisition investment
-              turns profitable.
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              Unlike LTV:CAC ratio which shows total value, payback period focuses on{' '}
-              <strong className="text-neutral-800">time to breakeven</strong>. A shorter payback
-              means faster reinvestment in growth. According to Bessemer Venture Partners, the
-              benchmark is <strong className="text-neutral-800">12 months or less</strong> for
-              healthy SaaS companies.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Why is CAC Payback Important?
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Cash Flow Management:</strong> Shows how long
-                  capital is tied up before generating profit
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Growth Sustainability:</strong> Shorter
-                  payback means faster reinvestment cycles
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Runway Planning:</strong> Critical for
-                  startups to understand burn rate implications
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Investor Metric:</strong> VCs closely monitor
-                  this alongside LTV:CAC for funding decisions
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate {t('calcs.cac-payback.results.paybackPeriod')}
-            </h2>
-            <p className="text-neutral-600 mb-4">The formula is:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">
-                CAC Payback = CAC / (Monthly Revenue × Gross Margin %)
-              </code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              For example, if your{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                CAC is {formatCurrency('600', currency)}
-              </span>
-              , with{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('100', currency)}/month revenue
-              </span>{' '}
-              and{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                80% gross margin
-              </span>
-              , your payback is{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('600', currency)} / ({formatCurrency('100', currency)} × 0.80) = 7.5
-                months
-              </span>
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              CAC Payback Benchmarks
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              Industry benchmarks from Bessemer, OpenView, and SaaS Capital (2024-2025):
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">&lt;6 months:</strong> Excellent. Very
-                  efficient acquisition, consider scaling faster
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">6-12 months:</strong> Good. Healthy for most
-                  SaaS companies
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">12-18 months:</strong> Acceptable for
-                  enterprise. Needs optimization for SMB
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">&gt;18 months:</strong> Warning. High churn
-                  risk before payback; reduce CAC or increase ARPU
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Source: Bessemer Venture Partners, OpenView Partners, SaaS Capital benchmarks
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Payback by Business Model
-            </h2>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4">
-              <ul className="space-y-2 text-neutral-600 text-sm">
-                <li className="flex justify-between">
-                  <span>SMB SaaS (self-serve)</span>
-                  <span className="text-neutral-800 font-medium">&lt;6 months ideal</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>Mid-Market SaaS</span>
-                  <span className="text-neutral-800 font-medium">6-12 months</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>Enterprise SaaS</span>
-                  <span className="text-neutral-800 font-medium">12-18 months acceptable</span>
-                </li>
-                <li className="flex justify-between">
-                  <span>eCommerce / D2C</span>
-                  <span className="text-neutral-800 font-medium">&lt;3 months ideal</span>
-                </li>
-              </ul>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Enterprise deals can have longer payback due to higher ACVs and lower churn.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Reduce {t('calcs.cac-payback.results.paybackPeriod')}
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Reduce CAC:</strong> Improve conversion
-                  rates, focus on organic channels, optimize ad spend
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Increase ARPU:</strong> Upsell to higher
-                  tiers, add premium features, usage-based pricing
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Improve Margins:</strong> Reduce hosting
-                  costs, automate support, optimize infrastructure
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Faster Onboarding:</strong> Get customers to
-                  value faster to reduce early churn
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              CAC Payback vs LTV:CAC
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              Both metrics matter but measure different things:
-            </p>
-            <ul className="space-y-2 text-neutral-600 mt-4">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">CAC Payback:</strong> Time-focused. How
-                  quickly you recover investment
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">LTV:CAC:</strong> Value-focused. Total return
-                  on acquisition investment
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              A company with great LTV:CAC (5:1) but long payback (24 months) needs significant
-              capital to grow. A company with shorter payback can reinvest faster.
-            </p>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="cac-payback" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4">

@@ -11,7 +11,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const CTRCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -35,7 +35,11 @@ const CTRCalculator = () => {
   const handleShare = () => {
     const text =
       ctr !== null
-        ? `My CTR: ${ctr.toFixed(2)}% | Clicks: ${parseInt(clicks, 10).toLocaleString()} | Impressions: ${parseInt(impressions, 10).toLocaleString()}`
+        ? t('calcs.ctr.share.result', {
+      ctr: ctr.toFixed(2),
+      clicks: parseInt(clicks, 10).toLocaleString(),
+      impressions: parseInt(impressions, 10).toLocaleString(),
+    })
         : null;
     shareToClipboard(text);
   };
@@ -55,185 +59,7 @@ const CTRCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is CTR?: Click-Through Rate
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              CTR, or <strong className="text-neutral-800">Click-Through Rate</strong>, is a digital
-              marketing metric that measures{' '}
-              <strong className="text-neutral-800">
-                the percentage of people who click on your ad after seeing it
-              </strong>
-              .
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              CTR is one of the most important metrics for evaluating ad engagement and relevance. A
-              higher CTR indicates that your{' '}
-              <strong className="text-neutral-800">ad copy, creative, and targeting</strong> are
-              resonating with your audience.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Why is CTR Important?
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Measures Engagement:</strong> Shows how
-                  compelling your ad is to your target audience
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Affects Quality Score:</strong> Higher CTR
-                  improves your Quality Score on Google Ads, lowering CPC
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Indicates Relevance:</strong> Low CTR may
-                  signal a mismatch between ad content and audience
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Optimizes Budget:</strong> Better CTR means
-                  more efficient use of your ad spend
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate CTR: The Formula
-            </h2>
-            <p className="text-neutral-600 mb-4">The CTR formula is:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">CTR = (Clicks / Impressions) x 100</code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              For example, if your ad received{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                150 clicks
-              </span>{' '}
-              from{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                10,000 impressions
-              </span>
-              , your CTR is{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                (150 / 10,000) x 100 = 1.5%
-              </span>
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              This means <strong className="text-neutral-800">1.5% of people</strong> who saw your
-              ad clicked on it.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              What is a Good CTR?
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              A "good" CTR varies by platform, industry, and ad type:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">Below 0.5%:</strong> Poor. Needs significant
-                  improvement
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">0.5% - 1%:</strong> Below average. Room for
-                  optimization
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">1% - 3%:</strong> Average to good for most
-                  platforms
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">Above 3%:</strong> Excellent. Highly engaging
-                  ads
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Average CTR by Platform (2025)
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              CTR benchmarks vary significantly across advertising platforms:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">Google Ads (Search):</strong> 3-5% average
-                  (intent-based)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">Google Ads (Display):</strong> 0.5-1% average
-                  (awareness)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">Meta (Facebook/Instagram):</strong> 0.9-1.5%
-                  average
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">LinkedIn:</strong> 0.4-0.6% average (B2B)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">TikTok:</strong> 1-3% average (highly
-                  engaging)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">Email Marketing:</strong> 2-5% average
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Note: Search ads typically have higher CTRs than display ads because users have active
-              intent.
-            </p>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="ctr" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4">

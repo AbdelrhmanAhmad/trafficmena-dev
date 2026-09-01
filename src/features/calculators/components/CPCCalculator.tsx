@@ -19,7 +19,7 @@ import {
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const CPCCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -52,7 +52,11 @@ const CPCCalculator = () => {
   const handleShare = () => {
     const text =
       cpc !== null
-        ? `My CPC: ${formatCurrency(cpc.toFixed(2), currency)} | Ad Spend: ${formatCurrency(adSpend, currency)} | Clicks: ${parseInt(clicks, 10).toLocaleString()}`
+        ? t('calcs.cpc.share.result', {
+      cpc: formatCurrency(cpc.toFixed(2), currency),
+      spend: formatCurrency(adSpend, currency),
+      clicks: parseInt(clicks, 10).toLocaleString(),
+    })
         : null;
     shareToClipboard(text);
   };
@@ -72,179 +76,7 @@ const CPCCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is CPC?: Cost Per Click
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              CPC, or <strong className="text-neutral-800">Cost Per Click</strong>, is a digital
-              advertising metric that measures{' '}
-              <strong className="text-neutral-800">
-                how much you pay each time someone clicks on your ad
-              </strong>
-              .
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              Unlike CPM (Cost Per Mille) which charges per impression, CPC ensures you only pay
-              when users take action by clicking. This makes CPC ideal for{' '}
-              <strong className="text-neutral-800">performance-based campaigns</strong> focused on
-              driving traffic, leads, or conversions.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Why is CPC Important?
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Pay for Performance:</strong> You only pay
-                  when users engage with your ad by clicking
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Budget Control:</strong> Set maximum bids to
-                  control how much you spend per click
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Measure Efficiency:</strong> Lower CPC means
-                  more traffic for your budget
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Optimize Campaigns:</strong> Compare CPC
-                  across ads, audiences, and platforms to find what works
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate CPC: The Formula
-            </h2>
-            <p className="text-neutral-600 mb-4">The CPC formula is:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">CPC = Total Ad Spend / Number of Clicks</code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              For example, if you spent{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('500', currency)}
-              </span>{' '}
-              on ads and received{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                250 clicks
-              </span>
-              , your CPC is{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('500', currency)} / 250 = {formatCurrency('2.00', currency)}
-              </span>
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              This means you paid{' '}
-              <strong className="text-neutral-800">
-                {formatCurrency('2.00', currency)} for each click
-              </strong>{' '}
-              on your ad.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Factors That Affect CPC
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Industry Competition:</strong> Highly
-                  competitive industries (legal, insurance, finance) have higher CPCs
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Quality Score:</strong> Higher quality ads
-                  with relevant landing pages get lower CPCs
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Targeting:</strong> Broader audiences
-                  typically have lower CPCs than niche targeting
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Ad Placement:</strong> Premium placements
-                  (top of page, feed) cost more per click
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Average CPC Rates by Platform (2025)
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              CPC varies significantly by platform and industry:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">Google Ads (Search):</strong> $1-$2 average,
-                  up to $50+ for competitive keywords
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">Google Ads (Display):</strong> $0.50-$1.00
-                  average
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">Meta (Facebook/Instagram):</strong>{' '}
-                  $0.50-$2.00 average
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">LinkedIn:</strong> $5-$6 average (B2B
-                  premium)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">TikTok:</strong> $0.20-$1.00 average
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Note: Legal, insurance, and finance industries often see CPCs of $10-$50+ due to high
-              customer lifetime value.
-            </p>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="cpc" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4">
@@ -329,7 +161,7 @@ const CPCCalculator = () => {
                     {/* Total Clicks Display */}
                     {totalClicks !== null && totalClicks > 0 && (
                       <div className="space-y-2">
-                        <Label className="text-sm text-neutral-600">{t('calcs.cpc.results.totalClicksReceived')}</Label>
+                        <Label className="text-sm text-neutral-600">${t('calcs.cpc.results.totalClicksReceived')}</Label>
                         <div className="relative">
                           <Input
                             readOnly

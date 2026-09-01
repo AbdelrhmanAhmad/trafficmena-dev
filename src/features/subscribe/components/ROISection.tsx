@@ -1,21 +1,32 @@
-import { ROI_SCENARIOS } from '../content';
+import { useTranslation } from 'react-i18next';
+import { getSubscribeIcon } from '../subscribeIcons';
+
+type RoiScenario = {
+  icon: string;
+  title: string;
+  metric: string;
+  description: string;
+};
 
 export function ROISection() {
+  const { t } = useTranslation('commerce');
+  const scenarios = t('subscribe.roiSection.scenarios', { returnObjects: true }) as RoiScenario[];
+
   return (
     <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8">
       <div className="relative z-10 mx-auto max-w-3xl text-center">
-        <span className="text-sm font-normal text-neutral-500">Return on Investment</span>
+        <span className="text-sm font-normal text-neutral-500">
+          {t('subscribe.roiSection.label')}
+        </span>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-          The Real Question: What's NOT Investing Worth?
+          {t('subscribe.roiSection.title')}
         </h2>
-        <p className="mt-3 text-sm text-neutral-600">
-          The real cost isn't the subscription. It's 12 months of staying exactly where you are.
-        </p>
+        <p className="mt-3 text-sm text-neutral-600">{t('subscribe.roiSection.subtitle')}</p>
       </div>
 
       <div className="relative z-10 mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {ROI_SCENARIOS.map((scenario) => {
-          const Icon = scenario.icon;
+        {scenarios.map((scenario) => {
+          const Icon = getSubscribeIcon(scenario.icon);
           return (
             <div
               key={scenario.title}

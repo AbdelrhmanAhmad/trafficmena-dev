@@ -19,7 +19,7 @@ import {
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const CPMCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -53,7 +53,11 @@ const CPMCalculator = () => {
   const handleShare = () => {
     const text =
       cpm !== null
-        ? `My CPM: ${formatCurrency(cpm.toFixed(2), currency)} | Ad Spend: ${formatCurrency(adSpend, currency)} | Impressions: ${parseInt(impressions, 10).toLocaleString()}`
+        ? t('calcs.cpm.share.result', {
+      cpm: formatCurrency(cpm.toFixed(2), currency),
+      spend: formatCurrency(adSpend, currency),
+      impressions: parseInt(impressions, 10).toLocaleString(),
+    })
         : null;
     shareToClipboard(text);
   };
@@ -73,171 +77,7 @@ const CPMCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is CPM?: Cost Per Mille
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              CPM, or <strong className="text-neutral-800">Cost Per Mille</strong> (mille is Latin
-              for "thousand"), is a pricing model in digital advertising where advertisers{' '}
-              <strong className="text-neutral-800">
-                pay a fixed price for every 1,000 impressions of their ad
-              </strong>
-              .
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              An impression is counted when an ad loads on a page or app and is viewed by the user.
-              CPM is the most common pricing model in{' '}
-              <strong className="text-neutral-800">programmatic advertising</strong> and is
-              particularly useful when the goal is{' '}
-              <strong className="text-neutral-800">building brand awareness</strong> rather than
-              driving direct conversions.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Why is CPM Important?
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Brand Awareness:</strong> CPM prioritizes
-                  exposure over clicks, making it ideal for getting your brand noticed
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Clear Pricing:</strong> Fixed cost for a set
-                  number of impressions makes budgeting predictable
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Easy Comparison:</strong> Compare channels
-                  and media sources based on cost efficiency
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Scalability:</strong> Easy to scale up or
-                  down based on budget
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate CPM: The Formula
-            </h2>
-            <p className="text-neutral-600 mb-4">The CPM formula is:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">CPM = (Total Ad Spend / Impressions) x 1,000</code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              For example, if you paid{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('1,500', currency)}
-              </span>{' '}
-              to serve your ad and received{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                750,000 impressions
-              </span>
-              , your CPM is{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                ({formatCurrency('1,500', currency)} / 750,000) x 1,000 ={' '}
-                {formatCurrency('2.00', currency)}
-              </span>
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              This means you paid{' '}
-              <strong className="text-neutral-800">
-                {formatCurrency('2.00', currency)} for every 1,000 ad impressions
-              </strong>
-              .
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              CPM vs CPC vs CPA
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">CPM (Cost Per Mille):</strong> Pay for
-                  impressions. Best for brand awareness campaigns
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">CPC (Cost Per Click):</strong> Pay only when
-                  users click. Best for driving traffic and engagement
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">CPA (Cost Per Action):</strong> Pay only when
-                  users take a specific action (purchase, signup). Best for conversions
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Average CPM Rates by Platform (2025)
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              CPM rates vary significantly by platform, audience, and seasonality:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">Meta (Facebook):</strong> ~$6.59 CPM
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">Instagram:</strong> ~$9.46 CPM (premium
-                  visual placements)
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">TikTok:</strong> ~$6-8 CPM
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">YouTube:</strong> ~$3-6 CPM
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">Snapchat:</strong> ~$12.84 CPM (Q4 peak)
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Note: CPM rates spike significantly in Q4 due to holiday advertising competition.
-            </p>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="cpm" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4">

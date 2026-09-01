@@ -19,7 +19,7 @@ import {
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const LTVCACCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -46,7 +46,12 @@ const LTVCACCalculator = () => {
   const handleShare = () => {
     const text =
       ratio !== null
-        ? `My {t('calcs.ltv-cac.results.ratio')}: ${ratio.toFixed(1)}:1 | LTV: ${formatCurrency(ltv, currency)} | CAC: ${formatCurrency(cac, currency)}`
+        ? t('calcs.ltv-cac.share.result', {
+            ratio: ratio.toFixed(1),
+            ltv: formatCurrency(ltv, currency),
+            cac: formatCurrency(cac, currency),
+            ratioLabel: t('calcs.ltv-cac.results.ratio'),
+          })
         : null;
     shareToClipboard(text);
   };
@@ -66,193 +71,7 @@ const LTVCACCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-2xl md:text-3xl font-bold text-neutral-800 mb-4">
-              What is {t('calcs.ltv-cac.results.ratio')}?
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              The LTV:CAC ratio measures{' '}
-              <strong className="text-neutral-800">
-                how much value a customer generates compared to the cost of acquiring them
-              </strong>
-              . It's the gold standard metric for evaluating unit economics health.
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              A ratio of <strong className="text-neutral-800">3:1</strong> means each customer
-              generates 3x what you spent to acquire them, the widely accepted benchmark for
-              sustainable growth. According to industry research, this ratio is one of the most
-              scrutinized metrics by VCs and growth investors.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Why is {t('calcs.ltv-cac.results.ratio')} Important?
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Profitability Signal:</strong> Shows whether
-                  customer acquisition is profitable at the unit level
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Investment Decisions:</strong> Guides how
-                  much to invest in marketing and sales
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Scalability Check:</strong> High ratios
-                  indicate room to scale; low ratios signal unit economics problems
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Fundraising Metric:</strong> Critical for
-                  investor due diligence and company valuation
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate {t('calcs.ltv-cac.results.ratio')}
-            </h2>
-            <p className="text-neutral-600 mb-4">The formula is straightforward:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">{t('calcs.ltv-cac.results.ratio')} = LTV / CAC</code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              For example, if your{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                LTV is {formatCurrency('1,500', currency)}
-              </span>{' '}
-              and your{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                CAC is {formatCurrency('500', currency)}
-              </span>
-              , your ratio is{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('1,500', currency)} / {formatCurrency('500', currency)} = 3:1
-              </span>
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              {t('calcs.ltv-cac.results.ratio')} Benchmarks
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              Industry-standard benchmarks for interpreting your ratio:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">Below 1:1:</strong> Losing money on every
-                  customer. Urgent action needed
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">1:1 to 2:1:</strong> Unprofitable after
-                  overhead. Optimize LTV or reduce CAC
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">2:1 to 3:1:</strong> Break-even territory.
-                  Getting close to healthy economics
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">3:1 to 5:1:</strong> Healthy. The gold
-                  standard for sustainable growth
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">Above 5:1:</strong> Excellent, but may
-                  indicate under-investment in growth
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Source: Industry benchmarks from Bessemer, a]16z, and growth equity standards
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Improve {t('calcs.ltv-cac.results.ratio')}
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              There are two levers to improve your ratio:
-            </p>
-
-            <h3 className="text-lg font-semibold text-neutral-800 mb-2">Increase LTV:</h3>
-            <ul className="space-y-2 text-neutral-600 mb-4">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>Reduce churn through better onboarding and customer success</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>Increase ARPU via upsells, cross-sells, and premium tiers</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>Improve gross margins by optimizing costs</span>
-              </li>
-            </ul>
-
-            <h3 className="text-lg font-semibold text-neutral-800 mb-2">Decrease CAC:</h3>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>Improve conversion rates across the funnel</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>Focus on organic channels (SEO, content, referrals)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>Optimize paid ad targeting and creative</span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              When High Ratios May Be a Problem
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              While a high LTV:CAC ratio (above 5:1) sounds great, it can indicate{' '}
-              <strong className="text-neutral-800">under-investment in growth</strong>. If your
-              ratio is very high, you may be leaving market share on the table by not spending
-              enough on customer acquisition.
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              The optimal strategy is often to invest more in marketing and sales until your ratio
-              approaches the 3:1 to 5:1 sweet spot, maximizing growth while maintaining healthy unit
-              economics.
-            </p>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="ltv-cac" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4 lg:space-y-6">

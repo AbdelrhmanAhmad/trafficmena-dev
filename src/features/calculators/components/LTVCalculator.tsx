@@ -19,7 +19,7 @@ import {
 import { CURRENCIES, type CurrencyCode, formatCurrency } from '../constants/currency';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const LTVCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -58,7 +58,16 @@ const LTVCalculator = () => {
   const handleShare = () => {
     const text =
       ltv !== null
-        ? `My Ecommerce LTV: ${formatCurrency(ltv.toFixed(2), currency)} | AOV: ${formatCurrency(aov, currency)} | Purchases/Customer: ${purchaseFrequency} | Gross Margin: ${grossMargin}%${ltvCacRatio !== null ? ` | {t('calcs.ltv.results.ltvCacRatio')}: ${ltvCacRatio.toFixed(1)}:1` : ''}`
+        ? t('calcs.ltv.share.result', {
+            ltv: formatCurrency(ltv.toFixed(2), currency),
+            aov: formatCurrency(aov, currency),
+            frequency: purchaseFrequency,
+            margin: grossMargin,
+            ratio:
+              ltvCacRatio !== null
+                ? ` | ${t('calcs.ltv.results.ltvCacRatio')}: ${ltvCacRatio.toFixed(1)}:1`
+                : '',
+          })
         : null;
     shareToClipboard(text);
   };
@@ -80,213 +89,7 @@ const LTVCalculator = () => {
     <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
         {/* Left Column - Educational Content */}
-        <div className="space-y-4 lg:space-y-6">
-          <section>
-            <h2 className="text-2xl md:text-3xl font-bold text-neutral-800 mb-4">
-              What is Ecommerce LTV?: Customer Lifetime Value
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              LTV (or CLV), <strong className="text-neutral-800">Customer Lifetime Value</strong>,
-              measures{' '}
-              <strong className="text-neutral-800">
-                the total profit a customer generates over their entire relationship with your
-                business
-              </strong>
-              .
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              Unlike revenue-focused metrics, this simplified eCommerce LTV formula factors in{' '}
-              <strong className="text-neutral-800">gross margin</strong> to show actual profit
-              contribution. According to Shopify, a good{' '}
-              <strong className="text-neutral-800">LTV:CAC ratio is 3:1</strong>, meaning each
-              customer should generate 3x what you spent to acquire them.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              Why is LTV Important?
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Sets Acquisition Budgets:</strong> Knowing
-                  LTV tells you how much you can profitably spend to acquire customers
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Identifies Valuable Segments:</strong> Find
-                  which customer groups generate the most long-term profit
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Drives Retention Focus:</strong> Retained
-                  customers buy more often and spend more than new ones
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Informs Pricing Strategy:</strong> Understand
-                  perceived value to optimize product pricing
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate Ecommerce LTV: The Formula
-            </h2>
-            <p className="text-neutral-600 mb-4">The simplified eCommerce LTV formula is:</p>
-            <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
-              <code className="text-neutral-800">
-                LTV = AOV × Purchases per Customer × Gross Margin %
-              </code>
-            </div>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              For example, if your{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                AOV is {formatCurrency('50', currency)}
-              </span>
-              , customers make{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                6 purchases
-              </span>{' '}
-              over their lifetime, with a{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                40% gross margin
-              </span>
-              , your LTV is{' '}
-              <span className="bg-primary-green/10 text-primary-green px-1.5 py-0.5 rounded font-mono text-sm">
-                {formatCurrency('50', currency)} × 6 × 0.40 = {formatCurrency('120', currency)}
-              </span>
-            </p>
-            <p className="text-neutral-600 leading-relaxed mt-4">
-              Each customer generates{' '}
-              <strong className="text-neutral-800">
-                {formatCurrency('120', currency)} in gross profit
-              </strong>{' '}
-              over their lifetime.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              {t('calcs.ltv.results.ltvCacRatio')} Benchmarks
-            </h2>
-            <p className="text-neutral-600 leading-relaxed mb-4">
-              The LTV:CAC ratio shows if your customer acquisition is profitable:
-            </p>
-            <ul className="space-y-2 text-neutral-600">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-loss"></span>
-                <span>
-                  <strong className="text-neutral-800">Below 2:1:</strong> Unprofitable. Spending
-                  too much to acquire customers
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-breakeven"></span>
-                <span>
-                  <strong className="text-neutral-800">2:1 to 3:1:</strong> Break-even territory.
-                  Optimize LTV or reduce CAC
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-good"></span>
-                <span>
-                  <strong className="text-neutral-800">3:1 to 4:1:</strong> Ideal balance.
-                  Profitable and sustainable growth
-                </span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-performance-excellent"></span>
-                <span>
-                  <strong className="text-neutral-800">Above 5:1:</strong> Opportunity to scale.
-                  Consider investing more in marketing
-                </span>
-              </li>
-            </ul>
-            <p className="text-neutral-600 leading-relaxed mt-4 text-sm">
-              Source: TrueProfit, Shopify (2025). A ratio above 5:1 may indicate under-investment in
-              growth.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Increase LTV
-            </h2>
-            <ul className="space-y-3 text-neutral-600">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Increase AOV:</strong> Use bundles, upsells,
-                  and free shipping thresholds
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Boost Purchase Frequency:</strong> Email
-                  marketing, subscriptions, and loyalty programs
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Improve Retention:</strong> Better
-                  onboarding, customer service, and personalization
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Optimize Margins:</strong> Reduce COGS,
-                  negotiate supplier deals, or adjust pricing
-                </span>
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              RFM Analysis for Segmentation
-            </h2>
-            <p className="text-neutral-600 leading-relaxed">
-              Shopify recommends using <strong className="text-neutral-800">RFM analysis</strong>{' '}
-              (Recency, Frequency, Monetary) to segment customers by value. This helps identify your
-              most valuable segments:
-            </p>
-            <ul className="space-y-2 text-neutral-600 mt-4">
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Recency:</strong> When did they last
-                  purchase?
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Frequency:</strong> How often do they buy?
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary-green mt-2 shrink-0"></span>
-                <span>
-                  <strong className="text-neutral-800">Monetary:</strong> How much have they spent?
-                </span>
-              </li>
-            </ul>
-          </section>
-        </div>
+        <CalculatorEducationPanel slug="ltv" />
 
         {/* Right Column - Calculator */}
         <div className="space-y-4 lg:space-y-6">
@@ -414,7 +217,7 @@ const LTVCalculator = () => {
                     {/* {t('calcs.ltv.results.ltvCacRatio')} Output */}
                     {ltvCacRatio !== null && (
                       <div className="space-y-2">
-                        <Label className="text-sm text-neutral-600">{t('calcs.ltv.results.ltvCacRatio')}</Label>
+                        <Label className="text-sm text-neutral-600">${t('calcs.ltv.results.ltvCacRatio')}</Label>
                         <div className="relative">
                           <Input
                             readOnly

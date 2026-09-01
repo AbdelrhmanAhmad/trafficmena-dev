@@ -1,18 +1,32 @@
-import { DIFFERENTIATORS } from '../content';
+import { useTranslation } from 'react-i18next';
+import { getSubscribeIcon } from '../subscribeIcons';
+
+type Differentiator = {
+  icon: string;
+  title: string;
+  description: string;
+};
 
 export function DifferentiationSection() {
+  const { t } = useTranslation('commerce');
+  const items = t('subscribe.differentiationSection.items', {
+    returnObjects: true,
+  }) as Differentiator[];
+
   return (
     <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8">
       <div className="relative z-10 mx-auto max-w-3xl text-center">
-        <span className="text-sm font-normal text-neutral-500">Why TrafficMENA</span>
+        <span className="text-sm font-normal text-neutral-500">
+          {t('subscribe.differentiationSection.label')}
+        </span>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-          What Makes TrafficMENA Different
+          {t('subscribe.differentiationSection.title')}
         </h2>
       </div>
 
       <div className="relative z-10 mt-10 grid gap-6 sm:grid-cols-2">
-        {DIFFERENTIATORS.map((item) => {
-          const Icon = item.icon;
+        {items.map((item) => {
+          const Icon = getSubscribeIcon(item.icon);
           return (
             <div
               key={item.title}

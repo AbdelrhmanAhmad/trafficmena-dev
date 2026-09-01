@@ -58,6 +58,106 @@
         "aboveAverage": "Above average CPC. May be a competitive industry.",
         "average": "Average CPC range for most platforms.",
         "excellent": "Excellent CPC. Very cost-efficient clicks!"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is CPC?: Cost Per Click",
+            "paragraphs": [
+              "CPC, or Cost Per Click, is a digital advertising metric that measures how much you pay each time someone clicks on your ad .",
+              "Unlike CPM (Cost Per Mille) which charges per impression, CPC ensures you only pay when users take action by clicking. This makes CPC ideal for performance-based campaigns focused on driving traffic, leads, or conversions."
+            ]
+          },
+          {
+            "heading": "Why is CPC Important?",
+            "bullets": [
+              {
+                "label": "Pay for Performance",
+                "text": "You only pay when users engage with your ad by clicking"
+              },
+              {
+                "label": "Budget Control",
+                "text": "Set maximum bids to control how much you spend per click"
+              },
+              {
+                "label": "Measure Efficiency",
+                "text": "Lower CPC means more traffic for your budget"
+              },
+              {
+                "label": "Optimize Campaigns",
+                "text": "Compare CPC across ads, audiences, and platforms to find what works"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate CPC: The Formula",
+            "paragraphs": [
+              "The CPC formula is:",
+              "For example, if you spent $500 on ads and received 250 clicks , your CPC is $500 / 250 = $2.00",
+              "This means you paid $2.00 for each click on your ad."
+            ],
+            "formula": "CPC = Total Ad Spend / Number of Clicks"
+          },
+          {
+            "heading": "Factors That Affect CPC",
+            "bullets": [
+              {
+                "label": "Industry Competition",
+                "text": "Highly competitive industries (legal, insurance, finance) have higher CPCs"
+              },
+              {
+                "label": "Quality Score",
+                "text": "Higher quality ads with relevant landing pages get lower CPCs"
+              },
+              {
+                "label": "Targeting",
+                "text": "Broader audiences typically have lower CPCs than niche targeting"
+              },
+              {
+                "label": "Ad Placement",
+                "text": "Premium placements (top of page, feed) cost more per click"
+              }
+            ]
+          },
+          {
+            "heading": "Average CPC Rates by Platform (2025)",
+            "paragraphs": [
+              "CPC varies significantly by platform and industry:",
+              "Note: Legal, insurance, and finance industries often see CPCs of $10-$50+ due to high customer lifetime value."
+            ],
+            "bullets": [
+              {
+                "label": "Google Ads (Search)",
+                "text": "$1-$2 average, up to $50+ for competitive keywords",
+                "tier": "breakeven"
+              },
+              {
+                "label": "Google Ads (Display)",
+                "text": "$0.50-$1.00 average",
+                "tier": "good"
+              },
+              {
+                "label": "Meta (Facebook/Instagram)",
+                "text": "$0.50-$2.00 average",
+                "tier": "good"
+              },
+              {
+                "label": "LinkedIn",
+                "text": "$5-$6 average (B2B premium)",
+                "tier": "loss"
+              },
+              {
+                "label": "TikTok",
+                "text": "$0.20-$1.00 average",
+                "tier": "excellent"
+              }
+            ],
+            "note": "Note: Legal, insurance, and finance industries often see CPCs of $10-$50+ due to high customer lifetime value."
+          }
+        ]
+      },
+      "share": {
+        "result": "My CPC: {{cpc}} | Ad Spend: {{spend}} | Clicks: {{clicks}}"
       }
     },
     "cpm": {
@@ -77,6 +177,102 @@
         "aboveAverage": "Above average CPM. May be premium inventory.",
         "average": "Average CPM range for most platforms.",
         "excellent": "Excellent CPM. Very cost-efficient impressions!"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is CPM?: Cost Per Mille",
+            "paragraphs": [
+              "CPM, or Cost Per Mille (mille is Latin for \"thousand\"), is a pricing model in digital advertising where advertisers pay a fixed price for every 1,000 impressions of their ad .",
+              "An impression is counted when an ad loads on a page or app and is viewed by the user. CPM is the most common pricing model in programmatic advertising and is particularly useful when the goal is building brand awareness rather than driving direct conversions."
+            ]
+          },
+          {
+            "heading": "Why is CPM Important?",
+            "bullets": [
+              {
+                "label": "Brand Awareness",
+                "text": "CPM prioritizes exposure over clicks, making it ideal for getting your brand noticed"
+              },
+              {
+                "label": "Clear Pricing",
+                "text": "Fixed cost for a set number of impressions makes budgeting predictable"
+              },
+              {
+                "label": "Easy Comparison",
+                "text": "Compare channels and media sources based on cost efficiency"
+              },
+              {
+                "label": "Scalability",
+                "text": "Easy to scale up or down based on budget"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate CPM: The Formula",
+            "paragraphs": [
+              "The CPM formula is:",
+              "For example, if you paid $100 to serve your ad and received 750,000 impressions , your CPM is ($100 / 750,000) x 1,000 = $2.00",
+              "This means you paid $2.00 for every 1,000 ad impressions ."
+            ],
+            "formula": "CPM = (Total Ad Spend / Impressions) x 1,000"
+          },
+          {
+            "heading": "CPM vs CPC vs CPA",
+            "bullets": [
+              {
+                "label": "CPM (Cost Per Mille)",
+                "text": "Pay for impressions. Best for brand awareness campaigns"
+              },
+              {
+                "label": "CPC (Cost Per Click)",
+                "text": "Pay only when users click. Best for driving traffic and engagement"
+              },
+              {
+                "label": "CPA (Cost Per Action)",
+                "text": "Pay only when users take a specific action (purchase, signup). Best for conversions"
+              }
+            ]
+          },
+          {
+            "heading": "Average CPM Rates by Platform (2025)",
+            "paragraphs": [
+              "CPM rates vary significantly by platform, audience, and seasonality:",
+              "Note: CPM rates spike significantly in Q4 due to holiday advertising competition."
+            ],
+            "bullets": [
+              {
+                "label": "Meta (Facebook)",
+                "text": "~$6.59 CPM",
+                "tier": "good"
+              },
+              {
+                "label": "Instagram",
+                "text": "~$9.46 CPM (premium visual placements)",
+                "tier": "breakeven"
+              },
+              {
+                "label": "TikTok",
+                "text": "~$6-8 CPM",
+                "tier": "good"
+              },
+              {
+                "label": "YouTube",
+                "text": "~$3-6 CPM",
+                "tier": "excellent"
+              },
+              {
+                "label": "Snapchat",
+                "text": "~$12.84 CPM (Q4 peak)",
+                "tier": "loss"
+              }
+            ],
+            "note": "Note: CPM rates spike significantly in Q4 due to holiday advertising competition."
+          }
+        ]
+      },
+      "share": {
+        "result": "My CPM: {{cpm}} | Ad Spend: {{spend}} | Impressions: {{impressions}}"
       }
     },
     "cpl": {
@@ -99,6 +295,160 @@
         "good": "✅ Good CPL. Competitive for most industries.",
         "aboveAverage": "📊 Above average CPL. Typical for B2B/SaaS sectors.",
         "high": "⚠️ High CPL. Ensure lead quality justifies the cost."
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is CPL (Cost Per Lead)?",
+            "paragraphs": [
+              "Cost Per Lead (CPL) measures how much money you spend on marketing or advertising to acquire a single lead. A lead is a potential customer who has shown interest in your product or service by providing contact information or taking a qualifying action. CPL is distinct from CAC (Customer Acquisition Cost), which measures the cost to acquire an actual paying customer."
+            ]
+          },
+          {
+            "heading": "Why is CPL Important?",
+            "bullets": [
+              {
+                "label": "Budget Allocation",
+                "text": "Helps determine which channels deliver the most cost-effective leads"
+              },
+              {
+                "label": "Campaign Comparison",
+                "text": "Enables direct comparison of different marketing campaigns"
+              },
+              {
+                "label": "Forecasting",
+                "text": "Predicts lead volume based on available marketing budget"
+              },
+              {
+                "label": "Marketing Efficiency",
+                "text": "Measures how efficiently your marketing spend converts to pipeline"
+              },
+              {
+                "label": "ROI Calculation",
+                "text": "Essential input for calculating overall marketing ROI when combined with conversion rates"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate CPL",
+            "paragraphs": [
+              "Example: If you spend $5,000 on a Google Ads campaign and generate 50 leads:"
+            ],
+            "formula": "CPL = Total Marketing Spend / Number of Leads Generated"
+          },
+          {
+            "heading": "Average CPL by Industry (2024-2025)",
+            "paragraphs": [
+              "According to First Page Sage research, average CPL varies significantly by industry and channel:"
+            ],
+            "table": {
+              "headers": [
+                "Industry",
+                "Paid CPL",
+                "Organic CPL",
+                "Blended"
+              ],
+              "rows": [
+                [
+                  "eCommerce",
+                  "$98",
+                  "$83",
+                  "$91"
+                ],
+                [
+                  "B2B SaaS",
+                  "$310",
+                  "$164",
+                  "$237"
+                ],
+                [
+                  "Healthcare",
+                  "$401",
+                  "$320",
+                  "$361"
+                ],
+                [
+                  "Financial Services",
+                  "$761",
+                  "$555",
+                  "$653"
+                ],
+                [
+                  "Legal Services",
+                  "$784",
+                  "$516",
+                  "$649"
+                ],
+                [
+                  "Higher Education",
+                  "$1,143",
+                  "$705",
+                  "$982"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "Organic vs Paid CPL",
+            "paragraphs": [
+              "Organic marketing channels (SEO, content marketing, social media) typically deliver 30-50% lower CPL than paid channels, though they require longer timeframes to generate results."
+            ],
+            "bullets": [
+              {
+                "text": "• SEO & Content"
+              },
+              {
+                "text": "• Email Marketing"
+              },
+              {
+                "text": "• Social Media (organic)"
+              },
+              {
+                "text": "• Referrals"
+              },
+              {
+                "text": "• Google Ads"
+              },
+              {
+                "text": "• Meta Ads"
+              },
+              {
+                "text": "• LinkedIn Ads"
+              },
+              {
+                "text": "• Display Advertising"
+              }
+            ]
+          },
+          {
+            "heading": "How to Lower Your CPL",
+            "bullets": [
+              {
+                "label": "Invest in SEO",
+                "text": "1. Organic leads cost 30-50% less than paid leads on average"
+              },
+              {
+                "label": "Improve Landing Pages",
+                "text": "2. Higher conversion rates mean more leads from the same spend"
+              },
+              {
+                "label": "Refine Audience Targeting",
+                "text": "3. Better targeting reduces wasted ad spend"
+              },
+              {
+                "label": "A/B Test Creatives",
+                "text": "4. Continuously optimize ad copy and visuals"
+              },
+              {
+                "label": "Use Lead Magnets",
+                "text": "5. Offer valuable content to increase conversion rates"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My {{cplLabel}}: {{cpl}}\nTotal Spend: {{spend}}\n{{leadsLabel}}: {{leads}}\n\nCalculated with {{panelTitle}}"
       }
     },
     "ctr": {
@@ -117,6 +467,118 @@
         "belowAverage": "Below average CTR. Room for optimization.",
         "good": "Good CTR. Your ads are performing well.",
         "excellent": "Excellent CTR. Highly engaging ads!"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is CTR?: Click-Through Rate",
+            "paragraphs": [
+              "CTR, or Click-Through Rate, is a digital marketing metric that measures the percentage of people who click on your ad after seeing it .",
+              "CTR is one of the most important metrics for evaluating ad engagement and relevance. A higher CTR indicates that your ad copy, creative, and targeting are resonating with your audience."
+            ]
+          },
+          {
+            "heading": "Why is CTR Important?",
+            "bullets": [
+              {
+                "label": "Measures Engagement",
+                "text": "Shows how compelling your ad is to your target audience"
+              },
+              {
+                "label": "Affects Quality Score",
+                "text": "Higher CTR improves your Quality Score on Google Ads, lowering CPC"
+              },
+              {
+                "label": "Indicates Relevance",
+                "text": "Low CTR may signal a mismatch between ad content and audience"
+              },
+              {
+                "label": "Optimizes Budget",
+                "text": "Better CTR means more efficient use of your ad spend"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate CTR: The Formula",
+            "paragraphs": [
+              "The CTR formula is:",
+              "For example, if your ad received 150 clicks from 10,000 impressions , your CTR is (150 / 10,000) x 100 = 1.5%",
+              "This means 1.5% of people who saw your ad clicked on it."
+            ],
+            "formula": "CTR = (Clicks / Impressions) x 100"
+          },
+          {
+            "heading": "What is a Good CTR?",
+            "paragraphs": [
+              "A \"good\" CTR varies by platform, industry, and ad type:"
+            ],
+            "bullets": [
+              {
+                "label": "Below 0.5%",
+                "text": "Poor. Needs significant improvement",
+                "tier": "loss"
+              },
+              {
+                "label": "0.5% - 1%",
+                "text": "Below average. Room for optimization",
+                "tier": "breakeven"
+              },
+              {
+                "label": "1% - 3%",
+                "text": "Average to good for most platforms",
+                "tier": "good"
+              },
+              {
+                "label": "Above 3%",
+                "text": "Excellent. Highly engaging ads",
+                "tier": "excellent"
+              }
+            ]
+          },
+          {
+            "heading": "Average CTR by Platform (2025)",
+            "paragraphs": [
+              "CTR benchmarks vary significantly across advertising platforms:",
+              "Note: Search ads typically have higher CTRs than display ads because users have active intent."
+            ],
+            "bullets": [
+              {
+                "label": "Google Ads (Search)",
+                "text": "3-5% average (intent-based)",
+                "tier": "excellent"
+              },
+              {
+                "label": "Google Ads (Display)",
+                "text": "0.5-1% average (awareness)",
+                "tier": "breakeven"
+              },
+              {
+                "label": "Meta (Facebook/Instagram)",
+                "text": "0.9-1.5% average",
+                "tier": "good"
+              },
+              {
+                "label": "LinkedIn",
+                "text": "0.4-0.6% average (B2B)",
+                "tier": "breakeven"
+              },
+              {
+                "label": "TikTok",
+                "text": "1-3% average (highly engaging)",
+                "tier": "good"
+              },
+              {
+                "label": "Email Marketing",
+                "text": "2-5% average",
+                "tier": "excellent"
+              }
+            ],
+            "note": "Note: Search ads typically have higher CTRs than display ads because users have active intent."
+          }
+        ]
+      },
+      "share": {
+        "result": "My CTR: {{ctr}}% | Clicks: {{clicks}} | Impressions: {{impressions}}"
       }
     },
     "cac": {
@@ -135,6 +597,136 @@
         "aboveAverage": "Above average CAC. Typical for B2B and SaaS industries.",
         "reasonable": "Reasonable CAC. Competitive for most industries.",
         "excellent": "Excellent CAC. Very efficient customer acquisition!"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is CAC?: Customer Acquisition Cost",
+            "paragraphs": [
+              "CAC, or Customer Acquisition Cost, is a business metric that measures the total cost of acquiring a new customer , including all marketing and sales expenses.",
+              "CAC is one of the most critical metrics for evaluating marketing efficiency and business sustainability. When combined with Customer Lifetime Value (LTV), it reveals whether your customer acquisition strategy is profitable."
+            ]
+          },
+          {
+            "heading": "Why is CAC Important?",
+            "bullets": [
+              {
+                "label": "Measures Marketing ROI",
+                "text": "Shows how efficiently you convert marketing spend into customers"
+              },
+              {
+                "label": "Informs Budget Decisions",
+                "text": "Helps allocate resources to the most cost-effective channels"
+              },
+              {
+                "label": "Determines Profitability",
+                "text": "When compared to LTV, reveals if customers are worth acquiring"
+              },
+              {
+                "label": "Benchmarks Performance",
+                "text": "Compare against industry standards to assess competitiveness"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate CAC: The Formula",
+            "paragraphs": [
+              "The CAC formula is:",
+              "For example, if you spent $10,000 on marketing and sales and acquired 100 new customers , your CAC is $10,000 ÷ 100 = $100",
+              "This means it costs you $100 to acquire each new customer ."
+            ],
+            "formula": "CAC = Total Sales & Marketing Spend ÷ Number of New Customers"
+          },
+          {
+            "heading": "What is a Good CAC?",
+            "paragraphs": [
+              "A \"good\" CAC depends on your industry and Customer Lifetime Value (LTV). The ideal LTV:CAC ratio is 3:1 or higher, meaning each customer should generate at least 3x what you spent to acquire them."
+            ],
+            "bullets": [
+              {
+                "text": "LTV:CAC below 1:1: Losing money on each customer"
+              },
+              {
+                "text": "LTV:CAC 1:1 to 2:1: Barely breaking even"
+              },
+              {
+                "text": "LTV:CAC 3:1: Healthy, sustainable business"
+              },
+              {
+                "text": "LTV:CAC 4:1+: Excellent efficiency"
+              }
+            ]
+          },
+          {
+            "heading": "Average CAC by Industry (2025)",
+            "paragraphs": [
+              "CAC varies dramatically across industries based on competition, sales cycle, and deal size:",
+              "Source: First Page Sage B2B CAC Benchmarks (2025). Organic channels typically have 40-60% lower CAC than paid channels."
+            ],
+            "bullets": [
+              {
+                "label": "eCommerce",
+                "text": "$70-$86 average",
+                "tier": "excellent"
+              },
+              {
+                "label": "B2B SaaS",
+                "text": "$239-$702 average",
+                "tier": "good"
+              },
+              {
+                "label": "B2B Companies",
+                "text": "$536 average",
+                "tier": "good"
+              },
+              {
+                "label": "Financial Services",
+                "text": "$784 average",
+                "tier": "breakeven"
+              },
+              {
+                "label": "Legal Services",
+                "text": "$749 average",
+                "tier": "breakeven"
+              },
+              {
+                "label": "Fintech SaaS",
+                "text": "$1,450 average",
+                "tier": "loss"
+              },
+              {
+                "label": "Education",
+                "text": "$1,143 average",
+                "tier": "loss"
+              }
+            ],
+            "note": "Source: First Page Sage B2B CAC Benchmarks (2025). Organic channels typically have 40-60% lower CAC than paid channels."
+          },
+          {
+            "heading": "How to Lower Your CAC",
+            "bullets": [
+              {
+                "label": "Invest in Organic Channels",
+                "text": "SEO and content marketing have 40-60% lower CAC than paid ads"
+              },
+              {
+                "label": "Optimize Conversion Funnels",
+                "text": "Improve landing pages and reduce friction in the buying process"
+              },
+              {
+                "label": "Implement Referral Programs",
+                "text": "Leverage word-of-mouth to acquire customers at lower cost"
+              },
+              {
+                "label": "Improve Targeting",
+                "text": "Focus on high-intent audiences to increase conversion rates"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My CAC: {{cac}} | Total Spend: {{spend}} | Customers Acquired: {{customers}}"
       }
     },
     "ncac": {
@@ -157,6 +749,104 @@
         "excellent": "Excellent nCAC. Efficient new customer acquisition!",
         "negativeProfitOk": "Negative first-purchase profit is acceptable if customer LTV exceeds nCAC over time.",
         "positiveProfit": "Profitable on first purchase. Strong acquisition efficiency!"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is nCAC?: New Customer Acquisition Cost",
+            "paragraphs": [
+              "nCAC, or New Customer Acquisition Cost, measures the specific cost to acquire first-time customers only , excluding repeat buyers from the calculation.",
+              "Unlike traditional CAC which blends costs of acquiring both new and returning customers, nCAC isolates the true cost of expanding your customer base. This distinction is critical for understanding real growth versus revenue from existing customers."
+            ]
+          },
+          {
+            "heading": "nCAC vs CAC: The Key Difference",
+            "paragraphs": [
+              "Standard CAC includes all customers, both new and returning. This can significantly understate your true acquisition costs:",
+              "In this example, 60% of conversions were repeat buyers. The true cost to acquire someone new is 2.5x higher than the blended CAC suggests."
+            ],
+            "formula": "$10,000"
+          },
+          {
+            "heading": "Why is nCAC Important?",
+            "bullets": [
+              {
+                "label": "Measures True Growth",
+                "text": "Shows the real cost of expanding your customer base, not just generating repeat sales"
+              },
+              {
+                "label": "Better Budget Allocation",
+                "text": "Ensures marketing spend drives new business rather than re-acquiring existing customers"
+              },
+              {
+                "label": "Accurate Benchmarking",
+                "text": "Provides apples-to-apples comparison across campaigns and competitors"
+              },
+              {
+                "label": "Investor Confidence",
+                "text": "Demonstrates scalability and market expansion potential to stakeholders"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate nCAC: The Formula",
+            "paragraphs": [
+              "The nCAC formula is:",
+              "The key difference from CAC is the denominator: you must segment your customer data to include only first-time buyers, excluding repeat purchasers entirely.",
+              "For example, if you spent $10,000 on ads and acquired 40 new customers (out of 100 total conversions), your nCAC is $10,000 / 40 = $100"
+            ],
+            "formula": "nCAC = Total Ad Spend / Number of NEW Customers Only"
+          },
+          {
+            "heading": "Optimizing nCAC to LTV",
+            "paragraphs": [
+              "The true power of nCAC comes when paired with Customer Lifetime Value (LTV). CMOs should optimize the nCAC-to-LTV ratio for sustainable, profitable growth:"
+            ],
+            "bullets": [
+              {
+                "text": "LTV:nCAC below 2:1: Unprofitable. Re-evaluate acquisition strategy"
+              },
+              {
+                "text": "LTV:nCAC 2:1 to 3:1: Break-even territory. Optimize funnels"
+              },
+              {
+                "text": "LTV:nCAC 3:1 to 4:1: Healthy, scalable growth"
+              },
+              {
+                "text": "LTV:nCAC 4:1+: Excellent. Consider scaling spend"
+              }
+            ]
+          },
+          {
+            "heading": "How to Lower Your nCAC",
+            "paragraphs": [
+              "Source: Power Digital Marketing, Wicked Reports (2025)"
+            ],
+            "bullets": [
+              {
+                "label": "Sharpen Targeting",
+                "text": "Focus on audiences less likely to have purchased before using exclusion lists"
+              },
+              {
+                "label": "Diversify Channels",
+                "text": "Reduce over-reliance on single platforms vulnerable to algorithm shifts"
+              },
+              {
+                "label": "Boost Conversion Rates",
+                "text": "A/B test landing pages, creatives, and checkout to increase efficiency"
+              },
+              {
+                "label": "Use Multi-Touch Attribution",
+                "text": "Move beyond last-click to understand true drivers of new customers"
+              }
+            ],
+            "note": "Source: Power Digital Marketing, Wicked Reports (2025)"
+          }
+        ]
+      },
+      "share": {
+        "result": "My nCAC: {{ncac}} | Total Spend: {{spend}} | New Customers: {{customers}}{{profit}}",
+        "profitSuffix": " | First-Purchase Profit: {{profit}}"
       }
     },
     "cac-payback": {
@@ -171,6 +861,136 @@
       "results": {
         "monthlyGrossProfit": "Monthly gross profit per customer",
         "paybackPeriod": "CAC Payback Period"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is CAC Payback Period?",
+            "paragraphs": [
+              "CAC Payback Period measures how many months it takes to recover the cost of acquiring a customer . It's a critical cash flow metric that shows how quickly your acquisition investment turns profitable.",
+              "Unlike LTV:CAC ratio which shows total value, payback period focuses on time to breakeven. A shorter payback means faster reinvestment in growth. According to Bessemer Venture Partners, the benchmark is 12 months or less for healthy SaaS companies."
+            ]
+          },
+          {
+            "heading": "Why is CAC Payback Important?",
+            "bullets": [
+              {
+                "label": "Cash Flow Management",
+                "text": "Shows how long capital is tied up before generating profit"
+              },
+              {
+                "label": "Growth Sustainability",
+                "text": "Shorter payback means faster reinvestment cycles"
+              },
+              {
+                "label": "Runway Planning",
+                "text": "Critical for startups to understand burn rate implications"
+              },
+              {
+                "label": "Investor Metric",
+                "text": "VCs closely monitor this alongside LTV:CAC for funding decisions"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate CAC Payback Period",
+            "paragraphs": [
+              "The formula is:",
+              "For example, if your CAC is $100 , with $100/month revenue and 80% gross margin , your payback is $100 / ($100 × 0.80) = 7.5 months"
+            ],
+            "formula": "CAC Payback = CAC / (Monthly Revenue × Gross Margin %)"
+          },
+          {
+            "heading": "CAC Payback Benchmarks",
+            "paragraphs": [
+              "Industry benchmarks from Bessemer, OpenView, and SaaS Capital (2024-2025):",
+              "Source: Bessemer Venture Partners, OpenView Partners, SaaS Capital benchmarks"
+            ],
+            "bullets": [
+              {
+                "label": "<6 months",
+                "text": "Excellent. Very efficient acquisition, consider scaling faster",
+                "tier": "excellent"
+              },
+              {
+                "label": "6-12 months",
+                "text": "Good. Healthy for most SaaS companies",
+                "tier": "good"
+              },
+              {
+                "label": "12-18 months",
+                "text": "Acceptable for enterprise. Needs optimization for SMB",
+                "tier": "breakeven"
+              },
+              {
+                "label": ">18 months",
+                "text": "Warning. High churn risk before payback; reduce CAC or increase ARPU",
+                "tier": "loss"
+              }
+            ],
+            "note": "Source: Bessemer Venture Partners, OpenView Partners, SaaS Capital benchmarks"
+          },
+          {
+            "heading": "Payback by Business Model",
+            "paragraphs": [
+              "Enterprise deals can have longer payback due to higher ACVs and lower churn."
+            ],
+            "bullets": [
+              {
+                "text": "SMB SaaS (self-serve) <6 months ideal"
+              },
+              {
+                "text": "Mid-Market SaaS 6-12 months"
+              },
+              {
+                "text": "Enterprise SaaS 12-18 months acceptable"
+              },
+              {
+                "text": "eCommerce / D2C <3 months ideal"
+              }
+            ]
+          },
+          {
+            "heading": "How to Reduce CAC Payback Period",
+            "bullets": [
+              {
+                "label": "Reduce CAC",
+                "text": "Improve conversion rates, focus on organic channels, optimize ad spend"
+              },
+              {
+                "label": "Increase ARPU",
+                "text": "Upsell to higher tiers, add premium features, usage-based pricing"
+              },
+              {
+                "label": "Improve Margins",
+                "text": "Reduce hosting costs, automate support, optimize infrastructure"
+              },
+              {
+                "label": "Faster Onboarding",
+                "text": "Get customers to value faster to reduce early churn"
+              }
+            ]
+          },
+          {
+            "heading": "CAC Payback vs LTV:CAC",
+            "paragraphs": [
+              "Both metrics matter but measure different things:",
+              "A company with great LTV:CAC (5:1) but long payback (24 months) needs significant capital to grow. A company with shorter payback can reinvest faster."
+            ],
+            "bullets": [
+              {
+                "label": "CAC Payback",
+                "text": "Time-focused. How quickly you recover investment"
+              },
+              {
+                "text": "LTV:CAC: Value-focused. Total return on acquisition investment"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My {{paybackLabel}}: {{payback}} months | CAC: {{cac}} | Monthly Revenue: {{revenue}} | Gross Margin: {{margin}}%"
       }
     },
     "cvr": {
@@ -189,6 +1009,143 @@
         "belowAverage": "Below average CVR. Room for improvement.",
         "good": "Good CVR. Performing well for most industries.",
         "excellent": "Excellent CVR. Top-performing conversion rate!"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is CVR?: Conversion Rate",
+            "paragraphs": [
+              "CVR, or Conversion Rate, is a marketing metric that measures the percentage of visitors who complete a desired action on your website, landing page, or app.",
+              "A \"conversion\" can be any valuable action: making a purchase, signing up for a newsletter, downloading a resource, filling out a form, or starting a free trial. CVR is one of the most critical metrics for evaluating funnel efficiency and user experience."
+            ]
+          },
+          {
+            "heading": "Why is CVR Important?",
+            "bullets": [
+              {
+                "label": "Measures Funnel Effectiveness",
+                "text": "Shows how well your site converts traffic into customers or leads"
+              },
+              {
+                "label": "Reduces Acquisition Costs",
+                "text": "Higher CVR means more customers from the same traffic, lowering CAC"
+              },
+              {
+                "label": "Identifies UX Issues",
+                "text": "Low CVR often signals friction in the user journey"
+              },
+              {
+                "label": "Enables A/B Testing",
+                "text": "Track conversion lift from experiments and optimizations"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate CVR: The Formula",
+            "paragraphs": [
+              "The CVR formula is:",
+              "For example, if your landing page received 5,000 visitors and 150 conversions , your CVR is (150 ÷ 5,000) × 100 = 3%",
+              "This means 3% of visitors completed the desired action."
+            ],
+            "formula": "CVR = (Conversions ÷ Total Visitors) × 100"
+          },
+          {
+            "heading": "What is a Good CVR?",
+            "paragraphs": [
+              "A \"good\" CVR varies significantly by industry, traffic source, and conversion type:"
+            ],
+            "bullets": [
+              {
+                "label": "Below 1%",
+                "text": "Poor. Significant optimization needed",
+                "tier": "loss"
+              },
+              {
+                "label": "1% - 2%",
+                "text": "Below average. Room for improvement",
+                "tier": "breakeven"
+              },
+              {
+                "label": "2% - 5%",
+                "text": "Average to good for most industries",
+                "tier": "good"
+              },
+              {
+                "label": "Above 5%",
+                "text": "Excellent. Top-performing pages",
+                "tier": "excellent"
+              }
+            ]
+          },
+          {
+            "heading": "Average CVR by Industry (2025)",
+            "paragraphs": [
+              "Conversion rate benchmarks vary across industries and conversion types:",
+              "Note: Paid traffic typically has higher CVR than organic due to intent. Mobile CVR is often 50% lower than desktop."
+            ],
+            "bullets": [
+              {
+                "label": "eCommerce",
+                "text": "2-3% average purchase rate",
+                "tier": "good"
+              },
+              {
+                "label": "SaaS Free Trial",
+                "text": "3-8% visitor-to-trial",
+                "tier": "excellent"
+              },
+              {
+                "label": "Lead Generation",
+                "text": "5-15% form completion",
+                "tier": "excellent"
+              },
+              {
+                "label": "B2B Services",
+                "text": "2-5% average",
+                "tier": "good"
+              },
+              {
+                "label": "Finance/Insurance",
+                "text": "1-3% average",
+                "tier": "breakeven"
+              },
+              {
+                "label": "Email Opt-in",
+                "text": "5-15% average",
+                "tier": "excellent"
+              }
+            ],
+            "note": "Note: Paid traffic typically has higher CVR than organic due to intent. Mobile CVR is often 50% lower than desktop."
+          },
+          {
+            "heading": "How to Improve CVR",
+            "bullets": [
+              {
+                "label": "Optimize Page Speed",
+                "text": "Every 1-second delay reduces conversions by ~7%"
+              },
+              {
+                "label": "Simplify Forms",
+                "text": "Reduce fields to only what's essential"
+              },
+              {
+                "label": "Add Social Proof",
+                "text": "Reviews, testimonials, and trust badges increase confidence"
+              },
+              {
+                "label": "Clear CTAs",
+                "text": "Use action-oriented, contrasting buttons"
+              },
+              {
+                "label": "Mobile Optimization",
+                "text": "Ensure seamless experience on all devices"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My CVR: {{cvr}}% | Conversions: {{conversions}} | Visitors: {{visitors}}"
       }
     },
     "cart-abandonment": {
@@ -205,6 +1162,142 @@
       },
       "results": {
         "rate": "Cart Abandonment Rate"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Cart Abandonment Rate?",
+            "paragraphs": [
+              "Cart Abandonment Rate measures the percentage of online shoppers who add items to their shopping cart but leave before completing the purchase. It's a critical ecommerce metric that reveals friction in your checkout process, pricing concerns, or trust issues. According to Baymard Institute, the average documented online cart abandonment rate is 70.22% based on 50 different studies."
+            ]
+          },
+          {
+            "heading": "Why is Cart Abandonment Rate Important?",
+            "bullets": [
+              {
+                "label": "Revenue Impact",
+                "text": "Ecommerce stores lose roughly $18 billion annually due to cart abandonment"
+              },
+              {
+                "label": "Checkout Optimization",
+                "text": "Identifies friction points in your purchase flow"
+              },
+              {
+                "label": "Customer Experience",
+                "text": "Reveals gaps in trust, pricing, or UX that drive customers away"
+              },
+              {
+                "label": "Marketing ROI",
+                "text": "High abandonment wastes acquisition spend. You're paying for traffic that doesn't convert"
+              },
+              {
+                "label": "Recovery Opportunities",
+                "text": "Cart recovery emails can recapture ~10% of lost revenue"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate Cart Abandonment Rate",
+            "paragraphs": [
+              "Example: If 1,000 shopping carts are created and only 300 complete checkout:"
+            ],
+            "formula": "Abandonment Rate = ((Carts Created - Carts Completed) / Carts Created) × 100"
+          },
+          {
+            "heading": "Cart Abandonment Rate by Industry (2024)",
+            "paragraphs": [
+              "Abandonment rates vary significantly by product type and price point:",
+              "Source: ClickPost, Baymard Institute (2024 benchmarks)"
+            ],
+            "table": {
+              "headers": [
+                "Industry",
+                "Abandonment Rate"
+              ],
+              "rows": [
+                [
+                  "Luxury & Jewelry",
+                  "82.84%"
+                ],
+                [
+                  "Beauty & Personal Care",
+                  "80.92%"
+                ],
+                [
+                  "Home & Furniture",
+                  "80.32%"
+                ],
+                [
+                  "Fashion & Apparel",
+                  "78.53%"
+                ],
+                [
+                  "Multi-brand Retail",
+                  "76.90%"
+                ],
+                [
+                  "Food & Beverage",
+                  "63.62%"
+                ],
+                [
+                  "Consumer Goods",
+                  "57.37%"
+                ],
+                [
+                  "Pet Care & Veterinary",
+                  "54.78%"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "Top Reasons Customers Abandon Carts"
+          },
+          {
+            "heading": "Abandonment by Device",
+            "paragraphs": [
+              "75.5%",
+              "Mobile",
+              "68.5%",
+              "Tablet",
+              "~67%",
+              "Desktop",
+              "Mobile users abandon more due to smaller screens and complex forms"
+            ]
+          },
+          {
+            "heading": "How to Reduce Cart Abandonment",
+            "bullets": [
+              {
+                "label": "Show All Costs Upfront",
+                "text": "1. Display shipping, taxes, and fees on product pages, not at checkout"
+              },
+              {
+                "label": "Enable Guest Checkout",
+                "text": "2. 26% abandon because of mandatory account creation"
+              },
+              {
+                "label": "Add Trust Badges",
+                "text": "3. Display security seals and payment icons prominently"
+              },
+              {
+                "label": "Simplify Checkout",
+                "text": "4. Keep it under 3 steps; use address auto-fill"
+              },
+              {
+                "label": "Send Recovery Emails",
+                "text": "5. Abandoned cart emails can recover ~10% of lost orders"
+              },
+              {
+                "label": "Offer Multiple Payment Options",
+                "text": "6. Include digital wallets, BNPL, and local methods"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My {{rateLabel}}: {{rate}}%\nCarts Created: {{created}}\nCarts Completed: {{completed}}\n\nCalculated with {{panelTitle}}"
       }
     },
     "checkout-abandonment": {
@@ -221,6 +1314,118 @@
       },
       "results": {
         "rate": "Checkout Abandonment Rate"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Checkout Abandonment Rate?",
+            "paragraphs": [
+              "Checkout Abandonment Rate measures the percentage of shoppers who start the checkout process but leave before completing their purchase. Unlike cart abandonment (which tracks all created carts), checkout abandonment specifically focuses on users who demonstrated clear purchase intent by initiating checkout. The global average checkout abandonment rate is approximately 75.19%."
+            ]
+          },
+          {
+            "heading": "Checkout vs Cart Abandonment",
+            "paragraphs": [
+              "Measures shoppers who add items to cart but never proceed to checkout. Includes window shoppers and price comparers.",
+              "Measures shoppers who start checkout but don't complete it. These users showed clear purchase intent, making this more actionable for optimization."
+            ]
+          },
+          {
+            "heading": "How to Calculate Checkout Abandonment Rate",
+            "paragraphs": [
+              "Example: If 100 customers begin checkout but only 30 complete their purchase:"
+            ],
+            "formula": "Rate = ((Checkouts Started - Checkouts Completed) / Checkouts Started) × 100"
+          },
+          {
+            "heading": "What is a Good Checkout Abandonment Rate?",
+            "paragraphs": [
+              "According to AgencyAnalytics, benchmark rates for checkout abandonment are:"
+            ]
+          },
+          {
+            "heading": "Checkout Abandonment by Industry",
+            "paragraphs": [
+              "Different industries experience varying checkout abandonment rates:",
+              "Sources: OpenSend, Hotjar, VWO (2024 benchmarks)"
+            ],
+            "table": {
+              "headers": [
+                "Industry",
+                "Abandonment Rate"
+              ],
+              "rows": [
+                [
+                  "Finance",
+                  "83.6%"
+                ],
+                [
+                  "Travel",
+                  "81.7%"
+                ],
+                [
+                  "Fashion",
+                  "74.8%"
+                ],
+                [
+                  "Retail (General)",
+                  "71.2%"
+                ],
+                [
+                  "Health & Beauty",
+                  "68.3%"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "Top Reasons for Checkout Abandonment"
+          },
+          {
+            "heading": "Checkout Abandonment by Device",
+            "paragraphs": [
+              "85.6%",
+              "Mobile",
+              "68.5%",
+              "Tablet",
+              "69.0%",
+              "Desktop",
+              "Mobile checkout abandonment can be 17% higher than desktop (Source: Hotjar)"
+            ]
+          },
+          {
+            "heading": "How to Reduce Checkout Abandonment",
+            "bullets": [
+              {
+                "label": "Streamline Checkout",
+                "text": "1. Keep to 12-14 form elements max, or 7-8 actual fields. Each extra step increases abandonment."
+              },
+              {
+                "label": "Show Costs Early",
+                "text": "2. Display shipping, taxes, and fees before checkout. Surprises cause 48% of abandonments."
+              },
+              {
+                "label": "Offer Guest Checkout",
+                "text": "3. Requiring account creation increases abandonment by 35%."
+              },
+              {
+                "label": "Add Progress Indicators",
+                "text": "4. Show users where they are in the checkout process."
+              },
+              {
+                "label": "Optimize for Mobile",
+                "text": "5. Mobile abandonment is 17% higher. Prioritize mobile-first design."
+              },
+              {
+                "label": "Display Trust Signals",
+                "text": "6. Security badges and payment icons reduce trust concerns."
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My {{rateLabel}}: {{rate}}%\n{{startedLabel}}: {{started}}\n{{completedLabel}}: {{completed}}\n\nCalculated with {{panelTitle}}"
       }
     },
     "lead-to-customer": {
@@ -233,6 +1438,175 @@
       },
       "results": {
         "rate": "Lead-to-Customer Rate"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Lead-to-Customer Rate?",
+            "paragraphs": [
+              "Lead-to-Customer Rate (also called Lead Conversion Rate) measures the percentage of leads that convert into paying customers. It's one of the most critical B2B metrics, showing how effectively your sales funnel turns prospects into revenue. According to 2025 benchmark data, the average lead-to-customer conversion rate is 2-5% across B2B industries."
+            ]
+          },
+          {
+            "heading": "Why is Lead-to-Customer Rate Important?",
+            "bullets": [
+              {
+                "label": "Sales Efficiency",
+                "text": "Measures how well your sales team converts leads into revenue"
+              },
+              {
+                "label": "Marketing ROI",
+                "text": "Shows if your lead generation efforts attract qualified buyers"
+              },
+              {
+                "label": "CAC Impact",
+                "text": "A 1-point lift (e.g., 2% → 3%) can cut Customer Acquisition Cost by 15-25%"
+              },
+              {
+                "label": "Funnel Health",
+                "text": "Identifies bottlenecks between marketing and sales handoffs"
+              },
+              {
+                "label": "Revenue Forecasting",
+                "text": "Essential for predicting pipeline and setting growth targets"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate Lead-to-Customer Rate",
+            "paragraphs": [
+              "Example: If you generate 500 leads and 15 become paying customers:"
+            ],
+            "formula": "Rate = (Customers Acquired / Total Leads) × 100"
+          },
+          {
+            "heading": "Lead-to-Customer Rate by Industry (2025)",
+            "paragraphs": [
+              "Conversion rates vary significantly by industry vertical:",
+              "Sources: First Page Sage, Ruler Analytics (2025 benchmarks)"
+            ],
+            "table": {
+              "headers": [
+                "Industry",
+                "Avg. Rate"
+              ],
+              "rows": [
+                [
+                  "Legal Services",
+                  "7.4%"
+                ],
+                [
+                  "Professional Services",
+                  "4-6%"
+                ],
+                [
+                  "Healthcare",
+                  "3-4%"
+                ],
+                [
+                  "Manufacturing",
+                  "3-5%"
+                ],
+                [
+                  "Financial Services",
+                  "1.9%"
+                ],
+                [
+                  "B2B E-commerce",
+                  "1.8%"
+                ],
+                [
+                  "IT / Managed Services",
+                  "1.5%"
+                ],
+                [
+                  "SaaS / Software",
+                  "1.1-3%"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "Conversion Rate by Marketing Channel",
+            "paragraphs": [
+              "Different channels produce leads with varying conversion potential:",
+              "Source: First Page Sage, Ruler Analytics (2025)"
+            ]
+          },
+          {
+            "heading": "Funnel Stage Benchmarks",
+            "paragraphs": [
+              "B2B funnels lose over 90% of leads before opportunity stage. Stage-by-stage breakdown:",
+              "Note: MQL→SQL is typically the biggest bottleneck"
+            ],
+            "table": {
+              "headers": [
+                "Stage",
+                "Avg. Rate",
+                "Top Performers"
+              ],
+              "rows": [
+                [
+                  "Visitor → Lead",
+                  "~2%",
+                  "4-5%"
+                ],
+                [
+                  "Lead → MQL",
+                  "31%",
+                  "40-50%"
+                ],
+                [
+                  "MQL → SQL",
+                  "13%",
+                  "20-25%"
+                ],
+                [
+                  "SQL → Opportunity",
+                  "50%",
+                  "55-62%"
+                ],
+                [
+                  "Opportunity → Customer",
+                  "25%",
+                  "30-40%"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "How to Improve Lead-to-Customer Rate",
+            "bullets": [
+              {
+                "label": "Speed to Lead",
+                "text": "1. Responding within 5 minutes is 21x more likely to qualify a lead than waiting 30 minutes"
+              },
+              {
+                "label": "Improve Lead Scoring",
+                "text": "2. Tighten MQL definitions and align with sales. The MQL→SQL gap causes most losses"
+              },
+              {
+                "label": "Focus on SEO",
+                "text": "3. SEO leads have 51% MQL→SQL conversion vs 26% for PPC"
+              },
+              {
+                "label": "Optimize Landing Pages",
+                "text": "4. CRO sprints can lift visitor→lead by 1-2 percentage points"
+              },
+              {
+                "label": "Use AI Scoring",
+                "text": "5. Predictive models identify high-intent leads 20-30% faster"
+              },
+              {
+                "label": "Sales-Marketing Alignment",
+                "text": "6. Regular feedback loops on lead quality improve conversion throughout funnel"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My {{rateLabel}}: {{rate}}%\n{{leadsLabel}}: {{leads}}\n{{customersLabel}}: {{customers}}\n\nCalculated with {{panelTitle}}"
       }
     },
     "repeat-purchase": {
@@ -249,6 +1623,137 @@
       },
       "results": {
         "rate": "Repeat Purchase Rate"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Repeat Purchase Rate?",
+            "paragraphs": [
+              "Repeat Purchase Rate (RPR), also known as Repeat Customer Rate, measures the percentage of customers who have made more than one purchase from your business. It's a direct indicator of customer loyalty, product satisfaction, and the overall health of your brand. A higher rate signals that your products and customer experience are meeting expectations."
+            ]
+          },
+          {
+            "heading": "Why is Repeat Purchase Rate Important?",
+            "bullets": [
+              {
+                "label": "Cost Efficiency",
+                "text": "Acquiring new customers costs 5-7x more than retaining existing ones"
+              },
+              {
+                "label": "Higher Profitability",
+                "text": "Repeat customers spend more per order and have higher lifetime value"
+              },
+              {
+                "label": "Brand Health",
+                "text": "A high RPR indicates strong customer satisfaction and brand loyalty"
+              },
+              {
+                "label": "Sustainable Growth",
+                "text": "Some brands barely break even on first sales. Profit comes from repeat purchases"
+              },
+              {
+                "label": "Predictable Revenue",
+                "text": "Repeat customers create more stable, predictable revenue streams"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate Repeat Purchase Rate",
+            "paragraphs": [
+              "Example: If you have 2,500 total customers and 625 have purchased more than once:"
+            ],
+            "formula": "RPR = (Repeat Customers / Total Customers) × 100"
+          },
+          {
+            "heading": "What is a Good Repeat Purchase Rate?",
+            "paragraphs": [
+              "The average repeat customer rate in ecommerce ranges from 15-30%, but varies widely by industry:"
+            ]
+          },
+          {
+            "heading": "Average RPR by Industry (2024-2025)",
+            "paragraphs": [
+              "Benchmarks vary significantly based on product type and purchase frequency:",
+              "Sources: MobiLoud, Bluecore, Shopify, Metrilo (2024-2025 benchmarks)"
+            ],
+            "table": {
+              "headers": [
+                "Industry",
+                "Avg. RPR"
+              ],
+              "rows": [
+                [
+                  "Grocery & Food Delivery",
+                  "40%+"
+                ],
+                [
+                  "Pet Supplies",
+                  "30%+"
+                ],
+                [
+                  "Health & Supplements",
+                  "~29%"
+                ],
+                [
+                  "Beauty & Cosmetics",
+                  "~26%"
+                ],
+                [
+                  "Fashion & Apparel",
+                  "~25%"
+                ],
+                [
+                  "Electronics & Tech",
+                  "~18%"
+                ],
+                [
+                  "Home & Furniture",
+                  "~15%"
+                ],
+                [
+                  "Luxury Goods",
+                  "~10%"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "Why Industry Rates Vary",
+            "paragraphs": [
+              "Products like groceries, supplements, and pet food require regular repurchasing, naturally boosting repeat rates.",
+              "Furniture, electronics, and luxury items are infrequent purchases. Customers may not return for months or years.",
+              "Chewy reports 78% of sales from Autoship subscriptions. Subscriptions dramatically increase repeat purchase behavior."
+            ]
+          },
+          {
+            "heading": "How to Improve Your Repeat Purchase Rate",
+            "bullets": [
+              {
+                "label": "Launch a Loyalty Program",
+                "text": "1. Reward repeat purchases with points, discounts, or exclusive perks"
+              },
+              {
+                "label": "Offer Subscriptions",
+                "text": "2. Auto-replenishment for consumables ensures regular repeat purchases"
+              },
+              {
+                "label": "Personalize Communications",
+                "text": "3. Targeted emails based on purchase history drive 2nd and 3rd orders"
+              },
+              {
+                "label": "Excellent Customer Service",
+                "text": "4. Quick resolutions turn one-time buyers into loyal customers"
+              },
+              {
+                "label": "Post-Purchase Engagement",
+                "text": "5. Follow up after delivery with tips, related products, and review requests"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My {{rateLabel}}: {{rate}}%\nRepeat Customers: {{repeat}}\n{{totalLabel}}: {{total}}\n\nCalculated with {{panelTitle}}"
       }
     },
     "aov": {
@@ -267,6 +1772,133 @@
         "moderate": "Moderate AOV. Typical for apparel, beauty, or food industries.",
         "strong": "Strong AOV. Above global average of $145.",
         "excellent": "Excellent AOV. High-value products or effective upselling!"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is AOV?: Average Order Value",
+            "paragraphs": [
+              "AOV, or Average Order Value, is a key eCommerce metric that measures the average amount spent per transaction on your website or store.",
+              "Instead of chasing new customers, many businesses focus on increasing AOV to maximize revenue from existing traffic. According to Shopify, the global AOV is approximately $145 across all industries."
+            ]
+          },
+          {
+            "heading": "Why is AOV Important?",
+            "bullets": [
+              {
+                "text": "Increases Revenue Without More Traffic: Higher AOV means more revenue per customer without additional acquisition costs"
+              },
+              {
+                "label": "Improves Profit Margins",
+                "text": "Shipping a $100 order costs the same as shipping a $140 order; the second is more profitable"
+              },
+              {
+                "label": "Offsets Rising Ad Costs",
+                "text": "With CPCs rising 15%+ on Meta and Google, higher AOV helps maintain ROAS"
+              },
+              {
+                "label": "Reveals Customer Behavior",
+                "text": "Low AOV may indicate pricing issues or missed upselling opportunities"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate AOV: The Formula",
+            "paragraphs": [
+              "The AOV formula is:",
+              "For example, if your store generated $100 in revenue from 100 orders , your AOV is $100 ÷ 100 = $100",
+              "This means on average, each customer spends $100 per order ."
+            ],
+            "formula": "AOV = Total Revenue ÷ Number of Orders"
+          },
+          {
+            "heading": "Average AOV by Industry (2025)",
+            "paragraphs": [
+              "AOV varies significantly by industry due to product price points and purchase behavior:",
+              "Source: Dynamic Yield, Shopify, Digital Web Solutions (2025). Global average AOV is ~$145 across all industries."
+            ],
+            "bullets": [
+              {
+                "label": "Luxury & Jewelry",
+                "text": "$300+ per order",
+                "tier": "excellent"
+              },
+              {
+                "label": "B2B eCommerce",
+                "text": "$400-$600+ (bulk/recurring)",
+                "tier": "excellent"
+              },
+              {
+                "label": "Electronics",
+                "text": "$200-$350",
+                "tier": "good"
+              },
+              {
+                "label": "Furniture & Home Decor",
+                "text": "$150-$250",
+                "tier": "good"
+              },
+              {
+                "label": "Apparel & Accessories",
+                "text": "$40-$170",
+                "tier": "breakeven"
+              },
+              {
+                "label": "Beauty & Personal Care",
+                "text": "$15-$90",
+                "tier": "breakeven"
+              },
+              {
+                "label": "Food & Beverage",
+                "text": "$25-$50",
+                "tier": "loss"
+              }
+            ],
+            "note": "Source: Dynamic Yield, Shopify, Digital Web Solutions (2025). Global average AOV is ~$145 across all industries."
+          },
+          {
+            "heading": "7 Ways to Increase AOV",
+            "bullets": [
+              {
+                "label": "Free Shipping Thresholds",
+                "text": "Set 30% above your current AOV (e.g., \"$50 for free shipping\")"
+              },
+              {
+                "label": "Product Bundles",
+                "text": "Offer \"complete the look\" or \"starter kit\" packages at a discount"
+              },
+              {
+                "label": "Upsells & Cross-sells",
+                "text": "Recommend complementary products during checkout"
+              },
+              {
+                "label": "Loyalty Programs",
+                "text": "Reward higher spending with points or exclusive perks"
+              },
+              {
+                "label": "AI Recommendations",
+                "text": "Personalized suggestions can increase AOV by 30%+"
+              },
+              {
+                "label": "Tiered Discounts",
+                "text": "\"Spend $100, get 10% off\" encourages larger carts"
+              },
+              {
+                "label": "Post-Purchase Upsells",
+                "text": "Offer add-ons immediately after checkout"
+              }
+            ]
+          },
+          {
+            "heading": "Pro Tip: Look Beyond the Mean",
+            "paragraphs": [
+              "Marketing experts recommend analyzing not just the mean (average), but also the mode (most common order value). A few high-value orders can skew your average, hiding that most customers spend much less. Focus on improving the modal order value for sustainable gains."
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My AOV: {{aov}} | Total Revenue: {{revenue}} | Orders: {{orders}}"
       }
     },
     "ltv": {
@@ -282,6 +1914,113 @@
       "results": {
         "ltv": "LTV (Customer Lifetime Value)",
         "ltvCacRatio": "LTV:CAC Ratio"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Ecommerce LTV?: Customer Lifetime Value",
+            "paragraphs": [
+              "LTV (or CLV), Customer Lifetime Value, measures the total profit a customer generates over their entire relationship with your business .",
+              "Unlike revenue-focused metrics, this simplified eCommerce LTV formula factors in gross margin to show actual profit contribution. According to Shopify, a good LTV:CAC ratio is 3:1, meaning each customer should generate 3x what you spent to acquire them."
+            ]
+          },
+          {
+            "heading": "Why is LTV Important?",
+            "bullets": [
+              {
+                "label": "Sets Acquisition Budgets",
+                "text": "Knowing LTV tells you how much you can profitably spend to acquire customers"
+              },
+              {
+                "label": "Identifies Valuable Segments",
+                "text": "Find which customer groups generate the most long-term profit"
+              },
+              {
+                "label": "Drives Retention Focus",
+                "text": "Retained customers buy more often and spend more than new ones"
+              },
+              {
+                "label": "Informs Pricing Strategy",
+                "text": "Understand perceived value to optimize product pricing"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate Ecommerce LTV: The Formula",
+            "paragraphs": [
+              "The simplified eCommerce LTV formula is:",
+              "For example, if your AOV is $100 , customers make 6 purchases over their lifetime, with a 40% gross margin , your LTV is $100 × 6 × 0.40 = $100",
+              "Each customer generates $100 in gross profit over their lifetime."
+            ],
+            "formula": "LTV = AOV × Purchases per Customer × Gross Margin %"
+          },
+          {
+            "heading": "LTV:CAC Ratio Benchmarks",
+            "paragraphs": [
+              "The LTV:CAC ratio shows if your customer acquisition is profitable:",
+              "Source: TrueProfit, Shopify (2025). A ratio above 5:1 may indicate under-investment in growth."
+            ],
+            "bullets": [
+              {
+                "text": "Below 2:1: Unprofitable. Spending too much to acquire customers"
+              },
+              {
+                "text": "2:1 to 3:1: Break-even territory. Optimize LTV or reduce CAC"
+              },
+              {
+                "text": "3:1 to 4:1: Ideal balance. Profitable and sustainable growth"
+              },
+              {
+                "text": "Above 5:1: Opportunity to scale. Consider investing more in marketing"
+              }
+            ],
+            "note": "Source: TrueProfit, Shopify (2025). A ratio above 5:1 may indicate under-investment in growth."
+          },
+          {
+            "heading": "How to Increase LTV",
+            "bullets": [
+              {
+                "label": "Increase AOV",
+                "text": "Use bundles, upsells, and free shipping thresholds"
+              },
+              {
+                "label": "Boost Purchase Frequency",
+                "text": "Email marketing, subscriptions, and loyalty programs"
+              },
+              {
+                "label": "Improve Retention",
+                "text": "Better onboarding, customer service, and personalization"
+              },
+              {
+                "label": "Optimize Margins",
+                "text": "Reduce COGS, negotiate supplier deals, or adjust pricing"
+              }
+            ]
+          },
+          {
+            "heading": "RFM Analysis for Segmentation",
+            "paragraphs": [
+              "Shopify recommends using RFM analysis (Recency, Frequency, Monetary) to segment customers by value. This helps identify your most valuable segments:"
+            ],
+            "bullets": [
+              {
+                "label": "Recency",
+                "text": "When did they last purchase?"
+              },
+              {
+                "label": "Frequency",
+                "text": "How often do they buy?"
+              },
+              {
+                "label": "Monetary",
+                "text": "How much have they spent?"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My Ecommerce LTV: {{ltv}} | AOV: {{aov}} | Purchases/Customer: {{frequency}} | Gross Margin: {{margin}}%{{ratio}}"
       }
     },
     "saas-ltv": {
@@ -298,6 +2037,143 @@
         "avgLifetime": "Average customer lifetime",
         "ltv": "SaaS LTV (Customer Lifetime Value)",
         "ltvCacRatio": "LTV:CAC Ratio"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is SaaS LTV?: Subscription Lifetime Value",
+            "paragraphs": [
+              "SaaS LTV (Customer Lifetime Value) measures the total gross profit a subscription customer generates over their entire relationship with your business .",
+              "Unlike eCommerce LTV, SaaS LTV uses monthly churn rate to estimate customer lifespan. According to Churnkey and industry benchmarks, a 3:1 LTV:CAC ratio is the gold standard for sustainable SaaS growth."
+            ]
+          },
+          {
+            "heading": "Why is SaaS LTV Important?",
+            "bullets": [
+              {
+                "label": "Unit Economics",
+                "text": "Determine if acquiring customers is profitable at the individual level"
+              },
+              {
+                "label": "CAC Budget",
+                "text": "Know how much you can profitably spend to acquire new subscribers"
+              },
+              {
+                "label": "Investor Metric",
+                "text": "LTV:CAC ratio is one of the most scrutinized metrics by VCs and growth equity investors"
+              },
+              {
+                "label": "Retention Focus",
+                "text": "Shows the direct impact of reducing churn on customer value"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate SaaS LTV: The Formula",
+            "paragraphs": [
+              "The churn-based SaaS LTV formula is:",
+              "For example, if your ARPU is $100/month , with a 80% gross margin and 5% monthly churn , your LTV is $100 × 0.80 × 20 = $100",
+              "The customer lifetime (1 / churn rate) in this case is 20 months."
+            ],
+            "formula": "LTV = ARPU × Gross Margin % × (1 / Monthly Churn Rate)"
+          },
+          {
+            "heading": "Monthly Churn Rate Benchmarks",
+            "paragraphs": [
+              "Based on data from Lenny Rachitsky and Churnkey (2024-2025):",
+              "Source: Lenny's Newsletter, Churnkey (2024-2025)"
+            ],
+            "bullets": [
+              {
+                "text": "B2B Enterprise (>1,000 employees): <0.5% monthly / <6% annual is GREAT"
+              },
+              {
+                "label": "B2B SMB + Mid-Market",
+                "text": "<1.5% monthly / <17% annual is GREAT",
+                "tier": "good"
+              },
+              {
+                "label": "B2C SaaS",
+                "text": "<2% monthly / <22% annual is GREAT",
+                "tier": "breakeven"
+              },
+              {
+                "label": "High churn warning",
+                "text": ">5% monthly means losing ~45% of customers annually",
+                "tier": "loss"
+              }
+            ],
+            "note": "Source: Lenny's Newsletter, Churnkey (2024-2025)"
+          },
+          {
+            "heading": "LTV:CAC Ratio Benchmarks",
+            "paragraphs": [
+              "The LTV:CAC ratio measures customer acquisition profitability:",
+              "Source: Growth Equity Interview Guide, industry standard benchmarks"
+            ],
+            "bullets": [
+              {
+                "text": "Below 2:1: Unprofitable. Customer value doesn't cover acquisition cost"
+              },
+              {
+                "text": "2:1 to 3:1: Break-even. Optimize retention or reduce CAC"
+              },
+              {
+                "text": "3:1 to 5:1: Healthy. The industry gold standard for sustainable growth"
+              },
+              {
+                "text": "Above 5:1: Excellent. May indicate room to invest more in growth"
+              }
+            ],
+            "note": "Source: Growth Equity Interview Guide, industry standard benchmarks"
+          },
+          {
+            "heading": "How to Increase SaaS LTV",
+            "bullets": [
+              {
+                "label": "Reduce Churn",
+                "text": "Improve onboarding, customer success, and cancel flow with trial extensions and pause walls"
+              },
+              {
+                "label": "Increase ARPU",
+                "text": "Upsell premium plans, add-ons, and usage-based pricing tiers"
+              },
+              {
+                "label": "Target Enterprise",
+                "text": "B2B enterprise clients have 10x+ longer lifetimes and higher ARPU"
+              },
+              {
+                "label": "Fix Involuntary Churn",
+                "text": "Implement precision retries, dunning emails, and failed payment recovery"
+              }
+            ]
+          },
+          {
+            "heading": "Churn Impact on LTV",
+            "paragraphs": [
+              "Small reductions in churn create exponential LTV gains:",
+              "A 1% reduction in churn can increase LTV by 25-50% depending on your starting point."
+            ],
+            "bullets": [
+              {
+                "text": "5% monthly churn → 20-month lifetime"
+              },
+              {
+                "text": "4% monthly churn → 25-month lifetime (+25%)"
+              },
+              {
+                "text": "3% monthly churn → 33-month lifetime (+65%)"
+              },
+              {
+                "text": "2% monthly churn → 50-month lifetime (+150%)"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My SaaS LTV: {{ltv}} | ARPU: {{arpu}}/mo | Gross Margin: {{margin}}% | Monthly Churn: {{churn}}%",
+        "lifetimeSuffix": " | Customer Lifetime: {{months}} months"
       }
     },
     "ltv-cac": {
@@ -310,6 +2186,107 @@
       },
       "results": {
         "ratio": "LTV:CAC Ratio"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is LTV:CAC Ratio?",
+            "paragraphs": [
+              "The LTV:CAC ratio measures how much value a customer generates compared to the cost of acquiring them . It's the gold standard metric for evaluating unit economics health.",
+              "A ratio of 3:1 means each customer generates 3x what you spent to acquire them, the widely accepted benchmark for sustainable growth. According to industry research, this ratio is one of the most scrutinized metrics by VCs and growth investors."
+            ]
+          },
+          {
+            "heading": "Why is LTV:CAC Ratio Important?",
+            "bullets": [
+              {
+                "label": "Profitability Signal",
+                "text": "Shows whether customer acquisition is profitable at the unit level"
+              },
+              {
+                "label": "Investment Decisions",
+                "text": "Guides how much to invest in marketing and sales"
+              },
+              {
+                "label": "Scalability Check",
+                "text": "High ratios indicate room to scale; low ratios signal unit economics problems"
+              },
+              {
+                "label": "Fundraising Metric",
+                "text": "Critical for investor due diligence and company valuation"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate LTV:CAC Ratio",
+            "paragraphs": [
+              "The formula is straightforward:",
+              "For example, if your LTV is $100 and your CAC is $500 , your ratio is $100 / $500 = 3:1"
+            ],
+            "formula": "LTV:CAC Ratio = LTV / CAC"
+          },
+          {
+            "heading": "LTV:CAC Ratio Benchmarks",
+            "paragraphs": [
+              "Industry-standard benchmarks for interpreting your ratio:",
+              "Source: Industry benchmarks from Bessemer, a]16z, and growth equity standards"
+            ],
+            "bullets": [
+              {
+                "text": "Below 1:1: Losing money on every customer. Urgent action needed"
+              },
+              {
+                "text": "1:1 to 2:1: Unprofitable after overhead. Optimize LTV or reduce CAC"
+              },
+              {
+                "text": "2:1 to 3:1: Break-even territory. Getting close to healthy economics"
+              },
+              {
+                "text": "3:1 to 5:1: Healthy. The gold standard for sustainable growth"
+              },
+              {
+                "text": "Above 5:1: Excellent, but may indicate under-investment in growth"
+              }
+            ],
+            "note": "Source: Industry benchmarks from Bessemer, a]16z, and growth equity standards"
+          },
+          {
+            "heading": "How to Improve LTV:CAC Ratio",
+            "paragraphs": [
+              "There are two levers to improve your ratio:"
+            ],
+            "bullets": [
+              {
+                "text": "Reduce churn through better onboarding and customer success"
+              },
+              {
+                "text": "Increase ARPU via upsells, cross-sells, and premium tiers"
+              },
+              {
+                "text": "Improve gross margins by optimizing costs"
+              },
+              {
+                "text": "Improve conversion rates across the funnel"
+              },
+              {
+                "text": "Focus on organic channels (SEO, content, referrals)"
+              },
+              {
+                "text": "Optimize paid ad targeting and creative"
+              }
+            ]
+          },
+          {
+            "heading": "When High Ratios May Be a Problem",
+            "paragraphs": [
+              "While a high LTV:CAC ratio (above 5:1) sounds great, it can indicate under-investment in growth. If your ratio is very high, you may be leaving market share on the table by not spending enough on customer acquisition.",
+              "The optimal strategy is often to invest more in marketing and sales until your ratio approaches the 3:1 to 5:1 sweet spot, maximizing growth while maintaining healthy unit economics."
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My {{ratioLabel}}: {{ratio}}:1 | LTV: {{ltv}} | CAC: {{cac}}"
       }
     },
     "roas": {
@@ -339,6 +2316,58 @@
         "breakeven": "Break-even to moderate return.",
         "good": "Good performance!",
         "excellent": "Excellent performance!"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is ROAS?: ROAS meaning",
+            "paragraphs": [
+              "Return on ad spend or ROAS is the amount of revenue a company generates for every dollar spent on an advertising source .",
+              "When a business tests a new advertising source for a campaign, it may compare the ROAS at different stages of the campaign with other advertising sources to gauge their performance and determine which should get renewed."
+            ]
+          },
+          {
+            "heading": "How to calculate ROAS: ROAS calculation formula",
+            "paragraphs": [
+              "The ROAS formula is:",
+              "That means that if you spent $100 on Facebook ads in one month and your revenue for that month is $100 , your ROAS is ($100/$100 ) × 100 = 3 × 100 = 300% per spent on advertising.",
+              "But if you made $100 in revenue in the same month, your ROAS is ($100/ $100) × 100 = 0.9 × 100 = 90% .",
+              "90% may look acceptable at face value, but don't be fooled by anyone throwing such ROAS numbers. Anything less than 100% is a loss when evaluating ROAS. The ROAS calculator will help you make sure you don't interpret your ROAS results wrongly or confusing ."
+            ],
+            "formula": "ROAS = (Revenue from advertising / Cost of advertising) × 100"
+          },
+          {
+            "heading": "What is a good ROAS?",
+            "paragraphs": [
+              "A good ROAS varies by industry, but generally:"
+            ],
+            "bullets": [
+              {
+                "label": "Below 100%",
+                "text": "You're losing money",
+                "tier": "loss"
+              },
+              {
+                "label": "100-300%",
+                "text": "Break-even to moderate",
+                "tier": "breakeven"
+              },
+              {
+                "label": "400-800%",
+                "text": "Good performance",
+                "tier": "good"
+              },
+              {
+                "label": "800%+",
+                "text": "Excellent performance",
+                "tier": "excellent"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My ROAS: {{roas}}% | Ad Spend: {{spend}} | Revenue: {{revenue}}"
       }
     },
     "breakeven-roas": {
@@ -359,6 +2388,102 @@
       "status": {
         "profitable": "Profitable!",
         "belowBreakeven": "Below Break-even"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Break-even ROAS?",
+            "paragraphs": [
+              "Break-even ROAS (Return on Ad Spend) is the minimum ROAS you need to achieve to cover your costs and not lose money on advertising. It's the point where your ad revenue exactly equals your total costs (including both ad spend and cost of goods sold).",
+              "Any ROAS above your break-even point generates profit, while any ROAS below means you're losing money on those ad campaigns."
+            ]
+          },
+          {
+            "heading": "Why is Break-even ROAS Important?",
+            "bullets": [
+              {
+                "label": "Sets minimum performance targets",
+                "text": "Gives you a clear threshold for campaign profitability"
+              },
+              {
+                "label": "Prevents losses",
+                "text": "Helps identify unprofitable campaigns before they drain budget"
+              },
+              {
+                "label": "Guides bid strategies",
+                "text": "Informs target ROAS bidding in platforms like Google Ads"
+              },
+              {
+                "label": "Product-level insights",
+                "text": "Different products have different margins, thus different break-even points"
+              },
+              {
+                "label": "Strategic decisions",
+                "text": "Helps decide when to scale or cut campaigns"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate Break-even ROAS",
+            "paragraphs": [
+              "The formula is elegantly simple:",
+              "Example: If your gross margin is 40%:",
+              "Break-even ROAS = 2.5x",
+              "This means you need to generate $2.50 in revenue for every $1 spent on ads just to break even. Anything above 2.5x ROAS is profit."
+            ],
+            "formula": "Break-even ROAS = 1 / Gross Margin %"
+          },
+          {
+            "heading": "Break-even ROAS by Gross Margin",
+            "table": {
+              "headers": [
+                "Gross Margin",
+                "Break-even ROAS",
+                "Common Industries"
+              ],
+              "rows": [
+                [
+                  "20%",
+                  "5.0x",
+                  "Grocery, Low-margin retail"
+                ],
+                [
+                  "30%",
+                  "3.33x",
+                  "Consumer electronics"
+                ],
+                [
+                  "40%",
+                  "2.5x",
+                  "Fashion, Apparel"
+                ],
+                [
+                  "50%",
+                  "2.0x",
+                  "Beauty, Cosmetics"
+                ],
+                [
+                  "60%",
+                  "1.67x",
+                  "Jewelry, Luxury goods"
+                ],
+                [
+                  "70%",
+                  "1.43x",
+                  "Software, Digital products"
+                ],
+                [
+                  "80%",
+                  "1.25x",
+                  "SaaS, Subscriptions"
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      "share": {
+        "result": "{{breakevenRoasLabel}} Calculator Results:\nGross Margin: {{grossMargin}}%\n{{breakevenRoasLabel}}: {{breakevenRoas}}x\nCurrent ROAS: {{currentRoas}}"
       }
     },
     "grr": {
@@ -374,6 +2499,137 @@
         "totalLost": "Total MRR lost (contraction + churn)",
         "retainedMrr": "Retained MRR",
         "grr": "Gross Revenue Retention (GRR)"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Gross Revenue Retention (GRR)?",
+            "paragraphs": [
+              "Gross Revenue Retention (GRR) measures the percentage of recurring revenue retained from existing customers , accounting only for churn and contractions, not expansion.",
+              "Unlike NRR, GRR cannot exceed 100% and reveals the true impact of churn without expansion revenue masking problems. A healthy SaaS business should retain 85-95% of recurring revenue year-over-year, with best-in-class achieving 95-100%."
+            ]
+          },
+          {
+            "heading": "Why is GRR Important?",
+            "bullets": [
+              {
+                "label": "Reveals True Churn Impact",
+                "text": "Unlike NRR, expansion can't hide retention problems in GRR"
+              },
+              {
+                "label": "Customer Stickiness",
+                "text": "High GRR indicates customers see lasting value and renew contracts"
+              },
+              {
+                "label": "Investor Focus",
+                "text": "VCs use GRR to spot churn issues in high-growth companies"
+              },
+              {
+                "label": "Long-term Health",
+                "text": "Predicts sustainable growth through customer loyalty"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate GRR: The Formula",
+            "paragraphs": [
+              "The GRR formula is:",
+              "For example, with $100 starting MRR , $5,000 contraction , and $5,000 churn :"
+            ],
+            "formula": "GRR = (Starting MRR - Contraction - Churn) / Starting MRR × 100"
+          },
+          {
+            "heading": "GRR Benchmarks (2025)",
+            "paragraphs": [
+              "Industry benchmarks from SaaS Capital and Ordway Labs:",
+              "Source: SaaS Capital 2025 Retention Benchmarks, Ordway Labs"
+            ],
+            "bullets": [
+              {
+                "label": "Below 80%",
+                "text": "Critical. Severe churn problem affecting growth potential",
+                "tier": "loss"
+              },
+              {
+                "label": "80-85%",
+                "text": "Below average. Customer satisfaction issues likely",
+                "tier": "breakeven"
+              },
+              {
+                "label": "85-95%",
+                "text": "Good. Healthy retention for most SaaS companies",
+                "tier": "good"
+              },
+              {
+                "label": "95-100%",
+                "text": "Excellent. Best-in-class customer stickiness",
+                "tier": "excellent"
+              }
+            ],
+            "note": "Source: SaaS Capital 2025 Retention Benchmarks, Ordway Labs"
+          },
+          {
+            "heading": "GRR by Average Contract Value (ACV)",
+            "paragraphs": [
+              "Higher ACV correlates with higher GRR due to stickier enterprise deals."
+            ],
+            "bullets": [
+              {
+                "text": "<$12K ACV (SMB) Median: 90%"
+              },
+              {
+                "text": "$12K-$50K ACV Median: 92%"
+              },
+              {
+                "text": "$50K-$100K ACV Median: 92%"
+              },
+              {
+                "text": "$100K-$250K ACV Median: 95%"
+              },
+              {
+                "text": ">$250K ACV (Enterprise) Median: 95%"
+              }
+            ]
+          },
+          {
+            "heading": "GRR vs NRR: Key Differences",
+            "paragraphs": [
+              "Why track both: If NRR is 110% but GRR is 75%, expansion is masking a serious churn problem. Strong companies have high GRR AND high NRR."
+            ],
+            "bullets": [
+              {
+                "text": "GRR Excludes expansion, max 100%, shows true retention"
+              },
+              {
+                "text": "NRR Includes expansion, can exceed 100%, shows growth potential"
+              }
+            ]
+          },
+          {
+            "heading": "How to Improve GRR",
+            "bullets": [
+              {
+                "label": "Improve Onboarding",
+                "text": "Get customers to value faster to prevent early churn"
+              },
+              {
+                "label": "Invest in Customer Success",
+                "text": "1-2% of revenue in CS drives measurable retention gains"
+              },
+              {
+                "label": "Monitor Usage Drops",
+                "text": "Proactively intervene before customers downgrade"
+              },
+              {
+                "label": "Fix Cancel Flow",
+                "text": "Implement pause walls, trial extensions, and win-back offers"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My GRR: {{grr}}% | Starting MRR: {{starting}} | Retained: {{retained}} | Lost: {{lost}}"
       }
     },
     "nrr": {
@@ -390,6 +2646,137 @@
         "endingMrr": "Ending MRR (from existing customers)",
         "nrr": "Net Revenue Retention (NRR)",
         "grr": "Gross Revenue Retention (GRR)"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Net Revenue Retention (NRR)?",
+            "paragraphs": [
+              "Net Revenue Retention (NRR), also called Net Dollar Retention (NDR), measures how much recurring revenue you retain and grow from existing customers over a specific period.",
+              "The simplest way to think about NRR: How much would your revenue grow or shrink if you acquired zero new customers? According to research, SaaS companies with high NRR grow 2.5x faster than low-NRR counterparts."
+            ]
+          },
+          {
+            "heading": "Why is NRR Important?",
+            "bullets": [
+              {
+                "label": "Predicts Sustainable Growth",
+                "text": "Companies with NRR above 110% can grow significantly without new acquisition"
+              },
+              {
+                "label": "Investor Priority",
+                "text": "Often the single most important metric after revenue growth for VCs"
+              },
+              {
+                "label": "Cost Efficiency",
+                "text": "Expanding existing customers costs 5x less than acquiring new ones"
+              },
+              {
+                "label": "Product-Market Fit",
+                "text": "NRR above 100% indicates customers see enough value to invest more"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate NRR: The Formula",
+            "paragraphs": [
+              "The standard NRR formula is:",
+              "For example, with $100 starting MRR , $100 expansion , $100 contraction , and $100 churn :"
+            ],
+            "formula": "NRR = (Starting MRR + Expansion - Contraction - Churn) / Starting MRR × 100"
+          },
+          {
+            "heading": "NRR Benchmarks (2025)",
+            "paragraphs": [
+              "Industry benchmarks from SaaS Capital and Fullview:",
+              "Source: SaaS Capital 2025 Retention Benchmarks, Fullview (2025)"
+            ],
+            "bullets": [
+              {
+                "label": "Below 100%",
+                "text": "Poor. Revenue shrinking from existing customers",
+                "tier": "loss"
+              },
+              {
+                "label": "100-105%",
+                "text": "Fair. Maintaining revenue with limited expansion",
+                "tier": "breakeven"
+              },
+              {
+                "label": "106-115%",
+                "text": "Good. Solid expansion offsetting churn",
+                "tier": "good"
+              },
+              {
+                "label": "116-120%+",
+                "text": "Excellent. Best-in-class expansion engine",
+                "tier": "excellent"
+              }
+            ],
+            "note": "Source: SaaS Capital 2025 Retention Benchmarks, Fullview (2025)"
+          },
+          {
+            "heading": "NRR by Average Contract Value (ACV)",
+            "paragraphs": [
+              "Higher ACV correlates with higher NRR due to stickier enterprise customers."
+            ],
+            "bullets": [
+              {
+                "text": "$0-$5K ACV (SMB) Median: 95-100%"
+              },
+              {
+                "text": "$5K-$25K ACV (Mid-Market) Median: 100-106%"
+              },
+              {
+                "text": "$25K-$100K ACV Median: 102-110%"
+              },
+              {
+                "text": "$100K+ ACV (Enterprise) Median: 110-115%"
+              }
+            ]
+          },
+          {
+            "heading": "NRR vs GRR",
+            "paragraphs": [
+              "Both metrics matter but measure different things:",
+              "Why track both: A strong upsell motion can mask underlying retention problems. If NRR is 110% but GRR is 70%, you have a serious churn problem that expansion is covering up."
+            ],
+            "bullets": [
+              {
+                "label": "NRR",
+                "text": "Includes expansion. Shows total growth potential from existing customers"
+              },
+              {
+                "label": "GRR (Gross Revenue Retention)",
+                "text": "Excludes expansion. Reveals core retention without upsells masking churn"
+              }
+            ]
+          },
+          {
+            "heading": "How to Improve NRR",
+            "bullets": [
+              {
+                "label": "Reduce Churn",
+                "text": "Improve onboarding, proactive customer success, and cancel flow optimization"
+              },
+              {
+                "label": "Drive Expansion",
+                "text": "Upsell higher tiers, add seats, cross-sell new products, usage-based pricing"
+              },
+              {
+                "label": "Reduce Contraction",
+                "text": "Monitor usage drops, intervene before downgrades, demonstrate value continuously"
+              },
+              {
+                "label": "Target Enterprise",
+                "text": "Higher ACV customers have stickier contracts and more expansion potential"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My NRR: {{nrr}}% | Starting MRR: {{starting}} | Ending MRR: {{ending}}"
       }
     },
     "mom-growth": {
@@ -427,6 +2814,137 @@
         "cmgrLow": "Low compound growth. Typical for mature, stable businesses.",
         "cmgrSolid": "Solid compound growth rate for growing businesses.",
         "cmgrExceptional": "Exceptional compound growth! Strong momentum."
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is Month-Over-Month Growth?",
+            "paragraphs": [
+              "Month-over-month (MoM) growth measures the percentage change in a specific metric from one month to the next. It's a critical indicator used by businesses to understand quick changes in market conditions, operational results, and overall performance trajectories.",
+              "MoM calculations are commonly used across business functions including finance (revenue monitoring), marketing (follower growth), sales (customer acquisition), and production (volume tracking)."
+            ]
+          },
+          {
+            "heading": "Why is MoM Growth Important?",
+            "bullets": [
+              {
+                "label": "Identify Short-term Trends",
+                "text": "Detect changes that aren't apparent from longer periods, allowing rapid adaptation"
+              },
+              {
+                "label": "Spot Seasonal Patterns",
+                "text": "Understand cyclicality for inventory, staffing, and marketing planning"
+              },
+              {
+                "label": "Set Measurable Targets",
+                "text": "Provides actionable KPIs to motivate teams and align efforts"
+              },
+              {
+                "label": "Startup Validation",
+                "text": "Evaluate whether products are gaining market traction"
+              },
+              {
+                "label": "Distress Monitoring",
+                "text": "Track if business is improving or deteriorating for strategic decisions"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate MoM Growth",
+            "paragraphs": [
+              "The formula to calculate month-over-month growth:",
+              "Alternatively:",
+              "Example: If you had 200 active users in January and 240 in February:"
+            ],
+            "formula": "MoM Growth = (Current Month - Previous Month) / Previous Month × 100"
+          },
+          {
+            "heading": "Compound Monthly Growth Rate (CMGR)",
+            "paragraphs": [
+              "CMGR measures the average month-over-month growth over a longer period, accounting for compounding effects. It's similar to CAGR but on a monthly basis.",
+              "Where n is the number of months between measurements.",
+              "Example: If users grew from 10,000 in January to 20,000 in December (11 months):"
+            ],
+            "formula": "CMGR = (End Value / Start Value)^(1/n) - 1"
+          },
+          {
+            "heading": "What is Good MoM Growth?",
+            "paragraphs": [
+              "Source: Wall Street Prep, Corporate Finance Institute, SaaS Insights"
+            ],
+            "table": {
+              "headers": [
+                "Business Stage",
+                "Good MoM Growth",
+                "Status"
+              ],
+              "rows": [
+                [
+                  "Early-stage Startup",
+                  "15-20%+",
+                  "Excellent"
+                ],
+                [
+                  "SaaS (Pre-$1M ARR)",
+                  "10-20%",
+                  "Good"
+                ],
+                [
+                  "SaaS (Post-$1M ARR)",
+                  "5-15%",
+                  "Healthy"
+                ],
+                [
+                  "Mature Company",
+                  "2-5%",
+                  "Stable"
+                ],
+                [
+                  "Any Stage",
+                  "< 0%",
+                  "Declining"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "MoM vs Other Growth Metrics",
+            "table": {
+              "headers": [
+                "Metric",
+                "Time Frame",
+                "Best For"
+              ],
+              "rows": [
+                [
+                  "MoM",
+                  "Monthly",
+                  "Short-term trends, quick decisions"
+                ],
+                [
+                  "QoQ",
+                  "Quarterly",
+                  "Quarterly planning, investor updates"
+                ],
+                [
+                  "YoY",
+                  "Yearly",
+                  "Long-term trends, removing seasonality"
+                ],
+                [
+                  "CMGR",
+                  "Multi-month avg",
+                  "Smoothed growth rate over time"
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      "share": {
+        "result": "Month-Over-Month Growth Calculator Results",
+        "mom": "MoM Growth: {{value}}%",
+        "cmgr": "CMGR: {{value}}%"
       }
     },
     "mer": {
@@ -441,6 +2959,100 @@
         "merRatio": "MER (Ratio)",
         "merPercent": "MER (Percentage)",
         "spendPercent": "Marketing spend as % of revenue"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is MER?: Marketing Efficiency Ratio",
+            "paragraphs": [
+              "Marketing Efficiency Ratio (MER), also known as Blended ROAS or Ecosystem ROAS, measures how many dollars in revenue your business generates for every $1 spent on marketing , regardless of which platform or channel drove the conversion.",
+              "Unlike channel-specific ROAS, MER gives you a holistic, big-picture view of your entire marketing performance across all channels combined."
+            ]
+          },
+          {
+            "heading": "MER vs ROAS: What's the Difference?",
+            "bullets": [
+              {
+                "label": "ROAS",
+                "text": "is channel-specific and attribution-dependent (e.g., Facebook ROAS, Google ROAS)"
+              },
+              {
+                "label": "MER",
+                "text": "includes ALL revenue regardless of attribution and ALL marketing costs"
+              },
+              {
+                "text": "MER accounts for the full marketing ecosystem including team salaries, software, agencies, and creative costs"
+              }
+            ]
+          },
+          {
+            "heading": "How to Calculate MER: The Formula",
+            "paragraphs": [
+              "The MER formula is:",
+              "For example, if your business generated $100 in revenue and spent $100 on all marketing efforts, your MER is $100 / $100 = 3.0x (or 300%)",
+              "This means you generate $3 in revenue for every $1 spent on marketing ."
+            ],
+            "formula": "MER = Total Revenue / Total Marketing Spend"
+          },
+          {
+            "heading": "What's Included in Total Marketing Spend?",
+            "paragraphs": [
+              "For accurate MER calculation, include all marketing-related costs:"
+            ],
+            "bullets": [
+              {
+                "text": "Ad spend across all platforms"
+              },
+              {
+                "text": "Marketing team salaries"
+              },
+              {
+                "text": "Agency fees"
+              },
+              {
+                "text": "Creative production costs"
+              },
+              {
+                "text": "Software & tool subscriptions"
+              },
+              {
+                "text": "Market research"
+              }
+            ]
+          },
+          {
+            "heading": "What is a Good MER?",
+            "paragraphs": [
+              "A \"good\" MER varies by industry, but as a rule of thumb:",
+              "Industry benchmarks (2025): Apparel 2.8x, Health & Wellness 2.0x, Food & Beverage 2.1x, Electronics 2.4x, Pets 1.9x"
+            ],
+            "bullets": [
+              {
+                "label": "Below 2x",
+                "text": "Difficult to be profitable (spending 50%+ of revenue)",
+                "tier": "loss"
+              },
+              {
+                "label": "2x - 3x",
+                "text": "Acceptable, room for improvement",
+                "tier": "breakeven"
+              },
+              {
+                "label": "3x - 5x",
+                "text": "Good efficiency (spending 20-33% of revenue)",
+                "tier": "good"
+              },
+              {
+                "label": "5x+",
+                "text": "Excellent efficiency",
+                "tier": "excellent"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "My MER: {{mer}}x ({{percent}}%) | Revenue: {{revenue}} | Marketing Spend: {{spend}}"
       }
     },
     "seo-roi": {
@@ -484,6 +3096,119 @@
       "tooltip": {
         "traffic": "Traffic",
         "monthLabel": "Month {{month}}"
+      },
+      "education": {
+        "sections": [
+          {
+            "heading": "What is SEO ROI?",
+            "paragraphs": [
+              "SEO ROI (Return on Investment) measures how much revenue SEO activities generate for a business compared to their cost. It helps tie your SEO efforts directly to business goals and proves the value of organic search.",
+              "A positive SEO ROI means the revenue generated by your SEO strategy exceeds its cost. Unlike paid ads, SEO compounds over time. Traffic gains persist even after the initial investment."
+            ]
+          },
+          {
+            "heading": "How to Calculate SEO ROI",
+            "paragraphs": [
+              "The standard SEO ROI formula:",
+              "For projecting future revenue:"
+            ],
+            "formula": "SEO ROI = (Revenue from SEO - Cost of SEO) / Cost of SEO × 100"
+          },
+          {
+            "heading": "SEO ROI by Industry",
+            "paragraphs": [
+              "Based on First Page Sage research (3-year averages):",
+              "Source: First Page Sage SEO ROI Statistics 2025"
+            ],
+            "table": {
+              "headers": [
+                "Industry",
+                "Avg ROI",
+                "Break-Even"
+              ],
+              "rows": [
+                [
+                  "Real Estate",
+                  "1,389%",
+                  "10 months"
+                ],
+                [
+                  "Medical Device",
+                  "1,183%",
+                  "13 months"
+                ],
+                [
+                  "Financial Services",
+                  "1,031%",
+                  "9 months"
+                ],
+                [
+                  "B2B SaaS",
+                  "702%",
+                  "7 months"
+                ],
+                [
+                  "Manufacturing",
+                  "813%",
+                  "9 months"
+                ],
+                [
+                  "eCommerce",
+                  "317%",
+                  "9 months"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "SEO ROI by Service Type",
+            "table": {
+              "headers": [
+                "SEO Service",
+                "Avg ROI"
+              ],
+              "rows": [
+                [
+                  "Technical SEO",
+                  "117%"
+                ],
+                [
+                  "Basic Content Marketing",
+                  "16%"
+                ],
+                [
+                  "Thought Leadership SEO",
+                  "748%"
+                ]
+              ]
+            }
+          },
+          {
+            "heading": "SEO ROI Timeline",
+            "paragraphs": [
+              "Unlike paid ads that stop when you stop paying, SEO provides compounding returns over time with ongoing optimization."
+            ],
+            "bullets": [
+              {
+                "label": "Months 1-6",
+                "text": "Foundation building, typically negative or break-even ROI"
+              },
+              {
+                "label": "Months 6-12",
+                "text": "Positive ROI typically achieved, traffic compounds"
+              },
+              {
+                "label": "Year 2-3",
+                "text": "Peak ROI as content matures and domain authority grows"
+              }
+            ]
+          }
+        ]
+      },
+      "share": {
+        "result": "SEO ROI Calculator Results",
+        "line": "{{label}}: {{value}}",
+        "projectedRoi": "Projected ROI: {{value}}"
       }
     }
   }

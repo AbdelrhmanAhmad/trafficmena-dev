@@ -11,7 +11,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { shareToClipboard } from '../utils/clipboard';
 import { showFeedbackToast } from '../utils/feedback';
-import { CalculatorActionButtons, CalculatorFeedback } from './shared';
+import { CalculatorActionButtons, CalculatorEducationPanel, CalculatorFeedback } from './shared';
 
 const BreakevenROASCalculator = () => {
   const { t } = useTranslation('calculators');
@@ -46,16 +46,16 @@ const BreakevenROASCalculator = () => {
     breakevenROAS !== null && !Number.isNaN(currentROASValue) && currentROASValue > breakevenROAS;
 
   const handleShare = () => {
-    const results =
+    const text =
       breakevenROAS !== null
-        ? `{t('calcs.breakeven-roas.results.breakevenRoas')} Calculator Results:
-Gross Margin: ${grossMargin}%
-{t('calcs.breakeven-roas.results.breakevenRoas')}: ${breakevenROAS.toFixed(2)}x
-${currentROAS ? `Current ROAS: ${currentROAS}x` : ''}
-${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: Below break-even' : ''}`
+        ? t('calcs.breakeven-roas.share.result', {
+            breakevenRoasLabel: t('calcs.breakeven-roas.results.breakevenRoas'),
+            grossMargin,
+            breakevenRoas: breakevenROAS.toFixed(2),
+            currentRoas: Number.isNaN(currentROASValue) ? '—' : `${currentROASValue.toFixed(2)}x`,
+          })
         : null;
-
-    shareToClipboard(results);
+    shareToClipboard(text);
   };
 
   const handleClear = () => {
@@ -72,161 +72,9 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
       {/* Left Column - Educational Content */}
-      <div className="space-y-4 lg:space-y-6">
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-neutral-800">What is {t('calcs.breakeven-roas.results.breakevenRoas')}?</h2>
-          <p className="text-neutral-600">
-            {t('calcs.breakeven-roas.results.breakevenRoas')} (Return on Ad Spend) is the minimum ROAS you need to achieve to cover
-            your costs and not lose money on advertising. It's the point where your ad revenue
-            exactly equals your total costs (including both ad spend and cost of goods sold).
-          </p>
-          <p className="text-neutral-600">
-            Any ROAS above your break-even point generates profit, while any ROAS below means you're
-            losing money on those ad campaigns.
-          </p>
-        </div>
+        <CalculatorEducationPanel slug="breakeven-roas" />
 
-        <div className="space-y-4">
-          <h2 className="text-lg lg:text-xl font-semibold text-neutral-800">
-            Why is {t('calcs.breakeven-roas.results.breakevenRoas')} Important?
-          </h2>
-          <ul className="list-disc list-inside text-neutral-600 space-y-2">
-            <li>
-              <strong className="text-neutral-800">Sets minimum performance targets:</strong> Gives
-              you a clear threshold for campaign profitability
-            </li>
-            <li>
-              <strong className="text-neutral-800">Prevents losses:</strong> Helps identify
-              unprofitable campaigns before they drain budget
-            </li>
-            <li>
-              <strong className="text-neutral-800">Guides bid strategies:</strong> Informs target
-              ROAS bidding in platforms like Google Ads
-            </li>
-            <li>
-              <strong className="text-neutral-800">Product-level insights:</strong> Different
-              products have different margins, thus different break-even points
-            </li>
-            <li>
-              <strong className="text-neutral-800">Strategic decisions:</strong> Helps decide when
-              to scale or cut campaigns
-            </li>
-          </ul>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-lg lg:text-xl font-semibold text-neutral-800">
-            How to {t('calcs.breakeven-roas.panelTitle')}
-          </h2>
-          <p className="text-neutral-600">The formula is elegantly simple:</p>
-          <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4">
-            <code className="text-primary-green font-mono">
-              {t('calcs.breakeven-roas.results.breakevenRoas')} = 1 / Gross Margin %
-            </code>
-          </div>
-          <p className="text-neutral-600 mt-4">
-            <strong className="text-neutral-800">Example:</strong> If your gross margin is 40%:
-          </p>
-          <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 space-y-2">
-            <p className="font-mono text-xs lg:text-sm">{t('calcs.breakeven-roas.results.breakevenRoas')} = 1 / 0.40</p>
-            <p className="font-mono text-xs lg:text-sm">{t('calcs.breakeven-roas.results.breakevenRoas')} = 2.5x</p>
-          </div>
-          <p className="text-neutral-600 mt-2">
-            This means you need to generate $2.50 in revenue for every $1 spent on ads just to break
-            even. Anything above 2.5x ROAS is profit.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-lg lg:text-xl font-semibold text-neutral-800">
-            {t('calcs.breakeven-roas.results.breakevenRoas')} by Gross Margin
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs lg:text-sm">
-              <thead>
-                <tr className="border-b border-neutral-200">
-                  <th className="text-left py-2 font-medium text-neutral-500">Gross Margin</th>
-                  <th className="text-left py-2 font-medium text-neutral-500">{t('calcs.breakeven-roas.results.breakevenRoas')}</th>
-                  <th className="text-left py-2 font-medium text-neutral-500">Common Industries</th>
-                </tr>
-              </thead>
-              <tbody className="text-neutral-600">
-                <tr className="border-b border-neutral-100">
-                  <td className="py-2 tabular-nums">20%</td>
-                  <td className="py-2 text-performance-loss font-medium tabular-nums">5.0x</td>
-                  <td className="py-2">Grocery, Low-margin retail</td>
-                </tr>
-                <tr className="border-b border-neutral-100">
-                  <td className="py-2 tabular-nums">30%</td>
-                  <td className="py-2 text-performance-breakeven font-medium tabular-nums">
-                    3.33x
-                  </td>
-                  <td className="py-2">Consumer electronics</td>
-                </tr>
-                <tr className="border-b border-neutral-100">
-                  <td className="py-2 tabular-nums">40%</td>
-                  <td className="py-2 text-performance-breakeven font-medium tabular-nums">2.5x</td>
-                  <td className="py-2">Fashion, Apparel</td>
-                </tr>
-                <tr className="border-b border-neutral-100">
-                  <td className="py-2 tabular-nums">50%</td>
-                  <td className="py-2 text-performance-good font-medium tabular-nums">2.0x</td>
-                  <td className="py-2">Beauty, Cosmetics</td>
-                </tr>
-                <tr className="border-b border-neutral-100">
-                  <td className="py-2 tabular-nums">60%</td>
-                  <td className="py-2 text-performance-good font-medium tabular-nums">1.67x</td>
-                  <td className="py-2">Jewelry, Luxury goods</td>
-                </tr>
-                <tr className="border-b border-neutral-100">
-                  <td className="py-2 tabular-nums">70%</td>
-                  <td className="py-2 text-performance-excellent font-medium tabular-nums">
-                    1.43x
-                  </td>
-                  <td className="py-2">Software, Digital products</td>
-                </tr>
-                <tr>
-                  <td className="py-2 tabular-nums">80%</td>
-                  <td className="py-2 text-performance-excellent font-medium tabular-nums">
-                    1.25x
-                  </td>
-                  <td className="py-2">SaaS, Subscriptions</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h2 className="text-lg lg:text-xl font-semibold text-neutral-800">
-            How to Lower Your {t('calcs.breakeven-roas.results.breakevenRoas')}
-          </h2>
-          <ul className="list-disc list-inside text-neutral-600 space-y-2">
-            <li>
-              <strong className="text-neutral-800">Increase gross margins:</strong> Negotiate better
-              supplier costs or raise prices strategically
-            </li>
-            <li>
-              <strong className="text-neutral-800">Reduce COGS:</strong> Optimize manufacturing,
-              shipping, and fulfillment costs
-            </li>
-            <li>
-              <strong className="text-neutral-800">Focus on high-margin products:</strong>
-              Prioritize ad spend on products with better margins
-            </li>
-            <li>
-              <strong className="text-neutral-800">Bundle products:</strong> Create bundles that
-              increase average order value and margin
-            </li>
-            <li>
-              <strong className="text-neutral-800">Factor in LTV:</strong> Consider customer
-              lifetime value for acquisition campaigns
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {/* Right Column - Calculator */}
+        {/* Right Column - Calculator */}
       <div className="space-y-4 lg:space-y-6">
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <Accordion type="single" defaultValue="calculator" collapsible>
@@ -267,7 +115,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                   {/* {t('calcs.breakeven-roas.results.breakevenRoas')} Output */}
                   <div className="space-y-2">
                     <Label htmlFor={beROASId} className="text-sm text-neutral-600">
-                      {t('calcs.breakeven-roas.results.breakevenRoas')}
+                      ${t('calcs.breakeven-roas.results.breakevenRoas')}
                     </Label>
                     <div className="relative">
                       <Input
@@ -314,7 +162,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                   {/* {t('calcs.breakeven-roas.results.profitabilityStatus')} */}
                   {breakevenROAS !== null && currentROAS && (
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">{t('calcs.breakeven-roas.results.profitabilityStatus')}</Label>
+                      <Label className="text-sm text-neutral-600">${t('calcs.breakeven-roas.results.profitabilityStatus')}</Label>
                       <div
                         className={`p-4 rounded-lg border ${
                           isProfitable
