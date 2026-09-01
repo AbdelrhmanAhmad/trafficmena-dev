@@ -1,0 +1,23 @@
+{
+  "title": "الخبراء",
+  "expert": "خبير",
+  "expertsDirectory": "الخبراء",
+  "aboutTheExpert": "نبذة عن الخبير",
+  "headline": "العنوان المهني",
+  "bio": "النبذة",
+  "expertise": "مجالات الخبرة",
+  "profile": "الملف الشخصي",
+  "website": "الموقع الإلكتروني",
+  "linkedin": "LinkedIn",
+  "twitter": "X (Twitter)",
+  "noExpertsFound": "لا يوجد خبراء.",
+  "profileUnavailable": "ملف الخبير غير متاح.",
+  "editExpertProfile": "تعديل ملف الخبير",
+  "saveProfile": "حفظ الملف",
+  "viewProfile": "عرض الملف",
+  "relatedEvents": "فعاليات مرتبطة",
+  "published": "منشور",
+  "draft": "مسودة",
+  "archived": "مؤرشف",
+  "backToExperts": "العودة إلى الخبراء"
+}
