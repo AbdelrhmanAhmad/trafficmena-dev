@@ -1,11 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DOMPurify from 'dompurify';
 import { CalendarDays, MapPin, Upload, Users } from 'lucide-react';
-import { type ChangeEvent, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { CreateEventPayload, EventDetailRecord } from '@/app/api/events';
 import { uploadFile } from '@/app/api/uploads';
+import { EventExpertPicker } from '@/features/experts/components/EventExpertPicker';
+import {
+  resolveInitialExpertIds,
+  withEventExpertIds,
+} from '@/features/events/utils/eventExpertIds';
 import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
 import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { Badge } from '@/shared/components/ui/badge';
@@ -205,6 +210,13 @@ export function AdminEventForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedExpertIds, setSelectedExpertIds] = useState<string[]>(() =>
+    resolveInitialExpertIds(event),
+  );
+
+  useEffect(() => {
+    setSelectedExpertIds(resolveInitialExpertIds(event));
+  }, [event?.id, event?.expert_ids]);
 
   const previewTags = values.tags
     ?.split(',')
@@ -284,7 +296,7 @@ export function AdminEventForm({
       isPublished: formValues.isPublished,
     };
 
-    await onSubmit(payload);
+    await onSubmit(withEventExpertIds(payload, selectedExpertIds));
 
     // No-silent-draft safeguard (D-2): warn only when an event becomes newly hidden — a brand-new
     // draft or a published event flipped to draft — not on every re-save of an existing draft.
@@ -579,6 +591,11 @@ export function AdminEventForm({
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+
+              <EventExpertPicker
+                selectedExpertIds={selectedExpertIds}
+                onChange={setSelectedExpertIds}
               />
 
               <BilingualRichTextField
