@@ -56,6 +56,27 @@ No language detection. No machine translation.
 
 All major content routes use `contentPresentation.ts` + `resolveLocaleFromRequest`.
 
+## Closure pass (round 3)
+
+- Recordings series titles localized in `trackRecordingsSeries` / `eventRecordingsSeries` loaders
+- Invitations: `customMessageEn` / `customMessageAr` admin + email locale
+- Checkout locale stored on `payments.checkout_locale` (migration 0036)
+- Signup, public browse, member dashboard routes wired to i18n
+- Payment checkout components use `payments` namespace
+- Calendar locale tests in `tests/unit/calendar-locale.test.ts`
+- Raw literal audit: `tests/unit/raw-literals-audit.test.ts`
+
+## Live migration verification
+
+Disposable PostgreSQL only — not staging/production:
+
+```bash
+MIGRATION_VERIFY_DATABASE_URL=postgresql://user:pass@host:5433/disposable_db \
+  node tests/scripts/verify-migration-0035.mjs
+```
+
+Note: Drizzle journal may need entries for 0034–0036 before `db:migrate` in CI.
+
 ## Security
 
 Arabic fields use the same validation, sanitization (DOMPurify), and RBAC as English.
