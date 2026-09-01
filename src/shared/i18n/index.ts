@@ -19,6 +19,7 @@ import arNav from './locales/ar/nav.json';
 import arPayments from './locales/ar/payments.json';
 import arTracks from './locales/ar/tracks.json';
 import arCalculators from './locales/ar/calculators.json';
+import arExperts from './locales/ar/experts.json';
 import enAuth from './locales/en/auth.json';
 import enCalendar from './locales/en/calendar.json';
 import enCommerce from './locales/en/commerce.json';
@@ -32,6 +33,7 @@ import enNav from './locales/en/nav.json';
 import enPayments from './locales/en/payments.json';
 import enTracks from './locales/en/tracks.json';
 import enCalculators from './locales/en/calculators.json';
+import enExperts from './locales/en/experts.json';
 
 export const APP_NAMESPACES = [
   'common',
@@ -47,6 +49,7 @@ export const APP_NAMESPACES = [
   'errors',
   'legal',
   'calculators',
+  'experts',
 ] as const;
 
 const initialLocale = readStoredLocale();
@@ -73,6 +76,7 @@ void i18n.use(initReactI18next).init({
       errors: enErrors,
       legal: enLegal,
       calculators: enCalculators,
+      experts: enExperts,
     },
     ar: {
       common: arCommon,
@@ -88,6 +92,7 @@ void i18n.use(initReactI18next).init({
       errors: arErrors,
       legal: arLegal,
       calculators: arCalculators,
+      experts: arExperts,
     },
   },
   interpolation: { escapeValue: false },

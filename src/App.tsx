@@ -93,6 +93,12 @@ const UserManagement = lazy(() => import('./pages/admin/users'));
 const AdminInvitations = lazy(() => import('./pages/admin/invitations'));
 const AdminPromoCodes = lazy(() => import('./pages/admin/promo-codes'));
 const AdminSkills = lazy(() => import('./pages/admin/skills'));
+const AdminExperts = lazy(() => import('./pages/admin/experts/index'));
+const AdminNewExpert = lazy(() => import('./pages/admin/experts/new'));
+const AdminEditExpert = lazy(() => import('./pages/admin/experts/[id]'));
+const PublicExperts = lazy(() => import('./pages/experts/index'));
+const PublicExpertDetail = lazy(() => import('./pages/experts/[slug]'));
+const DashboardExpertProfile = lazy(() => import('./pages/dashboard/expert-profile'));
 const AdminOrdersPage = lazy(() => import('./pages/admin/orders'));
 const LibraryManagement = lazy(() => import('./pages/admin/library'));
 const AdminLibraryItemDetail = lazy(() => import('./pages/admin/library/[id]'));
@@ -356,6 +362,30 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <MasterclassDetailPage />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/experts"
+                    element={
+                      <ErrorBoundary>
+                        <PublicExperts />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/experts/:slug"
+                    element={
+                      <ErrorBoundary>
+                        <PublicExpertDetail />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/expert-profile"
+                    element={
+                      <ErrorBoundary>
+                        <DashboardExpertProfile />
                       </ErrorBoundary>
                     }
                   />
@@ -821,6 +851,30 @@ const App = () => {
                           <AdminPromoCodes />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/experts"
+                    element={
+                      <ErrorBoundary>
+                        <AdminExperts />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/experts/new"
+                    element={
+                      <ErrorBoundary>
+                        <AdminNewExpert />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/experts/:id"
+                    element={
+                      <ErrorBoundary>
+                        <AdminEditExpert />
+                      </ErrorBoundary>
                     }
                   />
                   <Route

@@ -260,6 +260,20 @@
       "when": 1786529000000,
       "tag": "0036_checkout_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1786530000000,
+      "tag": "0037_expert_profiles",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1786531000000,
+      "tag": "0038_expert_guest_experts_backfill",
+      "breakpoints": true
     }
   ]
 }

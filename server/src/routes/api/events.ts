@@ -19,6 +19,14 @@ import {
 import { attendeeAmountCents } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { queueEventRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
+import {
+  expertIdsExist,
+  loadLinkedExpertsForEvent,
+  loadLinkedExpertsForEvents,
+  presentEventGuestExperts,
+  replaceEventExpertLinks,
+} from '../../services/experts.js';
+import { formatGuestExpertsPresentation } from '../../utils/expertEventPresentation.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { presentAdminEvent, presentPublicEvent } from '../../utils/eventPresentation.js';
 import { resolveLocaleFromRequest } from '../../utils/locale.js';
@@ -162,6 +170,7 @@ const baseEventSchema = z.object({
   eventType: z.enum(['Event', 'Meetup', 'Mastermind', 'Retreat']).default('Event'),
   eventFormat: z.enum(['online', 'offline']).default('offline'),
   priceInCents: priceInCentsSchema,
+  expertIds: z.array(z.string().uuid()).max(50).optional(),
 });
 
 const eventFormatOverrideReasonSchema = z.string().trim().min(3).max(500).optional();
@@ -445,16 +454,27 @@ export function registerEventRoutes(app: Hono) {
           .limit(pageSize)
           .offset(offset);
 
-        const sanitizedItems = items.map(({ meetingLink, locationUrl, ...rest }) => {
-          const presented = isStaff
-            ? presentAdminEvent({ ...rest, meetingLink, locationUrl })
-            : presentPublicEvent({ ...rest, meetingLink, locationUrl }, locale);
-          return {
-            ...presented,
-            meetingLink: null,
-            locationUrl: null,
-          };
-        });
+        const linkedMap = await loadLinkedExpertsForEvents(items.map((item) => item.id));
+
+        const sanitizedItems = await Promise.all(
+          items.map(async ({ meetingLink, locationUrl, ...rest }) => {
+            const linked = linkedMap.get(rest.id) ?? [];
+            const guestExperts = formatGuestExpertsPresentation(
+              linked,
+              rest.guestExperts,
+              locale,
+              Boolean(isStaff),
+            );
+            const presented = isStaff
+              ? { ...presentAdminEvent({ ...rest, meetingLink, locationUrl }), guestExperts, expertIds: linked.map((row) => row.id) }
+              : { ...presentPublicEvent({ ...rest, meetingLink, locationUrl }, locale), guestExperts };
+            return {
+              ...presented,
+              meetingLink: null,
+              locationUrl: null,
+            };
+          }),
+        );
 
         return c.json({
           items: sanitizedItems,
@@ -623,9 +643,17 @@ export function registerEventRoutes(app: Hono) {
           locale,
         );
 
+        const guestExperts = await presentEventGuestExperts({
+          eventId,
+          guestExpertsJson: event.guestExperts,
+          locale,
+          isStaff: Boolean(isStaff),
+        });
+        const linked = await loadLinkedExpertsForEvent(eventId);
+
         const presentedEvent = isStaff
-          ? presentAdminEvent(event)
-          : presentPublicEvent(event, locale);
+          ? { ...presentAdminEvent(event), guestExperts, expertIds: linked.map((row) => row.id) }
+          : { ...presentPublicEvent(event, locale), guestExperts };
 
         return c.json({
           ...presentedEvent,
@@ -764,6 +792,13 @@ export function registerEventRoutes(app: Hono) {
 
         const payload = parsed.data;
 
+        if (payload.expertIds?.length) {
+          const valid = await expertIdsExist(payload.expertIds);
+          if (!valid) {
+            throw new ApiError('INVALID_EXPERT', 'One or more expert profiles were not found.', 400);
+          }
+        }
+
         const created = await db.transaction(async (tx) => {
           const [event] = await tx
             .insert(events)
@@ -834,7 +869,22 @@ export function registerEventRoutes(app: Hono) {
             );
           }
 
-          return presentAdminEvent(event);
+          if (payload.expertIds?.length) {
+            await replaceEventExpertLinks(event.id, payload.expertIds);
+          }
+
+          const guestExperts = await presentEventGuestExperts({
+            eventId: event.id,
+            guestExpertsJson: event.guestExperts,
+            locale: 'en',
+            isStaff: true,
+          });
+
+          return {
+            ...presentAdminEvent(event),
+            guestExperts,
+            expertIds: payload.expertIds ?? [],
+          };
         });
 
         return c.json(
@@ -959,6 +1009,15 @@ export function registerEventRoutes(app: Hono) {
         if (updates.priceInCents !== undefined) updateValues.priceInCents = updates.priceInCents;
         if (updates.isPublished !== undefined) updateValues.isPublished = updates.isPublished;
 
+        if (updates.expertIds !== undefined) {
+          if (updates.expertIds.length > 0) {
+            const valid = await expertIdsExist(updates.expertIds);
+            if (!valid) {
+              throw new ApiError('INVALID_EXPERT', 'One or more expert profiles were not found.', 400);
+            }
+          }
+        }
+
         // If reducing capacity, verify it's valid
         if (updates.maxAttendees !== undefined) {
           const [{ count: currentAttendees }] = await db
@@ -1024,7 +1083,26 @@ export function registerEventRoutes(app: Hono) {
           throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
         }
 
-        return c.json({ event: presentAdminEvent(updated), eventFormatChangeReport });
+        if (updates.expertIds !== undefined) {
+          await replaceEventExpertLinks(eventId, updates.expertIds);
+        }
+
+        const guestExperts = await presentEventGuestExperts({
+          eventId,
+          guestExpertsJson: updated.guestExperts,
+          locale: 'en',
+          isStaff: true,
+        });
+        const linked = await loadLinkedExpertsForEvent(eventId);
+
+        return c.json({
+          event: {
+            ...presentAdminEvent(updated),
+            guestExperts,
+            expertIds: linked.map((row) => row.id),
+          },
+          eventFormatChangeReport,
+        });
       },
       'EVENT_UPDATE_FAILED',
       'Unable to update event.',

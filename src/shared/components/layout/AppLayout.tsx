@@ -17,6 +17,7 @@ import {
   Shield,
   Sparkles,
   Tag,
+  UserRound,
   Users,
 } from 'lucide-react';
 import type React from 'react';
@@ -163,6 +164,12 @@ const adminMenuItems = [
     icon: FileStack,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
     module: 'digitalProducts' as const,
+  },
+  {
+    title: 'Expert Profiles',
+    url: '/admin/experts',
+    icon: UserRound,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
     title: 'Masterclasses',

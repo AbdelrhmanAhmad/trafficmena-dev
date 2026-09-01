@@ -454,6 +454,78 @@ export const userSkills = pgTable(
   }),
 );
 
+export const experts = pgTable(
+  'experts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    slug: text('slug').notNull(),
+    displayName: text('display_name').notNull(),
+    displayNameEn: text('display_name_en').notNull(),
+    displayNameAr: text('display_name_ar').notNull(),
+    headlineEn: text('headline_en'),
+    headlineAr: text('headline_ar'),
+    bioEn: text('bio_en'),
+    bioAr: text('bio_ar'),
+    avatarUrl: text('avatar_url'),
+    websiteUrl: text('website_url'),
+    linkedinUrl: text('linkedin_url'),
+    twitterUrl: text('twitter_url'),
+    assignedUserId: uuid('assigned_user_id').references(() => users.id, { onDelete: 'set null' }),
+    isPublished: boolean('is_published').default(false).notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    slugUnique: uniqueIndex('experts_slug_unique').on(table.slug),
+    assignedUserUnique: uniqueIndex('experts_assigned_user_unique')
+      .on(table.assignedUserId)
+      .where(sql`assigned_user_id is not null`),
+    publishedIdx: index('experts_is_published_idx').on(table.isPublished),
+    archivedIdx: index('experts_archived_at_idx').on(table.archivedAt),
+  }),
+);
+
+export const expertSkills = pgTable(
+  'expert_skills',
+  {
+    expertId: uuid('expert_id')
+      .references(() => experts.id, { onDelete: 'cascade' })
+      .notNull(),
+    skillId: uuid('skill_id')
+      .references(() => skills.id, { onDelete: 'cascade' })
+      .notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: uniqueIndex('expert_skills_expert_skill_pk').on(table.expertId, table.skillId),
+  }),
+);
+
+export const eventExperts = pgTable(
+  'event_experts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    eventId: uuid('event_id')
+      .references(() => events.id, { onDelete: 'cascade' })
+      .notNull(),
+    expertId: uuid('expert_id')
+      .references(() => experts.id, { onDelete: 'restrict' })
+      .notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    eventExpertUnique: uniqueIndex('event_experts_event_expert_unique').on(
+      table.eventId,
+      table.expertId,
+    ),
+    eventIdx: index('event_experts_event_idx').on(table.eventId),
+    expertIdx: index('event_experts_expert_idx').on(table.expertId),
+  }),
+);
+
 export const invitations = pgTable(
   'invitations',
   {

@@ -1,0 +1,23 @@
+{
+  "title": "Experts",
+  "expert": "Expert",
+  "expertsDirectory": "Experts",
+  "aboutTheExpert": "About the Expert",
+  "headline": "Headline",
+  "bio": "Bio",
+  "expertise": "Expertise",
+  "profile": "Profile",
+  "website": "Website",
+  "linkedin": "LinkedIn",
+  "twitter": "X (Twitter)",
+  "noExpertsFound": "No experts found.",
+  "profileUnavailable": "This expert profile is unavailable.",
+  "editExpertProfile": "Edit Expert Profile",
+  "saveProfile": "Save profile",
+  "viewProfile": "View profile",
+  "relatedEvents": "Related events",
+  "published": "Published",
+  "draft": "Draft",
+  "archived": "Archived",
+  "backToExperts": "Back to experts"
+}
