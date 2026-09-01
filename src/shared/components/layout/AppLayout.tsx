@@ -191,6 +191,12 @@ const adminMenuItems = [
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
+    title: 'Pending posts',
+    url: '/admin/community/moderation',
+    icon: Shield,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
     title: 'Masterclasses',
     url: '/admin/masterclasses',
     icon: GraduationCap,

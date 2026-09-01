@@ -101,6 +101,7 @@ const AdminEditExpert = lazy(() => import('./pages/admin/experts/[id]'));
 const AdminCommunityChannels = lazy(() => import('./pages/admin/community/channels/index'));
 const AdminCommunityChannelEdit = lazy(() => import('./pages/admin/community/channels/[id]'));
 const AdminCommunityAnnouncements = lazy(() => import('./pages/admin/community/announcements/index'));
+const AdminCommunityModeration = lazy(() => import('./pages/admin/community/moderation/index'));
 const PublicExperts = lazy(() => import('./pages/experts/index'));
 const PublicExpertDetail = lazy(() => import('./pages/experts/[slug]'));
 const DashboardExpertProfile = lazy(() => import('./pages/dashboard/expert-profile'));
@@ -923,6 +924,14 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <AdminCommunityAnnouncements />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/community/moderation"
+                    element={
+                      <ErrorBoundary>
+                        <AdminCommunityModeration />
                       </ErrorBoundary>
                     }
                   />

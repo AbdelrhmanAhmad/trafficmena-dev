@@ -11,11 +11,7 @@ import {
 } from '../../db/schema/index.js';
 import { getPublishedAnnouncementsForChannels } from '../../services/community/announcements.js';
 import {
-  filterAccessibleChannelIds,
   isStaffRole,
-  loadChannelEntitlements,
-  userCanPostInChannel,
-  userCanViewChannel,
 } from '../../services/community/access.js';
 import {
   COMMUNITY_POST_BODY_MAX,
@@ -34,8 +30,10 @@ import {
 } from '../../utils/communityPresentation.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { resolveLocaleFromRequest } from '../../utils/locale.js';
-import { getSessionFromRequest } from '../../utils/session.js';
-import { consumeRateLimit, getOptionalUserRole, requireManager } from './utils.js';
+import {
+  createDefaultCommunityRouteDeps,
+  type CommunityRouteDeps,
+} from './communityRouteDeps.js';
 
 const POST_RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 const uuidParamSchema = z.string().uuid();
@@ -101,12 +99,12 @@ const announcementBodySchema = z.object({
   bodyAr: z.string().max(COMMUNITY_POST_BODY_MAX),
 });
 
-async function requireAuthUser(c: Context) {
-  const session = await getSessionFromRequest(c);
+async function requireAuthUser(c: Context, deps: CommunityRouteDeps) {
+  const session = await deps.getSessionFromRequest(c);
   if (!session?.user) {
     throw new ApiError('UNAUTHORIZED', 'Authentication required.', 401);
   }
-  const role = await getOptionalUserRole(session.user.id);
+  const role = await deps.getOptionalUserRole(session.user.id);
   return { session, role, userId: session.user.id, isStaff: isStaffRole(role) };
 }
 
@@ -179,11 +177,13 @@ function resolvePostStatus(params: {
   return 'published' as const;
 }
 
-export function registerCommunityRoutes(app: Hono) {
+export function registerCommunityRoutes(app: Hono, partialDeps: Partial<CommunityRouteDeps> = {}) {
+  const deps = { ...createDefaultCommunityRouteDeps(), ...partialDeps };
+
   app.get(
     '/community/channels',
     handleRoute(async (c) => {
-      const { userId, role, isStaff } = await requireAuthUser(c);
+      const { userId, role, isStaff } = await requireAuthUser(c, deps);
       const locale = resolveLocaleFromRequest(c);
 
       const rows = isStaff
@@ -194,7 +194,7 @@ export function registerCommunityRoutes(app: Hono) {
             .where(isNull(activityChannels.archivedAt))
             .orderBy(asc(activityChannels.sortOrder), asc(activityChannels.nameEn));
 
-      const accessible = await filterAccessibleChannelIds({
+      const accessible = await deps.filterAccessibleChannelIds({
         userId,
         role,
         channels: rows.map((row) => ({
@@ -215,12 +215,12 @@ export function registerCommunityRoutes(app: Hono) {
   app.get(
     '/community/channels/:slug',
     handleRoute(async (c) => {
-      const { userId, role, isStaff } = await requireAuthUser(c);
+      const { userId, role, isStaff } = await requireAuthUser(c, deps);
       const locale = resolveLocaleFromRequest(c);
       const channel = await getChannelBySlug(requireSlugParam(c));
       if (!channel) throw new ApiError('NOT_FOUND', 'Channel not found.', 404);
 
-      const canView = await userCanViewChannel({
+      const canView = await deps.userCanViewChannel({
         channel: {
           id: channel.id,
           channelType: channel.channelType,
@@ -231,7 +231,7 @@ export function registerCommunityRoutes(app: Hono) {
       });
       if (!canView) throw new ApiError('FORBIDDEN', 'You do not have access to this channel.', 403);
 
-      const canPost = await userCanPostInChannel({
+      const canPost = await deps.userCanPostInChannel({
         channel: {
           id: channel.id,
           channelType: channel.channelType,
@@ -251,7 +251,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.get(
     '/community/channels/:slug/feed',
     handleRoute(async (c) => {
-      const { userId, role, isStaff } = await requireAuthUser(c);
+      const { userId, role, isStaff } = await requireAuthUser(c, deps);
       const locale = resolveLocaleFromRequest(c);
       const parsed = paginationSchema.safeParse({
         page: c.req.query('page'),
@@ -262,7 +262,7 @@ export function registerCommunityRoutes(app: Hono) {
       const channel = await getChannelBySlug(requireSlugParam(c));
       if (!channel) throw new ApiError('NOT_FOUND', 'Channel not found.', 404);
 
-      const canView = await userCanViewChannel({
+      const canView = await deps.userCanViewChannel({
         channel: {
           id: channel.id,
           channelType: channel.channelType,
@@ -333,14 +333,14 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/channels/:slug/posts',
     handleRoute(async (c) => {
-      const { userId, role, isStaff } = await requireAuthUser(c);
-      const rateLimited = consumeRateLimit(c, `community:post:${userId}`, POST_RATE_LIMIT);
+      const { userId, role, isStaff } = await requireAuthUser(c, deps);
+      const rateLimited = deps.consumeRateLimit(c, `community:post:${userId}`, POST_RATE_LIMIT);
       if (rateLimited) return rateLimited;
 
       const channel = await getChannelBySlug(requireSlugParam(c));
       if (!channel) throw new ApiError('NOT_FOUND', 'Channel not found.', 404);
 
-      const canPost = await userCanPostInChannel({
+      const canPost = await deps.userCanPostInChannel({
         channel: {
           id: channel.id,
           channelType: channel.channelType,
@@ -380,7 +380,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.patch(
     '/community/posts/:id',
     handleRoute(async (c) => {
-      const { userId, role, isStaff } = await requireAuthUser(c);
+      const { userId, role, isStaff } = await requireAuthUser(c, deps);
       const postId = requireUuidParam(c, 'id');
 
       const [existing] = await db.select().from(activityPosts).where(eq(activityPosts.id, postId)).limit(1);
@@ -429,7 +429,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/posts/:id/archive',
     handleRoute(async (c) => {
-      const { userId, isStaff } = await requireAuthUser(c);
+      const { userId, isStaff } = await requireAuthUser(c, deps);
       const postId = requireUuidParam(c, 'id');
       const [existing] = await db.select().from(activityPosts).where(eq(activityPosts.id, postId)).limit(1);
       if (!existing) throw new ApiError('NOT_FOUND', 'Post not found.', 404);
@@ -451,7 +451,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/posts/:id/approve',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const postId = requireUuidParam(c, 'id');
@@ -476,7 +476,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/posts/:id/reject',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const postId = requireUuidParam(c, 'id');
@@ -500,7 +500,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/posts/:id/pin',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const body = z.object({ pinned: z.boolean() }).safeParse(await c.req.json().catch(() => ({})));
@@ -521,7 +521,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.delete(
     '/community/posts/:id',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const [deleted] = await db
@@ -539,7 +539,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.get(
     '/community/admin/channels',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const rows = await db
@@ -549,7 +549,7 @@ export function registerCommunityRoutes(app: Hono) {
 
       const items = await Promise.all(
         rows.map(async (row) => {
-          const entitlements = await loadChannelEntitlements(row.id);
+          const entitlements = await deps.loadChannelEntitlements(row.id);
           return presentAdminChannel(row, entitlements);
         }),
       );
@@ -561,7 +561,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/admin/channels',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const body = createChannelSchema.safeParse(await c.req.json().catch(() => ({})));
@@ -596,7 +596,7 @@ export function registerCommunityRoutes(app: Hono) {
         await replaceChannelEntitlements(created.id, body.data.entitlements);
       }
 
-      const entitlements = await loadChannelEntitlements(created.id);
+      const entitlements = await deps.loadChannelEntitlements(created.id);
       return c.json({ channel: presentAdminChannel(created, entitlements) }, 201);
     }, 'COMMUNITY_ADMIN_CHANNEL_CREATE_FAILED', 'Unable to create channel.', 'admin create channel'),
   );
@@ -604,7 +604,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.put(
     '/community/admin/channels/:id',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const channelId = requireUuidParam(c, 'id');
@@ -640,7 +640,7 @@ export function registerCommunityRoutes(app: Hono) {
         await replaceChannelEntitlements(channelId, body.data.entitlements);
       }
 
-      const entitlements = await loadChannelEntitlements(channelId);
+      const entitlements = await deps.loadChannelEntitlements(channelId);
       return c.json({ channel: presentAdminChannel(updated, entitlements) });
     }, 'COMMUNITY_ADMIN_CHANNEL_UPDATE_FAILED', 'Unable to update channel.', 'admin update channel'),
   );
@@ -648,7 +648,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/admin/channels/:id/archive',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const [updated] = await db
@@ -658,7 +658,7 @@ export function registerCommunityRoutes(app: Hono) {
         .returning();
 
       if (!updated) throw new ApiError('NOT_FOUND', 'Channel not found.', 404);
-      const entitlements = await loadChannelEntitlements(updated.id);
+      const entitlements = await deps.loadChannelEntitlements(updated.id);
       return c.json({ channel: presentAdminChannel(updated, entitlements) });
     }, 'COMMUNITY_ADMIN_CHANNEL_ARCHIVE_FAILED', 'Unable to archive channel.', 'admin archive channel'),
   );
@@ -666,7 +666,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/admin/channels/:id/restore',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const [updated] = await db
@@ -676,7 +676,7 @@ export function registerCommunityRoutes(app: Hono) {
         .returning();
 
       if (!updated) throw new ApiError('NOT_FOUND', 'Channel not found.', 404);
-      const entitlements = await loadChannelEntitlements(updated.id);
+      const entitlements = await deps.loadChannelEntitlements(updated.id);
       return c.json({ channel: presentAdminChannel(updated, entitlements) });
     }, 'COMMUNITY_ADMIN_CHANNEL_RESTORE_FAILED', 'Unable to restore channel.', 'admin restore channel'),
   );
@@ -684,7 +684,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.delete(
     '/community/admin/channels/:id',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const channelId = requireUuidParam(c, 'id');
@@ -701,7 +701,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.get(
     '/community/admin/posts/pending',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const rows = await db
@@ -733,7 +733,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.get(
     '/community/admin/announcements',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const rows = await db
@@ -748,7 +748,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/admin/announcements',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const body = announcementBodySchema.safeParse(await c.req.json().catch(() => ({})));
@@ -771,7 +771,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.put(
     '/community/admin/announcements/:id',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const body = announcementBodySchema.partial().safeParse(await c.req.json().catch(() => ({})));
@@ -803,7 +803,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/admin/announcements/:id/publish',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const now = new Date();
@@ -827,7 +827,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/admin/announcements/:id/schedule',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const body = z
@@ -865,7 +865,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/admin/announcements/:id/cancel',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const [existing] = await db
@@ -905,7 +905,7 @@ export function registerCommunityRoutes(app: Hono) {
   app.post(
     '/community/admin/announcements/:id/archive',
     handleRoute(async (c) => {
-      const staff = await requireManager(c);
+      const staff = await deps.requireManager(c);
       if ('response' in staff) return staff.response;
 
       const [updated] = await db

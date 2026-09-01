@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { fetchTracks } from '@/app/api/tracks';
+import { fetchAdminMasterclasses } from '@/app/api/masterclasses';
 import { uploadFile } from '@/app/api/uploads';
 import {
   archiveAdminCommunityChannel,
@@ -38,6 +39,7 @@ function ChannelFormPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tracks, setTracks] = useState<Array<{ id: string; title: string }>>([]);
+  const [masterclasses, setMasterclasses] = useState<Array<{ id: string; title: string }>>([]);
 
   const [form, setForm] = useState<ChannelPayload>({
     nameEn: '',
@@ -57,6 +59,13 @@ function ChannelFormPage() {
       try {
         const trackRes = await fetchTracks({ page: 1, pageSize: 100 });
         setTracks(trackRes.items.map((t) => ({ id: t.id, title: t.title })));
+        const mcItems = await fetchAdminMasterclasses();
+        setMasterclasses(
+          mcItems.map((mc) => ({
+            id: mc.id,
+            title: mc.titleEn ?? mc.title ?? mc.id,
+          })),
+        );
       } catch {
         // tracks optional for entitlement picker
       }
@@ -132,6 +141,17 @@ function ChannelFormPage() {
     });
   };
 
+  const toggleMasterclassEntitlement = (masterclassId: string) => {
+    setForm((prev) => {
+      const existing = prev.entitlements ?? [];
+      const found = existing.find((e) => e.masterclassId === masterclassId);
+      if (found) {
+        return { ...prev, entitlements: existing.filter((e) => e.masterclassId !== masterclassId) };
+      }
+      return { ...prev, entitlements: [...existing, { trackId: null, masterclassId }] };
+    });
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -196,22 +216,42 @@ function ChannelFormPage() {
             </Select>
           </div>
           {form.channelType === 'entitlement_gated' ? (
-            <div className="space-y-2">
-              <Label>Track entitlements</Label>
-              <div className="max-h-48 space-y-2 overflow-y-auto rounded border p-3">
-                {tracks.length === 0 ? (
-                  <p className="text-sm text-neutral-500">No tracks loaded.</p>
-                ) : (
-                  tracks.map((track) => {
-                    const selected = (form.entitlements ?? []).some((e) => e.trackId === track.id);
-                    return (
-                      <label key={track.id} className="flex cursor-pointer items-center gap-2 text-sm">
-                        <input type="checkbox" checked={selected} onChange={() => toggleTrackEntitlement(track.id)} />
-                        {track.title}
-                      </label>
-                    );
-                  })
-                )}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Track entitlements</Label>
+                <div className="max-h-48 space-y-2 overflow-y-auto rounded border p-3">
+                  {tracks.length === 0 ? (
+                    <p className="text-sm text-neutral-500">No tracks loaded.</p>
+                  ) : (
+                    tracks.map((track) => {
+                      const selected = (form.entitlements ?? []).some((e) => e.trackId === track.id);
+                      return (
+                        <label key={track.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                          <input type="checkbox" checked={selected} onChange={() => toggleTrackEntitlement(track.id)} />
+                          {track.title}
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Masterclass entitlements</Label>
+                <div className="max-h-48 space-y-2 overflow-y-auto rounded border p-3">
+                  {masterclasses.length === 0 ? (
+                    <p className="text-sm text-neutral-500">No masterclasses loaded.</p>
+                  ) : (
+                    masterclasses.map((mc) => {
+                      const selected = (form.entitlements ?? []).some((e) => e.masterclassId === mc.id);
+                      return (
+                        <label key={mc.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                          <input type="checkbox" checked={selected} onChange={() => toggleMasterclassEntitlement(mc.id)} />
+                          {mc.title}
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
           ) : null}
