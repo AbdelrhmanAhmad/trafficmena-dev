@@ -94,19 +94,3 @@ export function mapAdminGuestExpert(expert: GuestExpertBilingual) {
     imageUrl: expert.image_url ?? null,
   };
 }
-
-export function guestExpertsToDb(experts: Array<{
-  nameEn: string;
-  nameAr: string;
-  bioEn?: string | null;
-  bioAr?: string | null;
-  imageUrl?: string | null;
-}>) {
-  return experts.map((expert) => ({
-    name_en: expert.nameEn,
-    name_ar: expert.nameAr,
-    bio_en: expert.bioEn ?? '',
-    bio_ar: expert.bioAr ?? '',
-    image_url: expert.imageUrl ?? null,
-  }));
-}

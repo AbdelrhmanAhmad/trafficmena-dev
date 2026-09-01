@@ -21,12 +21,12 @@ import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { queueEventRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
 import {
   expertIdsExist,
-  formatGuestExpertsPresentation,
   loadLinkedExpertsForEvent,
   loadLinkedExpertsForEvents,
   presentEventGuestExperts,
   replaceEventExpertLinks,
 } from '../../services/experts.js';
+import { formatGuestExpertsPresentation } from '../../utils/expertEventPresentation.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
 import { presentAdminEvent, presentPublicEvent } from '../../utils/eventPresentation.js';
 import { resolveLocaleFromRequest } from '../../utils/locale.js';

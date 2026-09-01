@@ -56,6 +56,10 @@ export function presentAdminExpert(row: ExpertBilingualRow & { assignedUserEmail
   };
 }
 
+export function isExpertPubliclyVisible(expert: { isPublished: boolean; archivedAt: Date | null }) {
+  return expert.isPublished && expert.archivedAt == null;
+}
+
 export function presentPublicGuestExpertFromEntity(
   row: ExpertBilingualRow,
   locale: AppLocale,
@@ -66,6 +70,6 @@ export function presentPublicGuestExpertFromEntity(
     bio: localized.bio,
     image_url: localized.avatarUrl,
     slug: row.isPublished && !row.archivedAt ? row.slug : null,
-    expertId: row.id,
+    ...(row.isPublished && !row.archivedAt ? { expertId: row.id } : {}),
   };
 }

@@ -9,14 +9,7 @@ import {
   users,
 } from '../db/schema/index.js';
 import type { AppLocale } from '../utils/locale.js';
-import {
-  normalizeGuestExpert,
-  type GuestExpertBilingual,
-} from '../utils/contentMappers.js';
-import {
-  presentPublicGuestExpertFromEntity,
-  type ExpertBilingualRow,
-} from '../utils/expertPresentation.js';
+import { formatGuestExpertsPresentation } from '../utils/expertEventPresentation.js';
 
 export async function replaceEventExpertLinks(eventId: string, expertIds: string[]) {
   await db.delete(eventExperts).where(eq(eventExperts.eventId, eventId));
@@ -91,36 +84,6 @@ export async function loadLinkedExpertsForEvents(eventIds: string[]) {
   return map;
 }
 
-export function formatGuestExpertsPresentation(
-  linked: Awaited<ReturnType<typeof loadLinkedExpertsForEvent>>,
-  guestExpertsJson: unknown,
-  locale: AppLocale,
-  isStaff: boolean,
-) {
-  if (linked.length > 0) {
-    return linked.map((row) => {
-      if (isStaff) {
-        return {
-          expertId: row.id,
-          nameEn: row.displayNameEn,
-          nameAr: row.displayNameAr,
-          bioEn: row.bioEn ?? '',
-          bioAr: row.bioAr ?? '',
-          imageUrl: row.avatarUrl,
-          slug: row.slug,
-          isPublished: row.isPublished,
-        };
-      }
-      return presentPublicGuestExpertFromEntity(row as ExpertBilingualRow, locale);
-    });
-  }
-
-  if (!Array.isArray(guestExpertsJson)) return [];
-  return (guestExpertsJson as GuestExpertBilingual[]).map((expert) =>
-    normalizeGuestExpert(expert, locale),
-  );
-}
-
 export async function presentEventGuestExperts(params: {
   eventId: string;
   guestExpertsJson: unknown;
@@ -135,6 +98,8 @@ export async function presentEventGuestExperts(params: {
     params.isStaff,
   );
 }
+
+export { formatGuestExpertsPresentation } from '../utils/expertEventPresentation.js';
 
 export async function loadExpertSkillIds(expertId: string) {
   const rows = await db
@@ -219,10 +184,6 @@ export async function countEventExpertLinks(expertId: string) {
     .from(eventExperts)
     .where(eq(eventExperts.expertId, expertId));
   return Number(count ?? 0);
-}
-
-export async function isExpertPubliclyVisible(expert: { isPublished: boolean; archivedAt: Date | null }) {
-  return expert.isPublished && expert.archivedAt == null;
 }
 
 export async function listPublishedExperts() {
