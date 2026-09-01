@@ -92,6 +92,7 @@ const AdminModuleSettingsPage = lazy(() => import('./pages/admin/module-settings
 const UserManagement = lazy(() => import('./pages/admin/users'));
 const AdminInvitations = lazy(() => import('./pages/admin/invitations'));
 const AdminPromoCodes = lazy(() => import('./pages/admin/promo-codes'));
+const AdminSkills = lazy(() => import('./pages/admin/skills'));
 const AdminOrdersPage = lazy(() => import('./pages/admin/orders'));
 const LibraryManagement = lazy(() => import('./pages/admin/library'));
 const AdminLibraryItemDetail = lazy(() => import('./pages/admin/library/[id]'));
@@ -818,6 +819,16 @@ const App = () => {
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminPromoCodes />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/skills"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <AdminSkills />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }

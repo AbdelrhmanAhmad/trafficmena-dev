@@ -2,7 +2,9 @@ import { API_BASE, fetchJson } from './client';
 
 type ApiSkill = {
   id: string;
-  name: string;
+  name?: string;
+  nameEn?: string;
+  nameAr?: string;
   category: string | null;
   description: string | null;
 };
@@ -17,13 +19,35 @@ export async function fetchSkills(): Promise<SkillRecord[]> {
 }
 
 export async function createSkill(payload: {
-  name: string;
+  nameEn: string;
+  nameAr: string;
   category?: string;
   description?: string;
 }): Promise<{ success: boolean; skill?: SkillRecord; error?: { code: string; message: string } }> {
   return fetchJson(`${API_BASE}/skills`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function updateSkill(
+  id: string,
+  payload: {
+    nameEn: string;
+    nameAr: string;
+    category?: string | null;
+    description?: string | null;
+  },
+): Promise<{ success: boolean; skill?: SkillRecord }> {
+  return fetchJson(`${API_BASE}/skills/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteSkill(id: string): Promise<{ success: boolean }> {
+  return fetchJson(`${API_BASE}/skills/${id}`, {
+    method: 'DELETE',
   });
 }
 
