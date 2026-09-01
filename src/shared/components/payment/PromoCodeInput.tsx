@@ -1,5 +1,6 @@
 import { Loader2, Tag } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { trackApplyPromoCode } from '@/lib/analytics/events';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
@@ -37,6 +38,7 @@ export function PromoCodeInput({
   itemId,
   discountPercent,
 }: PromoCodeInputProps) {
+  const { t } = useTranslation('payments');
   const inputId = useId();
   const [expanded, setExpanded] = useState(Boolean(appliedCode) || Boolean(error));
   const [value, setValue] = useState(appliedCode ?? '');
@@ -112,9 +114,11 @@ export function PromoCodeInput({
       <div
         className={cn('rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3', className)}
       >
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">Promo code</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+          {t('promoLabel')}
+        </p>
         <p className="mt-1 text-sm text-neutral-600">
-          {disabledMessage ?? 'Promo codes are not available for this purchase.'}
+          {disabledMessage ?? t('promoNotAvailable')}
         </p>
       </div>
     );
@@ -129,7 +133,7 @@ export function PromoCodeInput({
           className="h-auto p-0 text-sm font-medium text-neutral-600"
           onClick={() => setExpanded(true)}
         >
-          Have a promo code?
+          {t('havePromoCode')}
         </Button>
       </div>
     );
@@ -143,10 +147,10 @@ export function PromoCodeInput({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm font-medium text-emerald-800">
             <Tag className="h-4 w-4" />
-            <span>{appliedCode} applied</span>
+            <span>{t('promoCodeApplied', { code: appliedCode })}</span>
           </div>
           <Button variant="ghost" size="sm" onClick={onRemove} className="text-emerald-800">
-            Remove
+            {t('remove')}
           </Button>
         </div>
       </div>
@@ -162,19 +166,19 @@ export function PromoCodeInput({
         htmlFor={inputId}
         className="text-xs font-medium uppercase tracking-wide text-neutral-500"
       >
-        Promo code
+        {t('promoLabel')}
       </Label>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <Input
           id={inputId}
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          placeholder="Enter code"
+          placeholder={t('enterCode')}
           className="h-9 flex-1 rounded-lg"
         />
         <Button type="submit" size="sm" disabled={isLoading || value.trim().length === 0}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Apply
+          {isLoading && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+          {t('apply')}
         </Button>
       </div>
       {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}

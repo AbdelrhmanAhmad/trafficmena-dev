@@ -171,7 +171,7 @@ const Header: React.FC = () => {
               >
                 <Menu className="h-4 w-4" />
                 <span className="sr-only">{t('nav:menuOpen')}</span>
-                <span className="ml-2 text-sm font-medium text-neutral-800">{t('nav:menu')}</span>
+                <span className="ms-2 text-sm font-medium text-neutral-800">{t('nav:menu')}</span>
               </Button>
             </DrawerTrigger>
             <DrawerContent className="border-neutral-200 bg-white">
@@ -224,7 +224,7 @@ const Header: React.FC = () => {
                   {showSubscriptionEntry && (
                     <Link to={user ? '/dashboard/subscribe' : '/subscribe'} onClick={closeDrawer}>
                       <Button className="w-full justify-start rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-sm font-medium text-amber-700 hover:bg-amber-100">
-                        <Crown className="mr-2 h-4 w-4" />
+                        <Crown className="me-2 h-4 w-4" />
                         {t('nav:subscribe')}
                       </Button>
                     </Link>
@@ -268,7 +268,7 @@ const Header: React.FC = () => {
                         variant="outline"
                         className="w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                       >
-                        <LogOut className="mr-2 h-4 w-4" />
+                        <LogOut className="me-2 h-4 w-4" />
                         {t('common:actions.signOut')}
                       </Button>
                     </>

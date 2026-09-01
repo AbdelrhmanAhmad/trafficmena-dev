@@ -1,4 +1,5 @@
 import { Tag } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { PricePreview } from '@/app/api/payments';
 import { cn } from '@/shared/lib/utils';
 
@@ -9,7 +10,7 @@ interface PriceDisplayCardProps {
   basePriceCents: number | null;
   /** Pre-fetched price preview from parent to avoid double API calls */
   pricePreview?: PricePreview | null;
-  /** Label text (defaults to "Price") */
+  /** Label text (defaults to translated "Price") */
   label?: string;
   /** Additional class names */
   className?: string;
@@ -36,10 +37,12 @@ export function PriceDisplayCard({
   itemType,
   basePriceCents,
   pricePreview,
-  label = 'Price',
+  label,
   className,
 }: PriceDisplayCardProps) {
+  const { t } = useTranslation('payments');
   const colors = colorSchemes[itemType];
+  const displayLabel = label ?? t('priceLabel');
 
   // Determine what price to show
   const showSubscriberPrice =
@@ -51,9 +54,9 @@ export function PriceDisplayCard({
     pricePreview.amountCents < originalAmount;
   const discountLabel =
     pricePreview?.discountSource === 'promo'
-      ? 'Promo applied'
+      ? t('pricePromoApplied')
       : pricePreview?.discountSource === 'subscriber'
-        ? 'Subscriber discount'
+        ? t('priceSubscriberDiscount')
         : null;
 
   return (
@@ -66,11 +69,11 @@ export function PriceDisplayCard({
     >
       <Tag className={cn('h-5 w-5', colors.icon)} />
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{label}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{displayLabel}</p>
         {showSubscriberPrice && pricePreview ? (
           <div className="flex items-center gap-2">
             <p className={cn('text-sm font-semibold', colors.price)}>
-              {pricePreview.isFree ? 'Free' : pricePreview.amountFormatted}
+              {pricePreview.isFree ? t('free') : pricePreview.amountFormatted}
             </p>
             {hasDiscount && originalAmount > 0 && (
               <>

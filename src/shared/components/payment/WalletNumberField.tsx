@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import {
@@ -28,6 +29,7 @@ interface WalletNumberFieldProps {
 }
 
 export function WalletNumberField({ profilePhone, disabled, onChange }: WalletNumberFieldProps) {
+  const { t } = useTranslation('payments');
   const inputId = useId();
   const [local, setLocal] = useState(() => parseE164(profilePhone).local);
   const [touched, setTouched] = useState(false);
@@ -55,7 +57,7 @@ export function WalletNumberField({ profilePhone, disabled, onChange }: WalletNu
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={inputId}>Wallet mobile number</Label>
+      <Label htmlFor={inputId}>{t('walletNumberLabel')}</Label>
       <div className="flex items-center overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
         <span className="select-none px-3 text-muted-foreground text-sm">+20</span>
         <Input
@@ -72,9 +74,7 @@ export function WalletNumberField({ profilePhone, disabled, onChange }: WalletNu
         />
       </div>
       <p className={showError ? 'text-destructive text-xs' : 'text-muted-foreground text-xs'}>
-        {showError
-          ? 'Enter a valid Egyptian mobile number (10 digits, e.g. 1012345678).'
-          : 'Enter the number your mobile wallet is registered on.'}
+        {showError ? t('walletInvalidNumber') : t('walletNumberHint')}
       </p>
     </div>
   );
