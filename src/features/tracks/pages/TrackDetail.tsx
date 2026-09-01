@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import type { PublicTrackEventRecord } from '@/app/api/tracks';
 import { usePricePreview } from '@/app/hooks/usePayments';
@@ -64,6 +65,7 @@ const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
 
 // Simplified event card for track detail
 function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
+  const { t } = useTranslation(['tracks', 'events']);
   const navigate = useNavigate();
   const eventDate = new Date(event.date);
   const formattedDate = format(eventDate, 'MMM d, yyyy');
@@ -95,7 +97,7 @@ function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
                 : 'bg-neutral-200 text-neutral-600'
             }`}
           >
-            {isUpcoming ? 'Upcoming' : 'Past'}
+            {isUpcoming ? t('detail.upcoming') : t('detail.past')}
           </span>
           <span className="rounded-full bg-neutral-900/80 px-2 py-0.5 text-[10px] font-medium text-white">
             {event.event_type}
@@ -116,15 +118,15 @@ function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
         <div className="mt-2 flex items-center gap-1 text-sm text-neutral-500">
           <MapPin className="h-3.5 w-3.5" />
           <span className="truncate">
-            {event.event_format === 'online' ? 'Online' : (event.location ?? 'In person')}
+            {event.event_format === 'online' ? t('events:online') : (event.location ?? t('detail.inPerson'))}
           </span>
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3">
           <span className="flex items-center gap-1 text-sm text-neutral-600">
             <Users className="h-4 w-4" />
             {event.max_attendees && event.attendee_count >= event.max_attendees
-              ? 'Sold Out'
-              : 'Limited Spots'}
+              ? t('events:soldOut')
+              : t('events:detail.limitedSpots')}
           </span>
         </div>
       </div>
@@ -133,6 +135,7 @@ function TrackEventCard({ event }: { event: PublicTrackEventRecord }) {
 }
 
 const TrackDetail: React.FC = () => {
+  const { t } = useTranslation(['tracks', 'events']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -161,41 +164,54 @@ const TrackDetail: React.FC = () => {
   // Booking status (window + capacity). Also feeds the preview gate and the checkout auto-open:
   // outside the window the server rejects both deterministically.
   const bookingStatus = useMemo(() => {
-    if (!track) return { canBook: false, message: null };
+    if (!track) return { canBook: false, statusKey: null, message: null };
 
     const now = new Date();
     const start = track.track_booking_start;
     const end = track.track_booking_end;
 
     if (!start || !end) {
-      return { canBook: false, message: 'Booking not configured for this track.' };
+      return {
+        canBook: false,
+        statusKey: 'not_configured',
+        message: t('detail.bookingNotConfigured'),
+      };
     }
 
     if (now < start) {
       return {
         canBook: false,
-        message: `Booking opens on ${format(start, 'MMM d, yyyy')}`,
+        statusKey: 'not_open_yet',
+        message: t('detail.bookingOpensOn', { date: format(start, 'MMM d, yyyy') }),
       };
     }
 
     if (now > end) {
-      return { canBook: false, message: 'Booking period has ended.' };
+      return {
+        canBook: false,
+        statusKey: 'period_ended',
+        message: t('detail.bookingPeriodEnded'),
+      };
     }
 
     if (track.spots_remaining !== null && track.spots_remaining <= 0) {
-      return { canBook: false, message: 'This track is fully booked.' };
+      return {
+        canBook: false,
+        statusKey: 'fully_booked',
+        message: t('detail.fullyBooked'),
+      };
     }
 
-    return { canBook: true, message: null };
-  }, [track]);
+    return { canBook: true, statusKey: 'open', message: null };
+  }, [track, t]);
 
   const recordingsSellableAfterBookingEnded = useMemo(() => {
     if (!track) return false;
     return (
-      bookingStatus.message === 'Booking period has ended.' &&
+      bookingStatus.statusKey === 'period_ended' &&
       Boolean(track.recordings_series?.is_sellable)
     );
-  }, [bookingStatus.message, track]);
+  }, [bookingStatus.statusKey, track]);
 
   // Gate the price preview until the track has loaded and the user can actually buy — a permissive
   // gate fires before `track` resolves (with no ticketType) and 400-storms the endpoint.
@@ -245,13 +261,13 @@ const TrackDetail: React.FC = () => {
   const isPromoApplied =
     Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !promoError;
   const promoDisabledReason = !bookingStatus.canBook
-    ? (bookingStatus.message ?? 'Booking is not currently available.')
+    ? (bookingStatus.message ?? t('detail.promoBookingUnavailable'))
     : !user
-      ? 'Sign in to apply a promo code.'
+      ? t('detail.promoSignIn')
       : pricePreview?.discountSource === 'subscriber'
-        ? 'Subscriber discount already applied.'
+        ? t('detail.promoSubscriberApplied')
         : pricePreview?.isFree
-          ? 'Promo codes are not available for free items.'
+          ? t('detail.promoFreeItem')
           : null;
   const promoDisabled = Boolean(promoDisabledReason);
 
@@ -423,8 +439,8 @@ const TrackDetail: React.FC = () => {
     <Layout>
       <DataLoader
         loading={isLoading}
-        error={error ? 'Unable to load this track right now.' : null}
-        loadingText="Loading track details..."
+        error={error ? t('detail.loadError') : null}
+        loadingText={t('detail.loading')}
       >
         {track && (
           <div className="relative isolate overflow-hidden">
@@ -437,10 +453,10 @@ const TrackDetail: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-neutral-600">
                   <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1">
                     <Sparkles className="h-3 w-3 text-purple-500" />
-                    TrafficMENA Track
+                    {t('detail.badge')}
                   </span>
                   <span className="rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 px-3 py-1 text-[11px] font-semibold text-white">
-                    {track.event_count} Sessions
+                    {t('detail.sessionsCount', { count: track.event_count })}
                   </span>
                 </div>
                 <h1 className="mt-5 text-3xl font-semibold tracking-tight text-neutral-900">
@@ -455,10 +471,10 @@ const TrackDetail: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-neutral-600">
                       <span className="hidden items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 lg:inline-flex">
                         <Sparkles className="h-3 w-3 text-purple-500" />
-                        TrafficMENA Track
+                        {t('detail.badge')}
                       </span>
                       <span className="hidden rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 px-3 py-1 text-[11px] font-semibold text-white lg:inline">
-                        {track.event_count} Sessions
+                        {t('detail.sessionsCount', { count: track.event_count })}
                       </span>
                     </div>
 
@@ -468,7 +484,7 @@ const TrackDetail: React.FC = () => {
 
                     {sanitizedDescription && (
                       <div className="mt-8 space-y-4">
-                        <h2 className="text-lg font-semibold text-neutral-900">About This Track</h2>
+                        <h2 className="text-lg font-semibold text-neutral-900">{t('detail.aboutTitle')}</h2>
                         <SanitizedDescription
                           className="prose prose-base max-w-none text-neutral-700 prose-headings:text-neutral-900 prose-strong:text-neutral-900 prose-a:text-purple-500"
                           html={sanitizedDescription}
@@ -482,19 +498,16 @@ const TrackDetail: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-5 w-5 text-purple-500" />
                       <h2 className="text-xl font-semibold text-neutral-900">
-                        Sessions Included ({visibleSessions.length})
+                        {t('detail.sessionsIncluded', { count: visibleSessions.length })}
                       </h2>
                     </div>
-                    <p className="mt-1 text-sm text-neutral-600">
-                      Book this track to get access to all sessions below.
-                    </p>
+                    <p className="mt-1 text-sm text-neutral-600">{t('detail.sessionsIncludedDesc')}</p>
 
                     {showRecordingsBanner && (
                       <div className="mt-4 flex items-start gap-2 rounded-xl border border-[#05ef62]/40 bg-[#f4fff9] px-4 py-3 text-sm text-neutral-800">
                         <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#05c24f]" />
                         <span>
-                          You'll also get recordings of the {offlineSessionCount} offline session
-                          {offlineSessionCount === 1 ? '' : 's'} after the offline day.
+                          {t('detail.recordingsBanner', { count: offlineSessionCount })}
                         </span>
                       </div>
                     )}
@@ -508,9 +521,7 @@ const TrackDetail: React.FC = () => {
                     ) : (
                       <div className="mt-6 rounded-xl border-2 border-dashed border-neutral-200 py-12 text-center">
                         <Calendar className="mx-auto h-10 w-10 text-neutral-400" />
-                        <p className="mt-3 text-sm text-neutral-600">
-                          No sessions have been added to this track yet.
-                        </p>
+                        <p className="mt-3 text-sm text-neutral-600">{t('detail.noSessionsYet')}</p>
                       </div>
                     )}
                   </div>
@@ -522,24 +533,27 @@ const TrackDetail: React.FC = () => {
                     <div className="aspect-[2/1] w-full overflow-hidden bg-neutral-100">
                       <img
                         src={trackImageUrl}
-                        alt={`${track.title} cover`}
+                        alt={t('detail.coverAlt', { title: track.title })}
                         className="h-full w-full object-contain"
                         loading="lazy"
                       />
                     </div>
                     <div className="space-y-4 p-6">
                       <span className="inline-flex rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
-                        Learning Track
+                        {t('detail.learningTrack')}
                       </span>
                       <div className="space-y-3 text-sm">
                         <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
                           <BookOpen className="h-5 w-5 text-purple-500" />
                           <div>
                             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                              Sessions
+                              {t('detail.sessionsLabel')}
                             </p>
                             <p className="text-sm font-semibold text-neutral-900">
-                              {track.event_count} {track.event_count === 1 ? 'Event' : 'Events'}
+                              {track.event_count}{' '}
+                              {track.event_count === 1
+                                ? t('detail.eventSingular')
+                                : t('detail.eventPlural')}
                             </p>
                           </div>
                         </div>
@@ -548,7 +562,7 @@ const TrackDetail: React.FC = () => {
                             <Calendar className="h-5 w-5 text-purple-500" />
                             <div>
                               <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                                Starts
+                                {t('detail.starts')}
                               </p>
                               <p className="text-sm font-semibold text-neutral-900">
                                 {format(firstEventDate, 'MMMM d, yyyy')}
@@ -561,7 +575,7 @@ const TrackDetail: React.FC = () => {
                             <MapPin className="h-5 w-5 text-purple-500" />
                             <div>
                               <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                                Location
+                                {t('detail.location')}
                               </p>
                               {showLocationUrl ? (
                                 <>
@@ -576,14 +590,12 @@ const TrackDetail: React.FC = () => {
                                       className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-purple-500 hover:underline"
                                     >
                                       <ExternalLink className="h-3 w-3" />
-                                      View on Map
+                                      {t('detail.viewOnMap')}
                                     </a>
                                   )}
                                 </>
                               ) : (
-                                <p className="text-sm text-neutral-500">
-                                  Book track to view location
-                                </p>
+                                <p className="text-sm text-neutral-500">{t('detail.bookForLocation')}</p>
                               )}
                             </div>
                           </div>
@@ -592,8 +604,8 @@ const TrackDetail: React.FC = () => {
                           <Users className="h-5 w-5 text-purple-500" />
                           <p className="text-sm font-semibold text-neutral-900">
                             {track.spots_remaining !== null && track.spots_remaining <= 0
-                              ? 'Sold Out'
-                              : 'Limited Spots'}
+                              ? t('events:soldOut')
+                              : t('events:detail.limitedSpots')}
                           </p>
                         </div>
 
@@ -602,7 +614,7 @@ const TrackDetail: React.FC = () => {
                             <Sparkles className="h-5 w-5 text-indigo-500" />
                             <div>
                               <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                                Recordings
+                                {t('detail.recordings')}
                               </p>
                               <p className="text-sm font-semibold text-indigo-700">
                                 {formatSeriesPriceLabel(recordingsPriceCents)}
@@ -665,7 +677,7 @@ const TrackDetail: React.FC = () => {
                         <div className="space-y-3">
                           <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-medium text-green-700">
                             <CheckCircle className="h-4 w-4" />
-                            <span>You're enrolled in this track</span>
+                            <span>{t('detail.enrolled')}</span>
                           </div>
                           {recordingsSellableAfterBookingEnded ? (
                             <Button
@@ -673,30 +685,28 @@ const TrackDetail: React.FC = () => {
                               className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
                               onClick={handleNavigateToRecordings}
                             >
-                              Buy Recordings
+                              {t('detail.buyRecordings')}
                             </Button>
                           ) : null}
                         </div>
                       ) : bookingState === 'pending' ? (
                         <div className="space-y-3">
                           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                            <p className="font-medium">Payment pending</p>
-                            <p className="mt-1">
-                              Complete your payment to secure your spot in this track.
-                            </p>
+                            <p className="font-medium">{t('detail.paymentPending')}</p>
+                            <p className="mt-1">{t('detail.paymentPendingDesc')}</p>
                           </div>
                           <Button
                             className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
                             onClick={handleResumePayment}
                           >
-                            Resume payment
+                            {t('detail.resumePayment')}
                           </Button>
                           <Button
                             variant="outline"
                             className="w-full rounded-xl"
                             onClick={handleRequestNewCode}
                           >
-                            Request new code
+                            {t('detail.requestNewCode')}
                           </Button>
                         </div>
                       ) : bookingStatus.canBook ? (
@@ -709,15 +719,15 @@ const TrackDetail: React.FC = () => {
                             {bookMutation.isPending ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Booking...
+                                {t('detail.booking')}
                               </>
                             ) : (
-                              'Book Full Track'
+                              t('detail.bookFullTrack')
                             )}
                           </Button>
                           {usesTicketTypes && !selectedTicketType && (
                             <p className="text-center text-xs font-medium text-neutral-600">
-                              Select a ticket type to continue.
+                              {t('detail.selectTicketType')}
                             </p>
                           )}
                         </div>
@@ -727,18 +737,18 @@ const TrackDetail: React.FC = () => {
                           className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
                           onClick={handleNavigateToRecordings}
                         >
-                          Buy Recordings
+                          {t('detail.buyRecordings')}
                         </Button>
                       ) : (
                         <div className="space-y-3">
                           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                            <p className="font-medium">Booking Unavailable</p>
+                            <p className="font-medium">{t('detail.bookingUnavailable')}</p>
                             <p className="mt-1">{bookingStatus.message}</p>
                           </div>
                           <Button disabled className="w-full rounded-xl" variant="secondary">
                             {track.spots_remaining !== null && track.spots_remaining <= 0
-                              ? 'Sold Out'
-                              : 'Booking Closed'}
+                              ? t('events:soldOut')
+                              : t('detail.bookingClosed')}
                           </Button>
                         </div>
                       )}
@@ -748,7 +758,7 @@ const TrackDetail: React.FC = () => {
                       !recordingsSellableAfterBookingEnded ? (
                         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
                           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                            Booking Window
+                            {t('detail.bookingWindow')}
                           </span>
                           <p className="mt-1 text-sm text-neutral-700">
                             {format(track.track_booking_start, 'MMM d')} -{' '}

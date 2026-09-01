@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { OrderStatusFilter } from '@/app/api/orders';
 import { useMyOrders } from '@/app/hooks/useOrders';
 import { OrderItemsList } from '@/features/orders/components/OrderItemsList';
@@ -25,6 +26,7 @@ function formatDate(value: string | null) {
 }
 
 function MyOrdersPage() {
+  const { t } = useTranslation(['dashboard', 'common']);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<OrderStatusFilter>('all');
   const { data, isLoading, isError } = useMyOrders({ page, pageSize: PAGE_SIZE, status });
@@ -38,10 +40,8 @@ function MyOrdersPage() {
       <AppLayout variant="member">
         <div className="mx-auto max-w-3xl space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-neutral-900">My orders</h1>
-            <p className="mt-1 text-neutral-600">
-              Your purchases of series and digital products.
-            </p>
+            <h1 className="text-3xl font-bold text-neutral-900">{t('orders.title')}</h1>
+            <p className="mt-1 text-neutral-600">{t('orders.subtitle')}</p>
           </div>
 
           <div className="flex justify-end">
@@ -53,26 +53,24 @@ function MyOrdersPage() {
               }}
             >
               <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t('common:labels.status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="all">{t('orders.statusAll')}</SelectItem>
+                <SelectItem value="paid">{t('orders.statusPaid')}</SelectItem>
+                <SelectItem value="pending">{t('orders.statusPending')}</SelectItem>
+                <SelectItem value="failed">{t('orders.statusFailed')}</SelectItem>
+                <SelectItem value="expired">{t('orders.statusExpired')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {isLoading && <p className="text-sm text-muted-foreground">Loading your orders…</p>}
-          {isError && (
-            <p className="text-sm text-red-600">Unable to load orders. Please try again.</p>
-          )}
+          {isLoading && <p className="text-sm text-muted-foreground">{t('orders.loading')}</p>}
+          {isError && <p className="text-sm text-red-600">{t('orders.loadError')}</p>}
           {!isLoading && !isError && orders.length === 0 && (
             <Card className="rounded-2xl">
               <CardContent className="py-12 text-center text-muted-foreground">
-                You have not placed any orders yet.
+                {t('orders.empty')}
               </CardContent>
             </Card>
           )}
@@ -87,7 +85,9 @@ function MyOrdersPage() {
                   <p className="mt-1 text-sm text-neutral-500">
                     {formatDate(order.paidAt ?? order.createdAt)}
                   </p>
-                  <p className="text-xs text-neutral-400">Order #{order.id.slice(0, 8)}</p>
+                  <p className="text-xs text-neutral-400">
+                    {t('orders.orderNumber', { id: order.id.slice(0, 8) })}
+                  </p>
                 </div>
                 <OrderStatusBadge status={order.status} />
               </CardHeader>
@@ -100,7 +100,7 @@ function MyOrdersPage() {
           {total > PAGE_SIZE && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-neutral-500">
-                Page {page} of {totalPages}
+                {t('common:pagination.pageOf', { current: page, total: totalPages })}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -110,7 +110,7 @@ function MyOrdersPage() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Previous
+                  {t('common:pagination.previous')}
                 </Button>
                 <Button
                   variant="outline"
@@ -118,7 +118,7 @@ function MyOrdersPage() {
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Next
+                  {t('common:pagination.next')}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

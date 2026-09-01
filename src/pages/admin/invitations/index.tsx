@@ -32,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui/table';
-import { Textarea } from '@/shared/components/ui/textarea';
+import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 import { cn } from '@/shared/lib/utils';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
@@ -41,7 +41,8 @@ const formSchema = z.object({
   email: z.string().email('Enter a valid email address').trim(),
   firstName: z.string().max(120).optional(),
   lastName: z.string().max(120).optional(),
-  customMessage: z.string().max(600).optional(),
+  customMessageEn: z.string().max(600).optional(),
+  customMessageAr: z.string().max(600).optional(),
 });
 
 type InvitationFormValues = z.infer<typeof formSchema>;
@@ -82,7 +83,6 @@ export default function AdminInvitations() {
   const emailFieldId = useId();
   const firstNameFieldId = useId();
   const lastNameFieldId = useId();
-  const customMessageFieldId = useId();
   const statusFilterFieldId = useId();
   const searchFieldId = useId();
   const pageSizeFieldId = useId();
@@ -123,7 +123,8 @@ export default function AdminInvitations() {
       email: '',
       firstName: '',
       lastName: '',
-      customMessage: '',
+      customMessageEn: '',
+      customMessageAr: '',
     },
   });
 
@@ -164,7 +165,12 @@ export default function AdminInvitations() {
         email: values.email.trim(),
         firstName: values.firstName?.trim() ? values.firstName.trim() : undefined,
         lastName: values.lastName?.trim() ? values.lastName.trim() : undefined,
-        customMessage: values.customMessage?.trim() ? values.customMessage.trim() : undefined,
+        customMessageEn: values.customMessageEn?.trim()
+          ? values.customMessageEn.trim()
+          : undefined,
+        customMessageAr: values.customMessageAr?.trim()
+          ? values.customMessageAr.trim()
+          : undefined,
       });
       toast({
         title: 'Invitation sent',
@@ -271,20 +277,29 @@ export default function AdminInvitations() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor={customMessageFieldId}>Personal note</Label>
-                    <Textarea
-                      id={customMessageFieldId}
-                      placeholder="Add context or next steps (optional)"
-                      rows={4}
-                      {...form.register('customMessage')}
-                    />
-                    {form.formState.errors.customMessage && (
-                      <p className="text-sm text-rose-600">
-                        {form.formState.errors.customMessage.message}
-                      </p>
-                    )}
-                  </div>
+                  <BilingualTextField
+                    label="Personal note"
+                    englishLabel="Personal note (English)"
+                    arabicLabel="Personal note (Arabic)"
+                    valueEn={form.watch('customMessageEn') ?? ''}
+                    valueAr={form.watch('customMessageAr') ?? ''}
+                    onChangeEn={(value) =>
+                      form.setValue('customMessageEn', value, { shouldDirty: true })
+                    }
+                    onChangeAr={(value) =>
+                      form.setValue('customMessageAr', value, { shouldDirty: true })
+                    }
+                    englishPlaceholder="Add context or next steps (optional)"
+                    arabicPlaceholder="أضف سياقًا أو الخطوات التالية (اختياري)"
+                    multiline
+                    rows={4}
+                  />
+                  {(form.formState.errors.customMessageEn || form.formState.errors.customMessageAr) && (
+                    <p className="text-sm text-rose-600">
+                      {form.formState.errors.customMessageEn?.message ??
+                        form.formState.errors.customMessageAr?.message}
+                    </p>
+                  )}
 
                   <p className="text-xs text-muted-foreground">
                     • Invitations include a secure signup link and expire in 72 hours.
@@ -344,7 +359,9 @@ export default function AdminInvitations() {
                     </Label>
                     <p className="text-xs text-muted-foreground">
                       Columns supported: <code>email</code>, <code>first_name</code>,{' '}
-                      <code>last_name</code>, <code>custom_message</code>. Header row optional.
+                      <code>last_name</code>, <code>custom_message_en</code>,{' '}
+                      <code>custom_message_ar</code> (or legacy <code>custom_message</code>). Header
+                      row optional.
                     </p>
                     <Input
                       type="file"

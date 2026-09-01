@@ -29,6 +29,8 @@ export type MasterclassCertificateSettings = {
   masterclassId: string;
   certificateEnabled: boolean;
   certificateTitle: string | null;
+  certificateTitleEn: string | null;
+  certificateTitleAr: string | null;
   certificateDescription: string | null;
   certificateTemplateUrl: string | null;
 };
@@ -153,6 +155,8 @@ export async function updateMasterclassCertificateSettings(
   payload: {
     certificateEnabled: boolean;
     certificateTitle?: string | null;
+    certificateTitleEn?: string | null;
+    certificateTitleAr?: string | null;
     certificateDescription?: string | null;
     certificateTemplateUrl?: string | null;
   },

@@ -7,5 +7,6 @@
   "serverError": "Something went wrong on our end. Please try again later.",
   "validationError": "Please check your input and try again.",
   "sessionExpired": "Your session has expired. Please sign in again.",
-  "loadFailed": "Failed to load data. Please try again."
+  "loadFailed": "Failed to load data. Please try again.",
+  "returnHome": "Return to Home"
 }

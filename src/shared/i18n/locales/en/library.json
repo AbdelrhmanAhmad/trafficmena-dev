@@ -6,5 +6,26 @@
   "free": "Free",
   "viewAsset": "View asset",
   "noAssets": "No library items found.",
-  "searchPlaceholder": "Search library…"
+  "searchPlaceholder": "Search library…",
+  "comingSoon": {
+    "title": "Library Coming Soon",
+    "description": "We are curating the first release of TrafficMENA playbooks, templates, and session recordings. Members will be able to dive into practical content tailored for the MENA market very soon."
+  },
+  "myRecordings": {
+    "title": "My Recordings",
+    "subtitleOwned": "Content you own or can access",
+    "subtitleStore": "Access your exclusive marketing resources and content",
+    "tabSeries": "Series",
+    "tabContent": "Single Content",
+    "loadingSeries": "Loading series...",
+    "loadingContent": "Loading library content...",
+    "loadError": "Failed to load library content. Please try again later.",
+    "emptyTitle": "No content available",
+    "emptySeriesOwned": "Purchased and complimentary recordings appear here after you buy or unlock them from a track or event.",
+    "emptySeriesStore": "Library content will appear here once available.",
+    "emptyContentOwned": "Content you have access to will appear here.",
+    "emptyContentStore": "Library content will appear here once available.",
+    "emptySearch": "No items match your search. Try different keywords.",
+    "searchPlaceholder": "Search library content..."
+  }
 }

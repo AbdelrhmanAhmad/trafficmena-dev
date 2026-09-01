@@ -10,5 +10,37 @@
   "removeItem": "Remove {{title}}",
   "checkoutFailed": "Checkout failed",
   "checkoutError": "Could not start checkout. Please try again.",
-  "orderLabel": "Order ({{count}} items)"
+  "orderLabel": "Order ({{count}} items)",
+  "subscribe": {
+    "badge": "Premium Membership",
+    "badgeTagline": "Become the Marketer Everyone Wants to Hire",
+    "heroTitle": "Your Fast Track to Becoming the Expert Others Turn To",
+    "heroDesc": "Premium gives you advanced knowledge and exclusive resources: expert-led tracks, done-for-you playbooks, and a community of 1,250+ MENA marketers who push you forward.",
+    "annualBadge": "Annual Subscription",
+    "perYear": "per year",
+    "benefitTracks": "Content + Performance Tracks",
+    "benefitPlaybooks": "Exclusive playbooks & templates",
+    "benefitSessions": "24 expert sessions per year",
+    "benefitFutureTracks": "All future tracks included",
+    "becomeMember": "Become a Member",
+    "accessDays": "365 days of premium access",
+    "foundingMemberCta": "Become a Founding Member: {{price}} EGP/year",
+    "heroBenefits": [
+      "Content Marketing Track (6 sessions)",
+      "Performance Marketing Track (7 sessions)",
+      "2x monthly expert sessions",
+      "All future online tracks included",
+      "20%+ off all offline events",
+      "Exclusive playbooks & templates"
+    ],
+    "finalCta": {
+      "headline": "Your Next Step",
+      "lead": "A year from now, you'll either be the generalist still hoping for a break, or the specialist who made it happen.",
+      "description": "Premium membership is your shortcut to specialization. Advanced tracks. Exclusive resources. A community that pushes you forward.",
+      "emphasis": "And right now, it's 50% off.",
+      "secondaryText": "Not ready?",
+      "secondaryLink": "Join Free",
+      "secondaryLinkSuffix": "and experience TrafficMENA first."
+    }
+  }
 }

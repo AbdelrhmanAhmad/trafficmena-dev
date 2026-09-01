@@ -10,15 +10,7 @@ import {
   Users2,
 } from 'lucide-react';
 
-// Hero section benefits (used in both hero and already-subscribed views)
-export const HERO_BENEFITS = [
-  'Content Marketing Track (6 sessions)',
-  'Performance Marketing Track (7 sessions)',
-  '2x monthly expert sessions',
-  'All future online tracks included',
-  '20%+ off all offline events',
-  'Exclusive playbooks & templates',
-];
+// Hero section benefits are sourced from commerce.json (subscribe.heroBenefits)
 
 // Content Marketing Track sessions
 export const CONTENT_MARKETING_SESSIONS = [
@@ -304,15 +296,5 @@ export const VIDEO_REVIEWS = [
   'https://iframe.mediadelivery.net/play/465597/dcdcdeed-4578-47dd-a63b-87262a2eb786',
 ];
 
-// Final CTA copy
-export const FINAL_CTA_COPY = {
-  headline: 'Your Next Step',
-  lead: "A year from now, you'll either be the generalist still hoping for a break, or the specialist who made it happen.",
-  description:
-    'Premium membership is your shortcut to specialization. Advanced tracks. Exclusive resources. A community that pushes you forward.',
-  emphasis: "And right now, it's 50% off.",
-  secondaryText: 'Not ready?',
-  secondaryLink: 'Join Free',
-  secondaryLinkHref: '/signup',
-  secondaryLinkSuffix: 'and experience TrafficMENA first.',
-};
+// Non-translatable subscribe route constants
+export const SUBSCRIBE_SIGNUP_HREF = '/signup';

@@ -1,6 +1,7 @@
 import { Edit, Sparkles } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SkillRecord } from '@/app/api/skills';
 import { useCurrentUser, useUpdateCurrentUser } from '@/app/hooks/useCurrentUser';
 import {
@@ -50,6 +51,7 @@ const EMPTY_PROFILE_ANALYTICS_SNAPSHOT: ProfileAnalyticsSnapshot = {
 };
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const { user, refreshSession } = useAuth();
   const { toast } = useToast();
   const firstNameId = useId();
@@ -116,8 +118,8 @@ const Dashboard: React.FC = () => {
       } catch (error) {
         setSelectedSkillIds((prev) => prev.filter((id) => id !== skillId));
         toast({
-          title: 'Error',
-          description: 'Failed to add skill. Please try again.',
+          title: t('common:status.error'),
+          description: t('profile.toast.addSkillFailed'),
           variant: 'destructive',
         });
       }
@@ -130,8 +132,8 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       setSelectedSkillIds((prev) => [...prev, skillId]);
       toast({
-        title: 'Error',
-        description: 'Failed to remove skill. Please try again.',
+        title: t('common:status.error'),
+        description: t('profile.toast.removeSkillFailed'),
         variant: 'destructive',
       });
     }
@@ -142,8 +144,8 @@ const Dashboard: React.FC = () => {
 
     if (!validation.isValid || !validation.sanitizedValue) {
       toast({
-        title: 'Invalid skill name',
-        description: validation.error ?? 'Please enter a valid skill name.',
+        title: t('profile.toast.invalidSkillTitle'),
+        description: validation.error ?? t('profile.toast.invalidSkillDesc'),
         variant: 'destructive',
       });
       return;
@@ -157,8 +159,8 @@ const Dashboard: React.FC = () => {
         await addUserSkillMutation.mutateAsync(result.skill.id);
         setSelectedSkillIds((prev) => [...prev, result.skill.id]);
         toast({
-          title: 'Skill added',
-          description: `"${sanitized}" added to your skills.`,
+          title: t('profile.toast.skillAddedTitle'),
+          description: t('profile.toast.skillAddedDesc', { name: sanitized }),
         });
         setCustomSkill('');
       } else {
@@ -168,9 +170,9 @@ const Dashboard: React.FC = () => {
       }
     } catch (error) {
       toast({
-        title: 'Error',
+        title: t('common:status.error'),
         description:
-          error instanceof Error ? error.message : 'Failed to add custom skill. Please try again.',
+          error instanceof Error ? error.message : t('profile.toast.addCustomSkillFailed'),
         variant: 'destructive',
       });
     }
@@ -206,14 +208,14 @@ const Dashboard: React.FC = () => {
       setSavedProfileSnapshot(currentProfileSnapshot);
 
       toast({
-        title: 'Profile updated',
-        description: 'Your profile information has been saved.',
+        title: t('profile.toast.profileUpdatedTitle'),
+        description: t('profile.toast.profileUpdatedDesc'),
       });
     } catch (error) {
       toast({
-        title: 'Error',
+        title: t('common:status.error'),
         description:
-          error instanceof Error ? error.message : 'Failed to update profile. Please try again.',
+          error instanceof Error ? error.message : t('profile.toast.updateFailed'),
         variant: 'destructive',
       });
     }
@@ -234,10 +236,10 @@ const Dashboard: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">
-                  My Profile
+                  {t('profile.title')}
                 </h1>
                 <p className="text-sm sm:text-base text-neutral-600 mt-0.5">
-                  Update your personal details and highlight the skills you&apos;re focused on.
+                  {t('profile.subtitle')}
                 </p>
               </div>
             </div>
@@ -245,32 +247,32 @@ const Dashboard: React.FC = () => {
 
           <Card className="rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
             <CardHeader className="p-5 sm:p-6">
-              <CardTitle className="text-lg sm:text-xl">Personal Information</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">{t('profile.personalInfo')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 p-5 pt-0 sm:p-6 sm:pt-0">
               {isLoading ? (
-                <p className="text-sm text-muted-foreground">Loading your profile…</p>
+                <p className="text-sm text-muted-foreground">{t('profile.loading')}</p>
               ) : (
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <Label htmlFor={firstNameId}>First Name</Label>
+                    <Label htmlFor={firstNameId}>{t('profile.firstName')}</Label>
                     <Input
                       id={firstNameId}
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      placeholder="Enter your first name"
+                      placeholder={t('profile.firstNamePlaceholder')}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor={lastNameId}>Last Name</Label>
+                    <Label htmlFor={lastNameId}>{t('profile.lastName')}</Label>
                     <Input
                       id={lastNameId}
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      placeholder="Enter your last name"
+                      placeholder={t('profile.lastNamePlaceholder')}
                     />
                   </div>
 
@@ -287,25 +289,25 @@ const Dashboard: React.FC = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor={goalId}>Primary Goal</Label>
+                    <Label htmlFor={goalId}>{t('profile.primaryGoal')}</Label>
                     <Textarea
                       id={goalId}
                       name="primaryGoal"
                       value={formData.primaryGoal}
                       onChange={handleInputChange}
-                      placeholder="Tell us what you want to achieve over the next 6-12 months."
+                      placeholder={t('profile.primaryGoalPlaceholder')}
                       rows={3}
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <Label htmlFor={challengeId}>Primary Challenge</Label>
+                    <Label htmlFor={challengeId}>{t('profile.primaryChallenge')}</Label>
                     <Textarea
                       id={challengeId}
                       name="primaryChallenge"
                       value={formData.primaryChallenge}
                       onChange={handleInputChange}
-                      placeholder="What is the biggest marketing challenge you face right now?"
+                      placeholder={t('profile.primaryChallengePlaceholder')}
                       rows={3}
                     />
                   </div>
@@ -314,14 +316,16 @@ const Dashboard: React.FC = () => {
 
               <div className="flex flex-col items-end gap-2">
                 {isPhoneValid ? null : (
-                  <p className="text-xs text-destructive">Fix the phone number before saving.</p>
+                  <p className="text-xs text-destructive">{t('profile.fixPhone')}</p>
                 )}
                 <Button
                   onClick={handleSaveProfile}
                   disabled={updateProfileMutation.isPending || !isPhoneValid}
                   className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
                 >
-                  {updateProfileMutation.isPending ? 'Saving…' : 'Save Changes'}
+                  {updateProfileMutation.isPending
+                    ? t('common:actions.saving')
+                    : t('profile.saveChanges')}
                 </Button>
               </div>
             </CardContent>
@@ -333,20 +337,19 @@ const Dashboard: React.FC = () => {
                 <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white shadow-lg">
                   <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <CardTitle className="text-lg sm:text-xl text-neutral-900">Skills Focus</CardTitle>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">
+                  {t('profile.skillsFocus')}
+                </CardTitle>
               </div>
               <p className="text-sm text-neutral-600 ml-0 sm:ml-[60px]">
-                Highlight the skills you&apos;re actively developing to unlock relevant events and
-                resources.
+                {t('profile.skillsSubtitle')}
               </p>
             </CardHeader>
             <CardContent className="space-y-6 p-5 pt-0 sm:p-6 sm:pt-0">
               {skillsLoading ? (
-                <p className="text-sm text-muted-foreground">Loading available skills…</p>
+                <p className="text-sm text-muted-foreground">{t('profile.loadingSkills')}</p>
               ) : allSkills.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No skills available yet. Add your first skill below.
-                </p>
+                <p className="text-sm text-muted-foreground">{t('profile.noSkills')}</p>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
                   {allSkills.map((skill) => {
@@ -401,13 +404,15 @@ const Dashboard: React.FC = () => {
                   <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
                     <Sparkles className="h-3.5 w-3.5" />
                   </div>
-                  <h3 className="text-sm font-semibold text-neutral-900">Add a custom skill</h3>
+                  <h3 className="text-sm font-semibold text-neutral-900">
+                    {t('profile.addCustomSkill')}
+                  </h3>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
                     value={customSkill}
                     onChange={(event) => setCustomSkill(event.target.value)}
-                    placeholder="e.g. Arabic copywriting"
+                    placeholder={t('profile.customSkillPlaceholder')}
                     disabled={createSkillMutation.isPending}
                     className="rounded-xl border-neutral-200 bg-white/70 backdrop-blur"
                   />
@@ -417,13 +422,12 @@ const Dashboard: React.FC = () => {
                     disabled={createSkillMutation.isPending || !customSkill.trim()}
                     className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-4 py-2 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95 disabled:opacity-50"
                   >
-                    {createSkillMutation.isPending ? 'Adding…' : 'Add Skill'}
+                    {createSkillMutation.isPending
+                      ? t('common:actions.adding')
+                      : t('profile.addSkill')}
                   </Button>
                 </div>
-                <p className="mt-2 text-xs text-neutral-600">
-                  We&apos;ll create this skill for the community and automatically add it to your
-                  profile.
-                </p>
+                <p className="mt-2 text-xs text-neutral-600">{t('profile.customSkillHint')}</p>
               </div>
             </CardContent>
           </Card>

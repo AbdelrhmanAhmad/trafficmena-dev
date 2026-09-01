@@ -13,9 +13,153 @@
     "save": "Save",
     "back": "Back",
     "loading": "Loading…",
-    "tryAgain": "Try again"
+    "saving": "Saving…",
+    "adding": "Adding…",
+    "tryAgain": "Try again",
+    "backToHome": "Back to Home",
+    "joinFree": "Join Free",
+    "exploreEvents": "Explore Events",
+    "signUpFree": "Sign Up for Free",
+    "goPremium": "Go Premium",
+    "goPremiumLaunch": "Go Premium: Launch Pricing",
+    "goPremiumDiscount": "Go Premium / 50% Off",
+    "joinFreeInstant": "Join Free: Get Instant Access",
+    "joinNextEvent": "Join the Next Event",
+    "rsvpEvents": "RSVP for Events"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{current}} of {{total}}",
+    "showingOf": "Showing {{shown}} of {{total}}"
+  },
+  "labels": {
+    "status": "Status",
+    "dateTba": "Date TBA"
   },
   "status": {
+    "error": "Error",
     "errorGeneric": "Something went wrong. Please try again."
+  },
+  "about": {
+    "badge": "Building the region's growth hub",
+    "title": "About TrafficMENA",
+    "description": "TrafficMENA connects ambitious marketers across the Middle East and North Africa with expert-led events, actionable resources, and a trusted peer community. We ship fast, learn together, and focus on practical outcomes that elevate the region's marketing talent.",
+    "connectTitle": "Connect",
+    "connectDesc": "Meet marketers, founders, and operators shaping growth across the region.",
+    "learnTitle": "Learn",
+    "learnDesc": "Access workshops, playbooks, and content tailored for the MENA market.",
+    "growTitle": "Grow",
+    "growDesc": "Bring MENA-focused strategies back to your teams and clients with confidence."
+  },
+  "contact": {
+    "badge": "We're here to help",
+    "title": "Contact Us",
+    "description": "Have a question about an event, your account, or TrafficMENA? Choose the channel that works best for you.",
+    "emailTitle": "Email",
+    "emailDesc": "Send us a message and our team will get back to you.",
+    "phoneTitle": "Phone",
+    "phoneDesc": "Call us directly to speak with the TrafficMENA team.",
+    "whatsappTitle": "WhatsApp",
+    "whatsappDesc": "Chat with us for a quick and convenient response."
+  },
+  "community": {
+    "title": "Community Space Coming Soon",
+    "description": "We are soon opening a private space for TrafficMENA members to swap wins, share playbooks, and collaborate with peers. Until then, join live sessions to stay in the loop."
+  },
+  "landing": {
+    "mvpBadge": "MVP Live",
+    "mvpSubtext": "Early members onboarding now",
+    "heroTitle": "Learn Digital Marketing From The Experts Who've Done It",
+    "heroSubtitle": "TrafficMENA connects you with practitioners, not professors, through expert-led meetups, structured learning tracks, and a community that actually helps you grow.",
+    "heroImageAlt": "Community meetup",
+    "metricMembers": "Members",
+    "metricEvents": "Events",
+    "metricExperts": "Experts",
+    "sectionHomepage": "Homepage",
+    "upcomingEvents": "Upcoming Events",
+    "eventsLoadError": "We couldn't load events right now. Please try again later.",
+    "noMeetups": "No upcoming meetups at the moment.",
+    "checkBackEvents": "Check back soon for new events!",
+    "structuredLearning": "Structured Learning",
+    "learningTracks": "Learning Tracks",
+    "noPaymentRequired": "No Payment Required",
+    "startFreeTitle": "Start Learning Today: For Free",
+    "startFreeDesc": "Our free membership isn't a teaser. It's a complete learning experience.",
+    "growthJourney": "Your Growth Journey",
+    "everyLevelTitle": "What You Get at Every Level",
+    "membershipTitle": "What You Get With Membership",
+    "everyLevelDesc": "Whether you start free or go premium, here's what's waiting for you.",
+    "membershipDesc": "Here's what members can access right now.",
+    "transitionComplete": "Complete",
+    "transitionFoundation": "Foundation",
+    "transitionEssentials": "You have the essentials.",
+    "transitionReadyMobile": "Ready for more?",
+    "transitionReadyDesktop": "Ready for {{specialization}}?",
+    "specialization": "specialization",
+    "premiumBadge": "PREMIUM",
+    "ctaTitle": "Start Your Marketing Journey Today",
+    "ctaDescPremium": "Whether you choose free or premium, you're joining 1,200+ marketers who are leveling up together.",
+    "ctaDescFree": "Join 1,200+ marketers who are leveling up together.",
+    "ctaFootnote": "Free membership is genuinely valuable. Premium is for those ready to specialize.",
+    "freeFeatures": {
+      "ecommerce": { "title": "E-commerce Business Track", "desc": "7 expert sessions" },
+      "ai": { "title": "AI for Marketers Track", "desc": "5 practical sessions" },
+      "qa": { "title": "Monthly Q&A Session", "desc": "Direct expert access" },
+      "calculators": { "title": "23 Marketing Calculators", "desc": "ROAS, MER, CAC & more" },
+      "premiumContent": { "title": "Premium Content Access", "desc": "After 6+ months" },
+      "community": { "title": "Community Access", "desc": "1,200+ marketers" }
+    },
+    "benefits": {
+      "01": {
+        "title": "Complete Learning Tracks: Yours Free",
+        "points": [
+          "E-commerce Business Track: 7 sessions covering idea to analytics",
+          "AI for Marketers Track: 5 sessions on practical AI tools",
+          "Each session taught by a different specialist. Multiple experts, not one instructor"
+        ]
+      },
+      "02": {
+        "title": "Professional Marketing Calculators",
+        "points": [
+          "ROAS Calculator: Know your true return on ad spend",
+          "MER Calculator: Understand your blended performance",
+          "CAC & nCAC Calculators: Track acquisition costs accurately",
+          "19 more tools used by professional marketers daily"
+        ]
+      },
+      "03": {
+        "title": "Direct Access to Experts Every Month",
+        "points": [
+          "Monthly live Q&A sessions with industry practitioners",
+          "Ask about your specific challenges, get real answers",
+          "No gatekeeping. Free members get the same expert access"
+        ]
+      },
+      "04": {
+        "title": "Advanced Tracks for Serious Marketers",
+        "points": [
+          "Content Marketing Track: 6 sessions + Content Marketing Day materials",
+          "Performance Marketing Track: 7 sessions + Performance Marketing Day materials",
+          "All future tracks included free. No additional cost as we grow"
+        ]
+      },
+      "05": {
+        "title": "Playbooks, Templates & Exclusive Guides",
+        "points": [
+          "Ready-to-use templates from practitioners who've proven them",
+          "Step-by-step playbooks for specific marketing challenges",
+          "Discounts on highly specialized premium resources"
+        ]
+      },
+      "06": {
+        "title": "VIP Treatment & Specialized Networks",
+        "points": [
+          "2x Monthly Q&A sessions (double the free tier)",
+          "20%+ discount on all offline events and intensive days",
+          "Specialty subgroups for your specific focus area"
+        ]
+      }
+    }
   }
 }

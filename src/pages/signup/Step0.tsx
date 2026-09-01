@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { Calendar, Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { acceptInvitation } from '@/app/api/invitations';
 import Header from '@/shared/components/layout/Header';
@@ -33,6 +34,7 @@ type AutoAcceptMeta = {
 };
 
 const Step0: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
@@ -275,21 +277,19 @@ const Step0: React.FC = () => {
           <div className="rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_18px_50px_-20px_rgba(16,16,16,0.35)] backdrop-blur">
             <div className="mb-8 text-center">
               <span className="inline-flex items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-600">
-                Start your journey
+                {t('signup.step0.badge')}
               </span>
               <h1 className="mt-5 text-3xl font-semibold tracking-tight text-neutral-900">
-                Join the heart of marketing in MENA
+                {t('signup.step0.title')}
               </h1>
-              <p className="mt-2 text-sm text-neutral-600">
-                Connect with experts, master new skills, and accelerate your career.
-              </p>
+              <p className="mt-2 text-sm text-neutral-600">{t('signup.step0.subtitle')}</p>
             </div>
 
             {invitationToken && !eventContext && (
               <Card className="mb-6 rounded-2xl border-blue-200 bg-blue-50/80">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold text-blue-900">
-                    Invitation Detected
+                    {t('signup.step0.invitationDetected')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -297,18 +297,12 @@ const Step0: React.FC = () => {
                     {acceptanceDetails?.email ? (
                       <>
                         <p className="text-sm text-blue-600">
-                          Invitation confirmed for {acceptanceDetails.email}.
+                          {t('signup.step0.invitationConfirmed', { email: acceptanceDetails.email })}
                         </p>
-                        <p className="text-sm text-blue-600">
-                          We pre-filled your details and sent a one-time passcode to your inbox to
-                          finish signup.
-                        </p>
+                        <p className="text-sm text-blue-600">{t('signup.step0.invitationOtpSent')}</p>
                       </>
                     ) : (
-                      <p className="text-sm text-blue-600">
-                        Continue with signup and our team will verify your invitation manually
-                        during the MVP.
-                      </p>
+                      <p className="text-sm text-blue-600">{t('signup.step0.invitationManualVerify')}</p>
                     )}
                   </div>
                 </CardContent>
@@ -320,7 +314,7 @@ const Step0: React.FC = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-sm font-semibold text-green-900">
                     <Calendar className="h-5 w-5" />
-                    You're signing up to join this event
+                    {t('signup.step0.eventSignupTitle')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
@@ -333,9 +327,7 @@ const Step0: React.FC = () => {
                       </span>
                     </div>
                   </div>
-                  <p className="mt-3 text-sm text-green-600">
-                    Complete your signup to secure your spot at this event!
-                  </p>
+                  <p className="mt-3 text-sm text-green-600">{t('signup.step0.eventSignupCta')}</p>
                 </CardContent>
               </Card>
             )}
@@ -348,16 +340,16 @@ const Step0: React.FC = () => {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Redirecting…
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                    {t('signup.step0.redirecting')}
                   </>
                 ) : (
-                  'Continue with email'
+                  t('signup.step0.continueWithEmail')
                 )}
               </Button>
 
               <div className="space-y-2 text-center text-sm text-neutral-600">
-                <p>Prefer quick access?</p>
+                <p>{t('signup.step0.preferQuickAccess')}</p>
                 <Button
                   variant="ghost"
                   className="w-full text-[#05ef62] hover:text-[#29cf9f]"
@@ -369,7 +361,7 @@ const Step0: React.FC = () => {
                     );
                   }}
                 >
-                  Already a member? Sign in
+                  {t('signup.step0.signIn')}
                 </Button>
               </div>
             </div>

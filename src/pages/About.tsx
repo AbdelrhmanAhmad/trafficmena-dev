@@ -1,9 +1,12 @@
 import { MapPin, Sparkles, Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 
 const AboutPage: React.FC = () => {
+  const { t } = useTranslation('common');
+
   return (
     <Layout>
       <div className="relative isolate overflow-hidden">
@@ -14,16 +17,13 @@ const AboutPage: React.FC = () => {
           <section className="w-full rounded-[28px] border border-neutral-200 bg-white/90 px-6 py-12 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur sm:px-12">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-xs font-medium text-neutral-600">
               <Sparkles className="h-3.5 w-3.5 text-[#05ef62]" />
-              Building the region's growth hub
+              {t('about.badge')}
             </span>
             <h1 className="mt-6 text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl">
-              About TrafficMENA
+              {t('about.title')}
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-neutral-700">
-              TrafficMENA connects ambitious marketers across the Middle East and North Africa with
-              expert-led events, actionable resources, and a trusted peer community. We ship fast,
-              learn together, and focus on practical outcomes that elevate the region's marketing
-              talent.
+              {t('about.description')}
             </p>
 
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -32,10 +32,10 @@ const AboutPage: React.FC = () => {
                   <Users className="h-5 w-5 text-[#05ef62]" />
                   <div>
                     <h3 className="text-base font-medium tracking-tight text-neutral-900">
-                      Connect
+                      {t('about.connectTitle')}
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                      Meet marketers, founders, and operators shaping growth across the region.
+                      {t('about.connectDesc')}
                     </p>
                   </div>
                 </div>
@@ -44,9 +44,11 @@ const AboutPage: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <Sparkles className="h-5 w-5 text-[#29cf9f]" />
                   <div>
-                    <h3 className="text-base font-medium tracking-tight text-neutral-900">Learn</h3>
+                    <h3 className="text-base font-medium tracking-tight text-neutral-900">
+                      {t('about.learnTitle')}
+                    </h3>
                     <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                      Access workshops, playbooks, and content tailored for the MENA market.
+                      {t('about.learnDesc')}
                     </p>
                   </div>
                 </div>
@@ -55,9 +57,11 @@ const AboutPage: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-[#006681]" />
                   <div>
-                    <h3 className="text-base font-medium tracking-tight text-neutral-900">Grow</h3>
+                    <h3 className="text-base font-medium tracking-tight text-neutral-900">
+                      {t('about.growTitle')}
+                    </h3>
                     <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                      Bring MENA-focused strategies back to your teams and clients with confidence.
+                      {t('about.growDesc')}
                     </p>
                   </div>
                 </div>
@@ -69,14 +73,14 @@ const AboutPage: React.FC = () => {
                 className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] shadow hover:brightness-95"
                 asChild
               >
-                <Link to="/meetups">Explore Events</Link>
+                <Link to="/meetups">{t('actions.exploreEvents')}</Link>
               </Button>
               <Button
                 variant="outline"
                 className="rounded-xl border-neutral-200 px-5 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                 asChild
               >
-                <Link to="/">Back to Home</Link>
+                <Link to="/">{t('actions.backToHome')}</Link>
               </Button>
             </div>
           </section>

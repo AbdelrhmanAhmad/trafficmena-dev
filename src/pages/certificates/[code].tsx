@@ -7,6 +7,7 @@ import {
   ShieldAlert,
   User,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import {
   certificatePublicDownloadUrl,
@@ -35,6 +36,7 @@ function formatIssueDate(value: string) {
 }
 
 export default function PublicCertificatePage() {
+  const { t } = useTranslation('dashboard');
   const { code } = useParams<{ code: string }>();
   const normalizedCode = code?.trim().toUpperCase() ?? '';
   const { data, isLoading, isError, error } = usePublicCertificate(normalizedCode);
@@ -45,8 +47,8 @@ export default function PublicCertificatePage() {
         <div className="container mx-auto max-w-2xl px-4 py-16">
           <Card>
             <CardHeader>
-              <CardTitle>Invalid certificate link</CardTitle>
-              <CardDescription>Please check the URL and try again.</CardDescription>
+              <CardTitle>{t('certificates.invalidLinkTitle')}</CardTitle>
+              <CardDescription>{t('certificates.invalidLinkDesc')}</CardDescription>
             </CardHeader>
           </Card>
         </div>
@@ -58,7 +60,7 @@ export default function PublicCertificatePage() {
     return (
       <Layout>
         <div className="flex min-h-[50vh] items-center justify-center">
-          <LoadingSpinner size="lg" text="Verifying certificate..." />
+          <LoadingSpinner size="lg" text={t('certificates.verifying')} />
         </div>
       </Layout>
     );
@@ -66,7 +68,7 @@ export default function PublicCertificatePage() {
 
   if (isError || !data) {
     const message =
-      error instanceof Error ? error.message : 'This certificate could not be found.';
+      error instanceof Error ? error.message : t('certificates.notFoundDefault');
     return (
       <Layout>
         <div className="container mx-auto max-w-2xl px-4 py-16">
@@ -74,13 +76,13 @@ export default function PublicCertificatePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-700">
                 <ShieldAlert className="h-5 w-5" />
-                Certificate not found
+                {t('certificates.notFound')}
               </CardTitle>
               <CardDescription>{message}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button type="button" variant="outline" asChild>
-                <Link to="/">Back to home</Link>
+                <Link to="/">{t('certificates.backHome')}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -90,7 +92,7 @@ export default function PublicCertificatePage() {
   }
 
   const isRevoked = data.status === 'revoked';
-  const heading = data.certificateTitle || 'Certificate of completion';
+  const heading = data.certificateTitle || t('certificates.defaultTitle');
 
   return (
     <Layout>
@@ -100,11 +102,9 @@ export default function PublicCertificatePage() {
             <Award className="h-7 w-7 text-amber-600" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 md:text-3xl">
-            Certificate verification
+            {t('certificates.verificationTitle')}
           </h1>
-          <p className="mt-2 text-neutral-600">
-            TrafficMENA Hub , verified completion record
-          </p>
+          <p className="mt-2 text-neutral-600">{t('certificates.verificationSubtitle')}</p>
         </div>
 
         {!isRevoked && data.preview && (
@@ -125,7 +125,7 @@ export default function PublicCertificatePage() {
           <CardHeader className="space-y-3 bg-gradient-to-br from-amber-50/80 to-white pb-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className={isRevoked ? 'bg-red-500' : 'bg-[#29cf9f]'}>
-                {isRevoked ? 'Revoked' : 'Verified'}
+                {isRevoked ? t('certificates.revoked') : t('certificates.verified')}
               </Badge>
               <Badge variant="outline" className="font-mono">
                 {data.certificateCode}
@@ -142,7 +142,7 @@ export default function PublicCertificatePage() {
           <CardContent className="space-y-6 p-6 md:p-8">
             {isRevoked ? (
               <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                This certificate has been revoked and is no longer valid.
+                {t('certificates.revokedMessage')}
               </div>
             ) : (
               <>
@@ -150,14 +150,14 @@ export default function PublicCertificatePage() {
                   <div className="rounded-xl border bg-neutral-50/80 p-4">
                     <dt className="mb-1 flex items-center gap-2 text-sm text-neutral-500">
                       <User className="h-4 w-4" />
-                      Student name
+                      {t('certificates.studentName')}
                     </dt>
                     <dd className="text-lg font-semibold text-neutral-900">{data.studentName}</dd>
                   </div>
                   <div className="rounded-xl border bg-neutral-50/80 p-4">
                     <dt className="mb-1 flex items-center gap-2 text-sm text-neutral-500">
                       <Award className="h-4 w-4" />
-                      Masterclass
+                      {t('certificates.masterclass')}
                     </dt>
                     <dd className="text-lg font-semibold text-neutral-900">
                       {data.masterclassTitle}
@@ -166,7 +166,7 @@ export default function PublicCertificatePage() {
                   <div className="rounded-xl border bg-neutral-50/80 p-4 sm:col-span-2">
                     <dt className="mb-1 flex items-center gap-2 text-sm text-neutral-500">
                       <Calendar className="h-4 w-4" />
-                      Issue date
+                      {t('certificates.issueDate')}
                     </dt>
                     <dd className="text-lg font-semibold text-neutral-900">
                       {formatIssueDate(data.issueDate)}
@@ -184,13 +184,13 @@ export default function PublicCertificatePage() {
                           rel="noopener noreferrer"
                         >
                           <Eye className="mr-2 h-4 w-4" />
-                          View certificate
+                          {t('certificates.viewCertificate')}
                         </a>
                       </Button>
                       <Button type="button" variant="outline" asChild>
                         <a href={certificatePublicDownloadUrl(data.certificateCode)}>
                           <Download className="mr-2 h-4 w-4" />
-                          Download PDF
+                          {t('certificates.downloadPdf')}
                         </a>
                       </Button>
                     </>
@@ -203,7 +203,7 @@ export default function PublicCertificatePage() {
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="mr-2 h-4 w-4" />
-                        External certificate
+                        {t('certificates.externalCertificate')}
                       </a>
                     </Button>
                   )}
@@ -214,7 +214,8 @@ export default function PublicCertificatePage() {
         </Card>
 
         <p className="mt-6 text-center text-xs text-neutral-500">
-          Certificate code: <span className="font-mono">{data.certificateCode}</span>
+          {t('certificates.codeLabel')}{' '}
+          <span className="font-mono">{data.certificateCode}</span>
         </p>
       </div>
     </Layout>

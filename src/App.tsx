@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy, Suspense, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import MeetupDetail from '@/features/events/pages/EventDetail';
 import Meetups from '@/features/events/pages/Meetups';
@@ -122,11 +123,14 @@ const Step4 = lazy(() => import('./pages/signup/Step4'));
 const Step5 = lazy(() => import('./pages/signup/Step5'));
 const CheckEmail = lazy(() => import('./pages/signup/CheckEmail'));
 
-const routeFallback = (
-  <div className="flex min-h-screen items-center justify-center bg-gray-50">
-    <LoadingSpinner size="lg" text="Loading..." />
-  </div>
-);
+function RouteFallback() {
+  const { t } = useTranslation('common');
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <LoadingSpinner size="lg" text={t('actions.loading')} />
+    </div>
+  );
+}
 
 const App = () => {
   // App initialization
@@ -154,7 +158,7 @@ const App = () => {
               <SeriesCartProvider>
               <PageTracker />
               <FloatingWhatsApp />
-              <Suspense fallback={routeFallback}>
+              <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route
                     path="/"

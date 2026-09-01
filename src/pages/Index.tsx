@@ -13,6 +13,7 @@ import {
   Users2,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { type EventRecord, fetchEvents } from '@/app/api/events';
 import { fetchPublicTracks, type PublicTrackRecord } from '@/app/api/tracks';
@@ -32,16 +33,9 @@ import { Button } from '@/shared/components/ui/button';
 import { useModuleFlags } from '@/app/hooks/useSettings';
 import { useErrorHandler } from '@/shared/utils/errorHandling';
 
-const benefitItems = [
-  // FREE ITEMS (01-03)
+const BENEFIT_META = [
   {
     id: '01',
-    title: 'Complete Learning Tracks: Yours Free',
-    points: [
-      'E-commerce Business Track: 7 sessions covering idea to analytics',
-      'AI for Marketers Track: 5 sessions on practical AI tools',
-      'Each session taught by a different specialist. Multiple experts, not one instructor',
-    ],
     icon: BookOpen,
     isPremium: false,
     mediaClassName:
@@ -50,13 +44,6 @@ const benefitItems = [
   },
   {
     id: '02',
-    title: 'Professional Marketing Calculators',
-    points: [
-      'ROAS Calculator: Know your true return on ad spend',
-      'MER Calculator: Understand your blended performance',
-      'CAC & nCAC Calculators: Track acquisition costs accurately',
-      '19 more tools used by professional marketers daily',
-    ],
     icon: Calculator,
     isPremium: false,
     mediaClassName:
@@ -65,27 +52,14 @@ const benefitItems = [
   },
   {
     id: '03',
-    title: 'Direct Access to Experts Every Month',
-    points: [
-      'Monthly live Q&A sessions with industry practitioners',
-      'Ask about your specific challenges, get real answers',
-      'No gatekeeping. Free members get the same expert access',
-    ],
     icon: MessageCircle,
     isPremium: false,
     mediaClassName:
       'aspect-video w-full rounded-2xl bg-gradient-to-br from-[#05ef62]/15 via-neutral-100 to-[#00fdc2]/10 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm',
     iconClassName: 'h-16 w-16 text-[#05ef62]/40',
   },
-  // PREMIUM ITEMS (04-06)
   {
     id: '04',
-    title: 'Advanced Tracks for Serious Marketers',
-    points: [
-      'Content Marketing Track: 6 sessions + Content Marketing Day materials',
-      'Performance Marketing Track: 7 sessions + Performance Marketing Day materials',
-      'All future tracks included free. No additional cost as we grow',
-    ],
     icon: Rocket,
     isPremium: true,
     mediaClassName:
@@ -94,12 +68,6 @@ const benefitItems = [
   },
   {
     id: '05',
-    title: 'Playbooks, Templates & Exclusive Guides',
-    points: [
-      "Ready-to-use templates from practitioners who've proven them",
-      'Step-by-step playbooks for specific marketing challenges',
-      'Discounts on highly specialized premium resources',
-    ],
     icon: FileText,
     isPremium: true,
     mediaClassName:
@@ -108,35 +76,29 @@ const benefitItems = [
   },
   {
     id: '06',
-    title: 'VIP Treatment & Specialized Networks',
-    points: [
-      '2x Monthly Q&A sessions (double the free tier)',
-      '20%+ discount on all offline events and intensive days',
-      'Specialty subgroups for your specific focus area',
-    ],
     icon: Crown,
     isPremium: true,
     mediaClassName:
       'aspect-video w-full rounded-2xl bg-gradient-to-br from-amber-100/60 via-amber-50/40 to-neutral-100 border border-amber-200 flex items-center justify-center overflow-hidden shadow-sm',
     iconClassName: 'h-16 w-16 text-amber-600/50',
   },
-];
+] as const;
 
-const FREE_FEATURES = [
-  { icon: BookOpen, title: 'E-commerce Business Track', desc: '7 expert sessions' },
-  { icon: Sparkles, title: 'AI for Marketers Track', desc: '5 practical sessions' },
-  { icon: MessageCircle, title: 'Monthly Q&A Session', desc: 'Direct expert access' },
-  { icon: Calculator, title: '23 Marketing Calculators', desc: 'ROAS, MER, CAC & more' },
+const FREE_FEATURE_META = [
+  { key: 'ecommerce', icon: BookOpen, isSubscriptionFeature: false },
+  { key: 'ai', icon: Sparkles, isSubscriptionFeature: false },
+  { key: 'qa', icon: MessageCircle, isSubscriptionFeature: false },
+  { key: 'calculators', icon: Calculator, isSubscriptionFeature: false },
   {
+    key: 'premiumContent',
     icon: Library,
-    title: 'Premium Content Access',
-    desc: 'After 6+ months',
     isSubscriptionFeature: true,
   },
-  { icon: Users2, title: 'Community Access', desc: '1,200+ marketers' },
-];
+  { key: 'community', icon: Users2, isSubscriptionFeature: false },
+] as const;
 
 const Index: React.FC = () => {
+  const { t } = useTranslation('common');
   const { pathname } = useLocation();
   const shouldTrackDiscoveryLists = isCanonicalDiscoveryListPath(pathname);
   const { handleError } = useErrorHandler();
@@ -186,6 +148,26 @@ const Index: React.FC = () => {
 
   const tracks = tracksData ?? [];
 
+  const benefitItems = useMemo(
+    () =>
+      BENEFIT_META.map((meta) => ({
+        ...meta,
+        title: t(`landing.benefits.${meta.id}.title`),
+        points: t(`landing.benefits.${meta.id}.points`, { returnObjects: true }) as string[],
+      })),
+    [t],
+  );
+
+  const freeFeatures = useMemo(
+    () =>
+      FREE_FEATURE_META.map((meta) => ({
+        ...meta,
+        title: t(`landing.freeFeatures.${meta.key}.title`),
+        desc: t(`landing.freeFeatures.${meta.key}.desc`),
+      })),
+    [t],
+  );
+
   // Intersection Observer for lazy loading
   useEffect(() => {
     if (!loadMoreRef.current) return;
@@ -227,8 +209,8 @@ const Index: React.FC = () => {
     ? benefitItems
     : benefitItems.filter((item) => !item.isPremium);
   const visibleFreeFeatures = subscriptionsEnabled
-    ? FREE_FEATURES
-    : FREE_FEATURES.filter((item) => !item.isSubscriptionFeature);
+    ? freeFeatures
+    : freeFeatures.filter((item) => !item.isSubscriptionFeature);
 
   useTrackedItemListView(EVENTS_LIST_CONTEXT, eventListItems, {
     enabled: shouldTrackDiscoveryLists,
@@ -258,24 +240,22 @@ const Index: React.FC = () => {
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-[#101010]">
                       <Sparkles className="h-3.5 w-3.5" />
                     </span>
-                    MVP Live
+                    {t('landing.mvpBadge')}
                     <span className="mx-1.5 h-1 w-1 rounded-full bg-neutral-400"></span>
-                    Early members onboarding now
+                    {t('landing.mvpSubtext')}
                   </div>
 
                   {/* Headline - Exactly like reference */}
                   <h1
                     className={`text-5xl font-semibold tracking-tight text-neutral-900 sm:text-6xl lg:text-7xl ${isLoaded ? 'animate-fade-in-up' : ''}`}
                   >
-                    Learn Digital Marketing From The Experts Who've Done It
+                    {t('landing.heroTitle')}
                   </h1>
 
                   <p
                     className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
                   >
-                    TrafficMENA connects you with practitioners, not professors, through expert-led
-                    meetups, structured learning tracks, and a community that actually helps you
-                    grow.
+                    {t('landing.heroSubtitle')}
                   </p>
 
                   <div
@@ -288,7 +268,7 @@ const Index: React.FC = () => {
                     >
                       <Link to="/signup">
                         <Users2 className="h-4 w-4" />
-                        <span>Join Free</span>
+                        <span>{t('actions.joinFree')}</span>
                       </Link>
                     </Button>
 
@@ -299,7 +279,7 @@ const Index: React.FC = () => {
                       >
                         <Link to="/subscribe">
                           <Crown className="h-4 w-4" />
-                          <span>Go Premium / 50% Off</span>
+                          <span>{t('actions.goPremiumDiscount')}</span>
                         </Link>
                       </Button>
                     )}
@@ -311,19 +291,19 @@ const Index: React.FC = () => {
                   className={`mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 ${isLoaded ? 'animate-fade-in-up' : ''}`}
                 >
                   <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 backdrop-blur hover:bg-white/90 hover:scale-105 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-                    <div className="text-sm font-medium text-neutral-600">Members</div>
+                    <div className="text-sm font-medium text-neutral-600">{t('landing.metricMembers')}</div>
                     <div className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900 group-hover:text-[#006681] transition-colors duration-300">
                       1.2k+
                     </div>
                   </div>
                   <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 backdrop-blur hover:bg-white/90 hover:scale-105 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-                    <div className="text-sm font-medium text-neutral-600">Events</div>
+                    <div className="text-sm font-medium text-neutral-600">{t('landing.metricEvents')}</div>
                     <div className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900 group-hover:text-[#05ef62] transition-colors duration-300">
                       48
                     </div>
                   </div>
                   <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 backdrop-blur hover:bg-white/90 hover:scale-105 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-                    <div className="text-sm font-medium text-neutral-600">Experts</div>
+                    <div className="text-sm font-medium text-neutral-600">{t('landing.metricExperts')}</div>
                     <div className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900 group-hover:text-[#29cf9f] transition-colors duration-300">
                       36+
                     </div>
@@ -339,7 +319,7 @@ const Index: React.FC = () => {
                   <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-full border border-white/60 bg-white/80 shadow-lg backdrop-blur hover:scale-105 hover:shadow-2xl hover:border-[#29cf9f]/60 transition-all duration-500 group">
                     <img
                       src={heroImage}
-                      alt="Community meetup"
+                      alt={t('landing.heroImageAlt')}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                       loading="eager"
                       fetchpriority="high"
@@ -363,9 +343,9 @@ const Index: React.FC = () => {
             </div>
 
             <div className="relative z-10 mx-auto max-w-3xl text-center">
-              <span className="text-sm font-normal text-neutral-500">Homepage</span>
+              <span className="text-sm font-normal text-neutral-500">{t('landing.sectionHomepage')}</span>
               <h2 className="text-[44px] sm:text-6xl lg:text-7xl leading-[0.95] text-neutral-900 mt-2 tracking-tight">
-                Upcoming Events
+                {t('landing.upcomingEvents')}
               </h2>
             </div>
 
@@ -385,9 +365,7 @@ const Index: React.FC = () => {
                 ))
               ) : error ? (
                 <div className="col-span-full py-12 text-center">
-                  <p className="text-lg text-red-500">
-                    We couldn't load events right now. Please try again later.
-                  </p>
+                  <p className="text-lg text-red-500">{t('landing.eventsLoadError')}</p>
                 </div>
               ) : displayEvents.length > 0 ? (
                 displayEvents.map((event, index) => (
@@ -409,8 +387,8 @@ const Index: React.FC = () => {
                 ))
               ) : (
                 <div className="col-span-full py-12 text-center">
-                  <p className="text-lg text-gray-500">No upcoming meetups at the moment.</p>
-                  <p className="text-gray-400">Check back soon for new events!</p>
+                  <p className="text-lg text-gray-500">{t('landing.noMeetups')}</p>
+                  <p className="text-gray-400">{t('landing.checkBackEvents')}</p>
                 </div>
               )}
             </div>
@@ -435,9 +413,9 @@ const Index: React.FC = () => {
               </div>
 
               <div className="relative z-10 mx-auto max-w-3xl text-center">
-                <span className="text-sm font-normal text-neutral-500">Structured Learning</span>
+                <span className="text-sm font-normal text-neutral-500">{t('landing.structuredLearning')}</span>
                 <h2 className="text-[44px] sm:text-6xl lg:text-7xl leading-[0.95] text-neutral-900 mt-2 tracking-tight">
-                  Learning Tracks
+                  {t('landing.learningTracks')}
                 </h2>
               </div>
 
@@ -466,13 +444,11 @@ const Index: React.FC = () => {
           {/* What You Get FREE Section */}
           <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-6 sm:p-8">
             <div className="mx-auto max-w-3xl text-center">
-              <span className="text-sm font-normal text-neutral-500">No Payment Required</span>
+              <span className="text-sm font-normal text-neutral-500">{t('landing.noPaymentRequired')}</span>
               <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                Start Learning Today: For Free
+                {t('landing.startFreeTitle')}
               </h2>
-              <p className="mt-3 text-sm text-neutral-600">
-                Our free membership isn't a teaser. It's a complete learning experience.
-              </p>
+              <p className="mt-3 text-sm text-neutral-600">{t('landing.startFreeDesc')}</p>
             </div>
 
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -498,7 +474,7 @@ const Index: React.FC = () => {
                 asChild
               >
                 <Link to="/signup">
-                  Join Free: Get Instant Access
+                  {t('actions.joinFreeInstant')}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -510,16 +486,14 @@ const Index: React.FC = () => {
             {/* Section Header */}
             <div className="px-6 sm:px-10 pt-12 pb-8">
               <div className="mx-auto max-w-3xl text-center">
-                <span className="text-sm font-normal text-neutral-500">Your Growth Journey</span>
+                <span className="text-sm font-normal text-neutral-500">{t('landing.growthJourney')}</span>
                 <h2 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
                   {subscriptionsEnabled
-                    ? 'What You Get at Every Level'
-                    : 'What You Get With Membership'}
+                    ? t('landing.everyLevelTitle')
+                    : t('landing.membershipTitle')}
                 </h2>
                 <p className="mt-3 text-sm text-neutral-600">
-                  {subscriptionsEnabled
-                    ? "Whether you start free or go premium, here's what's waiting for you."
-                    : "Here's what members can access right now."}
+                  {subscriptionsEnabled ? t('landing.everyLevelDesc') : t('landing.membershipDesc')}
                 </p>
               </div>
             </div>
@@ -562,10 +536,10 @@ const Index: React.FC = () => {
                                   </div>
                                   <div className="flex flex-col">
                                     <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-[0.15em]">
-                                      Complete
+                                      {t('landing.transitionComplete')}
                                     </span>
                                     <span className="text-sm font-bold text-[#05ef62]">
-                                      Foundation
+                                      {t('landing.transitionFoundation')}
                                     </span>
                                   </div>
                                 </div>
@@ -577,21 +551,19 @@ const Index: React.FC = () => {
                                 <div className="flex-1 text-center sm:text-left">
                                   <p className="text-sm sm:text-[15px] leading-relaxed text-neutral-600">
                                     <span className="font-semibold text-neutral-800">
-                                      You have the essentials.
+                                      {t('landing.transitionEssentials')}
                                     </span>
                                     <span className="hidden sm:inline text-neutral-300 mx-2">
                                       |
                                     </span>
                                     <br className="sm:hidden" />
                                     <span className="sm:hidden text-xs text-neutral-400 block mt-1">
-                                      Ready for more?
+                                      {t('landing.transitionReadyMobile')}
                                     </span>
                                     <span className="hidden sm:inline">
-                                      Ready for{' '}
-                                      <span className="font-semibold text-amber-600">
-                                        specialization
-                                      </span>
-                                      ?
+                                      {t('landing.transitionReadyDesktop', {
+                                        specialization: t('landing.specialization'),
+                                      })}
                                     </span>
                                   </p>
                                 </div>
@@ -602,7 +574,7 @@ const Index: React.FC = () => {
                                   className="group relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 hover:from-amber-500 hover:to-amber-500 hover:shadow-xl hover:shadow-amber-500/25 hover:-translate-y-0.5 transition-all duration-200 shrink-0"
                                 >
                                   <Crown className="h-4 w-4" />
-                                  <span>Go Premium</span>
+                                  <span>{t('actions.goPremium')}</span>
                                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                                 </Link>
                               </div>
@@ -634,7 +606,7 @@ const Index: React.FC = () => {
                                 {isPremium && (
                                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
                                     <Crown className="h-3 w-3" />
-                                    PREMIUM
+                                    {t('landing.premiumBadge')}
                                   </span>
                                 )}
                               </div>
@@ -677,19 +649,17 @@ const Index: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-green-900/20 via-blue-900/10 to-transparent"></div>
             <div className="relative px-6 sm:px-10 py-12 text-center">
               <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
-                Start Your Marketing Journey Today
+                {t('landing.ctaTitle')}
               </h3>
               <p className="mt-2 text-sm text-white/70 max-w-2xl mx-auto">
-                {subscriptionsEnabled
-                  ? "Whether you choose free or premium, you're joining 1,200+ marketers who are leveling up together."
-                  : 'Join 1,200+ marketers who are leveling up together.'}
+                {subscriptionsEnabled ? t('landing.ctaDescPremium') : t('landing.ctaDescFree')}
               </p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <Button
                   className="group inline-flex items-center gap-2 transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] transition-all duration-300 hover:brightness-95 hover:scale-105 hover:shadow-lg"
                   asChild
                 >
-                  <Link to="/signup">Join Free</Link>
+                  <Link to="/signup">{t('actions.joinFree')}</Link>
                 </Button>
                 {subscriptionsEnabled && (
                   <Button
@@ -698,15 +668,13 @@ const Index: React.FC = () => {
                   >
                     <Link to="/subscribe">
                       <Crown className="h-4 w-4" />
-                      Go Premium: Launch Pricing
+                      {t('actions.goPremiumLaunch')}
                     </Link>
                   </Button>
                 )}
               </div>
               {subscriptionsEnabled && (
-                <p className="mt-4 text-xs text-white/50">
-                  Free membership is genuinely valuable. Premium is for those ready to specialize.
-                </p>
+                <p className="mt-4 text-xs text-white/50">{t('landing.ctaFootnote')}</p>
               )}
             </div>
           </section>
