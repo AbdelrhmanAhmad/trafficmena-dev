@@ -28,6 +28,8 @@ type ApiEvent = {
   attendeeCount?: number | null;
   priceInCents: number | null;
   isPublished?: boolean;
+  guestExperts?: Array<{ name?: string; bio?: string | null; image_url?: string | null; slug?: string | null }>;
+  expertIds?: string[];
 };
 
 type ApiEventDetail = ApiEvent & {
