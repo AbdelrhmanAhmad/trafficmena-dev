@@ -17,6 +17,7 @@ import { registerSeriesRoutes } from './series.js';
 import { registerSeriesGrantsRoutes } from './seriesGrants.js';
 import { registerSettingsRoutes } from './settings.js';
 import { registerSkillRoutes } from './skills.js';
+import { registerCommunityRoutes } from './community.js';
 import { registerExpertRoutes } from './experts.js';
 import { registerFactoryResetRoute } from './factoryReset.js';
 import { registerSubscriptionRoutes } from './subscriptions.js';
@@ -44,6 +45,7 @@ export function registerApiRoutes(app: Hono) {
   registerSeriesGrantsRoutes(api);
   registerSkillRoutes(api);
   registerExpertRoutes(api);
+  registerCommunityRoutes(api);
   registerInvitationRoutes(api);
   registerSettingsRoutes(api);
   registerUploadRoutes(api);
