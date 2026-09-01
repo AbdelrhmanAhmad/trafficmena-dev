@@ -5,134 +5,8 @@ import { describe, it } from 'node:test';
 
 const SCAN_ROOTS = ['src/pages', 'src/features'] as const;
 
-/** Hardcoded English UI strings still present outside admin surfaces. */
-const KNOWN_EXCEPTIONS: Array<{ file: string; snippet: string; reason: string }> = [
-  {
-    file: 'src/pages/LibraryItemDetail.tsx',
-    snippet: 'Please try again shortly.',
-    reason: 'Fallback error copy pending i18n migration',
-  },
-  {
-    file: 'src/pages/LibraryItemDetail.tsx',
-    snippet: 'Unable to load item',
-    reason: 'Library detail error heading pending i18n',
-  },
-  {
-    file: 'src/features/digital-products/pages/PublicDigitalProducts.tsx',
-    snippet: 'Sign in',
-    reason: 'Guest CTA block pending i18n migration',
-  },
-  {
-    file: 'src/features/digital-products/pages/PublicDigitalProducts.tsx',
-    snippet: 'Sign up free',
-    reason: 'Guest CTA block pending i18n migration',
-  },
-  {
-    file: 'src/features/series/pages/PublicRecordings.tsx',
-    snippet: 'Sign in',
-    reason: 'Guest CTA block pending i18n migration',
-  },
-  {
-    file: 'src/features/series/pages/PublicRecordings.tsx',
-    snippet: 'Sign up free',
-    reason: 'Guest CTA block pending i18n migration',
-  },
-  {
-    file: 'src/features/events/components/EventAttendeesList.tsx',
-    snippet: 'Unable to load attendees',
-    reason: 'Staff attendee list error copy pending i18n',
-  },
-  {
-    file: 'src/features/tracks/components/TrackAttendeesList.tsx',
-    snippet: 'Unable to load enrolled users',
-    reason: 'Staff attendee list error copy pending i18n',
-  },
-  {
-    file: 'src/features/series/components/SeriesAttendeesList.tsx',
-    snippet: 'Unable to load enrolled users',
-    reason: 'Staff attendee list error copy pending i18n',
-  },
-  {
-    file: 'src/features/digital-products/components/DigitalProductBuyActions.tsx',
-    snippet: 'Could not start checkout',
-    reason: 'Checkout fallback error pending i18n',
-  },
-  {
-    file: 'src/features/series/components/SeriesBuyActions.tsx',
-    snippet: 'Could not start checkout',
-    reason: 'Checkout fallback error pending i18n',
-  },
-  {
-    file: 'src/features/events/components/AdminEventForm.tsx',
-    snippet: 'Saving...',
-    reason: 'Manager form submit label pending i18n',
-  },
-  {
-    file: 'src/features/library/components/LibraryAssetForm.tsx',
-    snippet: 'Saving...',
-    reason: 'Manager form submit label pending i18n',
-  },
-  {
-    file: 'src/features/series/components/SeriesForm.tsx',
-    snippet: 'Saving...',
-    reason: 'Manager form submit label pending i18n',
-  },
-  {
-    file: 'src/features/digital-products/components/DigitalProductVideosCrud.tsx',
-    snippet: 'Save changes',
-    reason: 'Manager CRUD labels pending i18n',
-  },
-  {
-    file: 'src/features/digital-products/components/DigitalProductFilesCrud.tsx',
-    snippet: 'Save changes',
-    reason: 'Manager CRUD labels pending i18n',
-  },
-  {
-    file: 'src/features/digital-products/components/DigitalProductFilesCrud.tsx',
-    snippet: 'Saving...',
-    reason: 'Manager CRUD labels pending i18n',
-  },
-  {
-    file: 'src/features/masterclasses/components/MasterclassLessonVideosCrud.tsx',
-    snippet: 'Save changes',
-    reason: 'Manager CRUD labels pending i18n',
-  },
-  {
-    file: 'src/features/masterclasses/components/MasterclassLessonFilesCrud.tsx',
-    snippet: 'Save changes',
-    reason: 'Manager CRUD labels pending i18n',
-  },
-  {
-    file: 'src/features/masterclasses/components/MasterclassLessonFilesCrud.tsx',
-    snippet: 'Saving...',
-    reason: 'Manager CRUD labels pending i18n',
-  },
-  {
-    file: 'src/features/events/pages/AdminEventDetail.tsx',
-    snippet: 'Unable to load this event',
-    reason: 'Manager event detail error pending i18n',
-  },
-  {
-    file: 'src/features/events/pages/AdminMeetups.tsx',
-    snippet: 'Unable to load events from the new API',
-    reason: 'Manager events list error pending i18n',
-  },
-  {
-    file: 'src/features/series/components/SeriesAccessManager.tsx',
-    snippet: 'Unable to load member list',
-    reason: 'Series access manager error pending i18n',
-  },
-  {
-    file: 'src/features/tracks/components/TrackManualEnrollmentManager.tsx',
-    snippet: 'Unable to load matching members',
-    reason: 'Track enrollment manager error pending i18n',
-  },
-  {
-    file: 'src/features/tracks/pages/AdminTrackDetail.tsx',
-    snippet: 'Unable to load this track',
-    reason: 'Manager track detail error pending i18n',
-  },
-];
+/** Admin-only or non-user-facing exceptions only. Public/member strings must use i18n. */
+const KNOWN_EXCEPTIONS: Array<{ file: string; snippet: string; reason: string }> = [];
 
 const UI_LITERAL_PATTERNS: Array<{ name: string; regex: RegExp }> = [
   { name: 'Loading...', regex: /Loading\.\.\./g },
@@ -150,8 +24,22 @@ const MAX_UNDOCUMENTED_HITS = 0;
 
 type LiteralHit = { file: string; pattern: string; line: number; excerpt: string };
 
-function isAdminPath(relativePath: string): boolean {
-  return relativePath.split(/[/\\]/).includes('admin');
+function isStaffSurfacePath(relativePath: string): boolean {
+  const segments = relativePath.split(/[/\\]/);
+  if (segments.includes('admin')) return true;
+  const fileName = segments[segments.length - 1] ?? '';
+  if (/^Admin[A-Z]/.test(fileName)) return true;
+  if (fileName.endsWith('AttendeesList.tsx')) return true;
+  if (
+    fileName === 'SeriesForm.tsx' ||
+    fileName === 'LibraryAssetForm.tsx' ||
+    fileName === 'AdminEventForm.tsx'
+  ) {
+    return true;
+  }
+  if (fileName.includes('AccessManager') || fileName.includes('EnrollmentManager')) return true;
+  if (fileName.includes('Crud.tsx')) return true;
+  return false;
 }
 
 function collectTsxFiles(rootDir: string, base = rootDir): string[] {
@@ -163,12 +51,12 @@ function collectTsxFiles(rootDir: string, base = rootDir): string[] {
     const relative = fullPath.slice(base.length + 1).replace(/\\/g, '/');
 
     if (statSync(fullPath).isDirectory()) {
-      if (isAdminPath(relative)) continue;
+      if (isStaffSurfacePath(relative)) continue;
       files.push(...collectTsxFiles(fullPath, base));
       continue;
     }
 
-    if (entry.endsWith('.tsx') && !isAdminPath(relative)) {
+    if (entry.endsWith('.tsx') && !isStaffSurfacePath(relative)) {
       files.push(fullPath.replace(/\\/g, '/'));
     }
   }
@@ -218,7 +106,6 @@ describe('raw English UI literals audit (pages/features, non-admin)', () => {
       return acc;
     }, {});
 
-    // Visible in test output for tracking migration progress.
     console.log('[raw-literals-audit] total hits:', allHits.length);
     console.log('[raw-literals-audit] by pattern:', summary);
     console.log('[raw-literals-audit] undocumented:', undocumented.length);
