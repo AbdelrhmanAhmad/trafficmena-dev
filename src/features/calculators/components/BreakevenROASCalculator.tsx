@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -13,6 +14,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const BreakevenROASCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [grossMargin, setGrossMargin] = useState('');
   const [currentROAS, setCurrentROAS] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -21,7 +23,7 @@ const BreakevenROASCalculator = () => {
   const beROASId = useId();
   const currentROASId = useId();
 
-  // Break-even ROAS = 1 / Gross Margin %
+  // {t('calcs.breakeven-roas.results.breakevenRoas')} = 1 / Gross Margin %
   const calculateBreakevenROAS = (): number | null => {
     const margin = parseFloat(grossMargin);
     if (Number.isNaN(margin) || margin <= 0 || margin > 100) return null;
@@ -46,9 +48,9 @@ const BreakevenROASCalculator = () => {
   const handleShare = () => {
     const results =
       breakevenROAS !== null
-        ? `Break-even ROAS Calculator Results:
+        ? `{t('calcs.breakeven-roas.results.breakevenRoas')} Calculator Results:
 Gross Margin: ${grossMargin}%
-Break-even ROAS: ${breakevenROAS.toFixed(2)}x
+{t('calcs.breakeven-roas.results.breakevenRoas')}: ${breakevenROAS.toFixed(2)}x
 ${currentROAS ? `Current ROAS: ${currentROAS}x` : ''}
 ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: Below break-even' : ''}`
         : null;
@@ -72,9 +74,9 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
       {/* Left Column - Educational Content */}
       <div className="space-y-4 lg:space-y-6">
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-neutral-800">What is Break-even ROAS?</h2>
+          <h2 className="text-2xl font-bold text-neutral-800">What is {t('calcs.breakeven-roas.results.breakevenRoas')}?</h2>
           <p className="text-neutral-600">
-            Break-even ROAS (Return on Ad Spend) is the minimum ROAS you need to achieve to cover
+            {t('calcs.breakeven-roas.results.breakevenRoas')} (Return on Ad Spend) is the minimum ROAS you need to achieve to cover
             your costs and not lose money on advertising. It's the point where your ad revenue
             exactly equals your total costs (including both ad spend and cost of goods sold).
           </p>
@@ -86,7 +88,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
 
         <div className="space-y-4">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800">
-            Why is Break-even ROAS Important?
+            Why is {t('calcs.breakeven-roas.results.breakevenRoas')} Important?
           </h2>
           <ul className="list-disc list-inside text-neutral-600 space-y-2">
             <li>
@@ -114,20 +116,20 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
 
         <div className="space-y-4">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800">
-            How to Calculate Break-even ROAS
+            How to {t('calcs.breakeven-roas.panelTitle')}
           </h2>
           <p className="text-neutral-600">The formula is elegantly simple:</p>
           <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4">
             <code className="text-primary-green font-mono">
-              Break-even ROAS = 1 / Gross Margin %
+              {t('calcs.breakeven-roas.results.breakevenRoas')} = 1 / Gross Margin %
             </code>
           </div>
           <p className="text-neutral-600 mt-4">
             <strong className="text-neutral-800">Example:</strong> If your gross margin is 40%:
           </p>
           <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 space-y-2">
-            <p className="font-mono text-xs lg:text-sm">Break-even ROAS = 1 / 0.40</p>
-            <p className="font-mono text-xs lg:text-sm">Break-even ROAS = 2.5x</p>
+            <p className="font-mono text-xs lg:text-sm">{t('calcs.breakeven-roas.results.breakevenRoas')} = 1 / 0.40</p>
+            <p className="font-mono text-xs lg:text-sm">{t('calcs.breakeven-roas.results.breakevenRoas')} = 2.5x</p>
           </div>
           <p className="text-neutral-600 mt-2">
             This means you need to generate $2.50 in revenue for every $1 spent on ads just to break
@@ -137,14 +139,14 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
 
         <div className="space-y-4">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800">
-            Break-even ROAS by Gross Margin
+            {t('calcs.breakeven-roas.results.breakevenRoas')} by Gross Margin
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-xs lg:text-sm">
               <thead>
                 <tr className="border-b border-neutral-200">
                   <th className="text-left py-2 font-medium text-neutral-500">Gross Margin</th>
-                  <th className="text-left py-2 font-medium text-neutral-500">Break-even ROAS</th>
+                  <th className="text-left py-2 font-medium text-neutral-500">{t('calcs.breakeven-roas.results.breakevenRoas')}</th>
                   <th className="text-left py-2 font-medium text-neutral-500">Common Industries</th>
                 </tr>
               </thead>
@@ -197,7 +199,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
 
         <div className="space-y-4">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800">
-            How to Lower Your Break-even ROAS
+            How to Lower Your {t('calcs.breakeven-roas.results.breakevenRoas')}
           </h2>
           <ul className="list-disc list-inside text-neutral-600 space-y-2">
             <li>
@@ -231,7 +233,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
             <AccordionItem value="calculator" className="border-none">
               <AccordionTrigger className="px-0 py-4 hover:no-underline">
                 <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                  Calculate Break-even ROAS
+                  {t('calcs.breakeven-roas.panelTitle')}
                 </span>
               </AccordionTrigger>
               <AccordionContent className="px-0 pb-6">
@@ -239,7 +241,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                   {/* Gross Margin Input */}
                   <div className="space-y-2">
                     <Label htmlFor={grossMarginId} className="text-sm text-neutral-600">
-                      Gross Margin (%)
+                      {t('calcs.breakeven-roas.fields.grossMargin')}
                     </Label>
                     <div className="relative">
                       <Input
@@ -262,10 +264,10 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                     </p>
                   </div>
 
-                  {/* Break-even ROAS Output */}
+                  {/* {t('calcs.breakeven-roas.results.breakevenRoas')} Output */}
                   <div className="space-y-2">
                     <Label htmlFor={beROASId} className="text-sm text-neutral-600">
-                      Break-even ROAS
+                      {t('calcs.breakeven-roas.results.breakevenRoas')}
                     </Label>
                     <div className="relative">
                       <Input
@@ -287,7 +289,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                   {/* Optional: Current ROAS */}
                   <div className="space-y-2">
                     <Label htmlFor={currentROASId} className="text-sm text-neutral-600">
-                      Current ROAS (Optional)
+                      {t('calcs.breakeven-roas.fields.currentRoasOptional')}
                     </Label>
                     <div className="relative">
                       <Input
@@ -305,14 +307,14 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                       </span>
                     </div>
                     <p className="text-xs text-neutral-500">
-                      Enter your current ROAS to see if you're profitable
+                      {t('calcs.breakeven-roas.hints.currentRoas')}
                     </p>
                   </div>
 
-                  {/* Profitability Status */}
+                  {/* {t('calcs.breakeven-roas.results.profitabilityStatus')} */}
                   {breakevenROAS !== null && currentROAS && (
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">Profitability Status</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.breakeven-roas.results.profitabilityStatus')}</Label>
                       <div
                         className={`p-4 rounded-lg border ${
                           isProfitable
@@ -322,7 +324,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                       >
                         {isProfitable ? (
                           <>
-                            <p className="text-performance-excellent font-semibold">Profitable!</p>
+                            <p className="text-performance-excellent font-semibold">{t('calcs.breakeven-roas.status.profitable')}</p>
                             <p className="text-sm text-neutral-600 mt-1">
                               Your ROAS of {currentROASValue.toFixed(2)}x is{' '}
                               <span className="tabular-nums">
@@ -344,7 +346,7 @@ ${isProfitable ? 'Status: Profitable' : breakevenROAS && currentROAS ? 'Status: 
                           </>
                         ) : (
                           <>
-                            <p className="text-performance-loss font-semibold">Below Break-even</p>
+                            <p className="text-performance-loss font-semibold">{t('calcs.breakeven-roas.status.belowBreakeven')}</p>
                             <p className="text-sm text-neutral-600 mt-1">
                               Your ROAS of {currentROASValue.toFixed(2)}x is{' '}
                               <span className="tabular-nums">

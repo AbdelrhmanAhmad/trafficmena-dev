@@ -1,0 +1,125 @@
+{
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: January 2025",
+    "sections": {
+      "informationWeCollect": {
+        "title": "1. Information We Collect",
+        "body": "We collect information you provide directly to us, such as when you create an account, register for events, or contact us for support. This may include your name, email address, professional information, and any other information you choose to provide."
+      },
+      "howWeUse": {
+        "title": "2. How We Use Your Information",
+        "body": "We use the information we collect to provide, maintain, and improve our services, process event registrations, send you updates about events and community activities, and respond to your comments and questions."
+      },
+      "informationSharing": {
+        "title": "3. Information Sharing",
+        "body": "We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, except as described in this policy or as required by law. We may share information with service providers who assist us in operating our platform."
+      },
+      "dataSecurity": {
+        "title": "4. Data Security",
+        "body": "We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction."
+      },
+      "yourRights": {
+        "title": "5. Your Rights",
+        "body": "You have the right to access, correct, or delete your personal information. You may also opt out of receiving promotional communications from us at any time by following the unsubscribe instructions in those messages."
+      },
+      "cookies": {
+        "title": "6. Cookies",
+        "body": "We use cookies and similar technologies to collect information about your browsing activities and to provide you with a better experience on our platform."
+      },
+      "changes": {
+        "title": "7. Changes to This Policy",
+        "body": "We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the \"Last updated\" date."
+      },
+      "contact": {
+        "title": "8. Contact Us",
+        "body": "If you have any questions about this Privacy Policy, please contact us at privacy@trafficmena.com."
+      }
+    }
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated: January 2025",
+    "sections": {
+      "acceptance": {
+        "title": "1. Acceptance of Terms",
+        "body": "By accessing and using TrafficMENA, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our platform."
+      },
+      "useOfService": {
+        "title": "2. Use of Service",
+        "body": "You agree to use our services only for lawful purposes and in accordance with these terms. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account."
+      },
+      "userContent": {
+        "title": "3. User Content",
+        "body": "You retain ownership of any content you submit to our platform. By submitting content, you grant us a non-exclusive, worldwide, royalty-free license to use, reproduce, and display your content in connection with our services."
+      },
+      "eventRegistration": {
+        "title": "4. Event Registration",
+        "body": "When you register for events through our platform, you agree to provide accurate information and to comply with any event-specific terms and conditions. Event cancellation and refund policies are determined by the event organizers."
+      },
+      "intellectualProperty": {
+        "title": "5. Intellectual Property",
+        "body": "All content, features, and functionality of our platform are owned by TrafficMENA and are protected by international copyright, trademark, and other intellectual property laws."
+      },
+      "limitationOfLiability": {
+        "title": "6. Limitation of Liability",
+        "body": "TrafficMENA shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or related to your use of our services."
+      },
+      "termination": {
+        "title": "7. Termination",
+        "body": "We reserve the right to terminate or suspend your account at any time for violations of these terms or for any other reason at our sole discretion."
+      },
+      "changes": {
+        "title": "8. Changes to Terms",
+        "body": "We may modify these terms at any time. Your continued use of our services after any changes constitutes your acceptance of the new terms."
+      },
+      "governingLaw": {
+        "title": "9. Governing Law",
+        "body": "These terms shall be governed by and construed in accordance with the laws of the United Arab Emirates, without regard to its conflict of law provisions."
+      },
+      "contact": {
+        "title": "10. Contact Us",
+        "body": "If you have any questions about these Terms of Service, please contact us at legal@trafficmena.com."
+      }
+    }
+  },
+  "refund": {
+    "title": "Refund Policy",
+    "lastUpdated": "Last updated: July 2026",
+    "guarantee": {
+      "title": "Our 7-day guarantee",
+      "body": "Request a cancellation at least 7 days before the event start date and receive a full refund, no questions asked."
+    },
+    "contactLink": "Contact Us page",
+    "sections": {
+      "eventRegistrations": {
+        "title": "1. Event registrations",
+        "body": "For an individual event registration, the guarantee window is measured from that event's scheduled start date. Submit your request through the in-app cancellation option. Requests within the guarantee window are approved unconditionally."
+      },
+      "trackBookings": {
+        "title": "2. Track bookings",
+        "body": "The same full-refund guarantee applies to a track booking when you request a refund at least 7 days before the track's first event. Track refunds do not have a self-service cancellation option, so please contact us by email or WhatsApp."
+      },
+      "eventSpecificTerms": {
+        "title": "3. Event-specific refund terms",
+        "body": "Refund terms shown on a specific event take precedence over this general policy. If an event does not state separate refund terms, this policy applies."
+      },
+      "howToRequest": {
+        "title": "4. How to request a refund",
+        "body": "Use the in-app cancellation option for individual event registrations. For track bookings and all other refund requests, visit our <contactLink>Contact Us page</contactLink> to reach us by email or WhatsApp."
+      },
+      "underSevenDays": {
+        "title": "5. Requests made under 7 days",
+        "body": "Requests made fewer than 7 days before the relevant event start date fall outside the guarantee. They are handled according to the event-specific terms, when present, or reviewed case by case."
+      },
+      "subscriptions": {
+        "title": "6. Subscriptions",
+        "body": "You may cancel your subscription at any time. Your access continues through the end of your current subscription period."
+      },
+      "questions": {
+        "title": "7. Questions",
+        "body": "If you have questions about this policy or need help with a request, please use our <contactLink>Contact Us page</contactLink>."
+      }
+    }
+  }
+}

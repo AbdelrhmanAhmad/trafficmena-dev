@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -13,6 +14,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CartAbandonmentRateCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [cartsCreated, setCartsCreated] = useState('');
   const [cartsCompleted, setCartsCompleted] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -33,7 +35,7 @@ const CartAbandonmentRateCalculator = () => {
   const handleShare = () => {
     const text =
       abandonmentRate !== null
-        ? `My Cart Abandonment Rate: ${abandonmentRate.toFixed(2)}%\nCarts Created: ${cartsCreated}\nCarts Completed: ${cartsCompleted}\n\nCalculated with Cart Abandonment Rate Calculator`
+        ? `My {t('calcs.cart-abandonment.results.rate')}: ${abandonmentRate.toFixed(2)}%\nCarts Created: ${cartsCreated}\nCarts Completed: ${cartsCompleted}\n\nCalculated with {t('calcs.cart-abandonment.panelTitle')}`
         : null;
     shareToClipboard(text);
   };
@@ -83,10 +85,10 @@ const CartAbandonmentRateCalculator = () => {
       <div className="space-y-4 lg:space-y-6">
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            What is Cart Abandonment Rate?
+            What is {t('calcs.cart-abandonment.results.rate')}?
           </h2>
           <p className="text-neutral-600">
-            Cart Abandonment Rate measures the percentage of online shoppers who add items to their
+            {t('calcs.cart-abandonment.results.rate')} measures the percentage of online shoppers who add items to their
             shopping cart but leave before completing the purchase. It's a critical ecommerce metric
             that reveals friction in your checkout process, pricing concerns, or trust issues.
             According to Baymard Institute, the average documented online cart abandonment rate is{' '}
@@ -96,7 +98,7 @@ const CartAbandonmentRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            Why is Cart Abandonment Rate Important?
+            Why is {t('calcs.cart-abandonment.results.rate')} Important?
           </h2>
           <ul className="space-y-2 text-neutral-600">
             <li>
@@ -124,7 +126,7 @@ const CartAbandonmentRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            How to Calculate Cart Abandonment Rate
+            How to Calculate {t('calcs.cart-abandonment.results.rate')}
           </h2>
           <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-center mb-4">
             Abandonment Rate = ((Carts Created - Carts Completed) / Carts Created) × 100
@@ -143,7 +145,7 @@ const CartAbandonmentRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            Cart Abandonment Rate by Industry (2024)
+            {t('calcs.cart-abandonment.results.rate')} by Industry (2024)
           </h2>
           <p className="text-neutral-600 mb-4">
             Abandonment rates vary significantly by product type and price point:
@@ -330,18 +332,18 @@ const CartAbandonmentRateCalculator = () => {
           <Accordion type="single" collapsible defaultValue="calculator">
             <AccordionItem value="calculator" className="border-none">
               <AccordionTrigger className="text-lg lg:text-xl font-semibold text-neutral-800 hover:no-underline">
-                Cart Abandonment Rate Calculator
+                {t('calcs.cart-abandonment.panelTitle')}
               </AccordionTrigger>
               <AccordionContent className="pt-4 space-y-4 lg:space-y-6">
                 {/* Carts Created Input */}
                 <div className="space-y-2">
                   <Label htmlFor={cartsCreatedId} className="text-sm text-neutral-600">
-                    Shopping Carts Created
+                    {t('calcs.cart-abandonment.fields.cartsCreated')}
                   </Label>
                   <Input
                     id={cartsCreatedId}
                     type="number"
-                    placeholder="Enter number of carts created"
+                    placeholder={t('calcs.cart-abandonment.placeholders.cartsCreated')}
                     value={cartsCreated}
                     onChange={(e) => setCartsCreated(e.target.value)}
                     className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -351,12 +353,12 @@ const CartAbandonmentRateCalculator = () => {
                 {/* Carts Completed Input */}
                 <div className="space-y-2">
                   <Label htmlFor={cartsCompletedId} className="text-sm text-neutral-600">
-                    Completed Purchases
+                    {t('calcs.cart-abandonment.fields.cartsCompleted')}
                   </Label>
                   <Input
                     id={cartsCompletedId}
                     type="number"
-                    placeholder="Enter number of completed purchases"
+                    placeholder={t('calcs.cart-abandonment.placeholders.cartsCompleted')}
                     value={cartsCompleted}
                     onChange={(e) => setCartsCompleted(e.target.value)}
                     className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -365,7 +367,7 @@ const CartAbandonmentRateCalculator = () => {
 
                 {/* Abandonment Rate Result */}
                 <div className="space-y-2">
-                  <Label className="text-sm text-neutral-600">Cart Abandonment Rate</Label>
+                  <Label className="text-sm text-neutral-600">{t('calcs.cart-abandonment.results.rate')}</Label>
                   <Input
                     readOnly
                     value={abandonmentRate !== null ? `${abandonmentRate.toFixed(2)}%` : '—'}

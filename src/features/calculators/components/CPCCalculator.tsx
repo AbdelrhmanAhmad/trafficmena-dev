@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CPCCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [adSpend, setAdSpend] = useState<string>('');
   const [clicks, setClicks] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -252,7 +254,7 @@ const CPCCalculator = () => {
               <AccordionItem value="cpc" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Cost Per Click (CPC)
+                    {t('calcs.cpc.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-6">
@@ -260,13 +262,13 @@ const CPCCalculator = () => {
                     {/* Ad Spend Input */}
                     <div className="space-y-2">
                       <Label htmlFor={adSpendId} className="text-sm text-neutral-600">
-                        Total ad spend
+                        {t('calcs.cpc.fields.adSpend')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={adSpendId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={adSpend}
                           onChange={(e) => setAdSpend(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -294,13 +296,13 @@ const CPCCalculator = () => {
                     {/* Clicks Input */}
                     <div className="space-y-2">
                       <Label htmlFor={clicksId} className="text-sm text-neutral-600">
-                        Total clicks
+                        {t('calcs.cpc.fields.clicks')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={clicksId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={clicks}
                           onChange={(e) => setClicks(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -310,12 +312,12 @@ const CPCCalculator = () => {
 
                     {/* CPC Output */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">CPC (Cost Per Click)</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.cpc.results.cpc')}</Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={cpc !== null ? cpc.toFixed(2) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-16 h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -327,7 +329,7 @@ const CPCCalculator = () => {
                     {/* Total Clicks Display */}
                     {totalClicks !== null && totalClicks > 0 && (
                       <div className="space-y-2">
-                        <Label className="text-sm text-neutral-600">Total clicks received</Label>
+                        <Label className="text-sm text-neutral-600">{t('calcs.cpc.results.totalClicksReceived')}</Label>
                         <div className="relative">
                           <Input
                             readOnly
@@ -352,10 +354,10 @@ const CPCCalculator = () => {
                         }`}
                       >
                         {cpc > 5 &&
-                          'High CPC. Consider improving ad quality or adjusting targeting.'}
-                        {cpc > 2 && cpc <= 5 && 'Above average CPC. May be a competitive industry.'}
-                        {cpc > 0.5 && cpc <= 2 && 'Average CPC range for most platforms.'}
-                        {cpc <= 0.5 && 'Excellent CPC. Very cost-efficient clicks!'}
+                          t('calcs.cpc.performance.high')}
+                        {cpc > 2 && cpc <= 5 && t('calcs.cpc.performance.aboveAverage')}
+                        {cpc > 0.5 && cpc <= 2 && t('calcs.cpc.performance.average')}
+                        {cpc <= 0.5 && t('calcs.cpc.performance.excellent')}
                       </p>
                     )}
                   </div>

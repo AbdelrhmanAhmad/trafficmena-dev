@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -13,6 +14,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const RepeatPurchaseRateCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [repeatCustomers, setRepeatCustomers] = useState('');
   const [totalCustomers, setTotalCustomers] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -32,7 +34,7 @@ const RepeatPurchaseRateCalculator = () => {
   const handleShare = () => {
     shareToClipboard(
       rpr !== null
-        ? `My Repeat Purchase Rate: ${rpr.toFixed(2)}%\nRepeat Customers: ${repeatCustomers}\nTotal Customers: ${totalCustomers}\n\nCalculated with Repeat Purchase Rate Calculator`
+        ? `My {t('calcs.repeat-purchase.results.rate')}: ${rpr.toFixed(2)}%\nRepeat Customers: ${repeatCustomers}\n{t('calcs.repeat-purchase.fields.totalCustomers')}: ${totalCustomers}\n\nCalculated with {t('calcs.repeat-purchase.panelTitle')}`
         : null,
     );
   };
@@ -82,10 +84,10 @@ const RepeatPurchaseRateCalculator = () => {
       <div className="space-y-4 lg:space-y-6">
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            What is Repeat Purchase Rate?
+            What is {t('calcs.repeat-purchase.results.rate')}?
           </h2>
           <p className="text-neutral-600">
-            Repeat Purchase Rate (RPR), also known as Repeat Customer Rate, measures the percentage
+            {t('calcs.repeat-purchase.results.rate')} (RPR), also known as Repeat Customer Rate, measures the percentage
             of customers who have made more than one purchase from your business. It's a direct
             indicator of customer loyalty, product satisfaction, and the overall health of your
             brand. A higher rate signals that your products and customer experience are meeting
@@ -95,7 +97,7 @@ const RepeatPurchaseRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            Why is Repeat Purchase Rate Important?
+            Why is {t('calcs.repeat-purchase.results.rate')} Important?
           </h2>
           <ul className="space-y-2 text-neutral-600">
             <li>
@@ -123,10 +125,10 @@ const RepeatPurchaseRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            How to Calculate Repeat Purchase Rate
+            How to Calculate {t('calcs.repeat-purchase.results.rate')}
           </h2>
           <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-center mb-4">
-            RPR = (Repeat Customers / Total Customers) × 100
+            RPR = (Repeat Customers / {t('calcs.repeat-purchase.fields.totalCustomers')}) × 100
           </div>
           <p className="text-neutral-600 mb-4">
             <strong>Example:</strong> If you have 2,500 total customers and 625 have purchased more
@@ -141,7 +143,7 @@ const RepeatPurchaseRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            What is a Good Repeat Purchase Rate?
+            What is a Good {t('calcs.repeat-purchase.results.rate')}?
           </h2>
           <p className="text-neutral-600 mb-4">
             The average repeat customer rate in ecommerce ranges from <strong>15-30%</strong>, but
@@ -270,7 +272,7 @@ const RepeatPurchaseRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            How to Improve Your Repeat Purchase Rate
+            How to Improve Your {t('calcs.repeat-purchase.results.rate')}
           </h2>
           <ul className="space-y-3 text-neutral-600">
             <li className="flex items-start gap-2">
@@ -318,29 +320,29 @@ const RepeatPurchaseRateCalculator = () => {
           <Accordion type="single" collapsible defaultValue="calculator">
             <AccordionItem value="calculator" className="border-none">
               <AccordionTrigger className="text-lg lg:text-xl font-semibold text-neutral-800 hover:no-underline">
-                Repeat Purchase Rate Calculator
+                {t('calcs.repeat-purchase.panelTitle')}
               </AccordionTrigger>
               <AccordionContent className="pt-4 space-y-4 lg:space-y-6">
                 {/* Repeat Customers Input */}
                 <div className="space-y-2">
-                  <Label htmlFor={repeatCustomersId}>Customers Who Bought More Than Once</Label>
+                  <Label htmlFor={repeatCustomersId}>{t('calcs.repeat-purchase.fields.repeatCustomers')}</Label>
                   <Input
                     id={repeatCustomersId}
                     type="number"
-                    placeholder="Enter number of repeat customers"
+                    placeholder={t('calcs.repeat-purchase.placeholders.repeatCustomers')}
                     value={repeatCustomers}
                     onChange={(e) => setRepeatCustomers(e.target.value)}
                     className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
                   />
                 </div>
 
-                {/* Total Customers Input */}
+                {/* {t('calcs.repeat-purchase.fields.totalCustomers')} Input */}
                 <div className="space-y-2">
-                  <Label htmlFor={totalCustomersId}>Total Customers</Label>
+                  <Label htmlFor={totalCustomersId}>{t('calcs.repeat-purchase.fields.totalCustomers')}</Label>
                   <Input
                     id={totalCustomersId}
                     type="number"
-                    placeholder="Enter total number of customers"
+                    placeholder={t('calcs.repeat-purchase.placeholders.totalCustomers')}
                     value={totalCustomers}
                     onChange={(e) => setTotalCustomers(e.target.value)}
                     className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -349,7 +351,7 @@ const RepeatPurchaseRateCalculator = () => {
 
                 {/* RPR Result */}
                 <div className="space-y-2">
-                  <Label>Repeat Purchase Rate</Label>
+                  <Label>{t('calcs.repeat-purchase.results.rate')}</Label>
                   <Input
                     readOnly
                     value={rpr !== null ? `${rpr.toFixed(2)}%` : '—'}

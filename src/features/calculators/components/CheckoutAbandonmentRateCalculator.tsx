@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -13,6 +14,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CheckoutAbandonmentRateCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [checkoutsStarted, setCheckoutsStarted] = useState('');
   const [checkoutsCompleted, setCheckoutsCompleted] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -33,7 +35,7 @@ const CheckoutAbandonmentRateCalculator = () => {
   const handleShare = () => {
     const text =
       abandonmentRate !== null
-        ? `My Checkout Abandonment Rate: ${abandonmentRate.toFixed(2)}%\nCheckouts Started: ${checkoutsStarted}\nCheckouts Completed: ${checkoutsCompleted}\n\nCalculated with Checkout Abandonment Rate Calculator`
+        ? `My {t('calcs.checkout-abandonment.results.rate')}: ${abandonmentRate.toFixed(2)}%\n{t('calcs.checkout-abandonment.fields.checkoutsStarted')}: ${checkoutsStarted}\n{t('calcs.checkout-abandonment.fields.checkoutsCompleted')}: ${checkoutsCompleted}\n\nCalculated with {t('calcs.checkout-abandonment.panelTitle')}`
         : null;
     shareToClipboard(text);
   };
@@ -83,10 +85,10 @@ const CheckoutAbandonmentRateCalculator = () => {
       <div className="space-y-4 lg:space-y-6">
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            What is Checkout Abandonment Rate?
+            What is {t('calcs.checkout-abandonment.results.rate')}?
           </h2>
           <p className="text-neutral-600">
-            Checkout Abandonment Rate measures the percentage of shoppers who{' '}
+            {t('calcs.checkout-abandonment.results.rate')} measures the percentage of shoppers who{' '}
             <strong>start the checkout process</strong> but leave before completing their purchase.
             Unlike cart abandonment (which tracks all created carts), checkout abandonment
             specifically focuses on users who demonstrated clear purchase intent by initiating
@@ -119,10 +121,10 @@ const CheckoutAbandonmentRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            How to Calculate Checkout Abandonment Rate
+            How to Calculate {t('calcs.checkout-abandonment.results.rate')}
           </h2>
           <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-center mb-4">
-            Rate = ((Checkouts Started - Checkouts Completed) / Checkouts Started) × 100
+            Rate = (({t('calcs.checkout-abandonment.fields.checkoutsStarted')} - {t('calcs.checkout-abandonment.fields.checkoutsCompleted')}) / {t('calcs.checkout-abandonment.fields.checkoutsStarted')}) × 100
           </div>
           <p className="text-neutral-600 mb-4">
             <strong>Example:</strong> If 100 customers begin checkout but only 30 complete their
@@ -137,7 +139,7 @@ const CheckoutAbandonmentRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            What is a Good Checkout Abandonment Rate?
+            What is a Good {t('calcs.checkout-abandonment.results.rate')}?
           </h2>
           <p className="text-neutral-600 mb-4">
             According to AgencyAnalytics, benchmark rates for checkout abandonment are:
@@ -330,33 +332,33 @@ const CheckoutAbandonmentRateCalculator = () => {
           <Accordion type="single" collapsible defaultValue="calculator">
             <AccordionItem value="calculator" className="border-none">
               <AccordionTrigger className="text-lg lg:text-xl font-semibold text-neutral-800 hover:no-underline">
-                Checkout Abandonment Rate Calculator
+                {t('calcs.checkout-abandonment.panelTitle')}
               </AccordionTrigger>
               <AccordionContent className="pt-4 space-y-4 lg:space-y-6">
-                {/* Checkouts Started Input */}
+                {/* {t('calcs.checkout-abandonment.fields.checkoutsStarted')} Input */}
                 <div className="space-y-2">
                   <Label htmlFor={checkoutsStartedId} className="text-sm text-neutral-600">
-                    Checkouts Started
+                    {t('calcs.checkout-abandonment.fields.checkoutsStarted')}
                   </Label>
                   <Input
                     id={checkoutsStartedId}
                     type="number"
-                    placeholder="Enter number of checkouts initiated"
+                    placeholder={t('calcs.checkout-abandonment.placeholders.checkoutsStarted')}
                     value={checkoutsStarted}
                     onChange={(e) => setCheckoutsStarted(e.target.value)}
                     className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
                   />
                 </div>
 
-                {/* Checkouts Completed Input */}
+                {/* {t('calcs.checkout-abandonment.fields.checkoutsCompleted')} Input */}
                 <div className="space-y-2">
                   <Label htmlFor={checkoutsCompletedId} className="text-sm text-neutral-600">
-                    Checkouts Completed
+                    {t('calcs.checkout-abandonment.fields.checkoutsCompleted')}
                   </Label>
                   <Input
                     id={checkoutsCompletedId}
                     type="number"
-                    placeholder="Enter number of completed purchases"
+                    placeholder={t('calcs.checkout-abandonment.placeholders.checkoutsCompleted')}
                     value={checkoutsCompleted}
                     onChange={(e) => setCheckoutsCompleted(e.target.value)}
                     className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -365,7 +367,7 @@ const CheckoutAbandonmentRateCalculator = () => {
 
                 {/* Abandonment Rate Result */}
                 <div className="space-y-2">
-                  <Label className="text-sm text-neutral-600">Checkout Abandonment Rate</Label>
+                  <Label className="text-sm text-neutral-600">{t('calcs.checkout-abandonment.results.rate')}</Label>
                   <Input
                     readOnly
                     value={abandonmentRate !== null ? `${abandonmentRate.toFixed(2)}%` : '—'}

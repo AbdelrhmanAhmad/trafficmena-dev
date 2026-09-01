@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CACPaybackCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [cac, setCac] = useState<string>('');
   const [monthlyRevenue, setMonthlyRevenue] = useState<string>('');
   const [grossMargin, setGrossMargin] = useState<string>('');
@@ -64,7 +66,7 @@ const CACPaybackCalculator = () => {
   const handleShare = () => {
     const text =
       paybackPeriod !== null
-        ? `My CAC Payback Period: ${paybackPeriod.toFixed(1)} months | CAC: ${formatCurrency(cac, currency)} | Monthly Revenue: ${formatCurrency(monthlyRevenue, currency)} | Gross Margin: ${grossMargin}%`
+        ? `My ${t('calcs.cac-payback.results.paybackPeriod')}: ${paybackPeriod.toFixed(1)} months | CAC: ${formatCurrency(cac, currency)} | Monthly Revenue: ${formatCurrency(monthlyRevenue, currency)} | Gross Margin: ${grossMargin}%`
         : null;
     shareToClipboard(text);
   };
@@ -88,10 +90,10 @@ const CACPaybackCalculator = () => {
         <div className="space-y-4 lg:space-y-6">
           <section>
             <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is CAC Payback Period?
+              What is {t('calcs.cac-payback.results.paybackPeriod')}?
             </h2>
             <p className="text-neutral-600 leading-relaxed">
-              CAC Payback Period measures{' '}
+              {t('calcs.cac-payback.results.paybackPeriod')} measures{' '}
               <strong className="text-neutral-800">
                 how many months it takes to recover the cost of acquiring a customer
               </strong>
@@ -145,7 +147,7 @@ const CACPaybackCalculator = () => {
 
           <section>
             <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Calculate CAC Payback Period
+              How to Calculate {t('calcs.cac-payback.results.paybackPeriod')}
             </h2>
             <p className="text-neutral-600 mb-4">The formula is:</p>
             <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-sm">
@@ -247,7 +249,7 @@ const CACPaybackCalculator = () => {
 
           <section>
             <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              How to Reduce CAC Payback Period
+              How to Reduce {t('calcs.cac-payback.results.paybackPeriod')}
             </h2>
             <ul className="space-y-3 text-neutral-600">
               <li className="flex items-start gap-2">
@@ -318,7 +320,7 @@ const CACPaybackCalculator = () => {
               <AccordionItem value="payback" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    CAC Payback Period Calculator
+                    {t('calcs.cac-payback.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-6">
@@ -326,13 +328,13 @@ const CACPaybackCalculator = () => {
                     {/* CAC Input */}
                     <div className="space-y-2">
                       <Label htmlFor={cacId} className="text-sm text-neutral-600">
-                        Customer acquisition cost (CAC)
+                        {t('calcs.cac-payback.fields.cac')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={cacId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={cac}
                           onChange={(e) => setCac(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -360,13 +362,13 @@ const CACPaybackCalculator = () => {
                     {/* Monthly Revenue Input */}
                     <div className="space-y-2">
                       <Label htmlFor={monthlyRevenueId} className="text-sm text-neutral-600">
-                        Monthly revenue per customer (ARPU)
+                        {t('calcs.cac-payback.fields.monthlyRevenue')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={monthlyRevenueId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={monthlyRevenue}
                           onChange={(e) => setMonthlyRevenue(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -380,7 +382,7 @@ const CACPaybackCalculator = () => {
                     {/* Gross Margin Input */}
                     <div className="space-y-2">
                       <Label htmlFor={grossMarginId} className="text-sm text-neutral-600">
-                        Gross margin (%)
+                        {t('calcs.cac-payback.fields.grossMargin')}
                       </Label>
                       <div className="relative">
                         <Input
@@ -404,7 +406,7 @@ const CACPaybackCalculator = () => {
                     {monthlyGrossProfit !== null && (
                       <div className="space-y-2">
                         <Label className="text-sm text-neutral-600">
-                          Monthly gross profit per customer
+                          {t('calcs.cac-payback.results.monthlyGrossProfit')}
                         </Label>
                         <div className="relative">
                           <Input
@@ -419,7 +421,7 @@ const CACPaybackCalculator = () => {
 
                     {/* Payback Period Output */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">CAC Payback Period</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.cac-payback.results.paybackPeriod')}</Label>
                       <div className="relative">
                         <Input
                           type="text"

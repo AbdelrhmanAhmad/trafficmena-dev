@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const AOVCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [totalRevenue, setTotalRevenue] = useState<string>('');
   const [numberOfOrders, setNumberOfOrders] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -287,7 +289,7 @@ const AOVCalculator = () => {
               <AccordionItem value="aov" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Average Order Value (AOV)
+                    {t('calcs.aov.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-6">
@@ -295,13 +297,13 @@ const AOVCalculator = () => {
                     {/* Total Revenue Input */}
                     <div className="space-y-2">
                       <Label htmlFor={totalRevenueId} className="text-sm text-neutral-600">
-                        Total revenue
+                        {t('calcs.aov.fields.totalRevenue')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={totalRevenueId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={totalRevenue}
                           onChange={(e) => setTotalRevenue(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -329,13 +331,13 @@ const AOVCalculator = () => {
                     {/* Number of Orders Input */}
                     <div className="space-y-2">
                       <Label htmlFor={numberOfOrdersId} className="text-sm text-neutral-600">
-                        Number of orders
+                        {t('calcs.aov.fields.numberOfOrders')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={numberOfOrdersId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={numberOfOrders}
                           onChange={(e) => setNumberOfOrders(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -345,12 +347,12 @@ const AOVCalculator = () => {
 
                     {/* AOV Output */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">AOV (Average Order Value)</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.aov.results.aov')}</Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={aov !== null ? aov.toFixed(2) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-16 h-11 lg:h-12 text-base bg-neutral-50 border border-neutral-100 font-semibold tabular-nums"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -373,12 +375,12 @@ const AOVCalculator = () => {
                         }`}
                       >
                         {aov < 50 &&
-                          'Low AOV. Consider bundles, upsells, or free shipping thresholds.'}
+                          t('calcs.aov.performance.low')}
                         {aov >= 50 &&
                           aov < 100 &&
-                          'Moderate AOV. Typical for apparel, beauty, or food industries.'}
-                        {aov >= 100 && aov < 200 && 'Strong AOV. Above global average of $145.'}
-                        {aov >= 200 && 'Excellent AOV. High-value products or effective upselling!'}
+                          t('calcs.aov.performance.moderate')}
+                        {aov >= 100 && aov < 200 && t('calcs.aov.performance.strong')}
+                        {aov >= 200 && t('calcs.aov.performance.excellent')}
                       </p>
                     )}
                   </div>

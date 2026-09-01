@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const LTVCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [aov, setAov] = useState<string>('');
   const [purchaseFrequency, setPurchaseFrequency] = useState<string>('');
   const [grossMargin, setGrossMargin] = useState<string>('');
@@ -56,7 +58,7 @@ const LTVCalculator = () => {
   const handleShare = () => {
     const text =
       ltv !== null
-        ? `My Ecommerce LTV: ${formatCurrency(ltv.toFixed(2), currency)} | AOV: ${formatCurrency(aov, currency)} | Purchases/Customer: ${purchaseFrequency} | Gross Margin: ${grossMargin}%${ltvCacRatio !== null ? ` | LTV:CAC Ratio: ${ltvCacRatio.toFixed(1)}:1` : ''}`
+        ? `My Ecommerce LTV: ${formatCurrency(ltv.toFixed(2), currency)} | AOV: ${formatCurrency(aov, currency)} | Purchases/Customer: ${purchaseFrequency} | Gross Margin: ${grossMargin}%${ltvCacRatio !== null ? ` | {t('calcs.ltv.results.ltvCacRatio')}: ${ltvCacRatio.toFixed(1)}:1` : ''}`
         : null;
     shareToClipboard(text);
   };
@@ -176,7 +178,7 @@ const LTVCalculator = () => {
 
           <section>
             <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              LTV:CAC Ratio Benchmarks
+              {t('calcs.ltv.results.ltvCacRatio')} Benchmarks
             </h2>
             <p className="text-neutral-600 leading-relaxed mb-4">
               The LTV:CAC ratio shows if your customer acquisition is profitable:
@@ -294,7 +296,7 @@ const LTVCalculator = () => {
               <AccordionItem value="ltv" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Ecommerce LTV (Customer Lifetime Value)
+                    {t('calcs.ltv.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-6">
@@ -302,13 +304,13 @@ const LTVCalculator = () => {
                     {/* AOV Input */}
                     <div className="space-y-2">
                       <Label htmlFor={aovId} className="text-sm text-neutral-600">
-                        Average order value (AOV)
+                        {t('calcs.ltv.fields.aov')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={aovId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={aov}
                           onChange={(e) => setAov(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -336,14 +338,14 @@ const LTVCalculator = () => {
                     {/* Purchase Frequency Input */}
                     <div className="space-y-2">
                       <Label htmlFor={purchaseFrequencyId} className="text-sm text-neutral-600">
-                        Purchases per customer (lifetime)
+                        {t('calcs.ltv.fields.purchaseFrequency')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={purchaseFrequencyId}
                           type="number"
                           step="0.1"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={purchaseFrequency}
                           onChange={(e) => setPurchaseFrequency(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -354,13 +356,13 @@ const LTVCalculator = () => {
                     {/* Gross Margin Input */}
                     <div className="space-y-2">
                       <Label htmlFor={grossMarginId} className="text-sm text-neutral-600">
-                        Gross margin (%)
+                        {t('calcs.ltv.fields.grossMargin')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={grossMarginId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={grossMargin}
                           onChange={(e) => setGrossMargin(e.target.value)}
                           className="pr-10 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -374,13 +376,13 @@ const LTVCalculator = () => {
                     {/* CAC Input (Optional) */}
                     <div className="space-y-2">
                       <Label htmlFor={cacId} className="text-sm text-neutral-600">
-                        Customer acquisition cost (optional, for ratio)
+                        {t('calcs.ltv.fields.cacOptional')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={cacId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={cac}
                           onChange={(e) => setCac(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -394,13 +396,13 @@ const LTVCalculator = () => {
                     {/* LTV Output */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-600">
-                        LTV (Customer Lifetime Value)
+                        {t('calcs.ltv.results.ltv')}
                       </Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={ltv !== null ? ltv.toFixed(2) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-16 h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -409,10 +411,10 @@ const LTVCalculator = () => {
                       </div>
                     </div>
 
-                    {/* LTV:CAC Ratio Output */}
+                    {/* {t('calcs.ltv.results.ltvCacRatio')} Output */}
                     {ltvCacRatio !== null && (
                       <div className="space-y-2">
-                        <Label className="text-sm text-neutral-600">LTV:CAC Ratio</Label>
+                        <Label className="text-sm text-neutral-600">{t('calcs.ltv.results.ltvCacRatio')}</Label>
                         <div className="relative">
                           <Input
                             readOnly

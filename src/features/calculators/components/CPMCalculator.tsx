@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CPMCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [adSpend, setAdSpend] = useState<string>('');
   const [impressions, setImpressions] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -245,7 +247,7 @@ const CPMCalculator = () => {
               <AccordionItem value="cpm" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Cost Per Mille (CPM)
+                    {t('calcs.cpm.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-6">
@@ -253,13 +255,13 @@ const CPMCalculator = () => {
                     {/* Ad Spend Input */}
                     <div className="space-y-2">
                       <Label htmlFor={adSpendId} className="text-sm text-neutral-600">
-                        Total ad spend
+                        {t('calcs.cpm.fields.adSpend')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={adSpendId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={adSpend}
                           onChange={(e) => setAdSpend(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -287,13 +289,13 @@ const CPMCalculator = () => {
                     {/* Impressions Input */}
                     <div className="space-y-2">
                       <Label htmlFor={impressionsId} className="text-sm text-neutral-600">
-                        Total impressions
+                        {t('calcs.cpm.fields.impressions')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={impressionsId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={impressions}
                           onChange={(e) => setImpressions(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -304,13 +306,13 @@ const CPMCalculator = () => {
                     {/* CPM Output */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-600">
-                        CPM (Cost Per 1,000 Impressions)
+                        {t('calcs.cpm.results.cpm')}
                       </Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={cpm !== null ? cpm.toFixed(2) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-16 h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -321,12 +323,12 @@ const CPMCalculator = () => {
 
                     {/* Cost Per Impression Output */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">Cost per single impression</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.cpm.results.costPerImpression')}</Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={costPerImpression !== null ? costPerImpression.toFixed(6) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-16 h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -348,10 +350,10 @@ const CPMCalculator = () => {
                                 : 'text-performance-excellent'
                         }`}
                       >
-                        {cpm > 15 && 'High CPM. Consider optimizing targeting or creative.'}
-                        {cpm > 10 && cpm <= 15 && 'Above average CPM. May be premium inventory.'}
-                        {cpm > 5 && cpm <= 10 && 'Average CPM range for most platforms.'}
-                        {cpm <= 5 && 'Excellent CPM. Very cost-efficient impressions!'}
+                        {cpm > 15 && t('calcs.cpm.performance.high')}
+                        {cpm > 10 && cpm <= 15 && t('calcs.cpm.performance.aboveAverage')}
+                        {cpm > 5 && cpm <= 10 && t('calcs.cpm.performance.average')}
+                        {cpm <= 5 && t('calcs.cpm.performance.excellent')}
                       </p>
                     )}
                   </div>

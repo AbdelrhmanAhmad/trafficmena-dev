@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const NCACCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [totalSpend, setTotalSpend] = useState<string>('');
   const [newCustomers, setNewCustomers] = useState<string>('');
   const [aov, setAov] = useState<string>('');
@@ -296,7 +298,7 @@ const NCACCalculator = () => {
               <AccordionItem value="ncac" className="border-none">
                 <AccordionTrigger className="px-5 lg:px-6 py-4 hover:no-underline">
                   <span className="text-base lg:text-lg font-semibold text-neutral-800">
-                    New Customer Acquisition Cost (nCAC)
+                    {t('calcs.ncac.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-5 lg:px-6 pb-5 lg:pb-6">
@@ -304,13 +306,13 @@ const NCACCalculator = () => {
                     {/* Total Spend Input */}
                     <div className="space-y-2">
                       <Label htmlFor={totalSpendId} className="text-sm text-neutral-600">
-                        Total ad spend
+                        {t('calcs.ncac.fields.adSpend')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={totalSpendId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={totalSpend}
                           onChange={(e) => setTotalSpend(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -338,13 +340,13 @@ const NCACCalculator = () => {
                     {/* New Customers Input */}
                     <div className="space-y-2">
                       <Label htmlFor={newCustomersId} className="text-sm text-neutral-600">
-                        Number of NEW customers only (first-time buyers)
+                        {t('calcs.ncac.fields.newCustomers')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={newCustomersId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={newCustomers}
                           onChange={(e) => setNewCustomers(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -355,13 +357,13 @@ const NCACCalculator = () => {
                     {/* AOV Input (Optional) */}
                     <div className="space-y-2">
                       <Label htmlFor={aovId} className="text-sm text-neutral-600">
-                        Average order value (optional)
+                        {t('calcs.ncac.fields.aovOptional')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={aovId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={aov}
                           onChange={(e) => setAov(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -375,13 +377,13 @@ const NCACCalculator = () => {
                     {/* nCAC Output */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-600">
-                        nCAC (New Customer Acquisition Cost)
+                        {t('calcs.ncac.results.ncac')}
                       </Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={ncac !== null ? ncac.toFixed(2) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-16 h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -394,7 +396,7 @@ const NCACCalculator = () => {
                     {profitPerCustomer !== null && (
                       <div className="space-y-2">
                         <Label className="text-sm text-neutral-600">
-                          First-purchase profit per customer
+                          {t('calcs.ncac.results.firstPurchaseProfit')}
                         </Label>
                         <div className="relative">
                           <Input
@@ -427,14 +429,14 @@ const NCACCalculator = () => {
                         }`}
                       >
                         {ncac > 500 &&
-                          'High nCAC. Ensure LTV justifies this cost or optimize targeting.'}
+                          t('calcs.ncac.performance.high')}
                         {ncac > 250 &&
                           ncac <= 500 &&
-                          'Above average nCAC. Typical for B2B, SaaS, or competitive niches.'}
+                          t('calcs.ncac.performance.aboveAverage')}
                         {ncac > 100 &&
                           ncac <= 250 &&
-                          'Reasonable nCAC. Compare against your AOV and LTV.'}
-                        {ncac <= 100 && 'Excellent nCAC. Efficient new customer acquisition!'}
+                          t('calcs.ncac.performance.reasonable')}
+                        {ncac <= 100 && t('calcs.ncac.performance.excellent')}
                       </p>
                     )}
 
@@ -447,8 +449,8 @@ const NCACCalculator = () => {
                         }`}
                       >
                         {profitPerCustomer < 0
-                          ? 'Negative first-purchase profit is acceptable if customer LTV exceeds nCAC over time.'
-                          : 'Profitable on first purchase. Strong acquisition efficiency!'}
+                          ? t('calcs.ncac.performance.negativeProfitOk')
+                          : t('calcs.ncac.performance.positiveProfit')}
                       </p>
                     )}
                   </div>

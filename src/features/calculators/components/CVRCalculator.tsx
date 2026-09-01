@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -13,6 +14,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CVRCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [conversions, setConversions] = useState<string>('');
   const [visitors, setVisitors] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -283,7 +285,7 @@ const CVRCalculator = () => {
               <AccordionItem value="cvr" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Conversion Rate (CVR)
+                    {t('calcs.cvr.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-0">
@@ -291,13 +293,13 @@ const CVRCalculator = () => {
                     {/* Conversions Input */}
                     <div className="space-y-2">
                       <Label htmlFor={conversionsId} className="text-sm text-neutral-600">
-                        Total conversions
+                        {t('calcs.cvr.fields.conversions')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={conversionsId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={conversions}
                           onChange={(e) => setConversions(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -308,13 +310,13 @@ const CVRCalculator = () => {
                     {/* Visitors Input */}
                     <div className="space-y-2">
                       <Label htmlFor={visitorsId} className="text-sm text-neutral-600">
-                        Total visitors
+                        {t('calcs.cvr.fields.visitors')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={visitorsId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={visitors}
                           onChange={(e) => setVisitors(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -324,12 +326,12 @@ const CVRCalculator = () => {
 
                     {/* CVR Output */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">CVR (Conversion Rate)</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.cvr.results.cvr')}</Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={cvr !== null ? cvr.toFixed(2) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-10 h-11 lg:h-12 text-base bg-neutral-50 border border-neutral-100 rounded-xl font-semibold"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -351,10 +353,10 @@ const CVRCalculator = () => {
                                 : 'text-performance-excellent'
                         }`}
                       >
-                        {cvr < 1 && 'Low CVR. Significant optimization needed on your funnel.'}
-                        {cvr >= 1 && cvr < 2 && 'Below average CVR. Room for improvement.'}
-                        {cvr >= 2 && cvr < 5 && 'Good CVR. Performing well for most industries.'}
-                        {cvr >= 5 && 'Excellent CVR. Top-performing conversion rate!'}
+                        {cvr < 1 && t('calcs.cvr.performance.low')}
+                        {cvr >= 1 && cvr < 2 && t('calcs.cvr.performance.belowAverage')}
+                        {cvr >= 2 && cvr < 5 && t('calcs.cvr.performance.good')}
+                        {cvr >= 5 && t('calcs.cvr.performance.excellent')}
                       </p>
                     )}
                   </div>

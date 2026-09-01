@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CACCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [totalSpend, setTotalSpend] = useState<string>('');
   const [customersAcquired, setCustomersAcquired] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -296,7 +298,7 @@ const CACCalculator = () => {
               <AccordionItem value="cac" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Customer Acquisition Cost (CAC)
+                    {t('calcs.cac.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-6">
@@ -304,13 +306,13 @@ const CACCalculator = () => {
                     {/* Total Spend Input */}
                     <div className="space-y-2">
                       <Label htmlFor={totalSpendId} className="text-sm text-neutral-600">
-                        Total sales & marketing spend
+                        {t('calcs.cac.fields.totalSpend')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={totalSpendId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={totalSpend}
                           onChange={(e) => setTotalSpend(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -338,13 +340,13 @@ const CACCalculator = () => {
                     {/* Customers Acquired Input */}
                     <div className="space-y-2">
                       <Label htmlFor={customersAcquiredId} className="text-sm text-neutral-600">
-                        Number of new customers acquired
+                        {t('calcs.cac.fields.customersAcquired')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={customersAcquiredId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={customersAcquired}
                           onChange={(e) => setCustomersAcquired(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -355,13 +357,13 @@ const CACCalculator = () => {
                     {/* CAC Output */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-600">
-                        CAC (Customer Acquisition Cost)
+                        {t('calcs.cac.results.cac')}
                       </Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={cac !== null ? cac.toFixed(2) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-16 h-11 lg:h-12 text-base bg-neutral-50 border border-neutral-100 font-semibold tabular-nums"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -383,14 +385,14 @@ const CACCalculator = () => {
                                 : 'text-performance-excellent'
                         }`}
                       >
-                        {cac > 1000 && 'High CAC. Ensure your LTV justifies this acquisition cost.'}
+                        {cac > 1000 && t('calcs.cac.performance.high')}
                         {cac > 500 &&
                           cac <= 1000 &&
-                          'Above average CAC. Typical for B2B and SaaS industries.'}
+                          t('calcs.cac.performance.aboveAverage')}
                         {cac > 100 &&
                           cac <= 500 &&
-                          'Reasonable CAC. Competitive for most industries.'}
-                        {cac <= 100 && 'Excellent CAC. Very efficient customer acquisition!'}
+                          t('calcs.cac.performance.reasonable')}
+                        {cac <= 100 && t('calcs.cac.performance.excellent')}
                       </p>
                     )}
                   </div>

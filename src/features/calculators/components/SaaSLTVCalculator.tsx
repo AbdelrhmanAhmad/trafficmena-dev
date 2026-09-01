@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const SaaSLTVCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [arpu, setArpu] = useState<string>('');
   const [grossMargin, setGrossMargin] = useState<string>('');
   const [monthlyChurnRate, setMonthlyChurnRate] = useState<string>('');
@@ -71,7 +73,7 @@ const SaaSLTVCalculator = () => {
       text += ` | Avg Customer Lifetime: ${customerLifetimeMonths.toFixed(1)} months`;
     }
     if (text && ltvCacRatio !== null) {
-      text += ` | LTV:CAC Ratio: ${ltvCacRatio.toFixed(1)}:1`;
+      text += ` | {t('calcs.saas-ltv.results.ltvCacRatio')}: ${ltvCacRatio.toFixed(1)}:1`;
     }
     shareToClipboard(text);
   };
@@ -99,7 +101,7 @@ const SaaSLTVCalculator = () => {
               What is SaaS LTV?: Subscription Lifetime Value
             </h2>
             <p className="text-neutral-600 leading-relaxed">
-              SaaS LTV (Customer Lifetime Value) measures{' '}
+              {t('calcs.saas-ltv.results.ltv')} measures{' '}
               <strong className="text-neutral-800">
                 the total gross profit a subscription customer generates over their entire
                 relationship with your business
@@ -231,7 +233,7 @@ const SaaSLTVCalculator = () => {
 
           <section>
             <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-              LTV:CAC Ratio Benchmarks
+              {t('calcs.saas-ltv.results.ltvCacRatio')} Benchmarks
             </h2>
             <p className="text-neutral-600 leading-relaxed mb-4">
               The LTV:CAC ratio measures customer acquisition profitability:
@@ -356,7 +358,7 @@ const SaaSLTVCalculator = () => {
               <AccordionItem value="ltv" className="border-none">
                 <AccordionTrigger className="px-6 py-4 hover:no-underline">
                   <span className="text-lg font-semibold text-neutral-800">
-                    SaaS LTV (Subscription Lifetime Value)
+                    {t('calcs.saas-ltv.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
@@ -364,13 +366,13 @@ const SaaSLTVCalculator = () => {
                     {/* ARPU Input */}
                     <div className="space-y-2">
                       <Label htmlFor={arpuId} className="text-sm text-neutral-500">
-                        Average revenue per user (ARPU) / month
+                        {t('calcs.saas-ltv.fields.arpu')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={arpuId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={arpu}
                           onChange={(e) => setArpu(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -398,7 +400,7 @@ const SaaSLTVCalculator = () => {
                     {/* Gross Margin Input */}
                     <div className="space-y-2">
                       <Label htmlFor={grossMarginId} className="text-sm text-neutral-500">
-                        Gross margin (%)
+                        {t('calcs.saas-ltv.fields.grossMargin')}
                       </Label>
                       <div className="relative">
                         <Input
@@ -421,7 +423,7 @@ const SaaSLTVCalculator = () => {
                     {/* Monthly Churn Rate Input */}
                     <div className="space-y-2">
                       <Label htmlFor={monthlyChurnRateId} className="text-sm text-neutral-500">
-                        Monthly churn rate (%)
+                        {t('calcs.saas-ltv.fields.churnRate')}
                       </Label>
                       <div className="relative">
                         <Input
@@ -442,13 +444,13 @@ const SaaSLTVCalculator = () => {
                     {/* CAC Input (Optional) */}
                     <div className="space-y-2">
                       <Label htmlFor={cacId} className="text-sm text-neutral-500">
-                        Customer acquisition cost (optional, for ratio)
+                        {t('calcs.saas-ltv.fields.cacOptional')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={cacId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={cac}
                           onChange={(e) => setCac(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -463,7 +465,7 @@ const SaaSLTVCalculator = () => {
                     {customerLifetimeMonths !== null && (
                       <div className="space-y-2">
                         <Label className="text-sm text-neutral-500">
-                          Average customer lifetime
+                          {t('calcs.saas-ltv.results.avgLifetime')}
                         </Label>
                         <div className="relative">
                           <Input
@@ -479,7 +481,7 @@ const SaaSLTVCalculator = () => {
                     {/* LTV Output */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-500">
-                        SaaS LTV (Customer Lifetime Value)
+                        {t('calcs.saas-ltv.results.ltv')}
                       </Label>
                       <div className="relative">
                         <Input
@@ -491,10 +493,10 @@ const SaaSLTVCalculator = () => {
                       </div>
                     </div>
 
-                    {/* LTV:CAC Ratio Output */}
+                    {/* {t('calcs.saas-ltv.results.ltvCacRatio')} Output */}
                     {ltvCacRatio !== null && (
                       <div className="space-y-2">
-                        <Label className="text-sm text-neutral-500">LTV:CAC Ratio</Label>
+                        <Label className="text-sm text-neutral-500">{t('calcs.saas-ltv.results.ltvCacRatio')}</Label>
                         <div className="relative">
                           <Input
                             type="text"

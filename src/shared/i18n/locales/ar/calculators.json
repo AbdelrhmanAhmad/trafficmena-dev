@@ -1,0 +1,490 @@
+{
+  "index": {
+    "title": "حاسبات التسويق",
+    "subtitle": "23 حاسبة أساسية لقياس وتحسين أداء التسويق"
+  },
+  "detail": {
+    "notFound": "الحاسبة غير موجودة",
+    "notFoundDescription": "الحاسبة التي تبحث عنها غير موجودة.",
+    "notAvailable": "الحاسبة غير متاحة",
+    "notAvailableDescription": "لم يتم تنفيذ هذه الحاسبة بعد.",
+    "backToAll": "جميع الحاسبات",
+    "loading": "جاري تحميل {{title}}..."
+  },
+  "common": {
+    "share": "مشاركة",
+    "clear": "مسح",
+    "calculate": "احسب",
+    "reset": "إعادة تعيين",
+    "currency": "العملة",
+    "feedback": "هل كانت هذه الحاسبة مفيدة؟",
+    "loading": "جاري التحميل…",
+    "notFound": "غير موجود",
+    "backToAll": "العودة إلى الحاسبات",
+    "invalidInput": "إدخال غير صالح",
+    "placeholderZero": "0",
+    "placeholderDash": "—",
+    "yes": "نعم",
+    "no": "لا",
+    "percent": "%",
+    "optional": "(اختياري)",
+    "feedbackThanksTitle": "شكراً على ملاحظاتك!",
+    "feedbackImproveTitle": "سنعمل على التحسين!",
+    "feedbackThanksDescription": "يسعدنا أن هذه الحاسبة ساعدتك.",
+    "feedbackImproveDescription": "ملاحظاتك تساعدنا على بناء أدوات أفضل."
+  },
+  "categories": {
+    "traffic": "حركة المرور والاكتساب",
+    "conversion": "التحويل",
+    "revenue": "الإيرادات والقيمة",
+    "retention": "الاحتفاظ والنمو",
+    "efficiency": "الكفاءة"
+  },
+  "calcs": {
+    "cpc": {
+      "title": "تكلفة النقرة",
+      "description": "احسب كفاءة التكلفة لكل نقرة",
+      "panelTitle": "تكلفة النقرة (CPC)",
+      "fields": {
+        "adSpend": "إجمالي الإنفاق الإعلاني",
+        "clicks": "إجمالي النقرات"
+      },
+      "results": {
+        "cpc": "CPC (Cost Per Click)",
+        "totalClicksReceived": "Total clicks received"
+      },
+      "performance": {
+        "high": "High CPC. Consider improving ad quality or adjusting targeting.",
+        "aboveAverage": "Above average CPC. May be a competitive industry.",
+        "average": "Average CPC range for most platforms.",
+        "excellent": "Excellent CPC. Very cost-efficient clicks!"
+      }
+    },
+    "cpm": {
+      "title": "تكلفة الألف ظهور",
+      "description": "التكلفة لكل 1000 ظهور",
+      "panelTitle": "تكلفة الألف ظهور (CPM)",
+      "fields": {
+        "adSpend": "إجمالي الإنفاق الإعلاني",
+        "impressions": "إجمالي مرات الظهور"
+      },
+      "results": {
+        "cpm": "CPM (Cost Per 1,000 Impressions)",
+        "costPerImpression": "Cost per single impression"
+      },
+      "performance": {
+        "high": "High CPM. Consider optimizing targeting or creative.",
+        "aboveAverage": "Above average CPM. May be premium inventory.",
+        "average": "Average CPM range for most platforms.",
+        "excellent": "Excellent CPM. Very cost-efficient impressions!"
+      }
+    },
+    "cpl": {
+      "title": "تكلفة العميل المحتمل",
+      "description": "احسب تكلفة اكتساب العميل المحتمل",
+      "panelTitle": "حاسبة CPL",
+      "fields": {
+        "totalSpend": "إجمالي إنفاق التسويق/الإعلان",
+        "leadsGenerated": "العملاء المحتملون المُولَّدون"
+      },
+      "placeholders": {
+        "totalSpend": "Enter total spend",
+        "leadsGenerated": "Enter number of leads"
+      },
+      "results": {
+        "cpl": "Cost Per Lead (CPL)"
+      },
+      "performance": {
+        "excellent": "🚀 Excellent CPL! Well below industry average.",
+        "good": "✅ Good CPL. Competitive for most industries.",
+        "aboveAverage": "📊 Above average CPL. Typical for B2B/SaaS sectors.",
+        "high": "⚠️ High CPL. Ensure lead quality justifies the cost."
+      }
+    },
+    "ctr": {
+      "title": "معدل النقر",
+      "description": "قياس تفاعل النقرات",
+      "panelTitle": "معدل النقر (CTR)",
+      "fields": {
+        "clicks": "إجمالي النقرات",
+        "impressions": "إجمالي مرات الظهور"
+      },
+      "results": {
+        "ctr": "CTR (Click-Through Rate)"
+      },
+      "performance": {
+        "low": "Low CTR. Consider improving ad copy, creative, or targeting.",
+        "belowAverage": "Below average CTR. Room for optimization.",
+        "good": "Good CTR. Your ads are performing well.",
+        "excellent": "Excellent CTR. Highly engaging ads!"
+      }
+    },
+    "cac": {
+      "title": "تكلفة اكتساب العميل",
+      "description": "إجمالي التكلفة لاكتساب عميل",
+      "panelTitle": "تكلفة اكتساب العميل (CAC)",
+      "fields": {
+        "totalSpend": "إجمالي إنفاق المبيعات والتسويق",
+        "customersAcquired": "عدد العملاء الجدد المكتسبين"
+      },
+      "results": {
+        "cac": "CAC (Customer Acquisition Cost)"
+      },
+      "performance": {
+        "high": "High CAC. Ensure your LTV justifies this acquisition cost.",
+        "aboveAverage": "Above average CAC. Typical for B2B and SaaS industries.",
+        "reasonable": "Reasonable CAC. Competitive for most industries.",
+        "excellent": "Excellent CAC. Very efficient customer acquisition!"
+      }
+    },
+    "ncac": {
+      "title": "تكلفة اكتساب العميل الجديد",
+      "description": "تكلفة اكتساب العميل الجديد",
+      "panelTitle": "تكلفة اكتساب العميل الجديد (nCAC)",
+      "fields": {
+        "adSpend": "إجمالي الإنفاق الإعلاني",
+        "newCustomers": "عدد العملاء الجدد فقط (المشترون لأول مرة)",
+        "aovOptional": "متوسط قيمة الطلب (اختياري)"
+      },
+      "results": {
+        "ncac": "nCAC (New Customer Acquisition Cost)",
+        "firstPurchaseProfit": "First-purchase profit per customer"
+      },
+      "performance": {
+        "high": "High nCAC. Ensure LTV justifies this cost or optimize targeting.",
+        "aboveAverage": "Above average nCAC. Typical for B2B, SaaS, or competitive niches.",
+        "reasonable": "Reasonable nCAC. Compare against your AOV and LTV.",
+        "excellent": "Excellent nCAC. Efficient new customer acquisition!",
+        "negativeProfitOk": "Negative first-purchase profit is acceptable if customer LTV exceeds nCAC over time.",
+        "positiveProfit": "Profitable on first purchase. Strong acquisition efficiency!"
+      }
+    },
+    "cac-payback": {
+      "title": "فترة استرداد CAC",
+      "description": "الوقت اللازم لاسترداد تكلفة الاكتساب",
+      "panelTitle": "CAC Payback Period Calculator",
+      "fields": {
+        "cac": "تكلفة اكتساب العميل (CAC)",
+        "monthlyRevenue": "الإيراد الشهري لكل عميل (ARPU)",
+        "grossMargin": "هامش الربح الإجمالي (%)"
+      },
+      "results": {
+        "monthlyGrossProfit": "Monthly gross profit per customer",
+        "paybackPeriod": "CAC Payback Period"
+      }
+    },
+    "cvr": {
+      "title": "معدل التحويل",
+      "description": "تتبع تحويل الزائر إلى عميل",
+      "panelTitle": "معدل التحويل (CVR)",
+      "fields": {
+        "conversions": "إجمالي التحويلات",
+        "visitors": "إجمالي الزوار"
+      },
+      "results": {
+        "cvr": "CVR (Conversion Rate)"
+      },
+      "performance": {
+        "low": "Low CVR. Significant optimization needed on your funnel.",
+        "belowAverage": "Below average CVR. Room for improvement.",
+        "good": "Good CVR. Performing well for most industries.",
+        "excellent": "Excellent CVR. Top-performing conversion rate!"
+      }
+    },
+    "cart-abandonment": {
+      "title": "معدل التخلي عن السلة",
+      "description": "معدل ترك سلة التسوق",
+      "panelTitle": "Cart Abandonment Rate Calculator",
+      "fields": {
+        "cartsCreated": "سلات التسوق المُنشأة",
+        "cartsCompleted": "المشتريات المكتملة"
+      },
+      "placeholders": {
+        "cartsCreated": "Enter number of carts created",
+        "cartsCompleted": "Enter number of completed purchases"
+      },
+      "results": {
+        "rate": "Cart Abandonment Rate"
+      }
+    },
+    "checkout-abandonment": {
+      "title": "التخلي عن الدفع",
+      "description": "معدل ترك عملية الدفع",
+      "panelTitle": "Checkout Abandonment Rate Calculator",
+      "fields": {
+        "checkoutsStarted": "عمليات الدفع المبدوءة",
+        "checkoutsCompleted": "عمليات الدفع المكتملة"
+      },
+      "placeholders": {
+        "checkoutsStarted": "Enter number of checkouts initiated",
+        "checkoutsCompleted": "Enter number of completed purchases"
+      },
+      "results": {
+        "rate": "Checkout Abandonment Rate"
+      }
+    },
+    "lead-to-customer": {
+      "title": "معدل تحويل العميل المحتمل",
+      "description": "كفاءة تحويل العميل المحتمل",
+      "panelTitle": "Lead-to-Customer Rate Calculator",
+      "fields": {
+        "totalLeads": "إجمالي العملاء المحتملين",
+        "customersAcquired": "العملاء المكتسبون"
+      },
+      "results": {
+        "rate": "Lead-to-Customer Rate"
+      }
+    },
+    "repeat-purchase": {
+      "title": "معدل الشراء المتكرر",
+      "description": "مقياس ولاء العملاء",
+      "panelTitle": "Repeat Purchase Rate Calculator",
+      "fields": {
+        "repeatCustomers": "العملاء الذين اشتروا أكثر من مرة",
+        "totalCustomers": "إجمالي العملاء"
+      },
+      "placeholders": {
+        "repeatCustomers": "Enter number of repeat customers",
+        "totalCustomers": "Enter total number of customers"
+      },
+      "results": {
+        "rate": "Repeat Purchase Rate"
+      }
+    },
+    "aov": {
+      "title": "متوسط قيمة الطلب",
+      "description": "متوسط قيمة المعاملة",
+      "panelTitle": "متوسط قيمة الطلب (AOV)",
+      "fields": {
+        "totalRevenue": "إجمالي الإيرادات",
+        "numberOfOrders": "عدد الطلبات"
+      },
+      "results": {
+        "aov": "AOV (Average Order Value)"
+      },
+      "performance": {
+        "low": "Low AOV. Consider bundles, upsells, or free shipping thresholds.",
+        "moderate": "Moderate AOV. Typical for apparel, beauty, or food industries.",
+        "strong": "Strong AOV. Above global average of $145.",
+        "excellent": "Excellent AOV. High-value products or effective upselling!"
+      }
+    },
+    "ltv": {
+      "title": "القيمة الدائمة للعميل",
+      "description": "إجمالي قيمة العميل عبر الزمن",
+      "panelTitle": "Ecommerce LTV (Customer Lifetime Value)",
+      "fields": {
+        "aov": "متوسط قيمة الطلب (AOV)",
+        "purchaseFrequency": "عدد المشتريات لكل عميل (مدى الحياة)",
+        "grossMargin": "هامش الربح الإجمالي (%)",
+        "cacOptional": "تكلفة اكتساب العميل (اختياري، للنسبة)"
+      },
+      "results": {
+        "ltv": "LTV (Customer Lifetime Value)",
+        "ltvCacRatio": "LTV:CAC Ratio"
+      }
+    },
+    "saas-ltv": {
+      "title": "حاسبة LTV للبرمجيات كخدمة",
+      "description": "القيمة الدائمة للاشتراك",
+      "panelTitle": "SaaS LTV (Subscription Lifetime Value)",
+      "fields": {
+        "arpu": "متوسط الإيراد لكل مستخدم (ARPU) / شهر",
+        "grossMargin": "هامش الربح الإجمالي (%)",
+        "churnRate": "معدل التسرب الشهري (%)",
+        "cacOptional": "تكلفة اكتساب العميل (اختياري، للنسبة)"
+      },
+      "results": {
+        "avgLifetime": "Average customer lifetime",
+        "ltv": "SaaS LTV (Customer Lifetime Value)",
+        "ltvCacRatio": "LTV:CAC Ratio"
+      }
+    },
+    "ltv-cac": {
+      "title": "نسبة LTV:CAC",
+      "description": "قيمة العميل مقابل تكلفة الاكتساب",
+      "panelTitle": "LTV:CAC Ratio Calculator",
+      "fields": {
+        "ltv": "القيمة الدائمة للعميل (LTV)",
+        "cac": "تكلفة اكتساب العميل (CAC)"
+      },
+      "results": {
+        "ratio": "LTV:CAC Ratio"
+      }
+    },
+    "roas": {
+      "title": "العائد على الإنفاق الإعلاني",
+      "description": "كفاءة إيرادات الإعلان",
+      "panelTitle": "العائد على الإنفاق الإعلاني (ROAS)",
+      "panelTitleRoi": "العائد على الاستثمار (ROI)",
+      "fields": {
+        "adSpend": "الإنفاق الإعلاني",
+        "knowsRevenue": "هل تعرف إيراداتك؟",
+        "adRevenue": "إيرادات الإعلان",
+        "targetRoas": "ROAS المستهدف (أدخل 100% لنقطة التعادل)",
+        "profitMargin": "هامش الربح"
+      },
+      "results": {
+        "requiredRevenue": "Required ad revenue",
+        "roas": "ROAS",
+        "roi": "ROI"
+      },
+      "hints": {
+        "requiredRevenue": "You need {{amount}} in revenue to achieve {{target}}% ROAS",
+        "roiBasis": "Based on {{margin}}% profit margin and {{roas}}% ROAS",
+        "roasVsRoi": "ROAS vs ROI: ROAS measures revenue per ad dollar, while ROI accounts for profit margins and other costs."
+      },
+      "performance": {
+        "losing": "You're losing money on this campaign.",
+        "breakeven": "Break-even to moderate return.",
+        "good": "Good performance!",
+        "excellent": "Excellent performance!"
+      }
+    },
+    "breakeven-roas": {
+      "title": "نقطة التعادل ROAS",
+      "description": "الحد الأدنى للربحية",
+      "panelTitle": "Calculate Break-even ROAS",
+      "fields": {
+        "grossMargin": "هامش الربح الإجمالي (%)",
+        "currentRoasOptional": "ROAS الحالي (اختياري)"
+      },
+      "results": {
+        "breakevenRoas": "Break-even ROAS",
+        "profitabilityStatus": "Profitability Status"
+      },
+      "hints": {
+        "currentRoas": "Enter your current ROAS to see if you're profitable"
+      },
+      "status": {
+        "profitable": "Profitable!",
+        "belowBreakeven": "Below Break-even"
+      }
+    },
+    "grr": {
+      "title": "الاحتفاظ الإجمالي بالإيرادات",
+      "description": "الإيرادات المحتفظ بها من العملاء الحاليين",
+      "panelTitle": "Gross Revenue Retention (GRR) Calculator",
+      "fields": {
+        "startingMrr": "MRR الابتدائي (من العملاء الحاليين)",
+        "contractionMrr": "MRR الانكماش (تخفيضات، استخدام أقل)",
+        "churnMrr": "MRR التسرب (الإلغاءات)"
+      },
+      "results": {
+        "totalLost": "Total MRR lost (contraction + churn)",
+        "retainedMrr": "Retained MRR",
+        "grr": "Gross Revenue Retention (GRR)"
+      }
+    },
+    "nrr": {
+      "title": "صافي الاحتفاظ بالإيرادات",
+      "description": "نمو الإيرادات من العملاء الحاليين",
+      "panelTitle": "Net Revenue Retention (NRR) Calculator",
+      "fields": {
+        "startingMrr": "MRR الابتدائي (من العملاء الحاليين)",
+        "expansionMrr": "MRR التوسع (ترقيات، مبيعات متقاطعة)",
+        "contractionMrr": "MRR الانكماش (تخفيضات، استخدام أقل)",
+        "churnMrr": "MRR التسرب (الإلغاءات)"
+      },
+      "results": {
+        "endingMrr": "Ending MRR (from existing customers)",
+        "nrr": "Net Revenue Retention (NRR)",
+        "grr": "Gross Revenue Retention (GRR)"
+      }
+    },
+    "mom-growth": {
+      "title": "النمو الشهري",
+      "description": "تتبع معدل النمو الشهري",
+      "panelTitle": "MoM Growth Calculator",
+      "panelTitleCmgr": "Compound Monthly Growth Rate (CMGR)",
+      "fields": {
+        "previousValue": "قيمة الشهر السابق",
+        "currentValue": "قيمة الشهر الحالي",
+        "startValue": "القيمة الابتدائية (الشهر 1)",
+        "endValue": "القيمة النهائية (الشهر الأخير)",
+        "numberOfMonths": "عدد الأشهر بينهما"
+      },
+      "placeholders": {
+        "previousValue": "e.g., 100000",
+        "currentValue": "e.g., 120000",
+        "startValue": "e.g., 10000",
+        "endValue": "e.g., 20000",
+        "numberOfMonths": "e.g., 11"
+      },
+      "results": {
+        "momGrowth": "MoM Growth Rate",
+        "cmgr": "Compound Monthly Growth Rate"
+      },
+      "hints": {
+        "monthsBetween": "Note: Count months between start and end (Jan to Dec = 11 months)"
+      },
+      "performance": {
+        "momNegative": "Negative growth indicates decline. Analyze root causes immediately.",
+        "momSlow": "Slow growth. Consider strategies to accelerate momentum.",
+        "momHealthy": "Healthy growth rate for established businesses.",
+        "momExcellent": "Excellent growth! Typical for high-performing startups.",
+        "cmgrNegative": "Negative CMGR indicates overall decline over the period.",
+        "cmgrLow": "Low compound growth. Typical for mature, stable businesses.",
+        "cmgrSolid": "Solid compound growth rate for growing businesses.",
+        "cmgrExceptional": "Exceptional compound growth! Strong momentum."
+      }
+    },
+    "mer": {
+      "title": "نسبة كفاءة التسويق",
+      "description": "العائد الإجمالي على التسويق",
+      "panelTitle": "Marketing Efficiency Ratio (MER)",
+      "fields": {
+        "totalRevenue": "إجمالي الإيرادات",
+        "totalMarketingSpend": "إجمالي إنفاق التسويق"
+      },
+      "results": {
+        "merRatio": "MER (Ratio)",
+        "merPercent": "MER (Percentage)",
+        "spendPercent": "Marketing spend as % of revenue"
+      }
+    },
+    "seo-roi": {
+      "title": "حاسبة عائد SEO",
+      "description": "العائد على الاستثمار في البحث العضوي",
+      "panelTitle": "الأرقام الحالية",
+      "panelTitleGrowth": "إمكانات النمو",
+      "chartTitle": "توقعات حركة المرور لـ 12 شهراً",
+      "tableTitle": "توقعات النمو لـ 12 شهراً",
+      "fields": {
+        "monthlyTraffic": "حركة المرور الشهرية",
+        "conversionRate": "معدل التحويل (%)",
+        "averageOrderValue": "متوسط قيمة الطلب",
+        "customerLifetimeValue": "القيمة الدائمة للعميل",
+        "monthlyGrowthRate": "معدل النمو الشهري (%)",
+        "seoInvestment": "استثمار SEO الشهري (اختياري)"
+      },
+      "placeholders": {
+        "monthlyTraffic": "e.g., 20000",
+        "conversionRate": "e.g., 3",
+        "averageOrderValue": "e.g., 50",
+        "customerLifetimeValue": "e.g., 300",
+        "monthlyGrowthRate": "e.g., 10",
+        "seoInvestment": "e.g., 5000"
+      },
+      "hints": {
+        "seoGrowth": "Typical SEO growth: 5-15% MoM for well-optimized sites",
+        "roiProjection": "Enter to calculate ROI projection"
+      },
+      "table": {
+        "month": "Month",
+        "traffic": "Traffic",
+        "newSales": "New Sales",
+        "newRevenue": "New Revenue"
+      },
+      "totals": {
+        "revenue12Month": "Total 12-Month Revenue:",
+        "ltvRevenue": "Total LTV Revenue:",
+        "projectedRoi": "Projected ROI:"
+      },
+      "tooltip": {
+        "traffic": "Traffic",
+        "monthLabel": "Month {{month}}"
+      }
+    }
+  }
+}

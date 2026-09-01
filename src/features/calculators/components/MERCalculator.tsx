@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const MERCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [totalRevenue, setTotalRevenue] = useState<string>('');
   const [totalMarketingSpend, setTotalMarketingSpend] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -84,7 +86,7 @@ const MERCalculator = () => {
               What is MER?: Marketing Efficiency Ratio
             </h2>
             <p className="text-neutral-600 leading-relaxed">
-              Marketing Efficiency Ratio (MER), also known as{' '}
+              {t('calcs.mer.panelTitle')}, also known as{' '}
               <strong className="text-neutral-800">Blended ROAS</strong> or{' '}
               <strong className="text-neutral-800">Ecosystem ROAS</strong>, measures{' '}
               <strong className="text-neutral-800">
@@ -248,7 +250,7 @@ const MERCalculator = () => {
               <AccordionItem value="mer" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Marketing Efficiency Ratio (MER)
+                    {t('calcs.mer.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-6">
@@ -256,13 +258,13 @@ const MERCalculator = () => {
                     {/* Total Revenue Input */}
                     <div className="space-y-2">
                       <Label htmlFor={totalRevenueId} className="text-sm text-neutral-600">
-                        Total revenue
+                        {t('calcs.mer.fields.totalRevenue')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={totalRevenueId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={totalRevenue}
                           onChange={(e) => setTotalRevenue(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -290,13 +292,13 @@ const MERCalculator = () => {
                     {/* Total Marketing Spend Input */}
                     <div className="space-y-2">
                       <Label htmlFor={totalMarketingSpendId} className="text-sm text-neutral-600">
-                        Total marketing spend
+                        {t('calcs.mer.fields.totalMarketingSpend')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={totalMarketingSpendId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={totalMarketingSpend}
                           onChange={(e) => setTotalMarketingSpend(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -309,12 +311,12 @@ const MERCalculator = () => {
 
                     {/* MER Output - Ratio */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">MER (Ratio)</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.mer.results.merRatio')}</Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={mer !== null ? `${mer.toFixed(2)}x` : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                       </div>
@@ -322,12 +324,12 @@ const MERCalculator = () => {
 
                     {/* MER Output - Percentage */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">MER (Percentage)</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.mer.results.merPercent')}</Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={merPercentage !== null ? merPercentage.toFixed(0) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-12 h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -339,13 +341,13 @@ const MERCalculator = () => {
                     {/* Spend as % of Revenue */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-600">
-                        Marketing spend as % of revenue
+                        {t('calcs.mer.results.spendPercent')}
                       </Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={spendPercent !== null ? spendPercent.toFixed(1) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-12 h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">

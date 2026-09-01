@@ -44,11 +44,16 @@ describe('contact and refund surface wiring', () => {
       new URL('../../src/pages/RefundPolicy.tsx', import.meta.url),
       'utf8',
     );
+    const legalEn = await readFile(
+      new URL('../../src/shared/i18n/locales/en/legal.json', import.meta.url),
+      'utf8',
+    );
 
-    assert.match(policySource, /7-day guarantee/i);
-    assert.match(policySource, /full\s+refund, no questions asked/i);
-    assert.match(policySource, /take precedence over this general policy/i);
-    assert.match(policySource, /does not state separate refund terms, this policy applies/i);
+    assert.match(policySource, /useTranslation\('legal'\)/);
+    assert.match(legalEn, /7-day guarantee/i);
+    assert.match(legalEn, /full refund, no questions asked/i);
+    assert.match(legalEn, /take precedence over this general policy/i);
+    assert.match(legalEn, /does not state separate refund terms, this policy applies/i);
   });
 });
 

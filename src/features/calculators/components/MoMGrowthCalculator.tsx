@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const MoMGrowthCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [previousValue, setPreviousValue] = useState('');
   const [currentValue, setCurrentValue] = useState('');
   const [startValue, setStartValue] = useState('');
@@ -68,8 +70,8 @@ const MoMGrowthCalculator = () => {
 
     let results = 'Month-Over-Month Growth Calculator Results\n';
     if (momGrowth !== null) {
-      results += `Previous Month Value: ${formatCurrency(previousValue, currency)}\n`;
-      results += `Current Month Value: ${formatCurrency(currentValue, currency)}\n`;
+      results += `{t('calcs.mom-growth.fields.previousValue')}: ${formatCurrency(previousValue, currency)}\n`;
+      results += `{t('calcs.mom-growth.fields.currentValue')}: ${formatCurrency(currentValue, currency)}\n`;
       results += `MoM Growth: ${momGrowth.toFixed(2)}%\n\n`;
     }
     if (cmgr !== null) {
@@ -165,7 +167,7 @@ const MoMGrowthCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold mb-3 text-neutral-800">
-            Compound Monthly Growth Rate (CMGR)
+            {t('calcs.mom-growth.panelTitleCmgr')}
           </h2>
           <p className="text-neutral-600 mb-3">
             CMGR measures the average month-over-month growth over a longer period, accounting for
@@ -280,19 +282,19 @@ const MoMGrowthCalculator = () => {
             <AccordionItem value="mom-calculator" className="border-none">
               <AccordionTrigger className="px-5 lg:px-6 py-4 hover:no-underline">
                 <span className="text-base lg:text-lg font-semibold text-neutral-800">
-                  MoM Growth Calculator
+                  {t('calcs.mom-growth.panelTitle')}
                 </span>
               </AccordionTrigger>
               <AccordionContent className="px-5 lg:px-6 pb-5 lg:pb-6">
                 <div className="space-y-4">
-                  {/* Previous Month Value */}
+                  {/* {t('calcs.mom-growth.fields.previousValue')} */}
                   <div className="space-y-2">
-                    <Label htmlFor={previousValueId}>Previous Month Value</Label>
+                    <Label htmlFor={previousValueId}>{t('calcs.mom-growth.fields.previousValue')}</Label>
                     <div className="relative">
                       <Input
                         id={previousValueId}
                         type="number"
-                        placeholder="e.g., 100000"
+                        placeholder={t('calcs.mom-growth.placeholders.previousValue')}
                         value={previousValue}
                         onChange={(e) => setPreviousValue(e.target.value)}
                         className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -317,14 +319,14 @@ const MoMGrowthCalculator = () => {
                     </div>
                   </div>
 
-                  {/* Current Month Value */}
+                  {/* {t('calcs.mom-growth.fields.currentValue')} */}
                   <div className="space-y-2">
-                    <Label htmlFor={currentValueId}>Current Month Value</Label>
+                    <Label htmlFor={currentValueId}>{t('calcs.mom-growth.fields.currentValue')}</Label>
                     <div className="relative">
                       <Input
                         id={currentValueId}
                         type="number"
-                        placeholder="e.g., 120000"
+                        placeholder={t('calcs.mom-growth.placeholders.currentValue')}
                         value={currentValue}
                         onChange={(e) => setCurrentValue(e.target.value)}
                         className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -351,7 +353,7 @@ const MoMGrowthCalculator = () => {
 
                   {/* MoM Growth Result */}
                   <div className="space-y-2">
-                    <Label>MoM Growth Rate</Label>
+                    <Label>{t('calcs.mom-growth.results.momGrowth')}</Label>
                     <Input
                       readOnly
                       value={momGrowth !== null ? `${momGrowth.toFixed(2)}%` : '—'}
@@ -364,22 +366,22 @@ const MoMGrowthCalculator = () => {
                     <div className="p-3 rounded-lg bg-muted/50">
                       {momGrowth < 0 && (
                         <p className="text-performance-loss text-sm">
-                          Negative growth indicates decline. Analyze root causes immediately.
+                          {t('calcs.mom-growth.performance.momNegative')}
                         </p>
                       )}
                       {momGrowth >= 0 && momGrowth < 5 && (
                         <p className="text-performance-breakeven text-sm">
-                          Slow growth. Consider strategies to accelerate momentum.
+                          {t('calcs.mom-growth.performance.momSlow')}
                         </p>
                       )}
                       {momGrowth >= 5 && momGrowth < 15 && (
                         <p className="text-performance-good text-sm">
-                          Healthy growth rate for established businesses.
+                          {t('calcs.mom-growth.performance.momHealthy')}
                         </p>
                       )}
                       {momGrowth >= 15 && (
                         <p className="text-performance-excellent text-sm">
-                          Excellent growth! Typical for high-performing startups.
+                          {t('calcs.mom-growth.performance.momExcellent')}
                         </p>
                       )}
                     </div>
@@ -396,19 +398,19 @@ const MoMGrowthCalculator = () => {
             <AccordionItem value="cmgr-calculator" className="border-none">
               <AccordionTrigger className="px-5 lg:px-6 py-4 hover:no-underline">
                 <span className="text-base lg:text-lg font-semibold text-neutral-800">
-                  Compound Monthly Growth Rate (CMGR)
+                  {t('calcs.mom-growth.panelTitleCmgr')}
                 </span>
               </AccordionTrigger>
               <AccordionContent className="px-5 lg:px-6 pb-5 lg:pb-6">
                 <div className="space-y-4">
                   {/* Start Value */}
                   <div className="space-y-2">
-                    <Label htmlFor={startValueId}>Start Value (Month 1)</Label>
+                    <Label htmlFor={startValueId}>{t('calcs.mom-growth.fields.startValue')}</Label>
                     <div className="relative">
                       <Input
                         id={startValueId}
                         type="number"
-                        placeholder="e.g., 10000"
+                        placeholder={t('calcs.mom-growth.placeholders.startValue')}
                         value={startValue}
                         onChange={(e) => setStartValue(e.target.value)}
                         className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -435,12 +437,12 @@ const MoMGrowthCalculator = () => {
 
                   {/* End Value */}
                   <div className="space-y-2">
-                    <Label htmlFor={endValueId}>End Value (Final Month)</Label>
+                    <Label htmlFor={endValueId}>{t('calcs.mom-growth.fields.endValue')}</Label>
                     <div className="relative">
                       <Input
                         id={endValueId}
                         type="number"
-                        placeholder="e.g., 20000"
+                        placeholder={t('calcs.mom-growth.placeholders.endValue')}
                         value={endValue}
                         onChange={(e) => setEndValue(e.target.value)}
                         className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -467,23 +469,23 @@ const MoMGrowthCalculator = () => {
 
                   {/* Number of Months */}
                   <div className="space-y-2">
-                    <Label htmlFor={numberOfMonthsId}>Number of Months Between</Label>
+                    <Label htmlFor={numberOfMonthsId}>{t('calcs.mom-growth.fields.numberOfMonths')}</Label>
                     <Input
                       id={numberOfMonthsId}
                       type="number"
-                      placeholder="e.g., 11"
+                      placeholder={t('calcs.mom-growth.placeholders.numberOfMonths')}
                       value={numberOfMonths}
                       onChange={(e) => setNumberOfMonths(e.target.value)}
                       className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
                     />
                     <p className="text-xs text-neutral-500">
-                      Note: Count months between start and end (Jan to Dec = 11 months)
+                      {t('calcs.mom-growth.hints.monthsBetween')}
                     </p>
                   </div>
 
                   {/* CMGR Result */}
                   <div className="space-y-2">
-                    <Label>Compound Monthly Growth Rate</Label>
+                    <Label>{t('calcs.mom-growth.results.cmgr')}</Label>
                     <Input
                       readOnly
                       value={cmgr !== null ? `${cmgr.toFixed(2)}%` : '—'}
@@ -496,22 +498,22 @@ const MoMGrowthCalculator = () => {
                     <div className="p-3 rounded-lg bg-muted/50">
                       {cmgr < 0 && (
                         <p className="text-performance-loss text-sm">
-                          Negative CMGR indicates overall decline over the period.
+                          {t('calcs.mom-growth.performance.cmgrNegative')}
                         </p>
                       )}
                       {cmgr >= 0 && cmgr < 3 && (
                         <p className="text-performance-breakeven text-sm">
-                          Low compound growth. Typical for mature, stable businesses.
+                          {t('calcs.mom-growth.performance.cmgrLow')}
                         </p>
                       )}
                       {cmgr >= 3 && cmgr < 10 && (
                         <p className="text-performance-good text-sm">
-                          Solid compound growth rate for growing businesses.
+                          {t('calcs.mom-growth.performance.cmgrSolid')}
                         </p>
                       )}
                       {cmgr >= 10 && (
                         <p className="text-performance-excellent text-sm">
-                          Exceptional compound growth! Strong momentum.
+                          {t('calcs.mom-growth.performance.cmgrExceptional')}
                         </p>
                       )}
                     </div>

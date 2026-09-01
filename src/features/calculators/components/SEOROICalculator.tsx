@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   Accordion,
@@ -22,6 +23,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const SEOROICalculator = () => {
+  const { t } = useTranslation('calculators');
   const [monthlyTraffic, setMonthlyTraffic] = useState('20000');
   const [conversionRate, setConversionRate] = useState('3');
   const [averageOrderValue, setAverageOrderValue] = useState('50');
@@ -272,17 +274,17 @@ const SEOROICalculator = () => {
           <Accordion type="single" collapsible defaultValue="current-numbers">
             <AccordionItem value="current-numbers" className="border-none">
               <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <span className="text-lg font-semibold text-neutral-800">Current Numbers</span>
+                <span className="text-lg font-semibold text-neutral-800">{t('calcs.seo-roi.panelTitle')}</span>
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6">
                 <div className="space-y-4">
                   {/* Monthly Traffic */}
                   <div className="space-y-2">
-                    <Label htmlFor={monthlyTrafficId}>Monthly Traffic</Label>
+                    <Label htmlFor={monthlyTrafficId}>{t('calcs.seo-roi.fields.monthlyTraffic')}</Label>
                     <Input
                       id={monthlyTrafficId}
                       type="number"
-                      placeholder="e.g., 20000"
+                      placeholder={t('calcs.seo-roi.placeholders.monthlyTraffic')}
                       value={monthlyTraffic}
                       onChange={(e) => setMonthlyTraffic(e.target.value)}
                       className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -291,11 +293,11 @@ const SEOROICalculator = () => {
 
                   {/* Conversion Rate */}
                   <div className="space-y-2">
-                    <Label htmlFor={conversionRateId}>Conversion Rate (%)</Label>
+                    <Label htmlFor={conversionRateId}>{t('calcs.seo-roi.fields.conversionRate')}</Label>
                     <Input
                       id={conversionRateId}
                       type="number"
-                      placeholder="e.g., 3"
+                      placeholder={t('calcs.seo-roi.placeholders.conversionRate')}
                       value={conversionRate}
                       onChange={(e) => setConversionRate(e.target.value)}
                       className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -304,12 +306,12 @@ const SEOROICalculator = () => {
 
                   {/* Average Order Value */}
                   <div className="space-y-2">
-                    <Label htmlFor={averageOrderValueId}>Average Order Value</Label>
+                    <Label htmlFor={averageOrderValueId}>{t('calcs.seo-roi.fields.averageOrderValue')}</Label>
                     <div className="relative">
                       <Input
                         id={averageOrderValueId}
                         type="number"
-                        placeholder="e.g., 50"
+                        placeholder={t('calcs.seo-roi.placeholders.averageOrderValue')}
                         value={averageOrderValue}
                         onChange={(e) => setAverageOrderValue(e.target.value)}
                         className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -336,12 +338,12 @@ const SEOROICalculator = () => {
 
                   {/* Customer Lifetime Value */}
                   <div className="space-y-2">
-                    <Label htmlFor={customerLifetimeValueId}>Customer Lifetime Value</Label>
+                    <Label htmlFor={customerLifetimeValueId}>{t('calcs.seo-roi.fields.customerLifetimeValue')}</Label>
                     <div className="relative">
                       <Input
                         id={customerLifetimeValueId}
                         type="number"
-                        placeholder="e.g., 300"
+                        placeholder={t('calcs.seo-roi.placeholders.customerLifetimeValue')}
                         value={customerLifetimeValue}
                         onChange={(e) => setCustomerLifetimeValue(e.target.value)}
                         className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -375,34 +377,32 @@ const SEOROICalculator = () => {
           <Accordion type="single" collapsible defaultValue="growth-potential">
             <AccordionItem value="growth-potential" className="border-none">
               <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <span className="text-lg font-semibold text-neutral-800">Growth Potential</span>
+                <span className="text-lg font-semibold text-neutral-800">{t('calcs.seo-roi.panelTitleGrowth')}</span>
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6">
                 <div className="space-y-4">
                   {/* Monthly Growth Rate */}
                   <div className="space-y-2">
-                    <Label htmlFor={monthlyGrowthRateId}>Monthly Growth Rate (%)</Label>
+                    <Label htmlFor={monthlyGrowthRateId}>{t('calcs.seo-roi.fields.monthlyGrowthRate')}</Label>
                     <Input
                       id={monthlyGrowthRateId}
                       type="number"
-                      placeholder="e.g., 10"
+                      placeholder={t('calcs.seo-roi.placeholders.monthlyGrowthRate')}
                       value={monthlyGrowthRate}
                       onChange={(e) => setMonthlyGrowthRate(e.target.value)}
                       className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
                     />
-                    <p className="text-xs text-neutral-500">
-                      Typical SEO growth: 5-15% MoM for well-optimized sites
-                    </p>
+                    <p className="text-xs text-neutral-500">{t('calcs.seo-roi.hints.seoGrowth')}</p>
                   </div>
 
                   {/* SEO Investment (Optional) */}
                   <div className="space-y-2">
-                    <Label htmlFor={seoCostId}>Monthly SEO Investment (Optional)</Label>
+                    <Label htmlFor={seoCostId}>{t('calcs.seo-roi.fields.seoInvestment')}</Label>
                     <div className="relative">
                       <Input
                         id={seoCostId}
                         type="number"
-                        placeholder="e.g., 5000"
+                        placeholder={t('calcs.seo-roi.placeholders.seoInvestment')}
                         value={seoCost}
                         onChange={(e) => setSeoCost(e.target.value)}
                         className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -425,7 +425,7 @@ const SEOROICalculator = () => {
                         </Select>
                       </div>
                     </div>
-                    <p className="text-xs text-neutral-500">Enter to calculate ROI projection</p>
+                    <p className="text-xs text-neutral-500">{t('calcs.seo-roi.hints.roiProjection')}</p>
                   </div>
                 </div>
               </AccordionContent>
@@ -436,7 +436,7 @@ const SEOROICalculator = () => {
         {/* Traffic Growth Chart */}
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h3 className="text-lg font-semibold text-neutral-800 mb-4">
-            12-Month Traffic Projection
+            {t('calcs.seo-roi.chartTitle')}
           </h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -448,8 +448,8 @@ const SEOROICalculator = () => {
                   tickFormatter={(value) => value.toLocaleString()}
                 />
                 <Tooltip
-                  formatter={(value: number) => [value.toLocaleString(), 'Traffic']}
-                  labelFormatter={(label) => `Month ${label}`}
+                  formatter={(value: number) => [value.toLocaleString(), t('calcs.seo-roi.tooltip.traffic')]}
+                  labelFormatter={(label) => t('calcs.seo-roi.tooltip.monthLabel', { month: label })}
                   contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
@@ -471,16 +471,16 @@ const SEOROICalculator = () => {
         {/* Projections Table */}
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h3 className="text-lg font-semibold text-neutral-800 mb-4 text-center">
-            12-Month Growth Projections
+            {t('calcs.seo-roi.tableTitle')}
           </h3>
           <div className="overflow-x-auto max-h-64">
             <table className="w-full text-xs lg:text-sm">
               <thead className="sticky top-0 bg-neutral-50">
                 <tr>
-                  <th className="text-left py-2 px-3 font-medium text-neutral-500">Month</th>
-                  <th className="text-left py-2 px-3 font-medium text-neutral-500">Traffic</th>
-                  <th className="text-left py-2 px-3 font-medium text-neutral-500">New Sales</th>
-                  <th className="text-left py-2 px-3 font-medium text-neutral-500">New Revenue</th>
+                  <th className="text-left py-2 px-3 font-medium text-neutral-500">{t('calcs.seo-roi.table.month')}</th>
+                  <th className="text-left py-2 px-3 font-medium text-neutral-500">{t('calcs.seo-roi.table.traffic')}</th>
+                  <th className="text-left py-2 px-3 font-medium text-neutral-500">{t('calcs.seo-roi.table.newSales')}</th>
+                  <th className="text-left py-2 px-3 font-medium text-neutral-500">{t('calcs.seo-roi.table.newRevenue')}</th>
                 </tr>
               </thead>
               <tbody className="text-neutral-600">
@@ -501,20 +501,20 @@ const SEOROICalculator = () => {
           {/* Totals */}
           <div className="mt-4 pt-4 border-t border-neutral-200 space-y-2">
             <div className="flex justify-between">
-              <span className="font-medium text-neutral-800">Total 12-Month Revenue:</span>
+              <span className="font-medium text-neutral-800">{t('calcs.seo-roi.totals.revenue12Month')}</span>
               <span className="font-semibold text-primary-green tabular-nums">
                 {formatCurrency(totals.totalRevenue, currency)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium text-neutral-800">Total LTV Revenue:</span>
+              <span className="font-medium text-neutral-800">{t('calcs.seo-roi.totals.ltvRevenue')}</span>
               <span className="font-semibold text-primary-green tabular-nums">
                 {formatCurrency(ltvRevenue, currency)}
               </span>
             </div>
             {totals.roi !== null && (
               <div className="flex justify-between">
-                <span className="font-medium text-neutral-800">Projected ROI:</span>
+                <span className="font-medium text-neutral-800">{t('calcs.seo-roi.totals.projectedRoi')}</span>
                 <span
                   className={`font-semibold tabular-nums ${totals.roi >= 100 ? 'text-performance-excellent' : totals.roi >= 0 ? 'text-performance-good' : 'text-performance-loss'}`}
                 >

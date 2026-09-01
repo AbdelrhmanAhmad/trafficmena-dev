@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -13,6 +14,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const LeadToCustomerRateCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [totalLeads, setTotalLeads] = useState('');
   const [customersAcquired, setCustomersAcquired] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -32,7 +34,7 @@ const LeadToCustomerRateCalculator = () => {
   const handleShare = () => {
     const text =
       conversionRate !== null
-        ? `My Lead-to-Customer Rate: ${conversionRate.toFixed(2)}%\nTotal Leads: ${totalLeads}\nCustomers Acquired: ${customersAcquired}\n\nCalculated with Lead-to-Customer Rate Calculator`
+        ? `My {t('calcs.lead-to-customer.results.rate')}: ${conversionRate.toFixed(2)}%\n{t('calcs.lead-to-customer.fields.totalLeads')}: ${totalLeads}\n{t('calcs.lead-to-customer.fields.customersAcquired')}: ${customersAcquired}\n\nCalculated with {t('calcs.lead-to-customer.panelTitle')}`
         : null;
     shareToClipboard(text);
   };
@@ -82,10 +84,10 @@ const LeadToCustomerRateCalculator = () => {
       <div className="space-y-4 lg:space-y-6">
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            What is Lead-to-Customer Rate?
+            What is {t('calcs.lead-to-customer.results.rate')}?
           </h2>
           <p className="text-neutral-600">
-            Lead-to-Customer Rate (also called Lead Conversion Rate) measures the percentage of
+            {t('calcs.lead-to-customer.results.rate')} (also called Lead Conversion Rate) measures the percentage of
             leads that convert into paying customers. It's one of the most critical B2B metrics,
             showing how effectively your sales funnel turns prospects into revenue. According to
             2025 benchmark data, the
@@ -96,7 +98,7 @@ const LeadToCustomerRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            Why is Lead-to-Customer Rate Important?
+            Why is {t('calcs.lead-to-customer.results.rate')} Important?
           </h2>
           <ul className="space-y-2 text-neutral-600">
             <li>
@@ -124,10 +126,10 @@ const LeadToCustomerRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            How to Calculate Lead-to-Customer Rate
+            How to Calculate {t('calcs.lead-to-customer.results.rate')}
           </h2>
           <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 font-mono text-center mb-4">
-            Rate = (Customers Acquired / Total Leads) × 100
+            Rate = ({t('calcs.lead-to-customer.fields.customersAcquired')} / {t('calcs.lead-to-customer.fields.totalLeads')}) × 100
           </div>
           <p className="text-neutral-600 mb-4">
             <strong>Example:</strong> If you generate 500 leads and 15 become paying customers:
@@ -141,7 +143,7 @@ const LeadToCustomerRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            Lead-to-Customer Rate by Industry (2025)
+            {t('calcs.lead-to-customer.results.rate')} by Industry (2025)
           </h2>
           <p className="text-neutral-600 mb-4">
             Conversion rates vary significantly by industry vertical:
@@ -299,7 +301,7 @@ const LeadToCustomerRateCalculator = () => {
 
         <Card className="p-5 lg:p-6 border-neutral-200/60 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h2 className="text-lg lg:text-xl font-semibold text-neutral-800 mb-4">
-            How to Improve Lead-to-Customer Rate
+            How to Improve {t('calcs.lead-to-customer.results.rate')}
           </h2>
           <ul className="space-y-3 text-neutral-600">
             <li className="flex items-start gap-2">
@@ -353,13 +355,13 @@ const LeadToCustomerRateCalculator = () => {
           <Accordion type="single" collapsible defaultValue="calculator">
             <AccordionItem value="calculator" className="border-none">
               <AccordionTrigger className="text-lg lg:text-xl font-semibold text-neutral-800 hover:no-underline">
-                Lead-to-Customer Rate Calculator
+                {t('calcs.lead-to-customer.panelTitle')}
               </AccordionTrigger>
               <AccordionContent className="pt-4 space-y-4 lg:space-y-6">
-                {/* Total Leads Input */}
+                {/* {t('calcs.lead-to-customer.fields.totalLeads')} Input */}
                 <div className="space-y-2">
                   <Label htmlFor={totalLeadsId} className="text-sm text-neutral-600">
-                    Total Leads
+                    {t('calcs.lead-to-customer.fields.totalLeads')}
                   </Label>
                   <Input
                     id={totalLeadsId}
@@ -371,10 +373,10 @@ const LeadToCustomerRateCalculator = () => {
                   />
                 </div>
 
-                {/* Customers Acquired Input */}
+                {/* {t('calcs.lead-to-customer.fields.customersAcquired')} Input */}
                 <div className="space-y-2">
                   <Label htmlFor={customersAcquiredId} className="text-sm text-neutral-600">
-                    Customers Acquired
+                    {t('calcs.lead-to-customer.fields.customersAcquired')}
                   </Label>
                   <Input
                     id={customersAcquiredId}
@@ -388,7 +390,7 @@ const LeadToCustomerRateCalculator = () => {
 
                 {/* Conversion Rate Result */}
                 <div className="space-y-2">
-                  <Label className="text-sm text-neutral-600">Lead-to-Customer Rate</Label>
+                  <Label className="text-sm text-neutral-600">{t('calcs.lead-to-customer.results.rate')}</Label>
                   <Input
                     readOnly
                     value={conversionRate !== null ? `${conversionRate.toFixed(2)}%` : '—'}

@@ -19,6 +19,8 @@ const NAMESPACES = [
   'dashboard',
   'calendar',
   'errors',
+  'legal',
+  'calculators',
 ] as const;
 
 type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];

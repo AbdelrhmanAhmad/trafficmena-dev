@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CPLCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [totalSpend, setTotalSpend] = useState('');
   const [leadsGenerated, setLeadsGenerated] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -41,7 +43,7 @@ const CPLCalculator = () => {
   const handleShare = () => {
     const text =
       cpl !== null
-        ? `My Cost Per Lead (CPL): ${formatCurrency(cpl, currency)}\nTotal Spend: ${formatCurrency(totalSpend, currency)}\nLeads Generated: ${leadsGenerated}\n\nCalculated with CPL Calculator`
+        ? `My {t('calcs.cpl.results.cpl')}: ${formatCurrency(cpl, currency)}\nTotal Spend: ${formatCurrency(totalSpend, currency)}\n{t('calcs.cpl.fields.leadsGenerated')}: ${leadsGenerated}\n\nCalculated with {t('calcs.cpl.panelTitle')}`
         : null;
     shareToClipboard(text);
   };
@@ -61,24 +63,24 @@ const CPLCalculator = () => {
     if (cpl === null) return null;
     if (cpl < 100) {
       return {
-        text: '🚀 Excellent CPL! Well below industry average.',
+        text: t('calcs.cpl.performance.excellent'),
         className: 'text-performance-excellent',
       };
     }
     if (cpl < 300) {
       return {
-        text: '✅ Good CPL. Competitive for most industries.',
+        text: t('calcs.cpl.performance.good'),
         className: 'text-performance-good',
       };
     }
     if (cpl < 600) {
       return {
-        text: '📊 Above average CPL. Typical for B2B/SaaS sectors.',
+        text: t('calcs.cpl.performance.aboveAverage'),
         className: 'text-performance-breakeven',
       };
     }
     return {
-      text: '⚠️ High CPL. Ensure lead quality justifies the cost.',
+      text: t('calcs.cpl.performance.high'),
       className: 'text-performance-loss',
     };
   };
@@ -94,7 +96,7 @@ const CPLCalculator = () => {
             What is CPL (Cost Per Lead)?
           </h2>
           <p className="text-sm lg:text-base text-neutral-600 leading-relaxed">
-            Cost Per Lead (CPL) measures how much money you spend on marketing or advertising to
+            {t('calcs.cpl.results.cpl')} measures how much money you spend on marketing or advertising to
             acquire a single lead. A lead is a potential customer who has shown interest in your
             product or service by providing contact information or taking a qualifying action. CPL
             is distinct from CAC (Customer Acquisition Cost), which measures the cost to acquire an
@@ -134,7 +136,7 @@ const CPLCalculator = () => {
             How to Calculate CPL
           </h2>
           <div className="bg-neutral-50 border border-neutral-100 p-3 lg:p-4 rounded-xl font-mono text-sm text-center mb-4 text-neutral-700">
-            CPL = Total Marketing Spend / Number of Leads Generated
+            CPL = Total Marketing Spend / Number of {t('calcs.cpl.fields.leadsGenerated')}
           </div>
           <p className="text-sm lg:text-base text-neutral-600 mb-3">
             <strong className="text-neutral-700">Example:</strong> If you spend{' '}
@@ -311,19 +313,19 @@ const CPLCalculator = () => {
           <Accordion type="single" collapsible defaultValue="calculator">
             <AccordionItem value="calculator" className="border-none">
               <AccordionTrigger className="text-lg lg:text-xl font-semibold hover:no-underline text-neutral-800">
-                CPL Calculator
+                {t('calcs.cpl.panelTitle')}
               </AccordionTrigger>
               <AccordionContent className="pt-4 space-y-5">
                 {/* Total Marketing Spend Input */}
                 <div className="space-y-2">
                   <Label htmlFor={totalSpendId} className="text-sm text-neutral-600">
-                    Total Marketing/Ad Spend
+                    {t('calcs.cpl.fields.totalSpend')}
                   </Label>
                   <div className="relative">
                     <Input
                       id={totalSpendId}
                       type="number"
-                      placeholder="Enter total spend"
+                      placeholder={t('calcs.cpl.placeholders.totalSpend')}
                       value={totalSpend}
                       onChange={(e) => setTotalSpend(e.target.value)}
                       className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -348,15 +350,15 @@ const CPLCalculator = () => {
                   </div>
                 </div>
 
-                {/* Leads Generated Input */}
+                {/* {t('calcs.cpl.fields.leadsGenerated')} Input */}
                 <div className="space-y-2">
                   <Label htmlFor={leadsGeneratedId} className="text-sm text-neutral-600">
-                    Leads Generated
+                    {t('calcs.cpl.fields.leadsGenerated')}
                   </Label>
                   <Input
                     id={leadsGeneratedId}
                     type="number"
-                    placeholder="Enter number of leads"
+                    placeholder={t('calcs.cpl.placeholders.leadsGenerated')}
                     value={leadsGenerated}
                     onChange={(e) => setLeadsGenerated(e.target.value)}
                     className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -365,7 +367,7 @@ const CPLCalculator = () => {
 
                 {/* CPL Result */}
                 <div className="space-y-2">
-                  <Label className="text-sm text-neutral-600">Cost Per Lead (CPL)</Label>
+                  <Label className="text-sm text-neutral-600">{t('calcs.cpl.results.cpl')}</Label>
                   <Input
                     readOnly
                     value={cpl !== null ? formatCurrency(cpl, currency) : '—'}

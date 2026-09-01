@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const NRRCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [startingMRR, setStartingMRR] = useState<string>('');
   const [expansionMRR, setExpansionMRR] = useState<string>('');
   const [contractionMRR, setContractionMRR] = useState<string>('');
@@ -94,10 +96,10 @@ const NRRCalculator = () => {
         <div className="space-y-4 lg:space-y-6">
           <section>
             <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is Net Revenue Retention (NRR)?
+              What is {t('calcs.nrr.results.nrr')}?
             </h2>
             <p className="text-neutral-600 leading-relaxed">
-              Net Revenue Retention (NRR), also called Net Dollar Retention (NDR), measures{' '}
+              {t('calcs.nrr.results.nrr')}, also called Net Dollar Retention (NDR), measures{' '}
               <strong className="text-neutral-800">
                 how much recurring revenue you retain and grow from existing customers
               </strong>{' '}
@@ -327,7 +329,7 @@ const NRRCalculator = () => {
               <AccordionItem value="nrr" className="border-none">
                 <AccordionTrigger className="px-5 lg:px-6 py-4 hover:no-underline">
                   <span className="text-base lg:text-lg font-semibold text-neutral-800">
-                    Net Revenue Retention (NRR) Calculator
+                    {t('calcs.nrr.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-5 lg:px-6 pb-5 lg:pb-6">
@@ -335,13 +337,13 @@ const NRRCalculator = () => {
                     {/* Starting MRR Input */}
                     <div className="space-y-2">
                       <Label htmlFor={startingMRRId} className="text-sm text-neutral-600">
-                        Starting MRR (from existing customers)
+                        {t('calcs.nrr.fields.startingMrr')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={startingMRRId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={startingMRR}
                           onChange={(e) => setStartingMRR(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -369,13 +371,13 @@ const NRRCalculator = () => {
                     {/* Expansion MRR Input */}
                     <div className="space-y-2">
                       <Label htmlFor={expansionMRRId} className="text-sm text-neutral-600">
-                        Expansion MRR (upsells, cross-sells, upgrades)
+                        {t('calcs.nrr.fields.expansionMrr')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={expansionMRRId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={expansionMRR}
                           onChange={(e) => setExpansionMRR(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -389,13 +391,13 @@ const NRRCalculator = () => {
                     {/* Contraction MRR Input */}
                     <div className="space-y-2">
                       <Label htmlFor={contractionMRRId} className="text-sm text-neutral-600">
-                        Contraction MRR (downgrades, reduced usage)
+                        {t('calcs.nrr.fields.contractionMrr')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={contractionMRRId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={contractionMRR}
                           onChange={(e) => setContractionMRR(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -409,13 +411,13 @@ const NRRCalculator = () => {
                     {/* Churn MRR Input */}
                     <div className="space-y-2">
                       <Label htmlFor={churnMRRId} className="text-sm text-neutral-600">
-                        Churn MRR (cancellations)
+                        {t('calcs.nrr.fields.churnMrr')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={churnMRRId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={churnMRR}
                           onChange={(e) => setChurnMRR(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -430,7 +432,7 @@ const NRRCalculator = () => {
                     {endingMRR !== null && startingMRR && (
                       <div className="space-y-2">
                         <Label className="text-sm text-neutral-600">
-                          Ending MRR (from existing customers)
+                          {t('calcs.nrr.results.endingMrr')}
                         </Label>
                         <div className="relative">
                           <Input
@@ -446,7 +448,7 @@ const NRRCalculator = () => {
                     {/* NRR Output */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-600">
-                        Net Revenue Retention (NRR)
+                        {t('calcs.nrr.results.nrr')}
                       </Label>
                       <div className="relative">
                         <Input
@@ -462,7 +464,7 @@ const NRRCalculator = () => {
                     {grr !== null && startingMRR && (
                       <div className="space-y-2">
                         <Label className="text-sm text-neutral-600">
-                          Gross Revenue Retention (GRR)
+                          {t('calcs.nrr.results.grr')}
                         </Label>
                         <div className="relative">
                           <Input

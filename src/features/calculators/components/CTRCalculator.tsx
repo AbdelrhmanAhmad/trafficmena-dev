@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -13,6 +14,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const CTRCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [clicks, setClicks] = useState<string>('');
   const [impressions, setImpressions] = useState<string>('');
   const [feedbackGiven, setFeedbackGiven] = useState<boolean | null>(null);
@@ -241,7 +243,7 @@ const CTRCalculator = () => {
               <AccordionItem value="ctr" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Click-Through Rate (CTR)
+                    {t('calcs.ctr.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-6">
@@ -249,13 +251,13 @@ const CTRCalculator = () => {
                     {/* Clicks Input */}
                     <div className="space-y-2">
                       <Label htmlFor={clicksId} className="text-sm text-neutral-600">
-                        Total clicks
+                        {t('calcs.ctr.fields.clicks')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={clicksId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={clicks}
                           onChange={(e) => setClicks(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -266,13 +268,13 @@ const CTRCalculator = () => {
                     {/* Impressions Input */}
                     <div className="space-y-2">
                       <Label htmlFor={impressionsId} className="text-sm text-neutral-600">
-                        Total impressions
+                        {t('calcs.ctr.fields.impressions')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={impressionsId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={impressions}
                           onChange={(e) => setImpressions(e.target.value)}
                           className="h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -282,12 +284,12 @@ const CTRCalculator = () => {
 
                     {/* CTR Output */}
                     <div className="space-y-2">
-                      <Label className="text-sm text-neutral-600">CTR (Click-Through Rate)</Label>
+                      <Label className="text-sm text-neutral-600">{t('calcs.ctr.results.ctr')}</Label>
                       <div className="relative">
                         <Input
                           readOnly
                           value={ctr !== null ? ctr.toFixed(2) : ''}
-                          placeholder="—"
+                          placeholder={t('common.placeholderDash')}
                           className="pr-10 h-11 lg:h-12 text-base bg-muted/30 font-semibold border-neutral-200"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 font-medium text-sm">
@@ -310,10 +312,10 @@ const CTRCalculator = () => {
                         }`}
                       >
                         {ctr < 0.5 &&
-                          'Low CTR. Consider improving ad copy, creative, or targeting.'}
-                        {ctr >= 0.5 && ctr < 1 && 'Below average CTR. Room for optimization.'}
-                        {ctr >= 1 && ctr < 3 && 'Good CTR. Your ads are performing well.'}
-                        {ctr >= 3 && 'Excellent CTR. Highly engaging ads!'}
+                          t('calcs.ctr.performance.low')}
+                        {ctr >= 0.5 && ctr < 1 && t('calcs.ctr.performance.belowAverage')}
+                        {ctr >= 1 && ctr < 3 && t('calcs.ctr.performance.good')}
+                        {ctr >= 3 && t('calcs.ctr.performance.excellent')}
                       </p>
                     )}
                   </div>

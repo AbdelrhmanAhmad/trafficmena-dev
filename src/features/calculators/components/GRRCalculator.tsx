@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId, useState } from 'react';
 import {
   Accordion,
@@ -21,6 +22,7 @@ import { showFeedbackToast } from '../utils/feedback';
 import { CalculatorActionButtons, CalculatorFeedback } from './shared';
 
 const GRRCalculator = () => {
+  const { t } = useTranslation('calculators');
   const [startingMRR, setStartingMRR] = useState<string>('');
   const [contractionMRR, setContractionMRR] = useState<string>('');
   const [churnMRR, setChurnMRR] = useState<string>('');
@@ -86,10 +88,10 @@ const GRRCalculator = () => {
         <div className="space-y-4 lg:space-y-6">
           <section>
             <h2 className="text-xl lg:text-2xl font-semibold text-neutral-800 mb-4">
-              What is Gross Revenue Retention (GRR)?
+              What is {t('calcs.grr.results.grr')}?
             </h2>
             <p className="text-neutral-600 leading-relaxed">
-              Gross Revenue Retention (GRR) measures{' '}
+              {t('calcs.grr.results.grr')} measures{' '}
               <strong className="text-neutral-800">
                 the percentage of recurring revenue retained from existing customers
               </strong>
@@ -317,7 +319,7 @@ const GRRCalculator = () => {
               <AccordionItem value="grr" className="border-none">
                 <AccordionTrigger className="px-0 py-4 hover:no-underline">
                   <span className="text-lg lg:text-xl font-semibold text-neutral-800">
-                    Gross Revenue Retention (GRR) Calculator
+                    {t('calcs.grr.panelTitle')}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="px-0 pb-0">
@@ -325,13 +327,13 @@ const GRRCalculator = () => {
                     {/* Starting MRR Input */}
                     <div className="space-y-2">
                       <Label htmlFor={startingMRRId} className="text-sm text-neutral-600">
-                        Starting MRR (from existing customers)
+                        {t('calcs.grr.fields.startingMrr')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={startingMRRId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={startingMRR}
                           onChange={(e) => setStartingMRR(e.target.value)}
                           className="pr-24 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -359,13 +361,13 @@ const GRRCalculator = () => {
                     {/* Contraction MRR Input */}
                     <div className="space-y-2">
                       <Label htmlFor={contractionMRRId} className="text-sm text-neutral-600">
-                        Contraction MRR (downgrades, reduced usage)
+                        {t('calcs.grr.fields.contractionMrr')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={contractionMRRId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={contractionMRR}
                           onChange={(e) => setContractionMRR(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -379,13 +381,13 @@ const GRRCalculator = () => {
                     {/* Churn MRR Input */}
                     <div className="space-y-2">
                       <Label htmlFor={churnMRRId} className="text-sm text-neutral-600">
-                        Churn MRR (cancellations)
+                        {t('calcs.grr.fields.churnMrr')}
                       </Label>
                       <div className="relative">
                         <Input
                           id={churnMRRId}
                           type="number"
-                          placeholder="0"
+                          placeholder={t('common.placeholderZero')}
                           value={churnMRR}
                           onChange={(e) => setChurnMRR(e.target.value)}
                           className="pr-16 h-11 lg:h-12 text-base border-neutral-200 focus:border-emerald-300 focus:ring-emerald-100"
@@ -400,7 +402,7 @@ const GRRCalculator = () => {
                     {lostMRR !== null && startingMRR && (
                       <div className="space-y-2">
                         <Label className="text-sm text-neutral-600">
-                          Total MRR lost (contraction + churn)
+                          {t('calcs.grr.results.totalLost')}
                         </Label>
                         <div className="relative">
                           <Input
@@ -413,10 +415,10 @@ const GRRCalculator = () => {
                       </div>
                     )}
 
-                    {/* Retained MRR Output */}
+                    {/* {t('calcs.grr.results.retainedMrr')} Output */}
                     {retainedMRR !== null && startingMRR && (
                       <div className="space-y-2">
-                        <Label className="text-sm text-neutral-600">Retained MRR</Label>
+                        <Label className="text-sm text-neutral-600">{t('calcs.grr.results.retainedMrr')}</Label>
                         <div className="relative">
                           <Input
                             type="text"
@@ -431,7 +433,7 @@ const GRRCalculator = () => {
                     {/* GRR Output */}
                     <div className="space-y-2">
                       <Label className="text-sm text-neutral-600">
-                        Gross Revenue Retention (GRR)
+                        {t('calcs.grr.results.grr')}
                       </Label>
                       <div className="relative">
                         <Input
