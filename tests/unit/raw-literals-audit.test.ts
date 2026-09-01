@@ -52,7 +52,9 @@ function isStaffSurfacePath(relativePath: string): boolean {
   if (
     fileName === 'SeriesForm.tsx' ||
     fileName === 'LibraryAssetForm.tsx' ||
-    fileName === 'AdminEventForm.tsx'
+    fileName === 'AdminEventForm.tsx' ||
+    fileName === 'ExpertForm.tsx' ||
+    fileName === 'EventExpertPicker.tsx'
   ) {
     return true;
   }
