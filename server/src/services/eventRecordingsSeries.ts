@@ -6,6 +6,9 @@ import {
   bilingualTitleFromLegacy,
 } from '../utils/bilingualDb.js';
 import { normalizeRecordingsAccessPolicy } from '../routes/api/seriesAccess.js';
+import { resolveLocalizedText } from '../utils/localize.js';
+import type { AppLocale } from '../utils/locale.js';
+import { DEFAULT_LOCALE } from '../utils/locale.js';
 import { isSeriesSellable } from './seriesSales.js';
 import {
   enrichRecordingsSeriesForUser,
@@ -140,6 +143,7 @@ export async function deleteEventRecordingsSeries(eventId: string): Promise<void
 export async function loadRecordingsSeriesForEvent(
   eventId: string,
   userContext?: RecordingsSeriesUserContext,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<RecordingsSeriesSummary | null> {
   if (await isEventLinkedToTrack(eventId)) {
     return null;
@@ -148,7 +152,10 @@ export async function loadRecordingsSeriesForEvent(
   const [eventSeries] = await db
     .select({
       id: series.id,
-      title: series.title,
+      titleEn: series.titleEn,
+      titleAr: series.titleAr,
+      descriptionEn: series.descriptionEn,
+      descriptionAr: series.descriptionAr,
       isPublished: series.isPublished,
       salesEnabled: series.salesEnabled,
       priceInCents: series.priceInCents,
@@ -179,7 +186,7 @@ export async function loadRecordingsSeriesForEvent(
 
   const baseSummary = {
     id: eventSeries.id,
-    title: eventSeries.title,
+    title: resolveLocalizedText(eventSeries.titleEn, eventSeries.titleAr, locale),
     isPublished: eventSeries.isPublished,
     salesEnabled: eventSeries.salesEnabled,
     priceInCents: eventSeries.priceInCents,
@@ -209,9 +216,10 @@ export async function loadRecordingsSeriesForEventDetail(
   eventId: string,
   trackId: string | null | undefined,
   userContext?: RecordingsSeriesUserContext,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<RecordingsSeriesSummary | null> {
   if (trackId) {
     return null;
   }
-  return loadRecordingsSeriesForEvent(eventId, userContext);
+  return loadRecordingsSeriesForEvent(eventId, userContext, locale);
 }

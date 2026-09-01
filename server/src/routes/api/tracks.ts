@@ -644,11 +644,16 @@ export function registerTrackRoutes(app: Hono) {
           ? presentAdminContent(track)
           : presentPublicContent(track, locale);
 
-        const recordingsSeries = await loadRecordingsSeriesForTrack(id, null, {
-          userId: session?.user?.id ?? null,
-          isStaff,
-          userHasTrackBooking: userHasBooked,
-        });
+        const recordingsSeries = await loadRecordingsSeriesForTrack(
+          id,
+          null,
+          {
+            userId: session?.user?.id ?? null,
+            isStaff,
+            userHasTrackBooking: userHasBooked,
+          },
+          locale,
+        );
 
         return c.json({
           track: {
@@ -957,11 +962,16 @@ export function registerTrackRoutes(app: Hono) {
       bookingTicketType = booking?.ticketType ?? null;
     }
 
-    const recordingsSeries = await loadRecordingsSeriesForTrack(id, null, {
-      userId: session?.user?.id ?? null,
-      isStaff: Boolean(isStaff),
-      userHasTrackBooking: userHasBooked,
-    });
+    const recordingsSeries = await loadRecordingsSeriesForTrack(
+      id,
+      null,
+      {
+        userId: session?.user?.id ?? null,
+        isStaff: Boolean(isStaff),
+        userHasTrackBooking: userHasBooked,
+      },
+      locale,
+    );
 
     const presentedTrack = isStaff
       ? presentAdminContent(track)

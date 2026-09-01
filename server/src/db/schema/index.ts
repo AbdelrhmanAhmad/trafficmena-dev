@@ -1076,6 +1076,7 @@ export const payments = pgTable(
     masaryCode: text('masary_code'),
     meezaReference: text('meeza_reference'),
     meezaQrCode: text('meeza_qr_code'),
+    checkoutLocale: text('checkout_locale'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     paidAt: timestamp('paid_at', { withTimezone: true }),
   },

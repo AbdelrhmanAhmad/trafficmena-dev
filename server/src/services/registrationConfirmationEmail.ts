@@ -7,7 +7,7 @@ import {
   getTrackRegistrationEmailCopy,
 } from '../i18n/emailCopy.js';
 import type { AppLocale } from '../utils/locale.js';
-import { DEFAULT_LOCALE } from '../utils/locale.js';
+import { DEFAULT_LOCALE, parseAppLocale } from '../utils/locale.js';
 import { sendRegistrationConfirmationEmail } from './email.js';
 import {
   buildApiCalendarIcsUrl,
@@ -155,6 +155,7 @@ export function queuePaymentRegistrationConfirmation(
         itemType: payments.itemType,
         itemId: payments.itemId,
         status: payments.status,
+        checkoutLocale: payments.checkoutLocale,
       })
       .from(payments)
       .where(eq(payments.id, paymentId))
@@ -162,27 +163,29 @@ export function queuePaymentRegistrationConfirmation(
 
     if (!payment || payment.status !== 'paid') return;
 
+    const effectiveLocale = parseAppLocale(payment.checkoutLocale) ?? locale;
+
     const email = await loadUserEmail(payment.userId);
     if (!email) return;
 
     if (payment.itemType === 'event' && payment.itemId) {
-      const source = await loadEventCalendarSource(payment.itemId, locale);
+      const source = await loadEventCalendarSource(payment.itemId, effectiveLocale);
       if (source) {
-        await notifyEventRegistrationConfirmation({ email, event: source, locale });
+        await notifyEventRegistrationConfirmation({ email, event: source, locale: effectiveLocale });
       }
       return;
     }
 
     if (payment.itemType === 'track' && payment.itemId) {
-      const trackTitle = await loadTrackTitle(payment.itemId, locale);
-      const events = await loadTrackCalendarEvents(payment.itemId, locale);
+      const trackTitle = await loadTrackTitle(payment.itemId, effectiveLocale);
+      const events = await loadTrackCalendarEvents(payment.itemId, effectiveLocale);
       if (trackTitle && events.length > 0) {
         await notifyTrackRegistrationConfirmation({
           email,
           trackId: payment.itemId,
           trackTitle,
           events,
-          locale,
+          locale: effectiveLocale,
         });
       }
     }

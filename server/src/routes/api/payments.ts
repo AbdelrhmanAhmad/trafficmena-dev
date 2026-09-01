@@ -1582,6 +1582,7 @@ export function registerPaymentRoutes(app: Hono) {
 
     const { itemType, itemId, paymentMethodId, forceNewCode, idempotencyKey, ticketType } =
       result.data;
+    const checkoutLocale = resolveLocaleFromRequest(c);
     const promoCode = result.data.promoCode?.trim() || undefined;
     const walletPhoneInput = result.data.walletPhone?.trim() || undefined;
 
@@ -1844,6 +1845,7 @@ export function registerPaymentRoutes(app: Hono) {
               promoCodeId: calculatedPriceResult.promoCodeId,
               discountAppliedCents: calculatedPriceResult.discountAppliedCents,
               originalAmountCents: calculatedPriceResult.originalAmountCents,
+              checkoutLocale,
             })
             .returning();
 
@@ -2002,6 +2004,7 @@ export function registerPaymentRoutes(app: Hono) {
               promoCodeId: priceResult.promoCodeId,
               discountAppliedCents: priceResult.discountAppliedCents,
               originalAmountCents: priceResult.originalAmountCents,
+              checkoutLocale,
             })
             .returning({ id: payments.id });
 
@@ -2220,6 +2223,7 @@ export function registerPaymentRoutes(app: Hono) {
               promoCodeId: priceResult.promoCodeId,
               discountAppliedCents: priceResult.discountAppliedCents,
               originalAmountCents: priceResult.originalAmountCents,
+              checkoutLocale,
             })
             .returning({ id: payments.id });
 
@@ -2269,6 +2273,7 @@ export function registerPaymentRoutes(app: Hono) {
               promoCodeId: calculatedPriceResult.promoCodeId,
               discountAppliedCents: calculatedPriceResult.discountAppliedCents,
               originalAmountCents: calculatedPriceResult.originalAmountCents,
+              checkoutLocale,
             })
             .returning({ id: payments.id });
         });

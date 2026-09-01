@@ -620,6 +620,7 @@ export function registerEventRoutes(app: Hono) {
             userHasTrackBooking: trackBooked,
             userHasTrackEventAttendance: attending,
           },
+          locale,
         );
 
         const presentedEvent = isStaff

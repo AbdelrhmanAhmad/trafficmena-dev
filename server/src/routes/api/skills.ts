@@ -1,9 +1,10 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, ne, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { skills, userSkills } from '../../db/schema/index.js';
 import {
+  bilingualDescriptionFields,
   bilingualDescriptionFromLegacy,
   bilingualNameFields,
   bilingualNameFromLegacy,
@@ -14,7 +15,7 @@ import {
 import { presentPublicNameRow } from '../../utils/contentPresentation.js';
 import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { getOptionalUserRole } from './utils.js';
+import { getOptionalUserRole, requireAdmin, requireManager } from './utils.js';
 
 const STAFF_ROLES = new Set(['owner', 'admin', 'manager']);
 
@@ -38,6 +39,15 @@ const createSkillSchema = z
   .refine((data) => (data.nameEn && data.nameAr) || data.name, {
     message: 'Provide name or nameEn/nameAr.',
   });
+
+const updateSkillSchema = z
+  .object({
+    nameEn: z.string().trim().min(1).max(255),
+    nameAr: z.string().trim().min(1).max(255),
+    category: z.string().trim().max(255).optional().nullable(),
+    description: z.string().trim().max(500).optional().nullable(),
+  })
+  .merge(optionalBilingualDescriptionFields);
 
 const userSkillBodySchema = z.object({
   skillId: z.string().uuid(),
@@ -133,6 +143,105 @@ export function registerSkillRoutes(app: Hono) {
       });
 
     return c.json({ success: true, skill: inserted[0] });
+  });
+
+  app.put('/skills/:id', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const skillId = c.req.param('id');
+    const body = updateSkillSchema.safeParse(await c.req.json().catch(() => ({})));
+
+    if (!body.success) {
+      return c.json(
+        {
+          error: {
+            code: 'INVALID_REQUEST',
+            message: body.error.message,
+          },
+        },
+        400,
+      );
+    }
+
+    const nameFields = bilingualNameFields(body.data.nameEn.trim(), body.data.nameAr.trim());
+    const lowerName = nameFields.nameEn.toLowerCase();
+
+    const duplicate = await db
+      .select({ id: skills.id })
+      .from(skills)
+      .where(and(sql`lower(${skills.nameEn}) = ${lowerName}`, ne(skills.id, skillId)))
+      .limit(1);
+
+    if (duplicate.length > 0) {
+      return c.json(
+        {
+          error: {
+            code: 'SKILL_EXISTS',
+            message: 'This skill already exists.',
+          },
+        },
+        409,
+      );
+    }
+
+    const descriptionFields =
+      body.data.descriptionEn !== undefined || body.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(body.data.descriptionEn, body.data.descriptionAr)
+        : bilingualDescriptionFromLegacy(body.data.description);
+
+    const [updated] = await db
+      .update(skills)
+      .set({
+        ...nameFields,
+        ...descriptionFields,
+        category: body.data.category ?? null,
+      })
+      .where(eq(skills.id, skillId))
+      .returning({
+        id: skills.id,
+        name: skills.name,
+        nameEn: skills.nameEn,
+        nameAr: skills.nameAr,
+        category: skills.category,
+        description: skills.description,
+      });
+
+    if (!updated) {
+      return c.json(
+        {
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Skill not found.',
+          },
+        },
+        404,
+      );
+    }
+
+    return c.json({ success: true, skill: updated });
+  });
+
+  app.delete('/skills/:id', async (c) => {
+    const staff = await requireAdmin(c);
+    if ('response' in staff) return staff.response;
+
+    const skillId = c.req.param('id');
+    const [deleted] = await db.delete(skills).where(eq(skills.id, skillId)).returning({ id: skills.id });
+
+    if (!deleted) {
+      return c.json(
+        {
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Skill not found.',
+          },
+        },
+        404,
+      );
+    }
+
+    return c.json({ success: true });
   });
 
   app.get('/user/skills', async (c) => {
