@@ -1,0 +1,47 @@
+{
+  "hub": {
+    "title": "Activity Hub",
+    "subtitle": "Channels, posts, and announcements for members.",
+    "empty": "No channels available yet.",
+    "accessRestricted": "Access restricted"
+  },
+  "channel": {
+    "back": "All channels",
+    "noPosts": "No posts yet.",
+    "announcementBadge": "Announcement",
+    "pinned": "Pinned",
+    "pending": "Pending approval",
+    "writePost": "Write a post",
+    "publish": "Publish",
+    "saveDraft": "Save draft",
+    "editPost": "Edit post",
+    "archivePost": "Archive post",
+    "postTitle": "Title (optional)",
+    "postBody": "Post content",
+    "memberOnly": "Members only",
+    "staffOnlyPost": "Only staff can post in this channel."
+  },
+  "types": {
+    "staff_post": "Staff updates",
+    "entitlement_gated": "Members only",
+    "open": "Open community"
+  },
+  "marketing": {
+    "title": "Join the TrafficMENA Community",
+    "description": "Sign in to access the Activity Hub — private channels, member posts, and platform announcements. The public page stays a preview; your feed lives inside your dashboard.",
+    "signIn": "Sign in",
+    "exploreHub": "Go to Activity Hub"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "cancelled": "Cancelled",
+    "published": "Published",
+    "archived": "Archived"
+  },
+  "errors": {
+    "loadChannels": "Could not load channels.",
+    "loadFeed": "Could not load channel feed.",
+    "createPost": "Could not publish post.",
+    "forbidden": "You do not have access to this channel."
+  }
+}

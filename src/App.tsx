@@ -48,6 +48,8 @@ const queryClient = new QueryClient({
 const AboutPage = lazy(() => import('./pages/About'));
 const ContactPage = lazy(() => import('./pages/Contact'));
 const CommunityComingSoon = lazy(() => import('./pages/Community'));
+const CommunityHub = lazy(() => import('./pages/dashboard/CommunityHub'));
+const CommunityChannel = lazy(() => import('./pages/dashboard/CommunityChannel'));
 const InviteOnlyPage = lazy(() => import('./pages/InviteOnly'));
 const LibraryComingSoon = lazy(() => import('./pages/Library'));
 const SubscribeLanding = lazy(() => import('./pages/SubscribeLanding'));
@@ -96,6 +98,9 @@ const AdminSkills = lazy(() => import('./pages/admin/skills'));
 const AdminExperts = lazy(() => import('./pages/admin/experts/index'));
 const AdminNewExpert = lazy(() => import('./pages/admin/experts/new'));
 const AdminEditExpert = lazy(() => import('./pages/admin/experts/[id]'));
+const AdminCommunityChannels = lazy(() => import('./pages/admin/community/channels/index'));
+const AdminCommunityChannelEdit = lazy(() => import('./pages/admin/community/channels/[id]'));
+const AdminCommunityAnnouncements = lazy(() => import('./pages/admin/community/announcements/index'));
 const PublicExperts = lazy(() => import('./pages/experts/index'));
 const PublicExpertDetail = lazy(() => import('./pages/experts/[slug]'));
 const DashboardExpertProfile = lazy(() => import('./pages/dashboard/expert-profile'));
@@ -418,6 +423,26 @@ const App = () => {
                             <DashboardSubscribePage />
                           </ErrorBoundary>
                         </SubscriptionFeatureGate>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/community"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <CommunityHub />
+                        </ErrorBoundary>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard/community/:slug"
+                    element={
+                      <ProtectedRoute>
+                        <ErrorBoundary>
+                          <CommunityChannel />
+                        </ErrorBoundary>
                       </ProtectedRoute>
                     }
                   />
@@ -874,6 +899,30 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <AdminEditExpert />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/community/channels"
+                    element={
+                      <ErrorBoundary>
+                        <AdminCommunityChannels />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/community/channels/:id"
+                    element={
+                      <ErrorBoundary>
+                        <AdminCommunityChannelEdit />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/community/announcements"
+                    element={
+                      <ErrorBoundary>
+                        <AdminCommunityAnnouncements />
                       </ErrorBoundary>
                     }
                   />

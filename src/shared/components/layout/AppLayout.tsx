@@ -12,6 +12,8 @@ import {
   Home,
   Library,
   Mail,
+  Megaphone,
+  MessageCircle,
   Receipt,
   Settings,
   Shield,
@@ -94,6 +96,11 @@ const memberMenuItems = [
     url: '/dashboard/calculators',
     icon: Calculator,
   },
+  {
+    titleKey: 'memberNav.activityHub',
+    url: '/dashboard/community',
+    icon: MessageCircle,
+  },
 ];
 
 // Menu items for admin/manager dashboard with role requirements
@@ -169,6 +176,18 @@ const adminMenuItems = [
     title: 'Expert Profiles',
     url: '/admin/experts',
     icon: UserRound,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'Activity Channels',
+    url: '/admin/community/channels',
+    icon: MessageCircle,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'Announcements',
+    url: '/admin/community/announcements',
+    icon: Megaphone,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
