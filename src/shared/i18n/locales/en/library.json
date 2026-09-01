@@ -55,6 +55,14 @@
     "downloads": "Downloads",
     "views": "Views",
     "linkedEventId": "Linked Event ID",
-    "presentationType": "Presentation"
+    "presentationType": "Presentation",
+    "addedOn": "Added {{date}}",
+    "googleSlides": "Google Slides",
+    "embeddedContent": "Embedded Content",
+    "fileTypes": {
+      "video": "Video",
+      "presentation": "Presentation",
+      "document": "Document"
+    }
   }
 }

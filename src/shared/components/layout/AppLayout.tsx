@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import { useCurrentSubscription } from '@/app/hooks/useSubscriptions';
 import { useModuleFlags } from '@/app/hooks/useSettings';
@@ -48,47 +49,47 @@ import {
 import { SeriesCartNavButton } from '@/features/series/components/SeriesCartNavButton';
 import UserProfileDropdown from './UserProfileDropdown';
 
-// Menu items for member dashboard
+// Menu items for member dashboard (labels resolved via nav.memberNav)
 const memberMenuItems = [
   {
-    title: 'Dashboard',
+    titleKey: 'memberNav.dashboard',
     url: '/dashboard',
     icon: Home,
   },
   {
-    title: 'Edit Profile',
+    titleKey: 'memberNav.editProfile',
     url: '/dashboard/profile',
     icon: Edit,
   },
   {
-    title: 'Events & Tracks',
+    titleKey: 'memberNav.eventsTracks',
     url: '/dashboard/meetups',
     icon: Calendar,
   },
   {
-    title: 'Recordings',
+    titleKey: 'memberNav.recordings',
     url: '/dashboard/library',
     icon: Library,
   },
   {
-    title: 'Digital Products',
+    titleKey: 'memberNav.digitalProducts',
     url: '/dashboard/digital-products',
     icon: FileStack,
     module: 'digitalProducts' as const,
   },
   {
-    title: 'My Orders',
+    titleKey: 'memberNav.myOrders',
     url: '/dashboard/orders',
     icon: Receipt,
   },
   {
-    title: 'Masterclasses',
+    titleKey: 'memberNav.masterclasses',
     url: '/dashboard/masterclasses',
     icon: GraduationCap,
     module: 'masterclasses' as const,
   },
   {
-    title: 'Calculators',
+    titleKey: 'memberNav.calculators',
     url: '/dashboard/calculators',
     icon: Calculator,
   },
@@ -181,6 +182,7 @@ interface AppLayoutProps {
 
 // Unified sidebar component
 function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
+  const { t } = useTranslation('nav');
   const location = useLocation();
   const { user } = useAuth();
   const { loading, rank, isOwner, isAdmin, isManager } = useRolePermissions();
@@ -231,7 +233,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
             : isManager
               ? 'Manager Panel'
               : 'Dashboard'
-      : 'Member Dashboard';
+      : t('memberNav.memberDashboard');
 
   // Access description for footer
   const accessDescription =
@@ -243,7 +245,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
           : isManager
             ? 'Event and content management privileges'
             : 'View-only access'
-      : 'Enjoy exclusive events, content, and community features';
+      : t('memberNav.memberAccessDescription');
 
   return (
     <Sidebar className="bg-white border-r border-neutral-200 shadow-[2px_0_12px_-4px_rgba(0,0,0,0.08)]">
@@ -285,12 +287,18 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
             <SidebarMenu className="px-2 py-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
+                const title =
+                  variant === 'member' && 'titleKey' in item
+                    ? t(item.titleKey)
+                    : 'title' in item
+                      ? item.title
+                      : '';
                 // Match exact path or sub-paths for sections like library and calculators
                 const isActive =
                   location.pathname === item.url ||
                   (item.url !== '/dashboard' && location.pathname.startsWith(`${item.url}/`));
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
@@ -298,7 +306,7 @@ function AppSidebar({ variant }: { variant: AppLayoutVariant }) {
                     >
                       <Link to={item.url} className="flex items-center gap-2.5">
                         <Icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate font-medium">{item.title}</span>
+                        <span className="truncate font-medium">{title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

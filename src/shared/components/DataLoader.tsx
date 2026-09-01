@@ -1,5 +1,6 @@
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import type React from 'react';
+import { useTranslation } from 'react-i18next';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import { Button } from '@/shared/components/ui/button';
 
@@ -17,15 +18,18 @@ const DataLoader: React.FC<DataLoaderProps> = ({
   loading,
   error,
   children,
-  loadingText = 'Loading...',
+  loadingText,
   onRetry,
   emptyState,
   isEmpty = false,
 }) => {
+  const { t: tCommon } = useTranslation('common');
+  const { t: tErrors } = useTranslation('errors');
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <LoadingSpinner text={loadingText} />
+        <LoadingSpinner text={loadingText ?? tCommon('actions.loading')} />
       </div>
     );
   }
@@ -37,14 +41,14 @@ const DataLoader: React.FC<DataLoaderProps> = ({
       <div className="flex items-center justify-center py-12">
         <div className="max-w-md text-center">
           <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-red-500" />
-          <h3 className="mb-2 text-lg font-medium text-gray-900">Failed to load data</h3>
+          <h3 className="mb-2 text-lg font-medium text-gray-900">{tErrors('loadFailed')}</h3>
           <p className="mb-4 text-gray-600">
-            {errorMessage || 'An unexpected error occurred while loading the data.'}
+            {errorMessage || tErrors('serverError')}
           </p>
           {onRetry && (
             <Button onClick={onRetry} variant="outline">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Try Again
+              <RefreshCw className="me-2 h-4 w-4" />
+              {tCommon('actions.tryAgain')}
             </Button>
           )}
         </div>

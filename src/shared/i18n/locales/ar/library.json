@@ -55,6 +55,14 @@
     "downloads": "التنزيلات",
     "views": "المشاهدات",
     "linkedEventId": "معرّف الفعالية المرتبطة",
-    "presentationType": "عرض تقديمي"
+    "presentationType": "عرض تقديمي",
+    "addedOn": "أُضيف {{date}}",
+    "googleSlides": "Google Slides",
+    "embeddedContent": "محتوى مضمّن",
+    "fileTypes": {
+      "video": "فيديو",
+      "presentation": "عرض تقديمي",
+      "document": "مستند"
+    }
   }
 }

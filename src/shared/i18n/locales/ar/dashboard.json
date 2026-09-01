@@ -169,6 +169,12 @@
     "viewCertificate": "عرض الشهادة",
     "downloadPdf": "تحميل PDF",
     "externalCertificate": "شهادة خارجية",
-    "codeLabel": "رمز الشهادة:"
+    "codeLabel": "رمز الشهادة:",
+    "shareCopiedTitle": "تم نسخ رابط المشاركة",
+    "shareCopiedDesc": "يمكن لأي شخص لديه هذا الرابط التحقق من الشهادة وتنزيلها.",
+    "copyFailedTitle": "فشل النسخ",
+    "copyFailedDesc": "تعذّر نسخ الرابط إلى الحافظة.",
+    "copyShareLink": "نسخ رابط المشاركة",
+    "copied": "تم النسخ"
   }
 }

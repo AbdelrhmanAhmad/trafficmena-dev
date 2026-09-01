@@ -169,6 +169,12 @@
     "viewCertificate": "View certificate",
     "downloadPdf": "Download PDF",
     "externalCertificate": "External certificate",
-    "codeLabel": "Certificate code:"
+    "codeLabel": "Certificate code:",
+    "shareCopiedTitle": "Share link copied",
+    "shareCopiedDesc": "Anyone with this link can verify and download the certificate.",
+    "copyFailedTitle": "Copy failed",
+    "copyFailedDesc": "Could not copy the link to clipboard.",
+    "copyShareLink": "Copy share link",
+    "copied": "Copied"
   }
 }

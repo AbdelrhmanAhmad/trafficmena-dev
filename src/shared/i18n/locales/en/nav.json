@@ -13,5 +13,17 @@
   "admin": "Admin",
   "community": "Community",
   "menu": "Menu",
-  "menuOpen": "Open menu"
+  "menuOpen": "Open menu",
+  "memberNav": {
+    "dashboard": "Dashboard",
+    "editProfile": "Edit Profile",
+    "eventsTracks": "Events & Tracks",
+    "recordings": "Recordings",
+    "digitalProducts": "Digital Products",
+    "myOrders": "My Orders",
+    "masterclasses": "Masterclasses",
+    "calculators": "Calculators",
+    "memberDashboard": "Member Dashboard",
+    "memberAccessDescription": "Enjoy exclusive events, content, and community features"
+  }
 }

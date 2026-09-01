@@ -1,5 +1,6 @@
 import { Check, Copy, Link2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { certificatePublicShareUrl } from '@/app/api/certificates';
 import { Button } from '@/shared/components/ui/button';
 import { useToast } from '@/shared/hooks/custom/use-toast';
@@ -15,6 +16,7 @@ export function CertificateShareButton({
   size = 'sm',
   variant = 'outline',
 }: CertificateShareButtonProps) {
+  const { t } = useTranslation('dashboard');
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const shareUrl = certificatePublicShareUrl(certificateCode);
@@ -24,14 +26,14 @@ export function CertificateShareButton({
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       toast({
-        title: 'Share link copied',
-        description: 'Anyone with this link can verify and download the certificate.',
+        title: t('certificates.shareCopiedTitle'),
+        description: t('certificates.shareCopiedDesc'),
       });
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       toast({
-        title: 'Copy failed',
-        description: 'Could not copy the link to clipboard.',
+        title: t('certificates.copyFailedTitle'),
+        description: t('certificates.copyFailedDesc'),
         variant: 'destructive',
       });
     }
@@ -39,13 +41,9 @@ export function CertificateShareButton({
 
   return (
     <Button type="button" size={size} variant={variant} onClick={handleCopy}>
-      {copied ? (
-        <Check className="mr-2 h-4 w-4" />
-      ) : (
-        <Copy className="mr-2 h-4 w-4" />
-      )}
-      {copied ? 'Copied' : 'Copy share link'}
-      <Link2 className="ml-2 h-3.5 w-3.5 opacity-60" />
+      {copied ? <Check className="me-2 h-4 w-4" /> : <Copy className="me-2 h-4 w-4" />}
+      {copied ? t('certificates.copied') : t('certificates.copyShareLink')}
+      <Link2 className="ms-2 h-3.5 w-3.5 opacity-60" />
     </Button>
   );
 }

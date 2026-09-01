@@ -43,7 +43,7 @@ const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
 );
 
 const LibraryItemDetail: React.FC = () => {
-  const { t } = useTranslation('library');
+  const { t, i18n } = useTranslation('library');
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,6 +97,24 @@ const LibraryItemDetail: React.FC = () => {
     return <FileText className="h-6 w-6 text-gray-600" />;
   };
 
+  const formatFileTypeLabel = (fileType: string, embedType?: string | null) => {
+    if (embedType || fileType === 'Presentation') return t('itemDetail.fileTypes.presentation');
+    if (fileType === 'Video') return t('itemDetail.fileTypes.video');
+    if (fileType === 'Document') return t('itemDetail.fileTypes.document');
+    return fileType;
+  };
+
+  const formatEmbedProvider = (embedType: string) => {
+    if (embedType === 'google_slides') return t('itemDetail.googleSlides');
+    return embedType;
+  };
+
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleDateString(i18n.language === 'ar' ? 'ar-EG' : 'en-US');
+
+  const formatDateTime = (value: string) =>
+    new Date(value).toLocaleString(i18n.language === 'ar' ? 'ar-EG' : 'en-US');
+
   const getEmbedContent = (url: string, type?: string | null) => {
     if (!url) return null;
 
@@ -108,7 +126,7 @@ const LibraryItemDetail: React.FC = () => {
           src={embedUrl}
           className="w-full h-[600px] rounded-lg"
           allowFullScreen={true}
-          title="Presentation"
+          title={t('itemDetail.presentation')}
         />
       );
     }
@@ -119,7 +137,7 @@ const LibraryItemDetail: React.FC = () => {
         src={url}
         className="w-full h-[600px] rounded-lg"
         allowFullScreen={true}
-        title="Embedded Content"
+        title={t('itemDetail.embeddedContent')}
       />
     );
   };
@@ -223,7 +241,7 @@ const LibraryItemDetail: React.FC = () => {
             <Button
               variant="ghost"
               onClick={backToLibrary}
-              className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
+              className="mb-6 -ms-2 hover:bg-neutral-100 text-neutral-700"
             >
               <ArrowLeft className="me-2 h-4 w-4 rtl:rotate-180" />
               {seriesContext.seriesId ? t('itemDetail.backToSeries') : t('itemDetail.backToRecordings')}
@@ -282,10 +300,10 @@ const LibraryItemDetail: React.FC = () => {
           <Button
             variant="ghost"
             onClick={backToLibrary}
-            className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
+            className="mb-6 -ms-2 hover:bg-neutral-100 text-neutral-700"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
+            <ArrowLeft className="me-2 h-4 w-4 rtl:rotate-180" />
+            {seriesContext.seriesId ? t('itemDetail.backToSeries') : t('itemDetail.backToRecordings')}
           </Button>
 
           <Card className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
@@ -297,17 +315,19 @@ const LibraryItemDetail: React.FC = () => {
                     <div className="flex items-center gap-2">
                       {getIcon(item.file_type, item.embed_type)}
                       <span className="font-medium">
-                        {item.embed_type ? 'Presentation' : item.file_type}
+                        {formatFileTypeLabel(item.file_type, item.embed_type)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      <span>Added {new Date(item.created_at).toLocaleDateString()}</span>
+                      <span>{t('itemDetail.addedOn', { date: formatDate(item.created_at) })}</span>
                     </div>
                     {item.event_id && (
                       <div className="flex items-center gap-2">
                         <Link2 className="h-4 w-4" />
-                        <span>Linked event ID: {item.event_id}</span>
+                        <span>
+                          {t('itemDetail.linkedEventId')}: {item.event_id}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -323,7 +343,7 @@ const LibraryItemDetail: React.FC = () => {
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
                       <Video className="h-4 w-4 text-blue-600" />
                     </div>
-                    <h2 className="text-lg font-semibold text-neutral-900">Video Content</h2>
+                    <h2 className="text-lg font-semibold text-neutral-900">{t('itemDetail.videoContent')}</h2>
                   </div>
                   <div className="w-full rounded-xl overflow-hidden bg-neutral-900">
                     <VideoEmbed url={item.video_url} />
@@ -338,7 +358,7 @@ const LibraryItemDetail: React.FC = () => {
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100">
                       <Presentation className="h-4 w-4 text-purple-600" />
                     </div>
-                    <h2 className="text-lg font-semibold text-neutral-900">Presentation</h2>
+                    <h2 className="text-lg font-semibold text-neutral-900">{t('itemDetail.presentation')}</h2>
                   </div>
                   <div className="rounded-xl overflow-hidden bg-neutral-50 border border-neutral-200">
                     {getEmbedContent(item.embed_url, item.embed_type)}
@@ -351,7 +371,7 @@ const LibraryItemDetail: React.FC = () => {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <FileText className="h-5 w-5 text-gray-600" />
-                    <h2 className="text-lg font-semibold text-gray-900">Document</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('itemDetail.document')}</h2>
                   </div>
                   <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-6">
                     <div className="flex items-center justify-between">
@@ -360,10 +380,8 @@ const LibraryItemDetail: React.FC = () => {
                           <FileText className="h-6 w-6 text-neutral-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-neutral-900">Document Attached</h3>
-                          <p className="text-sm text-neutral-500">
-                            Download the file to view its contents
-                          </p>
+                          <h3 className="font-semibold text-neutral-900">{t('itemDetail.documentAttached')}</h3>
+                          <p className="text-sm text-neutral-500">{t('itemDetail.documentHint')}</p>
                         </div>
                       </div>
                       {access.canDownload ? (
@@ -383,12 +401,12 @@ const LibraryItemDetail: React.FC = () => {
                           }
                         >
                           <Download className="h-4 w-4" />
-                          Download
+                          {t('itemDetail.download')}
                         </a>
                       ) : (
                         <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-100 text-neutral-400 font-medium cursor-not-allowed">
                           <Download className="h-4 w-4" />
-                          Restricted
+                          {t('itemDetail.restricted')}
                         </span>
                       )}
                     </div>
@@ -399,7 +417,7 @@ const LibraryItemDetail: React.FC = () => {
               {/* Description */}
               {item.description && (
                 <div className="prose prose-gray max-w-none">
-                  <h2 className="text-xl font-semibold text-neutral-900 mb-3">Description</h2>
+                  <h2 className="text-xl font-semibold text-neutral-900 mb-3">{t('itemDetail.description')}</h2>
                   <SanitizedDescription
                     className="text-neutral-700 leading-relaxed"
                     html={getSanitizedDescription(item.description)}
@@ -409,39 +427,37 @@ const LibraryItemDetail: React.FC = () => {
 
               {/* Metadata */}
               <div className="border-t border-neutral-200 pt-6">
-                <h3 className="text-lg font-semibold text-neutral-900 mb-3">Details</h3>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-3">{t('itemDetail.details')}</h3>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <dt className="text-sm font-medium text-neutral-500">Primary Type</dt>
+                    <dt className="text-sm font-medium text-neutral-500">{t('itemDetail.primaryType')}</dt>
                     <dd className="mt-1 text-sm text-neutral-900">
-                      {item.embed_type ? 'Presentation' : item.file_type}
+                      {formatFileTypeLabel(item.file_type, item.embed_type)}
                     </dd>
                   </div>
                   {item.embed_type && (
                     <div>
-                      <dt className="text-sm font-medium text-neutral-500">Embed Provider</dt>
+                      <dt className="text-sm font-medium text-neutral-500">{t('itemDetail.embedProvider')}</dt>
                       <dd className="mt-1 text-sm text-neutral-900">
-                        {item.embed_type === 'google_slides' ? 'Google Slides' : item.embed_type}
+                        {formatEmbedProvider(item.embed_type)}
                       </dd>
                     </div>
                   )}
                   <div>
-                    <dt className="text-sm font-medium text-neutral-500">Published</dt>
-                    <dd className="mt-1 text-sm text-neutral-900">
-                      {new Date(item.created_at).toLocaleString()}
-                    </dd>
+                    <dt className="text-sm font-medium text-neutral-500">{t('itemDetail.published')}</dt>
+                    <dd className="mt-1 text-sm text-neutral-900">{formatDateTime(item.created_at)}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-neutral-500">Downloads</dt>
+                    <dt className="text-sm font-medium text-neutral-500">{t('itemDetail.downloads')}</dt>
                     <dd className="mt-1 text-sm text-neutral-900">{item.download_count ?? 0}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-neutral-500">Views</dt>
+                    <dt className="text-sm font-medium text-neutral-500">{t('itemDetail.views')}</dt>
                     <dd className="mt-1 text-sm text-neutral-900">{item.view_count ?? 0}</dd>
                   </div>
                   {item.event_id && (
                     <div className="sm:col-span-2">
-                      <dt className="text-sm font-medium text-gray-500">Linked Event ID</dt>
+                      <dt className="text-sm font-medium text-gray-500">{t('itemDetail.linkedEventId')}</dt>
                       <dd className="mt-1 text-sm text-gray-900">{item.event_id}</dd>
                     </div>
                   )}
