@@ -22,6 +22,7 @@ const NAMESPACES = [
   'legal',
   'calculators',
   'experts',
+  'community',
 ] as const;
 
 type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
