@@ -1239,3 +1239,131 @@ export const subscriptions = pgTable(
       .where(sql`subscription_status = 'active' and revoked_at is null`),
   }),
 );
+
+// --- Activity Hub (W10) ----------------------------------------------------
+
+export const activityChannelTypeEnum = pgEnum('activity_channel_type', [
+  'staff_post',
+  'entitlement_gated',
+  'open',
+]);
+
+export const activityPostStatusEnum = pgEnum('activity_post_status', [
+  'draft',
+  'pending',
+  'published',
+  'rejected',
+  'archived',
+]);
+
+export const activityAnnouncementStatusEnum = pgEnum('activity_announcement_status', [
+  'draft',
+  'scheduled',
+  'published',
+  'cancelled',
+  'archived',
+]);
+
+export const activityChannels = pgTable(
+  'activity_channels',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    slug: text('slug').notNull(),
+    nameEn: text('name_en').notNull(),
+    nameAr: text('name_ar').notNull(),
+    descriptionEn: text('description_en'),
+    descriptionAr: text('description_ar'),
+    channelType: activityChannelTypeEnum('channel_type').notNull(),
+    coverImageUrl: text('cover_image_url').notNull(),
+    requiresApproval: boolean('requires_approval').default(true).notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    slugIdx: uniqueIndex('activity_channels_slug_idx').on(table.slug),
+    typeIdx: index('activity_channels_type_idx').on(table.channelType),
+    archivedIdx: index('activity_channels_archived_idx').on(table.archivedAt),
+  }),
+);
+
+export const activityChannelEntitlements = pgTable(
+  'activity_channel_entitlements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id')
+      .references(() => activityChannels.id, { onDelete: 'cascade' })
+      .notNull(),
+    trackId: uuid('track_id').references(() => tracks.id, { onDelete: 'cascade' }),
+    masterclassId: uuid('masterclass_id').references(() => masterclasses.id, {
+      onDelete: 'cascade',
+    }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    channelTrackIdx: uniqueIndex('activity_channel_entitlements_channel_track_idx')
+      .on(table.channelId, table.trackId)
+      .where(sql`track_id IS NOT NULL`),
+    channelMasterclassIdx: uniqueIndex('activity_channel_entitlements_channel_masterclass_idx')
+      .on(table.channelId, table.masterclassId)
+      .where(sql`masterclass_id IS NOT NULL`),
+  }),
+);
+
+export const activityPosts = pgTable(
+  'activity_posts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id')
+      .references(() => activityChannels.id, { onDelete: 'cascade' })
+      .notNull(),
+    authorUserId: uuid('author_user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: text('title'),
+    bodyHtml: text('body_html').default('').notNull(),
+    localeHint: text('locale_hint'),
+    linkUrl: text('link_url'),
+    imageUrl: text('image_url'),
+    status: activityPostStatusEnum('status').default('draft').notNull(),
+    isPinned: boolean('is_pinned').default(false).notNull(),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    moderatedBy: uuid('moderated_by').references(() => users.id, { onDelete: 'set null' }),
+    moderatedAt: timestamp('moderated_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    channelIdx: index('activity_posts_channel_idx').on(table.channelId),
+    authorIdx: index('activity_posts_author_idx').on(table.authorUserId),
+    statusIdx: index('activity_posts_status_idx').on(table.status),
+    publishedAtIdx: index('activity_posts_published_at_idx').on(table.publishedAt),
+  }),
+);
+
+export const activityAnnouncements = pgTable(
+  'activity_announcements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id').references(() => activityChannels.id, { onDelete: 'set null' }),
+    titleEn: text('title_en').notNull(),
+    titleAr: text('title_ar').notNull(),
+    bodyEn: text('body_en').default('').notNull(),
+    bodyAr: text('body_ar').default('').notNull(),
+    status: activityAnnouncementStatusEnum('status').default('draft').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index('activity_announcements_status_idx').on(table.status),
+    scheduledAtIdx: index('activity_announcements_scheduled_at_idx').on(table.scheduledAt),
+  }),
+);

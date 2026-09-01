@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
+import { useAuth } from '@/shared/context/AuthContext';
 
-const CommunityComingSoon: React.FC = () => {
-  const { t } = useTranslation('common');
+const CommunityMarketingPage: React.FC = () => {
+  const { t } = useTranslation('community');
+  const { user } = useAuth();
 
   return (
     <Layout>
@@ -19,25 +21,34 @@ const CommunityComingSoon: React.FC = () => {
               <MessageCircle className="h-6 w-6 text-[#05ef62]" />
             </div>
             <h1 className="mt-6 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-              {t('community.title')}
+              {t('marketing.title')}
             </h1>
             <p className="mt-4 text-base leading-relaxed text-neutral-700">
-              {t('community.description')}
+              {t('marketing.description')}
             </p>
 
             <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Button
-                className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] shadow hover:brightness-95"
-                asChild
-              >
-                <Link to="/meetups">{t('actions.rsvpEvents')}</Link>
-              </Button>
+              {user ? (
+                <Button
+                  className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] shadow hover:brightness-95"
+                  asChild
+                >
+                  <Link to="/dashboard/community">{t('marketing.exploreHub')}</Link>
+                </Button>
+              ) : (
+                <Button
+                  className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] shadow hover:brightness-95"
+                  asChild
+                >
+                  <Link to="/signin">{t('marketing.signIn')}</Link>
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="rounded-xl border-neutral-200 px-5 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
                 asChild
               >
-                <Link to="/">{t('actions.backToHome')}</Link>
+                <Link to="/meetups">{t('common:actions.rsvpEvents')}</Link>
               </Button>
             </div>
           </section>
@@ -47,4 +58,4 @@ const CommunityComingSoon: React.FC = () => {
   );
 };
 
-export default CommunityComingSoon;
+export default CommunityMarketingPage;
