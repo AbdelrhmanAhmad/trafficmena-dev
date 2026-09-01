@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useLibraryAsset } from '@/features/library/hooks/useLibrary';
 import { trackDownloadContent, trackViewContent } from '@/lib/analytics/events';
@@ -42,6 +43,7 @@ const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
 );
 
 const LibraryItemDetail: React.FC = () => {
+  const { t } = useTranslation('library');
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
@@ -159,7 +161,7 @@ const LibraryItemDetail: React.FC = () => {
       <ProtectedRoute>
         <AppLayout variant="member">
           <div className="flex justify-center py-12">
-            <LoadingSpinner size="lg" text="Loading library item..." />
+            <LoadingSpinner size="lg" text={t('itemDetail.loading')} />
           </div>
         </AppLayout>
       </ProtectedRoute>
@@ -171,13 +173,13 @@ const LibraryItemDetail: React.FC = () => {
       <ProtectedRoute>
         <AppLayout variant="member">
           <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Unable to load item</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('itemDetail.loadErrorTitle')}</h2>
             <p className="text-gray-600 mb-4">
-              {error instanceof Error ? error.message : 'Please try again shortly.'}
+              {error instanceof Error ? error.message : t('itemDetail.tryAgain')}
             </p>
             <Button onClick={backToLibrary}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
+              <ArrowLeft className="me-2 h-4 w-4 rtl:rotate-180" />
+              {seriesContext.seriesId ? t('itemDetail.backToSeries') : t('itemDetail.backToRecordings')}
             </Button>
           </div>
         </AppLayout>
@@ -190,11 +192,11 @@ const LibraryItemDetail: React.FC = () => {
       <ProtectedRoute>
         <AppLayout variant="member">
           <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Item not found</h2>
-            <p className="text-gray-600 mb-4">The requested library item could not be found.</p>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('itemDetail.notFoundTitle')}</h2>
+            <p className="text-gray-600 mb-4">{t('itemDetail.notFoundDesc')}</p>
             <Button onClick={backToLibrary}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
+              <ArrowLeft className="me-2 h-4 w-4 rtl:rotate-180" />
+              {seriesContext.seriesId ? t('itemDetail.backToSeries') : t('itemDetail.backToRecordings')}
             </Button>
           </div>
         </AppLayout>
@@ -223,8 +225,8 @@ const LibraryItemDetail: React.FC = () => {
               onClick={backToLibrary}
               className="mb-6 -ml-2 hover:bg-neutral-100 text-neutral-700"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              {seriesContext.seriesId ? 'Back to Series' : 'Back to Recordings'}
+              <ArrowLeft className="me-2 h-4 w-4 rtl:rotate-180" />
+              {seriesContext.seriesId ? t('itemDetail.backToSeries') : t('itemDetail.backToRecordings')}
             </Button>
 
             <Card className="overflow-hidden rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
@@ -236,14 +238,13 @@ const LibraryItemDetail: React.FC = () => {
               </CardHeader>
               <CardContent className="text-center space-y-6 pt-4">
                 <p className="text-neutral-600">
-                  This content is exclusive to registered attendees. Register for the associated
-                  event to unlock access.
+                  {t('itemDetail.exclusiveContent')}
                 </p>
 
                 {item.description && (
-                  <div className="text-left border-t border-neutral-200 pt-6">
+                  <div className="text-start border-t border-neutral-200 pt-6">
                     <h3 className="text-sm font-semibold text-neutral-700 mb-2">
-                      About this content
+                      {t('itemDetail.aboutContent')}
                     </h3>
                     <SanitizedDescription
                       className="text-sm text-neutral-600 leading-relaxed line-clamp-4"
@@ -258,11 +259,11 @@ const LibraryItemDetail: React.FC = () => {
                       asChild
                       className="bg-gradient-to-r from-[#05ef62] to-[#29cf9f] text-[#101010] hover:shadow-xl"
                     >
-                      <Link to={`/meetups/${item.event_id}`}>Register for Event</Link>
+                      <Link to={`/meetups/${item.event_id}`}>{t('itemDetail.registerForEvent')}</Link>
                     </Button>
                   )}
                   <Button variant="outline" onClick={() => navigate('/dashboard/meetups')}>
-                    Browse All Events
+                    {t('itemDetail.browseAllEvents')}
                   </Button>
                 </div>
               </CardContent>

@@ -145,7 +145,10 @@
     "tabMine": "My courses",
     "loadError": "Could not load masterclasses.",
     "emptyMine": "You are not enrolled in any masterclasses yet.",
-    "emptyAll": "No masterclasses available right now."
+    "emptyAll": "No masterclasses available right now.",
+    "enrolled": "Enrolled",
+    "available": "Available",
+    "lessonCount": "{{count}} lessons"
   },
   "certificates": {
     "invalidLinkTitle": "Invalid certificate link",

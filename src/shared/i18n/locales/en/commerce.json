@@ -11,6 +11,45 @@
   "checkoutFailed": "Checkout failed",
   "checkoutError": "Could not start checkout. Please try again.",
   "orderLabel": "Order ({{count}} items)",
+  "buyActions": {
+    "inCart": "In cart",
+    "addToCart": "Add to cart",
+    "buyNow": "Buy now",
+    "preparing": "Preparing…",
+    "signIn": "Sign in",
+    "signUpFree": "Sign up free",
+    "itemCategoryDigital": "Digital Product",
+    "itemCategorySeries": "Series"
+  },
+  "store": {
+    "label": "Store",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{current}} of {{total}}",
+    "showingCount": "Showing {{shown}} of {{total}}",
+    "loadFailed": "Failed to load content. Please try again.",
+    "loading": "Loading…",
+    "recordings": {
+      "badge": "TrafficMENA Recordings",
+      "heroTitle": "Learn From Real Sessions",
+      "heroDesc": "Buy on-demand recording series from TrafficMENA events and workshops. Preview what is included, then unlock permanent access in your member dashboard.",
+      "sectionTitle": "Recordings",
+      "emptyTitle": "No recordings available",
+      "emptyDesc": "Check back soon for new recording series from our events and workshops.",
+      "ctaTitle": "Ready to unlock full access?",
+      "ctaDesc": "Sign in to purchase recordings, add them to your cart, and watch everything from your dashboard."
+    },
+    "digitalProducts": {
+      "badge": "TrafficMENA Digital Products",
+      "heroTitle": "Templates, Tools & Resources",
+      "heroDesc": "One-time purchases built for marketers in the MENA region. Preview what's included, then unlock downloads and videos forever after you buy.",
+      "sectionTitle": "Digital Products",
+      "emptyTitle": "No products available",
+      "emptyDesc": "Check back soon for new digital products and resources.",
+      "ctaTitle": "Ready to unlock full access?",
+      "ctaDesc": "Sign in to purchase products, add them to your cart, and access everything from your dashboard."
+    }
+  },
   "subscribe": {
     "badge": "Premium Membership",
     "badgeTagline": "Become the Marketer Everyone Wants to Hire",
@@ -41,6 +80,83 @@
       "secondaryText": "Not ready?",
       "secondaryLink": "Join Free",
       "secondaryLinkSuffix": "and experience TrafficMENA first."
+    },
+    "tracksSection": {
+      "label": "Premium Content",
+      "title": "Everything You Get With Premium",
+      "subtitle": "Two complete learning tracks designed to make you a specialized marketer",
+      "bonusTitle": "BONUS: Offline Day Materials",
+      "outcomeLabel": "Outcome:",
+      "contentMarketing": {
+        "title": "Content Marketing Track",
+        "description": "6 sessions + offline day materials",
+        "outcome": "Build a content system that attracts, engages, and converts, with a portfolio to prove you can do it.",
+        "sessions": [
+          { "number": 1, "topic": "Build Content System with Content Pillars & Messaging Framework" },
+          { "number": 2, "topic": "Content Marketing Funnel Design: Mapping content to customer journey" },
+          { "number": 3, "topic": "Podcast Content Marketing" },
+          { "number": 4, "topic": "Content Types & Formats and The Art of Content Distribution" },
+          { "number": 5, "topic": "Content Marketing for Personal Branding" },
+          { "number": 6, "topic": "Content Strategy Presentation: How to build your Portfolio" }
+        ],
+        "bonus": [
+          "Full-Stack Generative AI for Content Creation (Presentation)",
+          "Reels Creation from the Kitchen (Recording + Presentation)",
+          "Performance Creatives Analysis (Recording + Presentation)"
+        ]
+      },
+      "performanceMarketing": {
+        "title": "Performance Marketing Track",
+        "description": "7 sessions + offline day materials",
+        "outcome": "Master paid advertising across Meta, Google, TikTok, and Snapchat, plus learn how to scale campaigns and even build an agency.",
+        "sessions": [
+          { "number": 1, "topic": "Performance Marketing Strategy" },
+          { "number": 2, "topic": "Performance Marketing Mindset" },
+          { "number": 3, "topic": "Performance Marketing: Meta Ads" },
+          { "number": 4, "topic": "Performance Marketing: TikTok & Snapchat Ads" },
+          { "number": 5, "topic": "Performance Marketing: Google Search Ads" },
+          { "number": 6, "topic": "Full B2B Performance Marketing" },
+          { "number": 7, "topic": "Meta Ads Scaling Strategies" }
+        ],
+        "bonus": [
+          "Google Ads Deep Dive: PMax, Demand Gen, Standard Shopping (Recording + Presentation)",
+          "Convert Your Skills to Agency: One Niche Agency Model (Recording + Presentation)"
+        ]
+      }
+    },
+    "faqSection": {
+      "label": "FAQ",
+      "title": "Questions? We've Got Answers",
+      "items": [
+        {
+          "question": "What's the difference between free and premium?",
+          "answer": "Free gives you our E-commerce and AI tracks, 23 calculators, and monthly Q&A. That's a complete learning foundation. Premium adds advanced tracks (Content Marketing, Performance Marketing), exclusive resources, 2x monthly sessions, offline discounts, and specialty subgroups. Think of it as: Free = Foundation, Premium = Specialization."
+        },
+        {
+          "question": "What if I'm already a free member?",
+          "answer": "Upgrading is seamless. You keep everything you had, plus unlock all premium benefits instantly. Your learning progress carries over."
+        },
+        {
+          "question": "When does founding member pricing end?",
+          "answer": "We haven't set an exact date, but it won't last indefinitely. We'll give notice before pricing changes, but the best way to lock in this rate is to join now."
+        },
+        {
+          "question": "Can I cancel my subscription?",
+          "answer": "Yes, you can cancel anytime. Your access continues through the end of your subscription period."
+        },
+        {
+          "question": "Are offline events included?",
+          "answer": "Offline events have a separate ticket price, but premium members get 20%+ off all offline events. For events like TrafficMENA Next (our SEO/organic growth intensive), that's significant savings."
+        },
+        {
+          "question": "What if I don't see value?",
+          "answer": "If you attend the sessions, use the resources, and engage with the community, you'll see value. But if for any reason you're not satisfied, reach out to us. We care more about your growth than your money."
+        },
+        {
+          "question": "How is this different from other courses?",
+          "answer": "Three ways: (1) Multiple experts per track, not one instructor. (2) Practitioners, not professors. Everyone teaching is actively working in marketing. (3) Content and community designed for marketers working in this region, not generic Western tactics."
+        }
+      ]
     }
   }
 }

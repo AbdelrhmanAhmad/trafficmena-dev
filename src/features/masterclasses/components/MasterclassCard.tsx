@@ -1,4 +1,5 @@
 import { GraduationCap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { MasterclassStoreItem } from '@/app/api/masterclasses';
 import { formatSeriesPriceLabel } from '@/features/series/utils/seriesPricing';
@@ -10,6 +11,7 @@ type MasterclassCardProps = {
 };
 
 export function MasterclassCard({ masterclass }: MasterclassCardProps) {
+  const { t } = useTranslation('dashboard');
   const href = masterclass.is_enrolled
     ? `/dashboard/masterclasses/${masterclass.id}/learn`
     : `/dashboard/masterclasses/${masterclass.id}`;
@@ -33,16 +35,16 @@ export function MasterclassCard({ masterclass }: MasterclassCardProps) {
         <CardHeader>
           <div className="flex flex-wrap gap-2">
             {masterclass.is_enrolled && (
-              <Badge className="bg-[#29cf9f]">Enrolled</Badge>
+              <Badge className="bg-[#29cf9f]">{t('masterclasses.enrolled')}</Badge>
             )}
             {!masterclass.is_enrolled && masterclass.is_sellable && (
-              <Badge variant="outline">Available</Badge>
+              <Badge variant="outline">{t('masterclasses.available')}</Badge>
             )}
           </div>
           <CardTitle className="text-lg">{masterclass.title}</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-neutral-600">
-          <p>{masterclass.lesson_count} lessons</p>
+          <p>{t('masterclasses.lessonCount', { count: masterclass.lesson_count })}</p>
           {masterclass.price_in_cents && masterclass.price_in_cents > 0 && !masterclass.is_enrolled && (
             <p className="mt-1 font-semibold text-neutral-900">
               {formatSeriesPriceLabel(masterclass.price_in_cents)}

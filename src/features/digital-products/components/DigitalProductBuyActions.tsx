@@ -1,5 +1,6 @@
 import { ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import { createCommerceOrder } from '@/app/api/orders';
@@ -30,6 +31,7 @@ export function DigitalProductBuyActions({
   onSuccessPath = '/dashboard/digital-products?filter=mine',
   onRequireAuth,
 }: DigitalProductBuyActionsProps) {
+  const { t } = useTranslation('commerce');
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -64,9 +66,8 @@ export function DigitalProductBuyActions({
       setOrderId(order.id);
       setCheckoutOpen(true);
     } catch (error) {
-      const message =
-        error instanceof ApiError ? error.message : 'Could not start checkout. Please try again.';
-      toast({ title: 'Checkout failed', description: message, variant: 'destructive' });
+      const message = error instanceof ApiError ? error.message : t('checkoutError');
+      toast({ title: t('checkoutFailed'), description: message, variant: 'destructive' });
     } finally {
       setIsCreatingOrder(false);
     }
@@ -85,8 +86,8 @@ export function DigitalProductBuyActions({
           }}
           className={layout === 'stack' ? 'w-full' : undefined}
         >
-          <ShoppingCart className="mr-2 h-4 w-4" />
-          {inCart ? 'In cart' : 'Add to cart'}
+          <ShoppingCart className="me-2 h-4 w-4" />
+          {inCart ? t('buyActions.inCart') : t('buyActions.addToCart')}
         </Button>
         <Button
           type="button"
@@ -94,7 +95,7 @@ export function DigitalProductBuyActions({
           onClick={() => void startCheckout()}
           className={layout === 'stack' ? 'w-full' : undefined}
         >
-          {isCreatingOrder ? 'Preparing...' : 'Buy now'}
+          {isCreatingOrder ? t('buyActions.preparing') : t('buyActions.buyNow')}
         </Button>
       </div>
 
@@ -105,7 +106,7 @@ export function DigitalProductBuyActions({
           itemType="order"
           itemId={orderId}
           itemName={product.title}
-          itemCategory="Digital Product"
+          itemCategory={t('buyActions.itemCategoryDigital')}
           basePriceCents={product.price_in_cents ?? 0}
           onSuccess={() => {
             cart.removeItem('digital_product', product.id);

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/shared/components/ui/badge';
 import type { Order } from '@/app/api/orders';
 
@@ -8,17 +9,19 @@ const statusStyles: Record<Order['status'], string> = {
   expired: 'bg-neutral-100 text-neutral-700',
 };
 
-const statusLabels: Record<Order['status'], string> = {
-  paid: 'Paid',
-  pending: 'Pending',
-  failed: 'Failed',
-  expired: 'Expired',
+const statusKeys: Record<Order['status'], string> = {
+  paid: 'orders.statusPaid',
+  pending: 'orders.statusPending',
+  failed: 'orders.statusFailed',
+  expired: 'orders.statusExpired',
 };
 
 export function OrderStatusBadge({ status }: { status: Order['status'] }) {
+  const { t } = useTranslation('dashboard');
+
   return (
     <Badge variant="secondary" className={statusStyles[status]}>
-      {statusLabels[status]}
+      {t(statusKeys[status])}
     </Badge>
   );
 }

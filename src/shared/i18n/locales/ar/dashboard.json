@@ -145,7 +145,10 @@
     "tabMine": "دوراتي",
     "loadError": "تعذّر تحميل الدورات المتقدمة.",
     "emptyMine": "لست مسجّلًا في أي دورة متقدمة بعد.",
-    "emptyAll": "لا توجد دورات متقدمة متاحة حاليًا."
+    "emptyAll": "لا توجد دورات متقدمة متاحة حاليًا.",
+    "enrolled": "مسجّل",
+    "available": "متاح",
+    "lessonCount": "{{count}} دروس"
   },
   "certificates": {
     "invalidLinkTitle": "رابط شهادة غير صالح",
