@@ -77,7 +77,8 @@ export type EventRecord = {
   event_type: ApiEvent['eventType'];
   event_format: ApiEvent['eventFormat'];
   attendee_count: number;
-  guest_experts: { name: string }[];
+  guest_experts: { name: string; bio?: string | null; image_url?: string | null; slug?: string | null }[];
+  expert_ids?: string[];
   price_in_cents: number | null;
   is_published: boolean;
 };
@@ -120,7 +121,13 @@ const mapApiEventToRecord = (event: ApiEvent): EventRecord => ({
   // Default to offline (paid for subscribers) if an older response omits the field — never silently online.
   event_format: event.eventFormat ?? 'offline',
   attendee_count: Number(event.attendeeCount ?? 0),
-  guest_experts: [],
+  guest_experts: (event.guestExperts ?? []).map((expert) => ({
+    name: expert.name ?? '',
+    bio: expert.bio ?? null,
+    image_url: expert.image_url ?? null,
+    slug: expert.slug ?? null,
+  })),
+  expert_ids: event.expertIds,
   price_in_cents: event.priceInCents ?? null,
   // Draft-safe: a response that omits the flag should read as a draft, never silently published.
   is_published: event.isPublished ?? false,
@@ -176,6 +183,7 @@ export type CreateEventPayload = {
   /** When false (e.g. event for a track), skip auto Series for standalone recordings sale */
   createRecordingsSeries?: boolean;
   isPublished?: boolean;
+  expertIds?: string[];
 };
 
 export type UpdateEventPayload = Partial<CreateEventPayload>;
