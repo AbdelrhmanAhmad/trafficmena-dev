@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
@@ -20,6 +21,7 @@ type CachedAcceptance = {
 };
 
 const Step2: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { formData, updateFormData, setCurrentStep: setSignUpCurrentStep } = useSignUpContext();
   const [email, setEmail] = useState(formData.email);
@@ -67,9 +69,9 @@ const Step2: React.FC = () => {
   }, [isInvitationFlow]);
 
   const validateEmail = (value: string) => {
-    if (!value.trim()) return 'Email is required';
+    if (!value.trim()) return t('signup.errors.emailRequired');
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(value)) return 'Please enter a valid email address';
+    if (!emailRegex.test(value)) return t('signup.errors.emailInvalid');
     return null;
   };
 
@@ -81,7 +83,7 @@ const Step2: React.FC = () => {
       const normalized = canonicalInvitationEmail ?? email.trim().toLowerCase();
 
       if (!normalized) {
-        setError('Email is required');
+        setError(t('signup.errors.emailRequired'));
         return;
       }
 
@@ -122,20 +124,18 @@ const Step2: React.FC = () => {
       <div className="space-y-6">
         <div className="mb-8 text-center">
           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            Step 2
+            {t('signup.stepLabel', { step: 2 })}
           </span>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
-            How can we reach you?
+            {t('signup.step2.title')}
           </h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            We&apos;ll send important updates and login codes to this email address.
-          </p>
+          <p className="mt-2 text-sm text-neutral-600">{t('signup.step2.subtitle')}</p>
         </div>
 
         <div className="space-y-4">
           <div>
             <Label htmlFor={emailId} className="text-sm font-medium text-neutral-700">
-              Email Address *
+              {t('emailAddress')} {t('signup.required')}
             </Label>
             <Input
               id={emailId}
@@ -147,7 +147,7 @@ const Step2: React.FC = () => {
                 if (error) setError(null);
                 if (apiError) setApiError(null);
               }}
-              placeholder="Enter your email"
+              placeholder={t('emailPlaceholder')}
               autoComplete="email"
               readOnly={isInvitationFlow}
               disabled={isInvitationFlow}
@@ -158,9 +158,7 @@ const Step2: React.FC = () => {
             {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
             {apiError && !error && <p className="mt-1 text-sm text-red-500">{apiError}</p>}
             {isInvitationFlow && !error && (
-              <p className="mt-1 text-xs text-neutral-500">
-                This email comes from your invitation and can&apos;t be changed.
-              </p>
+              <p className="mt-1 text-xs text-neutral-500">{t('signup.step2.invitationEmailHint')}</p>
             )}
           </div>
 
@@ -172,10 +170,10 @@ const Step2: React.FC = () => {
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Saving…
+                {t('signup.buttons.saving')}
               </span>
             ) : (
-              'Continue'
+              t('signup.buttons.continue')
             )}
           </Button>
         </div>

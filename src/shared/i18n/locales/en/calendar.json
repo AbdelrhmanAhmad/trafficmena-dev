@@ -1,0 +1,10 @@
+{
+  "title": "Calendar",
+  "subtitle": "View your upcoming events and sessions.",
+  "today": "Today",
+  "month": "Month",
+  "week": "Week",
+  "noEvents": "No events scheduled.",
+  "addToCalendar": "Add to calendar",
+  "viewEvent": "View event"
+}

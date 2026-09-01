@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import DOMPurify from 'dompurify';
 import { FileText, Globe, HelpCircle, Link2, Lock, Upload, Video } from 'lucide-react';
 import { type ChangeEvent, useId, useMemo, useRef, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type {
   CreateLibraryAssetPayload,
@@ -11,7 +11,8 @@ import type {
 } from '@/app/api/library';
 import { uploadFile } from '@/app/api/uploads';
 import { useEvents } from '@/features/events/hooks/useEvents';
-import { LazyEditor } from '@/shared/components/LazyEditor';
+import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
+import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 import {
@@ -42,8 +43,18 @@ import {
 
 const libraryAssetFormSchema = z
   .object({
-    title: z.string().trim().min(3, 'Add a descriptive title.').max(200),
-    description: z.string().trim().max(8000).optional(),
+    titleEn: z
+      .string()
+      .trim()
+      .min(3, 'Title (English) is required.')
+      .max(200, 'Keep titles under 200 characters.'),
+    titleAr: z
+      .string()
+      .trim()
+      .min(3, 'Title (Arabic) is required.')
+      .max(200, 'Keep titles under 200 characters.'),
+    descriptionEn: z.string().trim().max(8000).optional(),
+    descriptionAr: z.string().trim().max(8000).optional(),
     fileType: z.enum(['Video', 'Document', 'Presentation']),
     videoUrl: z.string().trim().max(1000).optional(),
     documentUrl: z.string().trim().max(1000).optional(),
@@ -113,8 +124,10 @@ export function LibraryAssetForm({
   canDelete = true,
 }: LibraryAssetFormProps) {
   const defaultValues: LibraryAssetFormValues = {
-    title: asset?.title ?? '',
-    description: asset?.description ?? '',
+    titleEn: asset?.titleEn ?? asset?.title ?? '',
+    titleAr: asset?.titleAr ?? asset?.title ?? '',
+    descriptionEn: (asset?.descriptionEn ?? asset?.description ?? '').trim(),
+    descriptionAr: (asset?.descriptionAr ?? asset?.description ?? '').trim(),
     fileType: asset?.file_type ?? 'Video',
     videoUrl: asset?.video_url ?? (asset?.file_type === 'Video' ? (asset?.file_url ?? '') : ''),
     documentUrl:
@@ -134,6 +147,7 @@ export function LibraryAssetForm({
     defaultValues,
   });
 
+  const values = form.watch();
   const { data: eventsData } = useEvents(1, 50);
 
   const documentInputRef = useRef<HTMLInputElement>(null);
@@ -214,13 +228,18 @@ export function LibraryAssetForm({
     const embedUrl = normaliseUrl(values.embedUrl);
     const thumbnailUrl = normaliseUrl(values.thumbnailUrl);
 
-    const sanitizedDescription = values.description?.trim()
-      ? DOMPurify.sanitize(values.description.trim())
+    const sanitizedDescriptionEn = values.descriptionEn?.trim()
+      ? DOMPurify.sanitize(values.descriptionEn.trim())
+      : null;
+    const sanitizedDescriptionAr = values.descriptionAr?.trim()
+      ? DOMPurify.sanitize(values.descriptionAr.trim())
       : null;
 
     const payload: CreateLibraryAssetPayload = {
-      title: values.title.trim(),
-      description: sanitizedDescription,
+      titleEn: values.titleEn.trim(),
+      titleAr: values.titleAr.trim(),
+      descriptionEn: sanitizedDescriptionEn,
+      descriptionAr: sanitizedDescriptionAr,
       fileType: values.fileType,
       videoUrl,
       documentUrl,
@@ -245,19 +264,26 @@ export function LibraryAssetForm({
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Growth workshop replay" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <div className="md:col-span-2">
+                <BilingualTextField
+                  label="Title"
+                  englishLabel="Title (English)"
+                  arabicLabel="Title (Arabic)"
+                  required
+                  valueEn={values.titleEn}
+                  valueAr={values.titleAr}
+                  onChangeEn={(value) => form.setValue('titleEn', value, { shouldDirty: true })}
+                  onChangeAr={(value) => form.setValue('titleAr', value, { shouldDirty: true })}
+                  englishPlaceholder="Growth workshop replay"
+                  arabicPlaceholder="إعادة عرض ورشة النمو"
+                />
+                {(form.formState.errors.titleEn || form.formState.errors.titleAr) && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.titleEn?.message ??
+                      form.formState.errors.titleAr?.message}
+                  </p>
                 )}
-              />
+              </div>
 
               <FormField
                 control={form.control}
@@ -318,22 +344,12 @@ export function LibraryAssetForm({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field: _field }) => (
-                <FormItem>
-                  <FormLabel>Summary</FormLabel>
-                  <Controller
-                    control={form.control}
-                    name="description"
-                    render={({ field: editorField }) => (
-                      <LazyEditor value={editorField.value ?? ''} onChange={editorField.onChange} />
-                    )}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
+            <BilingualRichTextField
+              label="Summary"
+              valueEn={values.descriptionEn ?? ''}
+              valueAr={values.descriptionAr ?? ''}
+              onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
+              onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
             />
 
             <FormField

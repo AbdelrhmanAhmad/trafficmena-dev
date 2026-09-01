@@ -12,16 +12,61 @@ import { activeTrackBookingWhere } from '../utils/booking.js';
 import { ApiError } from '../utils/errors.js';
 import { isEventHiddenFromNonStaff } from '../routes/api/eventVisibility.js';
 import { getOptionalUserRole } from '../routes/api/utils.js';
+import type { AppLocale } from '../utils/locale.js';
+import { resolveLocalizedText } from '../utils/localize.js';
 import type { EventCalendarSource } from './eventCalendar.js';
 
-export async function loadEventCalendarSource(eventId: string): Promise<EventCalendarSource | null> {
+type EventCalendarRow = {
+  id: string;
+  title: string;
+  titleEn: string | null;
+  titleAr: string | null;
+  eventDescription: string | null;
+  eventDescriptionEn: string | null;
+  eventDescriptionAr: string | null;
+  date: Date;
+  location: string | null;
+  locationEn: string | null;
+  locationAr: string | null;
+  locationUrl: string | null;
+  eventFormat: 'online' | 'offline';
+  meetingLink: string | null;
+};
+
+function toEventCalendarSource(row: EventCalendarRow, locale: AppLocale): EventCalendarSource {
+  return {
+    id: row.id,
+    title: resolveLocalizedText(row.titleEn ?? row.title, row.titleAr ?? row.title, locale),
+    eventDescription: resolveLocalizedText(
+      row.eventDescriptionEn ?? row.eventDescription,
+      row.eventDescriptionAr ?? row.eventDescription,
+      locale,
+    ),
+    date: row.date,
+    location: resolveLocalizedText(row.locationEn ?? row.location, row.locationAr ?? row.location, locale),
+    locationUrl: row.locationUrl,
+    eventFormat: row.eventFormat,
+    meetingLink: row.meetingLink,
+  };
+}
+
+export async function loadEventCalendarSource(
+  eventId: string,
+  locale: AppLocale = 'en',
+): Promise<EventCalendarSource | null> {
   const [row] = await db
     .select({
       id: events.id,
       title: events.title,
+      titleEn: events.titleEn,
+      titleAr: events.titleAr,
       eventDescription: events.eventDescription,
+      eventDescriptionEn: events.eventDescriptionEn,
+      eventDescriptionAr: events.eventDescriptionAr,
       date: events.date,
       location: events.location,
+      locationEn: events.locationEn,
+      locationAr: events.locationAr,
       locationUrl: events.locationUrl,
       eventFormat: events.eventFormat,
       meetingLink: events.meetingLink,
@@ -33,16 +78,7 @@ export async function loadEventCalendarSource(eventId: string): Promise<EventCal
 
   if (!row) return null;
 
-  return {
-    id: row.id,
-    title: row.title,
-    eventDescription: row.eventDescription,
-    date: row.date,
-    location: row.location,
-    locationUrl: row.locationUrl,
-    eventFormat: row.eventFormat,
-    meetingLink: row.meetingLink,
-  };
+  return toEventCalendarSource(row, locale);
 }
 
 export async function assertEventCalendarAccess(userId: string, eventId: string): Promise<void> {
@@ -130,14 +166,23 @@ export async function assertTrackCalendarAccess(userId: string, trackId: string)
   }
 }
 
-export async function loadTrackCalendarEvents(trackId: string): Promise<EventCalendarSource[]> {
+export async function loadTrackCalendarEvents(
+  trackId: string,
+  locale: AppLocale = 'en',
+): Promise<EventCalendarSource[]> {
   const rows = await db
     .select({
       id: events.id,
       title: events.title,
+      titleEn: events.titleEn,
+      titleAr: events.titleAr,
       eventDescription: events.eventDescription,
+      eventDescriptionEn: events.eventDescriptionEn,
+      eventDescriptionAr: events.eventDescriptionAr,
       date: events.date,
       location: events.location,
+      locationEn: events.locationEn,
+      locationAr: events.locationAr,
       locationUrl: events.locationUrl,
       eventFormat: events.eventFormat,
       meetingLink: events.meetingLink,
@@ -147,7 +192,7 @@ export async function loadTrackCalendarEvents(trackId: string): Promise<EventCal
     .where(and(eq(trackEvents.trackId, trackId), eq(events.isPublished, true)))
     .orderBy(trackEvents.sortOrder);
 
-  return rows;
+  return rows.map((row) => toEventCalendarSource(row, locale));
 }
 
 export async function loadUserEmail(userId: string): Promise<string | null> {
@@ -155,7 +200,12 @@ export async function loadUserEmail(userId: string): Promise<string | null> {
   return row?.email ?? null;
 }
 
-export async function loadTrackTitle(trackId: string): Promise<string | null> {
-  const [row] = await db.select({ title: tracks.title }).from(tracks).where(eq(tracks.id, trackId)).limit(1);
-  return row?.title ?? null;
+export async function loadTrackTitle(trackId: string, locale: AppLocale = 'en'): Promise<string | null> {
+  const [row] = await db
+    .select({ title: tracks.title, titleEn: tracks.titleEn, titleAr: tracks.titleAr })
+    .from(tracks)
+    .where(eq(tracks.id, trackId))
+    .limit(1);
+  if (!row) return null;
+  return resolveLocalizedText(row.titleEn ?? row.title, row.titleAr ?? row.title, locale);
 }

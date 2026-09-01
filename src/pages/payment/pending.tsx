@@ -3,6 +3,7 @@ import * as QRCode from 'qrcode';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/app/api/client';
 import type { PaymentItemType } from '@/app/api/payments';
 import { useCreateCheckout, usePayment, useVerifyPayment } from '@/app/hooks/usePayments';
@@ -26,6 +27,7 @@ function createCheckoutIdempotencyKey(scope: string): string {
 }
 
 export default function PaymentPendingPage() {
+  const { t } = useTranslation('payments');
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -69,33 +71,33 @@ export default function PaymentPendingPage() {
   const referenceCodes = [
     {
       key: 'fawry',
-      label: 'Fawry code',
+      label: t('fawryCode'),
       code: fawryCode,
-      instructions: 'Present this code at any Fawry outlet to complete your payment.',
+      instructions: t('fawryInstructions'),
     },
     {
       key: 'aman',
-      label: 'Aman code',
+      label: t('amanCode'),
       code: amanCode,
-      instructions: 'Use this code at any Aman kiosk to complete your payment.',
+      instructions: t('amanInstructions'),
     },
     {
       key: 'masary',
-      label: 'Masary code',
+      label: t('masaryCode'),
       code: masaryCode,
-      instructions: 'Provide this code at any Masary outlet to complete your payment.',
+      instructions: t('masaryInstructions'),
     },
     {
       key: 'meeza',
-      label: 'Wallet Reference',
+      label: t('walletReference'),
       code: meezaReference,
-      instructions: 'Use this reference in your wallet app to complete your payment.',
+      instructions: t('walletInstructions'),
     },
     {
       key: 'meeza-qr',
-      label: 'Wallet QR code',
+      label: t('walletQr'),
       code: meezaQrCode,
-      instructions: 'Scan this code with your wallet app to complete your payment.',
+      instructions: t('walletQrInstructions'),
     },
   ];
 
@@ -217,9 +219,9 @@ export default function PaymentPendingPage() {
       }
 
       const message =
-        error instanceof Error ? error.message : 'Unable to request a new code right now.';
+        error instanceof Error ? error.message : t('requestFailedDesc');
       toast({
-        title: 'Request failed',
+        title: t('requestFailed'),
         description: message,
         variant: 'destructive',
       });
@@ -232,8 +234,7 @@ export default function PaymentPendingPage() {
   if (isTerminated) {
     bodyContent = (
       <div className="rounded-lg border border-neutral-200 bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-        This payment session is no longer valid. Request a new code to try again, or start a new
-        checkout.
+        {t('sessionExpired')}
       </div>
     );
   } else if (showCodes) {
@@ -248,7 +249,7 @@ export default function PaymentPendingPage() {
             {entry.key === 'meeza-qr' && meezaQrDataUrl && (
               <img
                 src={meezaQrDataUrl}
-                alt="Wallet QR code"
+                alt={t('walletQrAlt')}
                 className="mx-auto mt-3 h-40 w-40 rounded-md border border-primary/20 bg-white p-2"
               />
             )}
@@ -266,7 +267,7 @@ export default function PaymentPendingPage() {
         ))}
         {isMeezaQrTooLarge && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-            Wallet QR code is too large to render. Please request a new code.
+            {t('walletQrTooLarge')}
           </div>
         )}
       </div>
@@ -274,15 +275,13 @@ export default function PaymentPendingPage() {
   } else if (isActionlessPending) {
     bodyContent = (
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800">
-        We couldn&apos;t set up an automatic payment for this method. Request a new code to try
-        again, or contact support.
+        {t('actionlessPending')}
       </div>
     );
   } else {
     bodyContent = (
       <div className="rounded-lg bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-        Your payment is being verified. This may take a few moments. You will receive a confirmation
-        once the payment is complete.
+        {t('verifyingStatus')}
       </div>
     );
   }
@@ -295,8 +294,8 @@ export default function PaymentPendingPage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
               <Clock className="h-10 w-10 text-amber-600" />
             </div>
-            <CardTitle className="text-2xl text-amber-700">Payment Pending</CardTitle>
-            <CardDescription>Your payment is being processed.</CardDescription>
+            <CardTitle className="text-2xl text-amber-700">{t('pendingTitle')}</CardTitle>
+            <CardDescription>{t('pendingDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {bodyContent}
@@ -308,7 +307,7 @@ export default function PaymentPendingPage() {
                 disabled={!canVerifyPayment || verifyPayment.isPending}
               >
                 {verifyPayment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Check payment status
+                {t('checkStatus')}
               </Button>
               <Button
                 variant="outline"
@@ -317,25 +316,23 @@ export default function PaymentPendingPage() {
                 disabled={!canRequestNewCode || createCheckout.isPending}
               >
                 {createCheckout.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Request new code
+                {t('requestNewCode')}
               </Button>
               {canRequestNewCode && (
                 <p className="text-center text-xs text-muted-foreground">
-                  Requesting a new code replaces the current pending payment.
+                  {t('requestNewCodeHint')}
                 </p>
               )}
               {!canRequestNewCode && (
                 <p className="text-center text-xs text-muted-foreground">
-                  {user
-                    ? 'Start a new checkout to get a fresh reference code.'
-                    : 'Sign in to check status or request a new code.'}
+                  {user ? t('startNewCheckout') : t('signInForCode')}
                 </p>
               )}
               <Button asChild className="w-full">
-                <Link to="/dashboard">Go to Dashboard</Link>
+                <Link to="/dashboard">{t('goToDashboard')}</Link>
               </Button>
               <Button asChild variant="outline" className="w-full">
-                <Link to="/dashboard/meetups">View My Events</Link>
+                <Link to="/dashboard/meetups">{t('viewMyEvents')}</Link>
               </Button>
             </div>
           </CardContent>

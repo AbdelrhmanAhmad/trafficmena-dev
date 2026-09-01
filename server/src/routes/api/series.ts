@@ -14,6 +14,21 @@ import {
   trackEvents,
 } from '../../db/schema/index.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
+import {
+  presentAdminContent,
+  presentPublicRow,
+} from '../../utils/contentPresentation.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import {
   getActiveSeriesGrantIds,
@@ -51,16 +66,22 @@ const priceInCentsSchema = z
 
 const recordingsAccessPolicySchema = z.enum(RECORDINGS_ACCESS_POLICIES);
 
-const createSeriesSchema = z.object({
-  title: z.string().trim().min(3, 'Title is required.').max(180),
-  description: z.union([z.string().trim().max(4000), z.null()]).optional(),
-  imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
-  isPublished: z.boolean().default(true),
-  isPremium: z.boolean().default(false),
-  priceInCents: priceInCentsSchema,
-  salesEnabled: z.boolean().default(false),
-  recordingsAccessPolicy: recordingsAccessPolicySchema.default('free_for_prior_buyers'),
-});
+const createSeriesSchema = z
+  .object({
+    title: z.string().trim().min(3, 'Title is required.').max(180).optional(),
+    description: z.union([z.string().trim().max(4000), z.null()]).optional(),
+    imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
+    isPublished: z.boolean().default(true),
+    isPremium: z.boolean().default(false),
+    priceInCents: priceInCentsSchema,
+    salesEnabled: z.boolean().default(false),
+    recordingsAccessPolicy: recordingsAccessPolicySchema.default('free_for_prior_buyers'),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields)
+  .refine((data) => (data.titleEn && data.titleAr) || data.title, {
+    message: 'Provide title or titleEn/titleAr.',
+  });
 
 const updateSeriesSchema = z
   .object({
@@ -74,6 +95,8 @@ const updateSeriesSchema = z
     recordingsAccessPolicy: recordingsAccessPolicySchema.optional(),
     sortOrder: z.number().int().min(0).optional(),
   })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields)
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
 const addAssetsSchema = z.object({
@@ -123,6 +146,7 @@ export function registerSeriesRoutes(app: Hono) {
     }
 
     const { page, pageSize, search, accessibleOnly } = parsed.data;
+    const locale = resolveLocaleFromRequest(c);
     const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
     const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
 
@@ -138,7 +162,14 @@ export function registerSeriesRoutes(app: Hono) {
       );
     }
     if (search) {
-      filters.push(ilike(series.title, `%${escapeLikePattern(search)}%`));
+      const pattern = `%${escapeLikePattern(search)}%`;
+      filters.push(
+        or(
+          ilike(series.titleEn, pattern),
+          ilike(series.titleAr, pattern),
+          ilike(series.title, pattern),
+        )!,
+      );
     }
 
     const whereClause = filters.length ? and(...filters) : undefined;
@@ -155,8 +186,10 @@ export function registerSeriesRoutes(app: Hono) {
     const seriesList = await db
       .select({
         id: series.id,
-        title: series.title,
-        description: series.description,
+        titleEn: series.titleEn,
+        titleAr: series.titleAr,
+        descriptionEn: series.descriptionEn,
+        descriptionAr: series.descriptionAr,
         imageUrl: series.imageUrl,
         sortOrder: series.sortOrder,
         isPublished: series.isPublished,
@@ -287,7 +320,7 @@ export function registerSeriesRoutes(app: Hono) {
           });
 
         return {
-          ...s,
+          ...presentPublicRow(s, locale, Boolean(isStaff)),
           assetCount,
           isSellable: isSeriesSellable({
             salesEnabled: s.salesEnabled,
@@ -328,14 +361,17 @@ export function registerSeriesRoutes(app: Hono) {
       );
     }
     const id = idParsed.data;
+    const locale = resolveLocaleFromRequest(c);
 
     const [role, seriesRows] = await Promise.all([
       getOptionalUserRole(session.user.id),
       db
         .select({
           id: series.id,
-          title: series.title,
-          description: series.description,
+          titleEn: series.titleEn,
+          titleAr: series.titleAr,
+          descriptionEn: series.descriptionEn,
+          descriptionAr: series.descriptionAr,
           imageUrl: series.imageUrl,
           sortOrder: series.sortOrder,
           isPublished: series.isPublished,
@@ -462,8 +498,10 @@ export function registerSeriesRoutes(app: Hono) {
         sortOrder: seriesAssets.sortOrder,
         asset: {
           id: libraryAssets.id,
-          title: libraryAssets.title,
-          description: libraryAssets.description,
+          titleEn: libraryAssets.titleEn,
+          titleAr: libraryAssets.titleAr,
+          descriptionEn: libraryAssets.descriptionEn,
+          descriptionAr: libraryAssets.descriptionAr,
           fileType: libraryAssets.fileType,
           thumbnailUrl: libraryAssets.thumbnailUrl,
           videoUrl: libraryAssets.videoUrl,
@@ -518,10 +556,10 @@ export function registerSeriesRoutes(app: Hono) {
         userEventIds,
       });
 
+      const presentedAsset = presentPublicRow(sa.asset, locale, Boolean(isStaff));
+
       return {
-        id: sa.asset.id,
-        title: sa.asset.title,
-        description: sa.asset.description,
+        ...presentedAsset,
         fileType: sa.asset.fileType,
         thumbnailUrl: sa.asset.thumbnailUrl,
         // Only include content URLs if user has access
@@ -539,8 +577,10 @@ export function registerSeriesRoutes(app: Hono) {
       };
     });
 
+    const presentedSeries = presentPublicRow(seriesRecord, locale, Boolean(isStaff));
+
     return c.json({
-      ...seriesRecord,
+      ...presentedSeries,
       recordingsAccessPolicy,
       assetCount: assets.length,
       assets,
@@ -565,11 +605,23 @@ export function registerSeriesRoutes(app: Hono) {
 
     const payload = parsed.data;
 
+    const titleFields =
+      payload.titleEn && payload.titleAr
+        ? bilingualTitleFields(payload.titleEn, payload.titleAr)
+        : bilingualTitleFromLegacy(payload.title!);
+    const descriptionFields =
+      payload.descriptionEn !== undefined || payload.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            payload.descriptionEn ?? payload.description ?? null,
+            payload.descriptionAr ?? payload.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(payload.description);
+
     const [created] = await db
       .insert(series)
       .values({
-        title: payload.title,
-        description: payload.description ?? null,
+        ...titleFields,
+        ...descriptionFields,
         imageUrl: payload.imageUrl || null,
         isPublished: payload.isPublished,
         isPremium: payload.isPremium,
@@ -579,7 +631,7 @@ export function registerSeriesRoutes(app: Hono) {
       })
       .returning();
 
-    return c.json({ series: created }, 201);
+    return c.json({ series: presentAdminContent(created) }, 201);
   });
 
   // Update series
@@ -651,7 +703,7 @@ export function registerSeriesRoutes(app: Hono) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
     }
 
-    return c.json({ series: updated });
+    return c.json({ series: presentAdminContent(updated) });
   });
 
   // Delete series

@@ -18,6 +18,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Switch } from '@/shared/components/ui/switch';
 import { Textarea } from '@/shared/components/ui/textarea';
+import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 
 type MasterclassCertificatesAdminProps = {
   masterclassId: string;
@@ -37,7 +38,8 @@ export function MasterclassCertificatesAdmin({
   const deleteMutation = useDeleteCertificate(masterclassId);
 
   const [enabled, setEnabled] = useState(false);
-  const [title, setTitle] = useState('');
+  const [titleEn, setTitleEn] = useState('');
+  const [titleAr, setTitleAr] = useState('');
   const [description, setDescription] = useState('');
   const [templateUrl, setTemplateUrl] = useState('');
 
@@ -47,7 +49,8 @@ export function MasterclassCertificatesAdmin({
   useEffect(() => {
     if (!settings) return;
     setEnabled(settings.certificateEnabled);
-    setTitle(settings.certificateTitle ?? '');
+    setTitleEn(settings.certificateTitleEn ?? settings.certificateTitle ?? '');
+    setTitleAr(settings.certificateTitleAr ?? settings.certificateTitle ?? '');
     setDescription(settings.certificateDescription ?? '');
     setTemplateUrl(settings.certificateTemplateUrl ?? '');
   }, [settings]);
@@ -55,7 +58,8 @@ export function MasterclassCertificatesAdmin({
   const handleSaveSettings = async () => {
     await updateSettings.mutateAsync({
       certificateEnabled: enabled,
-      certificateTitle: title.trim() || null,
+      certificateTitleEn: titleEn.trim() || null,
+      certificateTitleAr: titleAr.trim() || null,
       certificateDescription: description.trim() || null,
       certificateTemplateUrl: templateUrl.trim() || null,
     });
@@ -98,14 +102,17 @@ export function MasterclassCertificatesAdmin({
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
-          <div className="space-y-2">
-            <Label>Certificate title</Label>
-            <Input
-              placeholder={masterclassTitle}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
+          <BilingualTextField
+            label="Certificate title"
+            englishLabel="Certificate title (English)"
+            arabicLabel="Certificate title (Arabic)"
+            valueEn={titleEn}
+            valueAr={titleAr}
+            onChangeEn={setTitleEn}
+            onChangeAr={setTitleAr}
+            englishPlaceholder={masterclassTitle}
+            arabicPlaceholder={masterclassTitle}
+          />
           <div className="space-y-2">
             <Label>Description (shown to learners)</Label>
             <Textarea

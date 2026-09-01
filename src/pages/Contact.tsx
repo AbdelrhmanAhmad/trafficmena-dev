@@ -1,4 +1,6 @@
 import { Mail, Phone, Sparkles } from 'lucide-react';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { WhatsAppIcon } from '@/shared/components/icons/WhatsAppIcon';
 import Layout from '@/shared/components/layout/Layout';
 import {
@@ -8,37 +10,46 @@ import {
   WHATSAPP_URL,
 } from '@/shared/constants/contact';
 
-const actions = [
-  {
-    title: 'Email',
-    description: 'Send us a message and our team will get back to you.',
-    value: CONTACT_EMAIL,
-    href: `mailto:${CONTACT_EMAIL}`,
-    icon: Mail,
-    external: false,
-    iconClassName: 'text-[#05ef62]',
-  },
-  {
-    title: 'Phone',
-    description: 'Call us directly to speak with the TrafficMENA team.',
-    value: CONTACT_PHONE_DISPLAY,
-    href: `tel:${CONTACT_PHONE_E164}`,
-    icon: Phone,
-    external: false,
-    iconClassName: 'text-[#05ef62]',
-  },
-  {
-    title: 'WhatsApp',
-    description: 'Chat with us for a quick and convenient response.',
-    value: CONTACT_PHONE_DISPLAY,
-    href: WHATSAPP_URL,
-    icon: WhatsAppIcon,
-    external: true,
-    iconClassName: 'text-[#25D366]',
-  },
-] as const;
-
 const ContactPage = () => {
+  const { t } = useTranslation('common');
+
+  const actions = useMemo(
+    () =>
+      [
+        {
+          key: 'email',
+          title: t('contact.emailTitle'),
+          description: t('contact.emailDesc'),
+          value: CONTACT_EMAIL,
+          href: `mailto:${CONTACT_EMAIL}`,
+          icon: Mail,
+          external: false,
+          iconClassName: 'text-[#05ef62]',
+        },
+        {
+          key: 'phone',
+          title: t('contact.phoneTitle'),
+          description: t('contact.phoneDesc'),
+          value: CONTACT_PHONE_DISPLAY,
+          href: `tel:${CONTACT_PHONE_E164}`,
+          icon: Phone,
+          external: false,
+          iconClassName: 'text-[#05ef62]',
+        },
+        {
+          key: 'whatsapp',
+          title: t('contact.whatsappTitle'),
+          description: t('contact.whatsappDesc'),
+          value: CONTACT_PHONE_DISPLAY,
+          href: WHATSAPP_URL,
+          icon: WhatsAppIcon,
+          external: true,
+          iconClassName: 'text-[#25D366]',
+        },
+      ] as const,
+    [t],
+  );
+
   return (
     <Layout>
       <div className="relative isolate overflow-hidden">
@@ -49,21 +60,20 @@ const ContactPage = () => {
           <section className="w-full rounded-[28px] border border-neutral-200 bg-white/90 px-6 py-12 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur sm:px-12">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-xs font-medium text-neutral-600">
               <Sparkles className="h-3.5 w-3.5 text-[#05ef62]" />
-              We&apos;re here to help
+              {t('contact.badge')}
             </span>
             <h1 className="mt-6 text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl">
-              Contact Us
+              {t('contact.title')}
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-neutral-700">
-              Have a question about an event, your account, or TrafficMENA? Choose the channel that
-              works best for you.
+              {t('contact.description')}
             </p>
 
             <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
               {actions.map(
-                ({ title, description, value, href, icon: Icon, external, iconClassName }) => (
+                ({ key, title, description, value, href, icon: Icon, external, iconClassName }) => (
                   <a
-                    key={title}
+                    key={key}
                     href={href}
                     target={external ? '_blank' : undefined}
                     rel={external ? 'noopener noreferrer' : undefined}

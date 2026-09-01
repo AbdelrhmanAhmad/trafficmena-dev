@@ -21,7 +21,11 @@ export const MASTERCLASS_FILE_EXTENSIONS: Record<MasterclassFileType, string[]> 
 export type MasterclassAdmin = {
   id: string;
   title: string;
+  titleEn?: string;
+  titleAr?: string;
   description: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   imageUrl: string | null;
   priceInCents: number | null;
   isPublished: boolean;
@@ -185,8 +189,10 @@ export async function fetchMasterclassEnrollments(id: string): Promise<Mastercla
 }
 
 export async function createMasterclass(payload: {
-  title: string;
-  description?: string | null;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   imageUrl?: string | null;
   priceInCents?: number | null;
   isPublished?: boolean;
@@ -202,8 +208,10 @@ export async function createMasterclass(payload: {
 export async function updateMasterclass(
   id: string,
   payload: Partial<{
-    title: string;
-    description: string | null;
+    titleEn: string;
+    titleAr: string;
+    descriptionEn: string | null;
+    descriptionAr: string | null;
     imageUrl: string | null;
     priceInCents: number | null;
     isPublished: boolean;

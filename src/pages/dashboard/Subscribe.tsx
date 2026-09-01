@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { Check, Crown, Loader2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
@@ -15,7 +16,7 @@ import {
   ValueMathSection,
   VideoReviewsSection,
 } from '@/features/subscribe/components';
-import { FINAL_CTA_COPY, HERO_BENEFITS, PRICING } from '@/features/subscribe/content';
+import { PRICING } from '@/features/subscribe/content';
 import { trackBeginCheckout, trackSelectPaymentMethod } from '@/lib/analytics/events';
 import { rememberCheckoutReturn } from '@/shared/utils/paymentReturnContext';
 import {
@@ -53,8 +54,14 @@ function createCheckoutIdempotencyKey(scope: string): string {
 
 // Already subscribed view
 function AlreadySubscribedView({ subscription }: { subscription: { endsAt: string } }) {
+  const { t } = useTranslation('dashboard');
+  const { t: tCommerce } = useTranslation('commerce');
   const navigate = useNavigate();
   const expiresAt = new Date(subscription.endsAt);
+  const heroBenefits = useMemo(
+    () => tCommerce('subscribe.heroBenefits', { returnObjects: true }) as string[],
+    [tCommerce],
+  );
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
@@ -63,18 +70,18 @@ function AlreadySubscribedView({ subscription }: { subscription: { endsAt: strin
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10">
             <Crown className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl">You're a Premium Member!</CardTitle>
+          <CardTitle className="text-2xl">{t('subscribe.alreadySubscribedTitle')}</CardTitle>
           <CardDescription>
-            Your subscription is active until{' '}
-            <span className="font-medium text-foreground">{format(expiresAt, 'MMMM d, yyyy')}</span>
-            .
+            {t('subscribe.alreadySubscribedDesc', {
+              date: format(expiresAt, 'MMMM d, yyyy'),
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="rounded-xl bg-muted/50 p-4">
-            <h3 className="font-medium">Your Benefits</h3>
+            <h3 className="font-medium">{t('subscribe.yourBenefits')}</h3>
             <ul className="mt-3 space-y-2">
-              {HERO_BENEFITS.map((benefit) => (
+              {heroBenefits.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-2 text-sm">
                   <Check className="h-4 w-4 text-primary" />
                   {benefit}
@@ -84,7 +91,7 @@ function AlreadySubscribedView({ subscription }: { subscription: { endsAt: strin
           </div>
           <div className="flex justify-center">
             <Button onClick={() => navigate('/dashboard')} variant="outline">
-              Go to Dashboard
+              {t('subscribe.goToDashboard')}
             </Button>
           </div>
         </CardContent>
@@ -119,6 +126,12 @@ function HeroSection({
   onWalletPhoneChange: (e164: string | null) => void;
   canSubmit: boolean;
 }) {
+  const { t } = useTranslation('dashboard');
+  const { t: tCommerce } = useTranslation('commerce');
+  const heroBenefits = useMemo(
+    () => tCommerce('subscribe.heroBenefits', { returnObjects: true }) as string[],
+    [tCommerce],
+  );
   return (
     <section
       className={`relative mx-auto w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur ${isLoaded ? 'animate-fade-in' : ''}`}
@@ -134,28 +147,27 @@ function HeroSection({
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white">
                 <Crown className="h-3.5 w-3.5" />
               </span>
-              Premium Membership
+              {t('subscribe.premiumBadge')}
               <span className="mx-1.5 h-1 w-1 rounded-full bg-amber-400" />
-              Become the Expert Others Turn To
+              {t('subscribe.premiumTagline')}
             </div>
 
             {/* Headline */}
             <h1
               className={`text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              Complete Your Subscription
+              {t('subscribe.completeTitle')}
             </h1>
 
             <p
               className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              You're one step away from advanced knowledge and exclusive resources: expert-led
-              tracks, done-for-you playbooks, and a community of 1,250+ MENA marketers.
+              {t('subscribe.completeDesc')}
             </p>
 
             {/* Benefits List */}
             <ul className={`mt-6 space-y-3 ${isLoaded ? 'animate-fade-in-up' : ''}`}>
-              {HERO_BENEFITS.map((benefit) => (
+              {heroBenefits.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-3">
                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f]">
                     <Check className="h-3 w-3 text-white" />
@@ -175,7 +187,7 @@ function HeroSection({
             <div className="rounded-[28px] border-2 border-amber-200 bg-white p-8 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <div className="mb-6 text-center">
                 <Badge className="mb-4 bg-amber-100 text-amber-800 hover:bg-amber-100">
-                  Annual Subscription
+                  {t('subscribe.annualSubscription')}
                 </Badge>
                 <div className="text-4xl font-medium text-neutral-400 line-through">
                   {PRICING.regular.toLocaleString()} EGP
@@ -183,12 +195,14 @@ function HeroSection({
                 <div className="text-3xl font-bold text-neutral-900">
                   {pricePreview?.amountFormatted ?? `${subscriptionInfo?.priceEgp ?? '---'} EGP`}
                 </div>
-                <p className="mt-1 text-neutral-500">per year</p>
+                <p className="mt-1 text-neutral-500">{t('subscribe.perYear')}</p>
               </div>
 
               {/* Payment Method Selector */}
               <div className="mb-6">
-                <p className="mb-3 text-sm font-medium text-neutral-700">Select payment method</p>
+                <p className="mb-3 text-sm font-medium text-neutral-700">
+                  {t('subscribe.selectPaymentMethod')}
+                </p>
                 <PaymentMethodSelector
                   value={selectedMethodId}
                   onChange={setSelectedMethodId}
@@ -213,18 +227,18 @@ function HeroSection({
                 {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
+                    {t('subscribe.processing')}
                   </>
                 ) : (
                   <>
                     <Crown className="mr-2 h-4 w-4" />
-                    Subscribe Now
+                    {t('subscribe.subscribeNow')}
                   </>
                 )}
               </Button>
 
               <p className="mt-4 text-center text-xs text-neutral-500">
-                365 days of premium access
+                {t('subscribe.premiumAccessDays')}
               </p>
             </div>
           </div>
@@ -246,6 +260,8 @@ function FinalCTASection({
   onSubscribe: () => void;
   isPending: boolean;
 }) {
+  const { t } = useTranslation('dashboard');
+  const { t: tCommerce } = useTranslation('commerce');
   return (
     <section className="relative w-full overflow-hidden rounded-[28px]">
       <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900 to-[#0b3a3f]" />
@@ -257,13 +273,17 @@ function FinalCTASection({
         </div>
 
         <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-          {FINAL_CTA_COPY.headline}
+          {tCommerce('subscribe.finalCta.headline')}
         </h3>
         <p className="mx-auto mt-4 max-w-2xl text-base text-white/80 leading-relaxed">
-          {FINAL_CTA_COPY.lead}
+          {tCommerce('subscribe.finalCta.lead')}
         </p>
-        <p className="mx-auto mt-4 max-w-2xl text-sm text-white/60">{FINAL_CTA_COPY.description}</p>
-        <p className="mt-4 text-lg font-semibold text-[#05ef62]">{FINAL_CTA_COPY.emphasis}</p>
+        <p className="mx-auto mt-4 max-w-2xl text-sm text-white/60">
+          {tCommerce('subscribe.finalCta.description')}
+        </p>
+        <p className="mt-4 text-lg font-semibold text-[#05ef62]">
+          {tCommerce('subscribe.finalCta.emphasis')}
+        </p>
 
         <div className="mt-8">
           <Button
@@ -274,31 +294,33 @@ function FinalCTASection({
             {isPending ? (
               <>
                 <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-                <span>Processing...</span>
+                <span>{t('subscribe.processing')}</span>
               </>
             ) : (
               <>
                 <Crown className="h-5 w-5 shrink-0" />
-                <span>Subscribe Now: {subscriptionInfo?.priceEgp ?? '---'} EGP/year</span>
+                <span>
+                  {t('subscribe.subscribeNowWithPrice', {
+                    price: subscriptionInfo?.priceEgp ?? '---',
+                  })}
+                </span>
               </>
             )}
           </Button>
           {!canSubmit && (
-            <p className="mt-3 text-sm text-white/50">
-              Complete the payment details above to continue
-            </p>
+            <p className="mt-3 text-sm text-white/50">{t('subscribe.completePaymentHint')}</p>
           )}
         </div>
 
         <p className="mt-6 text-sm text-white/50">
-          Questions?{' '}
+          {t('subscribe.questions')}{' '}
           <a
             href="https://wa.me/201505437979"
             target="_blank"
             rel="noopener noreferrer"
             className="text-white/70 underline hover:text-white"
           >
-            Contact us on WhatsApp
+            {t('subscribe.contactWhatsApp')}
           </a>
         </p>
       </div>
@@ -308,6 +330,7 @@ function FinalCTASection({
 
 // Subscribe Payment View (Full Content)
 function SubscribePaymentView() {
+  const { t } = useTranslation('dashboard');
   const { toast } = useToast();
   const navigate = useNavigate();
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
@@ -379,8 +402,8 @@ function SubscribePaymentView() {
   const handleSubscribe = async () => {
     if (!selectedMethodId) {
       toast({
-        title: 'Select payment method',
-        description: 'Please select a payment method to continue.',
+        title: t('subscribe.selectMethodTitle'),
+        description: t('subscribe.selectMethodDesc'),
         variant: 'destructive',
       });
       return;
@@ -453,11 +476,9 @@ function SubscribePaymentView() {
       }
 
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to process subscription. Please try again.';
+        error instanceof Error ? error.message : t('subscribe.subscriptionFailedDesc');
       toast({
-        title: 'Subscription failed',
+        title: t('subscribe.subscriptionFailed'),
         description: message,
         variant: 'destructive',
       });

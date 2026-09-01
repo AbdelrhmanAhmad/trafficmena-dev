@@ -1,7 +1,14 @@
 import { and, count, eq } from 'drizzle-orm';
 import { db } from '../db/client.js';
 import { libraryAssets, series, seriesAssets, trackEvents } from '../db/schema/index.js';
+import {
+  bilingualDescriptionFromLegacy,
+  bilingualTitleFromLegacy,
+} from '../utils/bilingualDb.js';
 import { normalizeRecordingsAccessPolicy } from '../routes/api/seriesAccess.js';
+import { resolveLocalizedText } from '../utils/localize.js';
+import type { AppLocale } from '../utils/locale.js';
+import { DEFAULT_LOCALE } from '../utils/locale.js';
 import { isSeriesSellable } from './seriesSales.js';
 import {
   enrichRecordingsSeriesForUser,
@@ -26,11 +33,13 @@ export async function createEventRecordingsSeriesInTx(
   eventTitle: string,
   recordingAssetId: string,
 ): Promise<string> {
+  const seriesTitle = `${eventTitle} Recordings`;
+  const seriesDescription = `Recording from ${eventTitle}`;
   const [eventSeries] = await tx
     .insert(series)
     .values({
-      title: `${eventTitle} Recordings`,
-      description: `Recording from ${eventTitle}`,
+      ...bilingualTitleFromLegacy(seriesTitle),
+      ...bilingualDescriptionFromLegacy(seriesDescription),
       eventId,
       isPublished: false,
     })
@@ -90,11 +99,13 @@ export async function ensureEventRecordingsSeries(eventId: string, eventTitle: s
 
     let recordingAssetId = eventAssets[0]?.id;
     if (!recordingAssetId) {
+      const recordingTitle = `${eventTitle} - Recording`;
+      const recordingDescription = `Recording from ${eventTitle}`;
       const [createdAsset] = await tx
         .insert(libraryAssets)
         .values({
-          title: `${eventTitle} - Recording`,
-          description: `Recording from ${eventTitle}`,
+          ...bilingualTitleFromLegacy(recordingTitle),
+          ...bilingualDescriptionFromLegacy(recordingDescription),
           fileType: 'Video',
           eventId,
           isPublic: false,
@@ -132,6 +143,7 @@ export async function deleteEventRecordingsSeries(eventId: string): Promise<void
 export async function loadRecordingsSeriesForEvent(
   eventId: string,
   userContext?: RecordingsSeriesUserContext,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<RecordingsSeriesSummary | null> {
   if (await isEventLinkedToTrack(eventId)) {
     return null;
@@ -140,7 +152,10 @@ export async function loadRecordingsSeriesForEvent(
   const [eventSeries] = await db
     .select({
       id: series.id,
-      title: series.title,
+      titleEn: series.titleEn,
+      titleAr: series.titleAr,
+      descriptionEn: series.descriptionEn,
+      descriptionAr: series.descriptionAr,
       isPublished: series.isPublished,
       salesEnabled: series.salesEnabled,
       priceInCents: series.priceInCents,
@@ -171,7 +186,7 @@ export async function loadRecordingsSeriesForEvent(
 
   const baseSummary = {
     id: eventSeries.id,
-    title: eventSeries.title,
+    title: resolveLocalizedText(eventSeries.titleEn, eventSeries.titleAr, locale),
     isPublished: eventSeries.isPublished,
     salesEnabled: eventSeries.salesEnabled,
     priceInCents: eventSeries.priceInCents,
@@ -201,9 +216,10 @@ export async function loadRecordingsSeriesForEventDetail(
   eventId: string,
   trackId: string | null | undefined,
   userContext?: RecordingsSeriesUserContext,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<RecordingsSeriesSummary | null> {
   if (trackId) {
     return null;
   }
-  return loadRecordingsSeriesForEvent(eventId, userContext);
+  return loadRecordingsSeriesForEvent(eventId, userContext, locale);
 }

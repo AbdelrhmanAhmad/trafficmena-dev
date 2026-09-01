@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
-import type { Hono } from 'hono';
+import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -29,50 +29,155 @@ import {
   isDiscoveryBlocked,
 } from '../../services/productVisibility.js';
 import { getLearnerCertificateStatus, tryIssueCertificateOnCompletion } from '../../services/certificates.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualDisplayNameFields,
+  bilingualDisplayNameFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  optionalBilingualDisplayNameFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
 import { ApiError } from '../../utils/errors.js';
+import {
+  presentAdminContent,
+  presentAdminDisplayName,
+  presentPublicContent,
+  presentPublicDisplayName,
+  presentPublicTitleOnly,
+} from '../../utils/contentPresentation.js';
+import { resolveLocaleFromRequest, type AppLocale } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { requireManager, requireContentDelete } from './utils.js';
+import { getOptionalUserRole, requireManager, requireContentDelete } from './utils.js';
+
+const STAFF_ROLES = new Set(['owner', 'admin', 'manager']);
+
+type BilingualContentRow = {
+  id: string;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
+};
+
+async function resolvePresentationContext(c: Context) {
+  const locale = resolveLocaleFromRequest(c);
+  const session = await getSessionFromRequest(c);
+  const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
+  const isStaff = Boolean(role && STAFF_ROLES.has(role));
+  return { locale, isStaff };
+}
+
+function presentContentFields(row: BilingualContentRow, locale: AppLocale, isStaff: boolean) {
+  const contentRow = {
+    id: row.id,
+    titleEn: row.titleEn,
+    titleAr: row.titleAr,
+    descriptionEn: row.descriptionEn,
+    descriptionAr: row.descriptionAr,
+  };
+  if (isStaff) {
+    return presentAdminContent(contentRow);
+  }
+  const presented = presentPublicContent(contentRow, locale);
+  return { title: presented.title, description: presented.description };
+}
+
+function presentVideoTitle(
+  row: { id: string; titleEn: string; titleAr: string },
+  locale: AppLocale,
+  isStaff: boolean,
+) {
+  if (isStaff) {
+    return { id: row.id, titleEn: row.titleEn, titleAr: row.titleAr };
+  }
+  return presentPublicTitleOnly(row, locale);
+}
 
 const fileTypeSchema = z.enum(['excel', 'markdown', 'html', 'text', 'powerpoint']);
 const uuidParamSchema = z.string().uuid();
 
-const createMasterclassSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
-  priceInCents: z.number().int().min(0).optional().nullable(),
-  isPublished: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
-});
+const masterclassFieldsSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    imageUrl: z.string().url().optional().nullable(),
+    priceInCents: z.number().int().min(0).optional().nullable(),
+    isPublished: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
 
-const updateMasterclassSchema = createMasterclassSchema.partial();
+const createMasterclassSchema = masterclassFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
-const moduleInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional().nullable(),
-  sortOrder: z.number().int().optional(),
-});
+const updateMasterclassSchema = masterclassFieldsSchema
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
-const lessonInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional().nullable(),
-  sortOrder: z.number().int().optional(),
-});
+const moduleFieldsSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
 
-const videoInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  videoUrl: z.string().trim().min(1).max(1000),
-  sortOrder: z.number().int().optional(),
-});
+const moduleInputSchema = moduleFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
+
+const lessonFieldsSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(5000).optional().nullable(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
+
+const lessonInputSchema = lessonFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
+
+const baseVideoInputSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    videoUrl: z.string().trim().min(1).max(1000),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial());
+
+const videoInputSchema = baseVideoInputSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
 const MAX_VIDEOS_PER_LESSON = 20;
 
-const fileInputSchema = z.object({
-  fileType: fileTypeSchema,
-  displayName: z.string().min(1).max(200),
-  fileUrl: z.string().url(),
-  sortOrder: z.number().int().optional(),
-});
+const baseFileInputSchema = z
+  .object({
+    fileType: fileTypeSchema,
+    displayName: z.string().min(1).max(200).optional(),
+    fileUrl: z.string().url(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(optionalBilingualDisplayNameFields.partial());
+
+const fileInputSchema = baseFileInputSchema.refine(
+  (data) => (data.displayNameEn && data.displayNameAr) || data.displayName,
+  { message: 'Provide displayName or displayNameEn/displayNameAr.' },
+);
 
 const reorderSchema = z.object({
   orderedIds: z.array(z.string().uuid()),
@@ -257,6 +362,7 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
     }
 
+    const { locale, isStaff } = await resolvePresentationContext(c);
     const filter = c.req.query('filter') === 'mine' ? 'mine' : 'all';
     const visibility = await getEffectiveProductVisibility();
     const discoveryBlocked = isDiscoveryBlocked('masterclasses', visibility);
@@ -284,9 +390,8 @@ export function registerMasterclassRoutes(app: Hono) {
       .map((row) => {
         const lessonCount = lessonCountMap.get(row.id) ?? 0;
         return {
+          ...presentContentFields(row, locale, isStaff),
           id: row.id,
-          title: row.title,
-          description: row.description,
           image_url: row.imageUrl,
           price_in_cents: row.priceInCents,
           is_enrolled: enrolledIds.has(row.id),
@@ -303,6 +408,8 @@ export function registerMasterclassRoutes(app: Hono) {
     if (!session?.user?.id) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
     }
+
+    const { locale, isStaff } = await resolvePresentationContext(c);
 
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
@@ -337,13 +444,21 @@ export function registerMasterclassRoutes(app: Hono) {
 
     let modules: Array<{
       id: string;
-      title: string;
-      description: string | null;
+      title?: string;
+      titleEn?: string;
+      titleAr?: string;
+      description?: string | null;
+      descriptionEn?: string | null;
+      descriptionAr?: string | null;
       sort_order: number;
       lessons: Array<{
         id: string;
-        title: string;
-        description: string | null;
+        title?: string;
+        titleEn?: string;
+        titleAr?: string;
+        description?: string | null;
+        descriptionEn?: string | null;
+        descriptionAr?: string | null;
         sort_order: number;
         video_count: number;
         file_count: number;
@@ -351,28 +466,30 @@ export function registerMasterclassRoutes(app: Hono) {
     }> = [];
     if (isEnrolled) {
       const tree = await loadMasterclassPreviewTree(masterclass.id);
-      modules = tree.modules.map((module) => ({
-        id: module.id,
-        title: module.title,
-        description: module.description,
-        sort_order: module.sortOrder,
-        lessons: module.lessons.map((lesson) => ({
-          id: lesson.id,
-          title: lesson.title,
-          description: lesson.description,
-          sort_order: lesson.sortOrder,
-          video_count: lesson.videos.length,
-          file_count: lesson.files.length,
-        })),
-      }));
+      modules = tree.modules.map((module) => {
+        const moduleFields = presentContentFields(module, locale, isStaff);
+        return {
+          id: module.id,
+          ...moduleFields,
+          sort_order: module.sortOrder,
+          lessons: module.lessons.map((lesson) => ({
+            id: lesson.id,
+            ...presentContentFields(lesson, locale, isStaff),
+            sort_order: lesson.sortOrder,
+            video_count: lesson.videos.length,
+            file_count: lesson.files.length,
+          })),
+        };
+      });
     }
+
+    const masterclassFields = presentContentFields(masterclass, locale, isStaff);
 
     return c.json({
       data: {
         masterclass: {
+          ...masterclassFields,
           id: masterclass.id,
-          title: masterclass.title,
-          description: masterclass.description,
           image_url: masterclass.imageUrl,
           price_in_cents: masterclass.priceInCents,
           is_enrolled: isEnrolled,
@@ -391,6 +508,8 @@ export function registerMasterclassRoutes(app: Hono) {
     if (!session?.user?.id) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
     }
+
+    const { locale, isStaff } = await resolvePresentationContext(c);
 
     const lessonIdParsed = uuidParamSchema.safeParse(c.req.param('lessonId'));
     if (!lessonIdParsed.success) {
@@ -423,7 +542,8 @@ export function registerMasterclassRoutes(app: Hono) {
     const videos = await db
       .select({
         id: masterclassLessonVideos.id,
-        title: masterclassLessonVideos.title,
+        titleEn: masterclassLessonVideos.titleEn,
+        titleAr: masterclassLessonVideos.titleAr,
         sort_order: masterclassLessonVideos.sortOrder,
         video_url: masterclassLessonVideos.videoUrl,
       })
@@ -448,24 +568,43 @@ export function registerMasterclassRoutes(app: Hono) {
       )
       .limit(1);
 
+    const lessonFields = lesson ? presentContentFields(lesson, locale, isStaff) : {};
+
     return c.json({
       data: {
         lesson: {
           id: lesson?.id,
-          title: lesson?.title,
-          description: lesson?.description,
+          ...lessonFields,
           module_id: context.moduleId,
           masterclass_id: context.masterclassId,
           is_completed: Boolean(progress),
         },
-        videos,
-        files: files.map((f) => ({
-          id: f.id,
-          file_type: f.fileType,
-          display_name: f.displayName,
-          file_url: f.fileUrl,
-          sort_order: f.sortOrder,
+        videos: videos.map((v) => ({
+          ...presentVideoTitle(v, locale, isStaff),
+          sort_order: v.sort_order,
+          video_url: v.video_url,
         })),
+        files: files.map((f) => {
+          if (isStaff) {
+            const adminFields = presentAdminDisplayName(f);
+            return {
+              id: f.id,
+              file_type: f.fileType,
+              displayNameEn: adminFields.displayNameEn,
+              displayNameAr: adminFields.displayNameAr,
+              file_url: f.fileUrl,
+              sort_order: f.sortOrder,
+            };
+          }
+          const { displayName } = presentPublicDisplayName(f, locale);
+          return {
+            id: f.id,
+            file_type: f.fileType,
+            display_name: displayName,
+            file_url: f.fileUrl,
+            sort_order: f.sortOrder,
+          };
+        }),
       },
     });
   });
@@ -585,6 +724,8 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
     }
 
+    const { locale, isStaff } = await resolvePresentationContext(c);
+
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
       return c.json({ error: { code: 'INVALID_PARAM', message: 'Invalid masterclass id.' } }, 400);
@@ -655,12 +796,13 @@ export function registerMasterclassRoutes(app: Hono) {
       lessonsByModule.set(lesson.moduleId, list);
     }
 
+    const masterclassFields = presentContentFields(masterclass, locale, isStaff);
+
     return c.json({
       data: {
         masterclass: {
+          ...masterclassFields,
           id: masterclass.id,
-          title: masterclass.title,
-          description: masterclass.description,
           image_url: masterclass.imageUrl,
         },
         progress: {
@@ -669,13 +811,11 @@ export function registerMasterclassRoutes(app: Hono) {
         },
         modules: modules.map((module) => ({
           id: module.id,
-          title: module.title,
-          description: module.description,
+          ...presentContentFields(module, locale, isStaff),
           sort_order: module.sortOrder,
           lessons: (lessonsByModule.get(module.id) ?? []).map((lesson) => ({
             id: lesson.id,
-            title: lesson.title,
-            description: lesson.description,
+            ...presentContentFields(lesson, locale, isStaff),
             sort_order: lesson.sortOrder,
             is_completed: completedSet.has(lesson.id),
           })),
@@ -700,7 +840,13 @@ export function registerMasterclassRoutes(app: Hono) {
     return c.json({
       data: {
         items: rows.map((row) => ({
-          ...row,
+          ...presentAdminContent(row),
+          imageUrl: row.imageUrl,
+          priceInCents: row.priceInCents,
+          isPublished: row.isPublished,
+          sortOrder: row.sortOrder,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
           lessonCount: lessonCountMap.get(row.id) ?? 0,
         })),
       },
@@ -717,11 +863,23 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
 
+    const titleFields =
+      parsed.data.titleEn && parsed.data.titleAr
+        ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+        : bilingualTitleFromLegacy(parsed.data.title!);
+    const descriptionFields =
+      parsed.data.descriptionEn !== undefined || parsed.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            parsed.data.descriptionEn ?? parsed.data.description ?? null,
+            parsed.data.descriptionAr ?? parsed.data.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(parsed.data.description);
+
     const [created] = await db
       .insert(masterclasses)
       .values({
-        title: parsed.data.title,
-        description: parsed.data.description ?? null,
+        ...titleFields,
+        ...descriptionFields,
         imageUrl: parsed.data.imageUrl ?? null,
         priceInCents: parsed.data.priceInCents ?? null,
         isPublished: parsed.data.isPublished ?? false,
@@ -754,7 +912,43 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const tree = await loadMasterclassPreviewTree(masterclass.id);
-    return c.json({ data: { masterclass, ...tree } });
+    return c.json({
+      data: {
+        masterclass: presentAdminContent(masterclass),
+        modules: tree.modules.map((module) => ({
+          ...presentAdminContent(module),
+          sortOrder: module.sortOrder,
+          createdAt: module.createdAt,
+          updatedAt: module.updatedAt,
+          masterclassId: module.masterclassId,
+          lessons: module.lessons.map((lesson) => ({
+            ...presentAdminContent(lesson),
+            sortOrder: lesson.sortOrder,
+            createdAt: lesson.createdAt,
+            updatedAt: lesson.updatedAt,
+            moduleId: lesson.moduleId,
+            videos: lesson.videos.map((video) => ({
+              id: video.id,
+              lessonId: video.lessonId,
+              titleEn: video.titleEn,
+              titleAr: video.titleAr,
+              videoUrl: video.videoUrl,
+              sortOrder: video.sortOrder,
+              createdAt: video.createdAt,
+            })),
+            files: lesson.files.map((file) => ({
+              id: file.id,
+              lessonId: file.lessonId,
+              fileType: file.fileType,
+              fileUrl: file.fileUrl,
+              sortOrder: file.sortOrder,
+              createdAt: file.createdAt,
+              ...presentAdminDisplayName(file),
+            })),
+          })),
+        })),
+      },
+    });
   });
 
   app.get('/masterclasses/:id/enrollments', async (c) => {
@@ -948,12 +1142,24 @@ export function registerMasterclassRoutes(app: Hono) {
       .from(masterclassModules)
       .where(eq(masterclassModules.masterclassId, idParsed.data));
 
+    const moduleTitleFields =
+      parsed.data.titleEn && parsed.data.titleAr
+        ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+        : bilingualTitleFromLegacy(parsed.data.title!);
+    const moduleDescriptionFields =
+      parsed.data.descriptionEn !== undefined || parsed.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            parsed.data.descriptionEn ?? parsed.data.description ?? null,
+            parsed.data.descriptionAr ?? parsed.data.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(parsed.data.description);
+
     const [created] = await db
       .insert(masterclassModules)
       .values({
         masterclassId: idParsed.data,
-        title: parsed.data.title,
-        description: parsed.data.description ?? null,
+        ...moduleTitleFields,
+        ...moduleDescriptionFields,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
       .returning();
@@ -984,7 +1190,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const parsed = moduleInputSchema.partial().safeParse(body);
+    const parsed = moduleFieldsSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
@@ -1120,12 +1326,24 @@ export function registerMasterclassRoutes(app: Hono) {
       .from(masterclassLessons)
       .where(eq(masterclassLessons.moduleId, moduleIdParsed.data));
 
+    const lessonTitleFields =
+      parsed.data.titleEn && parsed.data.titleAr
+        ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+        : bilingualTitleFromLegacy(parsed.data.title!);
+    const lessonDescriptionFields =
+      parsed.data.descriptionEn !== undefined || parsed.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            parsed.data.descriptionEn ?? parsed.data.description ?? null,
+            parsed.data.descriptionAr ?? parsed.data.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(parsed.data.description);
+
     const [created] = await db
       .insert(masterclassLessons)
       .values({
         moduleId: moduleIdParsed.data,
-        title: parsed.data.title,
-        description: parsed.data.description ?? null,
+        ...lessonTitleFields,
+        ...lessonDescriptionFields,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
       .returning();
@@ -1158,7 +1376,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const parsed = lessonInputSchema.partial().safeParse(body);
+    const parsed = lessonFieldsSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
@@ -1252,7 +1470,9 @@ export function registerMasterclassRoutes(app: Hono) {
       .insert(masterclassLessonVideos)
       .values({
         lessonId: lessonIdParsed.data,
-        title: parsed.data.title,
+        ...(parsed.data.titleEn && parsed.data.titleAr
+          ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+          : bilingualTitleFromLegacy(parsed.data.title!)),
         videoUrl: parsed.data.videoUrl,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
@@ -1272,7 +1492,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const parsed = videoInputSchema.partial().safeParse(body);
+    const parsed = baseVideoInputSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
@@ -1362,7 +1582,9 @@ export function registerMasterclassRoutes(app: Hono) {
       .values({
         lessonId: lessonIdParsed.data,
         fileType: parsed.data.fileType,
-        displayName: parsed.data.displayName,
+        ...(parsed.data.displayNameEn && parsed.data.displayNameAr
+          ? bilingualDisplayNameFields(parsed.data.displayNameEn, parsed.data.displayNameAr)
+          : bilingualDisplayNameFromLegacy(parsed.data.displayName!)),
         fileUrl: parsed.data.fileUrl,
         sortOrder: parsed.data.sortOrder ?? (countRow?.count ?? 0),
       })
@@ -1382,7 +1604,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const parsed = fileInputSchema.partial().safeParse(body);
+    const parsed = baseFileInputSchema.partial().safeParse(body);
     if (!parsed.success) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
@@ -1452,7 +1674,12 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const lessonCount = await countMasterclassLessons(masterclass.id);
-    return c.json({ data: { masterclass, lessonCount } });
+    return c.json({
+      data: {
+        masterclass: presentAdminContent(masterclass),
+        lessonCount,
+      },
+    });
   });
 
   app.put('/masterclasses/:id', async (c) => {

@@ -14,6 +14,22 @@ import {
   trackEvents,
 } from '../../db/schema/index.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
+import {
+  presentAdminContent,
+  presentPublicContent,
+  presentPublicRow,
+} from '../../utils/contentPresentation.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import {
   normalizeRecordingsAccessPolicy,
@@ -47,25 +63,33 @@ const urlSchema = z
 
 const optionalShortString = z.union([z.string().trim().max(120), z.null()]).optional();
 
-const assetObjectSchema = z.object({
-  title: z.string().trim().min(3, 'Title is required.').max(200),
-  description: optionalText,
-  fileType: z.enum(['Document', 'Video', 'Presentation']),
-  videoUrl: urlSchema,
-  documentUrl: urlSchema,
-  embedUrl: urlSchema,
-  embedType: optionalShortString,
-  thumbnailUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
-  eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
-  isPublic: z.boolean().optional().default(false),
-  isPremium: z.boolean().optional().default(false),
-  fileSizeBytes: z
-    .union([z.number().int().min(0), z.null()])
-    .optional()
-    .refine((value) => value == null || value <= 20 * 1024 * 1024, {
-      message: 'File size must be 20 MB or less.',
-    }),
-});
+const assetFieldsSchema = z
+  .object({
+    title: z.string().trim().min(3, 'Title is required.').max(200).optional(),
+    description: optionalText,
+    fileType: z.enum(['Document', 'Video', 'Presentation']),
+    videoUrl: urlSchema,
+    documentUrl: urlSchema,
+    embedUrl: urlSchema,
+    embedType: optionalShortString,
+    thumbnailUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
+    eventId: z.union([z.string().uuid('Link an existing event by its ID.'), z.null()]).optional(),
+    isPublic: z.boolean().optional().default(false),
+    isPremium: z.boolean().optional().default(false),
+    fileSizeBytes: z
+      .union([z.number().int().min(0), z.null()])
+      .optional()
+      .refine((value) => value == null || value <= 20 * 1024 * 1024, {
+        message: 'File size must be 20 MB or less.',
+      }),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
+
+const assetObjectSchema = assetFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
 const uuidParamSchema = z.string().uuid();
 
@@ -99,7 +123,7 @@ const createAssetSchema = assetObjectSchema.superRefine((payload, ctx) => {
   }
 });
 
-const updateAssetSchema = assetObjectSchema
+const updateAssetSchema = assetFieldsSchema
   .partial()
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
@@ -142,6 +166,7 @@ export function registerLibraryRoutes(app: Hono) {
 
     const { page, pageSize, search, type, eventIds, excludeInTracks, accessibleOnly } =
       parsed.data;
+    const locale = resolveLocaleFromRequest(c);
     const filters: SQL<unknown>[] = [];
 
     // Permission filtering: staff/subscribers see all, free users see accessible + premium assets
@@ -181,7 +206,14 @@ export function registerLibraryRoutes(app: Hono) {
     }
 
     if (search) {
-      filters.push(ilike(libraryAssets.title, `%${escapeLikePattern(search)}%`));
+      const pattern = `%${escapeLikePattern(search)}%`;
+      filters.push(
+        or(
+          ilike(libraryAssets.titleEn, pattern),
+          ilike(libraryAssets.titleAr, pattern),
+          ilike(libraryAssets.title, pattern),
+        )!,
+      );
     }
 
     // Filter by event IDs (comma-separated UUIDs)
@@ -205,8 +237,10 @@ export function registerLibraryRoutes(app: Hono) {
     const baseItemsQuery = db
       .select({
         id: libraryAssets.id,
-        title: libraryAssets.title,
-        description: libraryAssets.description,
+        titleEn: libraryAssets.titleEn,
+        titleAr: libraryAssets.titleAr,
+        descriptionEn: libraryAssets.descriptionEn,
+        descriptionAr: libraryAssets.descriptionAr,
         fileType: libraryAssets.fileType,
         fileUrl: libraryAssets.fileUrl,
         videoUrl: libraryAssets.videoUrl,
@@ -374,12 +408,14 @@ export function registerLibraryRoutes(app: Hono) {
           : null,
       });
 
+      const presented = presentPublicRow(item, locale, Boolean(isStaff));
+
       if (hasAccess) {
-        return { ...item, hasAccess };
+        return { ...presented, hasAccess };
       }
 
       return {
-        ...item,
+        ...presented,
         fileUrl: null,
         videoUrl: null,
         documentUrl: null,
@@ -429,12 +465,15 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
     const id = idParsed.data;
+    const locale = resolveLocaleFromRequest(c);
 
     const asset = await db
       .select({
         id: libraryAssets.id,
-        title: libraryAssets.title,
-        description: libraryAssets.description,
+        titleEn: libraryAssets.titleEn,
+        titleAr: libraryAssets.titleAr,
+        descriptionEn: libraryAssets.descriptionEn,
+        descriptionAr: libraryAssets.descriptionAr,
         fileType: libraryAssets.fileType,
         fileUrl: libraryAssets.fileUrl,
         videoUrl: libraryAssets.videoUrl,
@@ -571,11 +610,12 @@ export function registerLibraryRoutes(app: Hono) {
       });
 
       if (!hasAccess) {
+        const deniedAsset = presentPublicContent(asset[0], locale);
         return c.json(
           {
-            id: asset[0].id,
-            title: asset[0].title,
-            description: asset[0].description,
+            id: deniedAsset.id,
+            title: deniedAsset.title,
+            description: deniedAsset.description,
             fileType: asset[0].fileType,
             thumbnailUrl: asset[0].thumbnailUrl,
             eventId: asset[0].eventId,
@@ -596,7 +636,8 @@ export function registerLibraryRoutes(app: Hono) {
       }
     }
 
-    return c.json({ ...asset[0], hasAccess: true });
+    const presentedAsset = presentPublicRow(asset[0], locale, Boolean(isStaff));
+    return c.json({ ...presentedAsset, hasAccess: true });
   });
 
   app.post('/library', async (c) => {
@@ -620,11 +661,23 @@ export function registerLibraryRoutes(app: Hono) {
 
     const payload = parsed.data;
 
+    const titleFields =
+      payload.titleEn && payload.titleAr
+        ? bilingualTitleFields(payload.titleEn, payload.titleAr)
+        : bilingualTitleFromLegacy(payload.title!);
+    const descriptionFields =
+      payload.descriptionEn !== undefined || payload.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            payload.descriptionEn ?? payload.description ?? null,
+            payload.descriptionAr ?? payload.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(payload.description);
+
     const [created] = await db
       .insert(libraryAssets)
       .values({
-        title: payload.title,
-        description: payload.description ?? null,
+        ...titleFields,
+        ...descriptionFields,
         fileType: payload.fileType,
         fileUrl: payload.documentUrl ?? payload.videoUrl ?? payload.embedUrl ?? null,
         videoUrl: payload.videoUrl ?? null,
@@ -639,8 +692,10 @@ export function registerLibraryRoutes(app: Hono) {
       })
       .returning({
         id: libraryAssets.id,
-        title: libraryAssets.title,
-        description: libraryAssets.description,
+        titleEn: libraryAssets.titleEn,
+        titleAr: libraryAssets.titleAr,
+        descriptionEn: libraryAssets.descriptionEn,
+        descriptionAr: libraryAssets.descriptionAr,
         fileType: libraryAssets.fileType,
         fileUrl: libraryAssets.fileUrl,
         videoUrl: libraryAssets.videoUrl,
@@ -657,7 +712,7 @@ export function registerLibraryRoutes(app: Hono) {
         createdAt: libraryAssets.createdAt,
       });
 
-    return c.json({ asset: created }, 201);
+    return c.json({ asset: presentAdminContent(created) }, 201);
   });
 
   app.put('/library/:id', async (c) => {
@@ -730,8 +785,10 @@ export function registerLibraryRoutes(app: Hono) {
       .where(eq(libraryAssets.id, id))
       .returning({
         id: libraryAssets.id,
-        title: libraryAssets.title,
-        description: libraryAssets.description,
+        titleEn: libraryAssets.titleEn,
+        titleAr: libraryAssets.titleAr,
+        descriptionEn: libraryAssets.descriptionEn,
+        descriptionAr: libraryAssets.descriptionAr,
         fileType: libraryAssets.fileType,
         fileUrl: libraryAssets.fileUrl,
         videoUrl: libraryAssets.videoUrl,
@@ -760,7 +817,7 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
 
-    return c.json({ asset: updated });
+    return c.json({ asset: presentAdminContent(updated) });
   });
 
   app.delete('/library/:id', async (c) => {

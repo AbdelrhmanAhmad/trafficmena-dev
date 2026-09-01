@@ -1,6 +1,7 @@
 import { Check, Crown, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/components/ui/button';
-import { FOUNDING_MEMBER_COPY, PRICING } from '../content';
+import { PRICING } from '../content';
 
 type FoundingMemberPricingProps = {
   priceEgp?: number | null;
@@ -13,49 +14,50 @@ export function FoundingMemberPricing({
   onSubscribe,
   isPending = false,
 }: FoundingMemberPricingProps) {
+  const { t } = useTranslation('commerce');
+  const features = t('subscribe.foundingMember.features', { returnObjects: true }) as string[];
+
   const regularPrice = PRICING.regular;
   const displayPrice = priceEgp ?? 3000;
   const savings = Math.round(((regularPrice - displayPrice) / regularPrice) * 100);
 
   return (
     <section className="relative w-full overflow-hidden rounded-[28px]">
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-white to-amber-50/30" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-100/50 via-transparent to-transparent" />
 
       <div className="relative px-6 py-12 sm:px-10">
         <div className="mx-auto max-w-2xl text-center">
-          {/* Badge */}
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-800">
             <Crown className="h-4 w-4" />
-            {FOUNDING_MEMBER_COPY.badge}
-            <span className="ml-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs text-white">
-              {savings}% OFF
+            {t('subscribe.foundingMember.badge')}
+            <span className="ms-1 rounded-full bg-amber-500 px-2 py-0.5 text-xs text-white">
+              {t('subscribe.foundingMember.percentOff', { savings })}
             </span>
           </div>
 
-          {/* Headline */}
           <h2 className="text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
-            {FOUNDING_MEMBER_COPY.headline}
+            {t('subscribe.foundingMember.headline')}
           </h2>
 
-          {/* Pricing */}
           <div className="mt-8 flex flex-col items-center">
             <div className="text-4xl font-medium text-neutral-400 line-through sm:text-5xl">
-              {regularPrice.toLocaleString()} EGP/year
+              {regularPrice.toLocaleString()} {t('subscribe.foundingMember.egpYear')}
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-bold text-amber-600 sm:text-4xl">
                 {priceEgp !== null && priceEgp !== undefined ? priceEgp.toLocaleString() : '---'}
               </span>
-              <span className="text-lg text-neutral-600">EGP/year</span>
+              <span className="text-lg text-neutral-600">
+                {t('subscribe.foundingMember.egpYear')}
+              </span>
             </div>
             <div className="mt-2 text-sm text-neutral-500">
-              {displayPrice > 0 ? Math.round(displayPrice / 12).toLocaleString() : '---'} EGP/month
+              {displayPrice > 0 ? Math.round(displayPrice / 12).toLocaleString() : '---'}{' '}
+              {t('subscribe.foundingMember.egpMonth')}
             </div>
           </div>
 
-          {/* CTA Button */}
           <div className="mt-8">
             <Button
               onClick={onSubscribe}
@@ -64,21 +66,20 @@ export function FoundingMemberPricing({
             >
               {isPending ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing...
+                  <Loader2 className="me-2 h-5 w-5 animate-spin" />
+                  {t('subscribe.foundingMember.processing')}
                 </>
               ) : (
                 <>
-                  <Crown className="mr-2 h-5 w-5" />
-                  Become a Founding Member
+                  <Crown className="me-2 h-5 w-5" />
+                  {t('subscribe.foundingMember.becomeFoundingMember')}
                 </>
               )}
             </Button>
           </div>
 
-          {/* Features */}
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            {FOUNDING_MEMBER_COPY.features.map((feature) => (
+            {features.map((feature) => (
               <div
                 key={feature}
                 className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm text-neutral-700 shadow-sm border border-neutral-100"
@@ -89,9 +90,8 @@ export function FoundingMemberPricing({
             ))}
           </div>
 
-          {/* Description */}
           <p className="mt-8 mx-auto max-w-xl text-sm text-neutral-600 leading-relaxed">
-            {FOUNDING_MEMBER_COPY.description}
+            {t('subscribe.foundingMember.description')}
           </p>
         </div>
       </div>

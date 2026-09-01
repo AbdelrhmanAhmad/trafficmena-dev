@@ -1,5 +1,6 @@
 import { CheckCircle2, Mail, ShieldAlert } from 'lucide-react';
 import { useEffect, useId, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAcceptInvitation } from '@/app/hooks/useInvitations';
 import Layout from '@/shared/components/layout/Layout';
@@ -27,6 +28,7 @@ type StoredAcceptance = {
 };
 
 export default function InvitationAcceptancePage() {
+  const { t } = useTranslation('auth');
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -61,8 +63,8 @@ export default function InvitationAcceptancePage() {
   const handleAccept = async () => {
     if (!invitationToken || !email) {
       toast({
-        title: 'Missing details',
-        description: 'Make sure the invitation link includes an email address.',
+        title: t('invitation.errors.missingDetailsTitle'),
+        description: t('invitation.errors.missingDetailsDesc'),
         variant: 'destructive',
       });
       return;
@@ -95,22 +97,22 @@ export default function InvitationAcceptancePage() {
 
       if (response.alreadyAccepted) {
         toast({
-          title: 'Invitation already accepted',
-          description: 'You can continue with signup using the same email address.',
+          title: t('invitation.toast.alreadyAcceptedTitle'),
+          description: t('invitation.toast.alreadyAcceptedDesc'),
         });
       } else {
         toast({
-          title: 'Invitation confirmed',
-          description: 'Great! We emailed you a one-time passcode to continue signup.',
+          title: t('invitation.toast.confirmedTitle'),
+          description: t('invitation.toast.confirmedDesc'),
         });
       }
 
       setState('accepted');
     } catch (error) {
       const detail =
-        (error as { message?: string })?.message ?? 'We could not validate this invite.';
+        (error as { message?: string })?.message ?? t('invitation.errors.validateFailed');
       toast({
-        title: 'Unable to accept invitation',
+        title: t('invitation.errors.acceptFailedTitle'),
         description: detail,
         variant: 'destructive',
       });
@@ -150,12 +152,14 @@ export default function InvitationAcceptancePage() {
               )}
             </div>
             <CardTitle className="text-primary">
-              {state === 'accepted' ? 'Invitation confirmed' : 'Confirm your invitation'}
+              {state === 'accepted'
+                ? t('invitation.titleConfirmed')
+                : t('invitation.titleConfirm')}
             </CardTitle>
             <CardDescription>
               {isTokenMissing
-                ? 'This link is missing its invitation token. Double-check the email we sent you.'
-                : 'We use your invitation code to fast-track signup and unlock member access.'}
+                ? t('invitation.descMissingToken')
+                : t('invitation.descDefault')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -164,62 +168,53 @@ export default function InvitationAcceptancePage() {
                 <div className="flex items-start gap-2">
                   <ShieldAlert className="mt-0.5 h-4 w-4" />
                   <div>
-                    <p className="font-medium">Missing invitation token</p>
-                    <p className="mt-1">
-                      Head back to your email and click the latest invite link. The URL should
-                      include a token parameter.
-                    </p>
+                    <p className="font-medium">{t('invitation.missingTokenTitle')}</p>
+                    <p className="mt-1">{t('invitation.missingTokenBody')}</p>
                   </div>
                 </div>
                 <Button variant="ghost" className="mt-4 w-full" onClick={() => navigate('/')}>
-                  Return home
+                  {t('invitation.returnHome')}
                 </Button>
               </div>
             ) : (
               <>
                 <div className="grid gap-4">
                   <div className="space-y-2 text-left">
-                    <Label htmlFor={emailInputId}>Email</Label>
+                    <Label htmlFor={emailInputId}>{t('emailLabel')}</Label>
                     <Input
                       id={emailInputId}
                       type="email"
                       value={email}
                       autoComplete="email"
-                      placeholder="you@example.com"
+                      placeholder={t('invitation.inviteEmailPlaceholder')}
                       onChange={(event) => setEmail(event.target.value.toLowerCase())}
                     />
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2 text-left">
-                      <Label htmlFor={firstNameInputId}>First name (optional)</Label>
+                      <Label htmlFor={firstNameInputId}>{t('invitation.firstNameOptional')}</Label>
                       <Input
                         id={firstNameInputId}
                         value={firstName}
                         onChange={(event) => setFirstName(event.target.value)}
-                        placeholder="Ranya"
+                        placeholder={t('invitation.firstNamePlaceholder')}
                       />
                     </div>
                     <div className="space-y-2 text-left">
-                      <Label htmlFor={lastNameInputId}>Last name (optional)</Label>
+                      <Label htmlFor={lastNameInputId}>{t('invitation.lastNameOptional')}</Label>
                       <Input
                         id={lastNameInputId}
                         value={lastName}
                         onChange={(event) => setLastName(event.target.value)}
-                        placeholder="El Haddad"
+                        placeholder={t('invitation.lastNamePlaceholder')}
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    We will mark your invitation as accepted and guide you through the seven-step
-                    onboarding to finish your profile.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Need a new link? Ask the TrafficMENA team to resend your invite from the admin
-                    dashboard.
-                  </p>
+                  <p>{t('invitation.onboardingNote')}</p>
+                  <p className="text-xs text-muted-foreground">{t('invitation.resendNote')}</p>
                 </div>
 
                 <div className="flex flex-col gap-2">
@@ -229,10 +224,10 @@ export default function InvitationAcceptancePage() {
                     onClick={state === 'accepted' ? handleContinue : handleAccept}
                   >
                     {state === 'accepted'
-                      ? 'Continue to signup'
+                      ? t('invitation.continueToSignup')
                       : isSubmitting
-                        ? 'Confirming invitation…'
-                        : 'Confirm invitation'}
+                        ? t('invitation.confirming')
+                        : t('invitation.confirmButton')}
                   </Button>
                 </div>
               </>

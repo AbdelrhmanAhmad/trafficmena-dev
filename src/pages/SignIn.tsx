@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useEffect, useId, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/app/api/client';
 import { completeSignInVerification, requestSignInCode, sanitizeOtp } from '@/app/auth/signIn';
 import { trackLogin, trackLoginStart } from '@/lib/analytics/events';
@@ -17,6 +18,7 @@ import {
 } from '@/shared/utils/authReturnPath';
 
 const SignIn: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, requestOtp, verifyOtp, refreshSession } = useAuth();
@@ -45,13 +47,12 @@ const SignIn: React.FC = () => {
 
   const requestLoginCode = async () => {
     if (!email.trim()) {
-      setErrorMessage('Please enter your email address.');
+      setErrorMessage(t('errors.emailRequired'));
       return;
     }
 
-    // If Turnstile is shown but not verified, block submission
     if (showTurnstile && !turnstile.isVerified) {
-      setErrorMessage('Please complete the security check.');
+      setErrorMessage(t('errors.turnstileRequired'));
       return;
     }
 
@@ -66,20 +67,19 @@ const SignIn: React.FC = () => {
         turnstileToken: turnstile.token ?? undefined,
       });
       toast({
-        title: 'Check your inbox',
-        description: 'We sent you a 6-digit code to sign in.',
+        title: t('toast.checkInboxTitle'),
+        description: t('toast.checkInboxDesc'),
       });
       setStep('verify');
       setShowTurnstile(false);
       turnstile.reset();
     } catch (error) {
-      // Handle Turnstile requirement
       if (error instanceof ApiError && error.extra?.requiresTurnstile) {
         setShowTurnstile(true);
-        setErrorMessage('Please complete the security check below.');
+        setErrorMessage(t('errors.turnstileBelow'));
         return;
       }
-      const message = error instanceof Error ? error.message : 'Unable to send login code.';
+      const message = error instanceof Error ? error.message : t('errors.sendCodeFailed');
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -94,7 +94,7 @@ const SignIn: React.FC = () => {
   const handleVerifyOtp = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!email.trim() || !otp.trim()) {
-      setErrorMessage('Enter your email and the code you received.');
+      setErrorMessage(t('errors.emailAndOtpRequired'));
       return;
     }
 
@@ -112,11 +112,11 @@ const SignIn: React.FC = () => {
         },
       });
       trackLogin({ status: 'success', email: normalizedEmail, userId });
-      toast({ title: 'Welcome back!', description: 'You are now signed in.' });
+      toast({ title: t('toast.welcomeBackTitle'), description: t('toast.welcomeBackDesc') });
       navigate(consumeAuthReturnPath(), { replace: true });
     } catch (error) {
       trackLogin({ status: 'failure', email: email.trim().toLowerCase() });
-      const message = error instanceof Error ? error.message : 'Invalid or expired code.';
+      const message = error instanceof Error ? error.message : t('errors.invalidOtp');
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -133,14 +133,12 @@ const SignIn: React.FC = () => {
           <div className="rounded-[28px] border border-neutral-200 bg-white/95 p-8 shadow-[0_18px_50px_-20px_rgba(16,16,16,0.35)] backdrop-blur">
             <div className="mb-8 text-center">
               <span className="inline-flex items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-600">
-                TrafficMENA Account
+                {t('badge')}
               </span>
               <h2 className="mt-5 text-3xl font-semibold tracking-tight text-neutral-900">
-                Welcome Back
+                {t('welcomeBack')}
               </h2>
-              <p className="mt-2 text-sm text-neutral-600">
-                Sign in to continue exploring events, content, and the community.
-              </p>
+              <p className="mt-2 text-sm text-neutral-600">{t('welcomeSubtitle')}</p>
             </div>
 
             {errorMessage && (
@@ -153,14 +151,14 @@ const SignIn: React.FC = () => {
               <form onSubmit={handleRequestOtp} className="space-y-6">
                 <div>
                   <Label htmlFor={requestEmailId} className="text-sm font-medium text-neutral-700">
-                    Email Address
+                    {t('emailAddress')}
                   </Label>
                   <Input
                     id={requestEmailId}
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Enter your email address"
+                    placeholder={t('emailPlaceholder')}
                     className="mt-1 rounded-xl border-neutral-200"
                     required
                     disabled={isSubmitting}
@@ -183,13 +181,13 @@ const SignIn: React.FC = () => {
                   disabled={isSubmitting || (showTurnstile && !turnstile.isVerified)}
                   className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] py-3 font-semibold text-[#101010] shadow hover:brightness-95"
                 >
-                  {isSubmitting ? 'Sending code…' : 'Send login code'}
+                  {isSubmitting ? t('sendingCode') : t('sendLoginCode')}
                 </Button>
 
                 <p className="text-center text-sm text-neutral-600">
-                  Don&apos;t have an account?{' '}
+                  {t('noAccount')}{' '}
                   <Link to="/signup" className="font-medium text-[#05ef62] hover:text-[#29cf9f]">
-                    Join TrafficMENA
+                    {t('joinTrafficMena')}
                   </Link>
                 </p>
               </form>
@@ -197,14 +195,14 @@ const SignIn: React.FC = () => {
               <form onSubmit={handleVerifyOtp} className="space-y-6">
                 <div>
                   <Label htmlFor={verifyEmailId} className="text-sm font-medium text-neutral-700">
-                    Email Address
+                    {t('emailAddress')}
                   </Label>
                   <Input
                     id={verifyEmailId}
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Enter your email address"
+                    placeholder={t('emailPlaceholder')}
                     className="mt-1 rounded-xl border-neutral-200"
                     required
                     disabled={isSubmitting}
@@ -213,7 +211,7 @@ const SignIn: React.FC = () => {
 
                 <div>
                   <Label htmlFor={otpId} className="text-sm font-medium text-neutral-700">
-                    6-digit Code
+                    {t('otpLabel')}
                   </Label>
                   <Input
                     id={otpId}
@@ -222,7 +220,7 @@ const SignIn: React.FC = () => {
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     maxLength={6}
-                    placeholder="Enter the code you received"
+                    placeholder={t('otpPlaceholder')}
                     className="mt-1 rounded-xl border-neutral-200 tracking-[0.3em] text-center text-lg"
                     required
                     disabled={isSubmitting}
@@ -234,18 +232,18 @@ const SignIn: React.FC = () => {
                   disabled={isSubmitting || otp.trim().length === 0}
                   className="w-full rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] py-3 font-semibold text-[#101010] shadow hover:brightness-95"
                 >
-                  {isSubmitting ? 'Verifying…' : 'Verify and sign in'}
+                  {isSubmitting ? t('verifying') : t('verifyAndSignIn')}
                 </Button>
 
                 <div className="text-center text-sm text-neutral-600">
-                  Didn&apos;t get the code?{' '}
+                  {t('didntGetCode')}{' '}
                   <button
                     type="button"
                     className="font-medium text-[#05ef62] hover:text-[#29cf9f]"
                     onClick={requestLoginCode}
                     disabled={isSubmitting}
                   >
-                    Resend code
+                    {t('resendCode')}
                   </button>
                 </div>
               </form>

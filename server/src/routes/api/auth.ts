@@ -13,6 +13,8 @@ import {
   OTP_VERIFY_WINDOW_MS,
   otpVerifyKey,
 } from './otpRateLimits.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
+import { setPendingOtpLocale } from '../../i18n/otpLocaleContext.js';
 import { getRequestIp, normalizeEmail } from './utils.js';
 
 const OTP_SHORT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
@@ -263,6 +265,8 @@ export function registerAuthRoutes(app: Hono) {
           );
         }
       }
+
+      setPendingOtpLocale(email, resolveLocaleFromRequest(c));
 
       const response = await auth.api.sendVerificationOTP({
         body: {

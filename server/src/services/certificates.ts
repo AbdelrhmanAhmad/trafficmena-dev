@@ -18,6 +18,7 @@ import {
   type CertificateFieldSettings,
 } from '../db/schema/index.js';
 import { ApiError } from '../utils/errors.js';
+import { bilingualCertificateTitleFields } from '../utils/bilingualDb.js';
 import { countCompletedLessons, countMasterclassLessons } from './masterclassSales.js';
 import { fetchRemoteFileBytes, uploadCertificatePdfBuffer, deleteRemoteFileByUrl } from './certificateStorage.js';
 import { isKnownDatabaseConflict } from '../routes/api/utils.js';
@@ -283,6 +284,8 @@ export async function getMasterclassCertificateSettings(masterclassId: string) {
       masterclassId,
       certificateEnabled: false,
       certificateTitle: null as string | null,
+      certificateTitleEn: null as string | null,
+      certificateTitleAr: null as string | null,
       certificateDescription: null as string | null,
       certificateTemplateUrl: null as string | null,
     };
@@ -290,22 +293,42 @@ export async function getMasterclassCertificateSettings(masterclassId: string) {
   return row;
 }
 
+function resolveCertificateTitleFields(payload: {
+  certificateTitle?: string | null;
+  certificateTitleEn?: string | null;
+  certificateTitleAr?: string | null;
+}) {
+  const titleEn = payload.certificateTitleEn?.trim() || payload.certificateTitle?.trim() || '';
+  const titleAr = payload.certificateTitleAr?.trim() || payload.certificateTitle?.trim() || '';
+  if (!titleEn && !titleAr) {
+    return {
+      certificateTitle: null,
+      certificateTitleEn: null,
+      certificateTitleAr: null,
+    };
+  }
+  return bilingualCertificateTitleFields(titleEn, titleAr || titleEn);
+}
+
 export async function upsertMasterclassCertificateSettings(
   masterclassId: string,
   payload: {
     certificateEnabled: boolean;
     certificateTitle?: string | null;
+    certificateTitleEn?: string | null;
+    certificateTitleAr?: string | null;
     certificateDescription?: string | null;
     certificateTemplateUrl?: string | null;
   },
 ) {
+  const titleFields = resolveCertificateTitleFields(payload);
   const existing = await getMasterclassCertificateSettings(masterclassId);
   if (existing.id) {
     const [updated] = await db
       .update(masterclassCertificateSettings)
       .set({
         certificateEnabled: payload.certificateEnabled,
-        certificateTitle: payload.certificateTitle ?? null,
+        ...titleFields,
         certificateDescription: payload.certificateDescription ?? null,
         certificateTemplateUrl: payload.certificateTemplateUrl ?? null,
         updatedAt: new Date(),
@@ -320,7 +343,7 @@ export async function upsertMasterclassCertificateSettings(
     .values({
       masterclassId,
       certificateEnabled: payload.certificateEnabled,
-      certificateTitle: payload.certificateTitle ?? null,
+      ...titleFields,
       certificateDescription: payload.certificateDescription ?? null,
       certificateTemplateUrl: payload.certificateTemplateUrl ?? null,
     })
@@ -431,7 +454,9 @@ async function createCertificateRecord(params: {
 
   const classSettings = await getMasterclassCertificateSettings(params.masterclassId);
   const courseTitle =
-    classSettings.certificateTitle?.trim() || masterclass.title;
+    classSettings.certificateTitleEn?.trim() ||
+    classSettings.certificateTitle?.trim() ||
+    masterclass.title;
   const studentName = await resolveStudentName(params.userId);
   const issueDate = new Date();
   const certificateCode = generateCertificateCode();

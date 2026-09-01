@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
-import type { Hono } from 'hono';
+import type { Context, Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
 import {
@@ -16,35 +16,122 @@ import {
   getEffectiveProductVisibility,
   isDiscoveryBlocked,
 } from '../../services/productVisibility.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualDisplayNameFields,
+  bilingualDisplayNameFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  optionalBilingualDisplayNameFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
+import {
+  presentAdminContent,
+  presentAdminDisplayName,
+  presentPublicContent,
+  presentPublicDisplayName,
+  presentPublicTitleOnly,
+} from '../../utils/contentPresentation.js';
+import { resolveLocaleFromRequest, type AppLocale } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
-import { requireManager, requireContentDelete } from './utils.js';
+import { getOptionalUserRole, requireManager, requireContentDelete } from './utils.js';
+
+const STAFF_ROLES = new Set(['owner', 'admin', 'manager']);
+
+type BilingualProductRow = {
+  id: string;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
+};
+
+async function resolvePresentationContext(c: Context) {
+  const locale = resolveLocaleFromRequest(c);
+  const session = await getSessionFromRequest(c);
+  const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
+  const isStaff = Boolean(role && STAFF_ROLES.has(role));
+  return { locale, isStaff };
+}
+
+function presentProductFields(row: BilingualProductRow, locale: AppLocale, isStaff: boolean) {
+  const contentRow = {
+    id: row.id,
+    titleEn: row.titleEn,
+    titleAr: row.titleAr,
+    descriptionEn: row.descriptionEn,
+    descriptionAr: row.descriptionAr,
+  };
+  if (isStaff) {
+    return presentAdminContent(contentRow);
+  }
+  const presented = presentPublicContent(contentRow, locale);
+  return { title: presented.title, description: presented.description };
+}
+
+function presentVideoFields(
+  row: { id: string; titleEn: string; titleAr: string },
+  locale: AppLocale,
+  isStaff: boolean,
+) {
+  if (isStaff) {
+    return { id: row.id, titleEn: row.titleEn, titleAr: row.titleAr };
+  }
+  return presentPublicTitleOnly(row, locale);
+}
 
 const fileTypeSchema = z.enum(['excel', 'markdown', 'html', 'text', 'powerpoint']);
 
-const createProductSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(8000).optional().nullable(),
-  imageUrl: z.string().url().optional().nullable(),
-  priceInCents: z.number().int().min(0).optional().nullable(),
-  salesEnabled: z.boolean().optional(),
-  isPublished: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
-});
+const productFieldsSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(8000).optional().nullable(),
+    imageUrl: z.string().url().optional().nullable(),
+    priceInCents: z.number().int().min(0).optional().nullable(),
+    salesEnabled: z.boolean().optional(),
+    isPublished: z.boolean().optional(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields);
 
-const updateProductSchema = createProductSchema.partial();
+const createProductSchema = productFieldsSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
-const fileInputSchema = z.object({
-  fileType: fileTypeSchema,
-  displayName: z.string().min(1).max(200),
-  fileUrl: z.string().url(),
-  sortOrder: z.number().int().optional(),
-});
+const updateProductSchema = productFieldsSchema.partial();
 
-const videoInputSchema = z.object({
-  title: z.string().min(1).max(200),
-  videoUrl: z.string().trim().min(1).max(1000),
-  sortOrder: z.number().int().optional(),
-});
+const baseFileInputSchema = z
+  .object({
+    fileType: fileTypeSchema,
+    displayName: z.string().min(1).max(200).optional(),
+    fileUrl: z.string().url(),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(optionalBilingualDisplayNameFields.partial());
+
+const fileInputSchema = baseFileInputSchema.refine(
+  (data) => (data.displayNameEn && data.displayNameAr) || data.displayName,
+  { message: 'Provide displayName or displayNameEn/displayNameAr.' },
+);
+
+const baseVideoInputSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    videoUrl: z.string().trim().min(1).max(1000),
+    sortOrder: z.number().int().optional(),
+  })
+  .merge(requiredBilingualTitleFields.partial());
+
+const videoInputSchema = baseVideoInputSchema.refine(
+  (data) => (data.titleEn && data.titleAr) || data.title,
+  { message: 'Provide title or titleEn/titleAr.' },
+);
 
 /** Max downloadable files attached to one digital product */
 const MAX_FILES_PER_PRODUCT = 30;
@@ -105,6 +192,7 @@ export function registerDigitalProductRoutes(app: Hono) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
     }
 
+    const { locale, isStaff } = await resolvePresentationContext(c);
     const filter = c.req.query('filter') === 'mine' ? 'mine' : 'all';
     const visibility = await getEffectiveProductVisibility();
     const discoveryBlocked = isDiscoveryBlocked('digitalProducts', visibility);
@@ -118,8 +206,10 @@ export function registerDigitalProductRoutes(app: Hono) {
     const rows = await db
       .select({
         id: digitalProducts.id,
-        title: digitalProducts.title,
-        description: digitalProducts.description,
+        titleEn: digitalProducts.titleEn,
+        titleAr: digitalProducts.titleAr,
+        descriptionEn: digitalProducts.descriptionEn,
+        descriptionAr: digitalProducts.descriptionAr,
         imageUrl: digitalProducts.imageUrl,
         priceInCents: digitalProducts.priceInCents,
         salesEnabled: digitalProducts.salesEnabled,
@@ -146,9 +236,8 @@ export function registerDigitalProductRoutes(app: Hono) {
         return isDigitalProductSellable(row) || purchased;
       })
       .map((row) => ({
+        ...presentProductFields(row, locale, isStaff),
         id: row.id,
-        title: row.title,
-        description: row.description,
         image_url: row.imageUrl,
         price_in_cents: row.priceInCents,
         is_purchased: purchasedIds.has(row.id),
@@ -165,6 +254,8 @@ export function registerDigitalProductRoutes(app: Hono) {
     if (!session?.user?.id) {
       return c.json({ error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } }, 401);
     }
+
+    const { locale, isStaff } = await resolvePresentationContext(c);
 
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
@@ -207,12 +298,13 @@ export function registerDigitalProductRoutes(app: Hono) {
 
     const videos = isPurchased ? await loadProductVideos(product.id) : [];
 
+    const productFields = presentProductFields(product, locale, isStaff);
+
     return c.json({
       data: {
         product: {
+          ...productFields,
           id: product.id,
-          title: product.title,
-          description: product.description,
           image_url: product.imageUrl,
           price_in_cents: product.priceInCents,
           is_purchased: isPurchased,
@@ -220,17 +312,29 @@ export function registerDigitalProductRoutes(app: Hono) {
           file_count: fileCount,
         },
         files: isPurchased
-          ? files.map((f) => ({
-              id: f.id,
-              file_type: f.fileType,
-              display_name: f.displayName,
-              file_url: f.fileUrl,
-            }))
+          ? files.map((f) => {
+              if (isStaff) {
+                const adminFields = presentAdminDisplayName(f);
+                return {
+                  id: f.id,
+                  file_type: f.fileType,
+                  displayNameEn: adminFields.displayNameEn,
+                  displayNameAr: adminFields.displayNameAr,
+                  file_url: f.fileUrl,
+                };
+              }
+              const { displayName } = presentPublicDisplayName(f, locale);
+              return {
+                id: f.id,
+                file_type: f.fileType,
+                display_name: displayName,
+                file_url: f.fileUrl,
+              };
+            })
           : [],
         videos: isPurchased
           ? videos.map((v) => ({
-              id: v.id,
-              title: v.title,
+              ...presentVideoFields(v, locale, isStaff),
               video_url: v.videoUrl,
             }))
           : [],
@@ -241,6 +345,7 @@ export function registerDigitalProductRoutes(app: Hono) {
   // --- Public catalog (guests + optional auth for purchase flags) ----------
 
   app.get('/digital-products/public', async (c) => {
+    const { locale, isStaff } = await resolvePresentationContext(c);
     const visibility = await getEffectiveProductVisibility();
     if (isDiscoveryBlocked('digitalProducts', visibility)) {
       return c.json({
@@ -266,8 +371,10 @@ export function registerDigitalProductRoutes(app: Hono) {
     const rows = await db
       .select({
         id: digitalProducts.id,
-        title: digitalProducts.title,
-        description: digitalProducts.description,
+        titleEn: digitalProducts.titleEn,
+        titleAr: digitalProducts.titleAr,
+        descriptionEn: digitalProducts.descriptionEn,
+        descriptionAr: digitalProducts.descriptionAr,
         imageUrl: digitalProducts.imageUrl,
         priceInCents: digitalProducts.priceInCents,
         salesEnabled: digitalProducts.salesEnabled,
@@ -290,9 +397,8 @@ export function registerDigitalProductRoutes(app: Hono) {
     let items = rows
       .filter((row) => isDigitalProductSellable(row))
       .map((row) => ({
+        ...presentProductFields(row, locale, isStaff),
         id: row.id,
-        title: row.title,
-        description: row.description,
         image_url: row.imageUrl,
         price_in_cents: row.priceInCents,
         is_sellable: true,
@@ -325,6 +431,7 @@ export function registerDigitalProductRoutes(app: Hono) {
   });
 
   app.get('/digital-products/public/:id', async (c) => {
+    const { locale, isStaff } = await resolvePresentationContext(c);
     const idParsed = uuidParamSchema.safeParse(c.req.param('id'));
     if (!idParsed.success) {
       return c.json({ error: { code: 'INVALID_PARAM', message: 'Invalid product id.' } }, 400);
@@ -365,7 +472,8 @@ export function registerDigitalProductRoutes(app: Hono) {
       db
         .select({
           id: digitalProductFiles.id,
-          displayName: digitalProductFiles.displayName,
+          displayNameEn: digitalProductFiles.displayNameEn,
+          displayNameAr: digitalProductFiles.displayNameAr,
           fileType: digitalProductFiles.fileType,
         })
         .from(digitalProductFiles)
@@ -374,19 +482,21 @@ export function registerDigitalProductRoutes(app: Hono) {
       db
         .select({
           id: digitalProductVideos.id,
-          title: digitalProductVideos.title,
+          titleEn: digitalProductVideos.titleEn,
+          titleAr: digitalProductVideos.titleAr,
         })
         .from(digitalProductVideos)
         .where(eq(digitalProductVideos.productId, product.id))
         .orderBy(asc(digitalProductVideos.sortOrder), asc(digitalProductVideos.createdAt)),
     ]);
 
+    const productFields = presentProductFields(product, locale, isStaff);
+
     return c.json({
       data: {
         product: {
+          ...productFields,
           id: product.id,
-          title: product.title,
-          description: product.description,
           image_url: product.imageUrl,
           price_in_cents: product.priceInCents,
           is_purchased: isPurchased,
@@ -394,15 +504,24 @@ export function registerDigitalProductRoutes(app: Hono) {
           file_count: fileCount,
           video_count: videos.length,
         },
-        files: files.map((f) => ({
-          id: f.id,
-          display_name: f.displayName,
-          file_type: f.fileType,
-        })),
-        videos: videos.map((v) => ({
-          id: v.id,
-          title: v.title,
-        })),
+        files: files.map((f) => {
+          if (isStaff) {
+            const adminFields = presentAdminDisplayName(f);
+            return {
+              id: f.id,
+              displayNameEn: adminFields.displayNameEn,
+              displayNameAr: adminFields.displayNameAr,
+              file_type: f.fileType,
+            };
+          }
+          const { displayName } = presentPublicDisplayName(f, locale);
+          return {
+            id: f.id,
+            display_name: displayName,
+            file_type: f.fileType,
+          };
+        }),
+        videos: videos.map((v) => presentVideoFields(v, locale, isStaff)),
       },
     });
   });
@@ -416,8 +535,10 @@ export function registerDigitalProductRoutes(app: Hono) {
     const rows = await db
       .select({
         id: digitalProducts.id,
-        title: digitalProducts.title,
-        description: digitalProducts.description,
+        titleEn: digitalProducts.titleEn,
+        titleAr: digitalProducts.titleAr,
+        descriptionEn: digitalProducts.descriptionEn,
+        descriptionAr: digitalProducts.descriptionAr,
         imageUrl: digitalProducts.imageUrl,
         priceInCents: digitalProducts.priceInCents,
         salesEnabled: digitalProducts.salesEnabled,
@@ -437,7 +558,28 @@ export function registerDigitalProductRoutes(app: Hono) {
       .groupBy(digitalProducts.id)
       .orderBy(asc(digitalProducts.sortOrder), desc(digitalProducts.createdAt));
 
-    return c.json({ data: { items: rows } });
+    return c.json({
+      data: {
+        items: rows.map((row) => ({
+          ...presentAdminContent({
+            id: row.id,
+            titleEn: row.titleEn,
+            titleAr: row.titleAr,
+            descriptionEn: row.descriptionEn,
+            descriptionAr: row.descriptionAr,
+          }),
+          imageUrl: row.imageUrl,
+          priceInCents: row.priceInCents,
+          salesEnabled: row.salesEnabled,
+          isPublished: row.isPublished,
+          sortOrder: row.sortOrder,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          fileCount: row.fileCount,
+          videoCount: row.videoCount,
+        })),
+      },
+    });
   });
 
   app.post('/digital-products', async (c) => {
@@ -450,11 +592,23 @@ export function registerDigitalProductRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
 
+    const titleFields =
+      parsed.data.titleEn && parsed.data.titleAr
+        ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
+        : bilingualTitleFromLegacy(parsed.data.title!);
+    const descriptionFields =
+      parsed.data.descriptionEn !== undefined || parsed.data.descriptionAr !== undefined
+        ? bilingualDescriptionFields(
+            parsed.data.descriptionEn ?? parsed.data.description ?? null,
+            parsed.data.descriptionAr ?? parsed.data.description ?? null,
+          )
+        : bilingualDescriptionFromLegacy(parsed.data.description);
+
     const [product] = await db
       .insert(digitalProducts)
       .values({
-        title: parsed.data.title,
-        description: parsed.data.description ?? null,
+        ...titleFields,
+        ...descriptionFields,
         imageUrl: parsed.data.imageUrl ?? null,
         priceInCents: parsed.data.priceInCents ?? null,
         salesEnabled: parsed.data.salesEnabled ?? false,
@@ -496,7 +650,29 @@ export function registerDigitalProductRoutes(app: Hono) {
       loadProductVideos(product.id),
     ]);
 
-    return c.json({ data: { product, files, videos } });
+    return c.json({
+      data: {
+        product: presentAdminContent(product),
+        files: files.map((f) => ({
+          id: f.id,
+          productId: f.productId,
+          fileType: f.fileType,
+          fileUrl: f.fileUrl,
+          sortOrder: f.sortOrder,
+          createdAt: f.createdAt,
+          ...presentAdminDisplayName(f),
+        })),
+        videos: videos.map((v) => ({
+          id: v.id,
+          productId: v.productId,
+          titleEn: v.titleEn,
+          titleAr: v.titleAr,
+          videoUrl: v.videoUrl,
+          sortOrder: v.sortOrder,
+          createdAt: v.createdAt,
+        })),
+      },
+    });
   });
 
   app.put('/digital-products/:id', async (c) => {
@@ -610,7 +786,9 @@ export function registerDigitalProductRoutes(app: Hono) {
         incomingFiles.map((entry, index) => ({
           productId: product.id,
           fileType: entry.fileType,
-          displayName: entry.displayName,
+          ...(entry.displayNameEn && entry.displayNameAr
+            ? bilingualDisplayNameFields(entry.displayNameEn, entry.displayNameAr)
+            : bilingualDisplayNameFromLegacy(entry.displayName!)),
           fileUrl: entry.fileUrl,
           sortOrder: entry.sortOrder ?? baseSortOrder + index,
         })),
@@ -635,12 +813,14 @@ export function registerDigitalProductRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const updateFileSchema = fileInputSchema
+    const updateFileSchema = baseFileInputSchema
       .partial()
       .refine(
         (data) =>
           data.fileType !== undefined ||
           data.displayName !== undefined ||
+          data.displayNameEn !== undefined ||
+          data.displayNameAr !== undefined ||
           data.fileUrl !== undefined ||
           data.sortOrder !== undefined,
         'Provide at least one field to update.',
@@ -743,7 +923,9 @@ export function registerDigitalProductRoutes(app: Hono) {
       .values(
         incomingVideos.map((entry, index) => ({
           productId: product.id,
-          title: entry.title.trim(),
+          ...(entry.titleEn && entry.titleAr
+            ? bilingualTitleFields(entry.titleEn.trim(), entry.titleAr.trim())
+            : bilingualTitleFromLegacy(entry.title!.trim())),
           videoUrl: entry.videoUrl.trim(),
           sortOrder: entry.sortOrder ?? baseSortOrder + index,
         })),
@@ -768,11 +950,15 @@ export function registerDigitalProductRoutes(app: Hono) {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const updateVideoSchema = videoInputSchema
+    const updateVideoSchema = baseVideoInputSchema
       .partial()
       .refine(
         (data) =>
-          data.title !== undefined || data.videoUrl !== undefined || data.sortOrder !== undefined,
+          data.title !== undefined ||
+          data.titleEn !== undefined ||
+          data.titleAr !== undefined ||
+          data.videoUrl !== undefined ||
+          data.sortOrder !== undefined,
         'Provide at least one field to update.',
       );
     const parsed = updateVideoSchema.safeParse(body);

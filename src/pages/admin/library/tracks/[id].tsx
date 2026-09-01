@@ -3,10 +3,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RemoveTrackEventDialog } from '@/features/tracks/components/RemoveTrackEventDialog';
 import TrackEventSelector from '@/features/tracks/components/TrackEventSelector';
-import TrackForm, {
-  mapTrackTicketPrices,
-  type TrackFormValues,
-} from '@/features/tracks/components/TrackForm';
+import TrackForm from '@/features/tracks/components/TrackForm';
 import { TrackRecordingsPublishCard } from '@/features/tracks/components/TrackRecordingsPublishCard';
 import {
   useAddEventsToTrack,
@@ -87,22 +84,10 @@ function TrackDetailPage() {
     );
   }
 
-  const handleUpdateTrack = async (values: TrackFormValues) => {
+  const handleUpdateTrack = async (payload: Parameters<typeof updateMutation.mutateAsync>[0]['data']) => {
     await updateMutation.mutateAsync({
       id: track.id,
-      data: {
-        title: values.title,
-        description: values.description || null,
-        imageUrl: values.imageUrl || null,
-        isPublished: values.isPublished,
-        maxTrackBookings: values.maxTrackBookings ?? null,
-        trackBookingStart: values.trackBookingStart || null,
-        trackBookingEnd: values.trackBookingEnd || null,
-        singleBookingStart: values.singleBookingStart || null,
-        singleBookingEnd: values.singleBookingEnd || null,
-        priceInCents: values.priceEgp ? Math.round(Number(values.priceEgp) * 100) : null,
-        ...mapTrackTicketPrices(values),
-      },
+      data: payload,
     });
   };
 

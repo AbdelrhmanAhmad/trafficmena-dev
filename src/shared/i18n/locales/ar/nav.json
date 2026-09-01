@@ -1,0 +1,29 @@
+{
+  "home": "الرئيسية",
+  "events": "الفعاليات",
+  "tracks": "المسارات",
+  "digitalProducts": "المنتجات الرقمية",
+  "masterclasses": "الماستركلاس",
+  "recordings": "التسجيلات",
+  "library": "المكتبة",
+  "about": "من نحن",
+  "contact": "تواصل معنا",
+  "subscribe": "اشترك",
+  "dashboard": "لوحة التحكم",
+  "admin": "الإدارة",
+  "community": "المجتمع",
+  "menu": "القائمة",
+  "menuOpen": "فتح القائمة",
+  "memberNav": {
+    "dashboard": "لوحة التحكم",
+    "editProfile": "تعديل الملف الشخصي",
+    "eventsTracks": "الفعاليات والمسارات",
+    "recordings": "التسجيلات",
+    "digitalProducts": "المنتجات الرقمية",
+    "myOrders": "طلباتي",
+    "masterclasses": "الماستركلاس",
+    "calculators": "الحاسبات",
+    "memberDashboard": "لوحة العضو",
+    "memberAccessDescription": "استمتع بفعاليات ومحتوى وميزات مجتمع حصرية"
+  }
+}

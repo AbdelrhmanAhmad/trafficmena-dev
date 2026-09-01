@@ -1,4 +1,5 @@
 import { GraduationCap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { MasterclassCard } from '@/features/masterclasses/components/MasterclassCard';
 import { useMasterclassStore } from '@/features/masterclasses/hooks/useMasterclasses';
@@ -8,6 +9,7 @@ import ProtectedRoute from '@/shared/components/layout/ProtectedRoute';
 import { Tabs, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 
 function MasterclassesBrowse() {
+  const { t } = useTranslation('dashboard');
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = searchParams.get('filter') === 'mine' ? 'mine' : 'all';
   const { data, isLoading, isError } = useMasterclassStore(filter);
@@ -23,14 +25,14 @@ function MasterclassesBrowse() {
     }
 
     if (isError) {
-      return <p className="text-red-600">Could not load masterclasses.</p>;
+      return <p className="text-red-600">{t('masterclasses.loadError')}</p>;
     }
 
     if (items.length === 0) {
       return (
         <div className="rounded-2xl border bg-white py-16 text-center text-neutral-500">
           <GraduationCap className="mx-auto mb-3 h-10 w-10 text-neutral-300" />
-          {filter === 'mine' ? 'You are not enrolled in any masterclasses yet.' : 'No masterclasses available right now.'}
+          {filter === 'mine' ? t('masterclasses.emptyMine') : t('masterclasses.emptyAll')}
         </div>
       );
     }
@@ -47,10 +49,8 @@ function MasterclassesBrowse() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Masterclasses</h1>
-        <p className="mt-1 text-neutral-600">
-          Buy each course directly , permanent access after payment (not in cart).
-        </p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t('masterclasses.title')}</h1>
+        <p className="mt-1 text-neutral-600">{t('masterclasses.subtitle')}</p>
       </div>
 
       <Tabs
@@ -59,8 +59,8 @@ function MasterclassesBrowse() {
         className="w-full"
       >
         <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="mine">My courses</TabsTrigger>
+          <TabsTrigger value="all">{t('masterclasses.tabAll')}</TabsTrigger>
+          <TabsTrigger value="mine">{t('masterclasses.tabMine')}</TabsTrigger>
         </TabsList>
       </Tabs>
 

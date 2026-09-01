@@ -15,6 +15,9 @@ import {
 } from '../routes/api/seriesAccess.js';
 import { hasActiveSubscription } from '../routes/api/subscriptionShared.js';
 import { activeTrackBookingWhere } from '../utils/booking.js';
+import { resolveLocalizedText } from '../utils/localize.js';
+import type { AppLocale } from '../utils/locale.js';
+import { DEFAULT_LOCALE } from '../utils/locale.js';
 import { getPurchasedSeriesIds, isSeriesSellable } from './seriesSales.js';
 
 export type RecordingsSeriesUserContext = {
@@ -146,11 +149,15 @@ export async function loadRecordingsSeriesForTrack(
   trackId: string,
   eventId?: string | null,
   userContext?: RecordingsSeriesUserContext,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<RecordingsSeriesSummary | null> {
   const [trackSeries] = await db
     .select({
       id: series.id,
-      title: series.title,
+      titleEn: series.titleEn,
+      titleAr: series.titleAr,
+      descriptionEn: series.descriptionEn,
+      descriptionAr: series.descriptionAr,
       isPublished: series.isPublished,
       salesEnabled: series.salesEnabled,
       priceInCents: series.priceInCents,
@@ -185,7 +192,7 @@ export async function loadRecordingsSeriesForTrack(
 
   const baseSummary = {
     id: trackSeries.id,
-    title: trackSeries.title,
+    title: resolveLocalizedText(trackSeries.titleEn, trackSeries.titleAr, locale),
     isPublished: trackSeries.isPublished,
     salesEnabled: trackSeries.salesEnabled,
     priceInCents: trackSeries.priceInCents,

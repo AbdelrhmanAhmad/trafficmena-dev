@@ -1,23 +1,19 @@
 import type React from 'react';
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
 import { Button } from '@/shared/components/ui/button';
 
+const GOAL_KEYS = ['firstJob', 'seniorRole', 'newSkill', 'networking', 'growBusiness'] as const;
+
 const Step4: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { formData, updateFormData } = useSignUpContext();
   const [primaryGoal, setPrimaryGoal] = useState(formData.primaryGoal);
   const goalGroupId = useId();
-
-  const goalOptions = [
-    'Find my first job in marketing',
-    'Get promoted to a senior or lead role',
-    'Master a new marketing skill',
-    'Network with other top-tier professionals',
-    'Grow my own business / freelance clients',
-  ];
 
   const handleNext = () => {
     updateFormData({ primaryGoal });
@@ -37,24 +33,24 @@ const Step4: React.FC = () => {
       <div className="space-y-6">
         <div className="mb-8 text-center">
           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            Step 4
+            {t('signup.stepLabel', { step: 4 })}
           </span>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
-            What is your #1 career goal right now?
+            {t('signup.step4.title')}
           </h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            This helps us match you with the right people and opportunities.
-          </p>
+          <p className="mt-2 text-sm text-neutral-600">{t('signup.step4.subtitle')}</p>
         </div>
 
         <fieldset className="space-y-3">
-          <legend className="text-sm font-medium text-neutral-700">Primary Goal *</legend>
-          {goalOptions.map((option, index) => {
-            const optionId = `${goalGroupId}-${index}`;
-            const isSelected = primaryGoal === option;
+          <legend className="text-sm font-medium text-neutral-700">
+            {t('signup.step4.primaryGoalLabel')} {t('signup.required')}
+          </legend>
+          {GOAL_KEYS.map((goalKey) => {
+            const optionId = `${goalGroupId}-${goalKey}`;
+            const isSelected = primaryGoal === goalKey;
             return (
               <label
-                key={option}
+                key={goalKey}
                 htmlFor={optionId}
                 className={`flex cursor-pointer items-center rounded-xl border p-3 transition-colors ${
                   isSelected
@@ -67,10 +63,10 @@ const Step4: React.FC = () => {
                   type="radio"
                   name={goalGroupId}
                   checked={isSelected}
-                  onChange={() => setPrimaryGoal(option)}
-                  className="mr-3"
+                  onChange={() => setPrimaryGoal(goalKey)}
+                  className="me-3"
                 />
-                <span>{option}</span>
+                <span>{t(`signup.goals.${goalKey}`)}</span>
               </label>
             );
           })}
@@ -82,14 +78,14 @@ const Step4: React.FC = () => {
             onClick={handleBack}
             className="rounded-xl border-neutral-200 px-8 py-3 text-neutral-700 hover:bg-neutral-50"
           >
-            Back
+            {t('signup.buttons.back')}
           </Button>
           <Button
             onClick={handleNext}
             disabled={!isValid}
             className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-3 font-semibold text-[#101010] shadow hover:brightness-95"
           >
-            Next
+            {t('signup.buttons.next')}
           </Button>
         </div>
       </div>

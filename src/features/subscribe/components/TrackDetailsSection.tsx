@@ -1,11 +1,6 @@
 import { BookOpen, Gift, Megaphone } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/utils';
-import {
-  CONTENT_MARKETING_BONUS,
-  CONTENT_MARKETING_SESSIONS,
-  PERFORMANCE_MARKETING_BONUS,
-  PERFORMANCE_MARKETING_SESSIONS,
-} from '../content';
 
 type Session = {
   number: number;
@@ -31,12 +26,12 @@ function SessionTable({ sessions }: { sessions: Session[] }) {
   );
 }
 
-function BonusSection({ items }: { items: string[] }) {
+function BonusSection({ items, title }: { items: string[]; title: string }) {
   return (
     <div className="mt-6 rounded-xl bg-gradient-to-r from-amber-50 to-amber-50/30 p-4">
       <div className="flex items-center gap-2 mb-3">
         <Gift className="h-4 w-4 text-amber-600" />
-        <span className="text-sm font-semibold text-amber-800">BONUS: Offline Day Materials</span>
+        <span className="text-sm font-semibold text-amber-800">{title}</span>
       </div>
       <ul className="space-y-2">
         {items.map((item) => (
@@ -57,6 +52,8 @@ function TrackCard({
   bonus,
   icon: Icon,
   outcome,
+  bonusTitle,
+  outcomeLabel,
 }: {
   title: string;
   description: string;
@@ -64,6 +61,8 @@ function TrackCard({
   bonus: string[];
   icon: typeof BookOpen;
   outcome: string;
+  bonusTitle: string;
+  outcomeLabel: string;
 }) {
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-6 transition-all duration-300 hover:shadow-lg">
@@ -78,11 +77,11 @@ function TrackCard({
       </div>
 
       <SessionTable sessions={sessions} />
-      <BonusSection items={bonus} />
+      <BonusSection items={bonus} title={bonusTitle} />
 
       <div className="mt-6 rounded-xl bg-neutral-900 p-4">
         <p className="text-sm text-white/90">
-          <span className="font-semibold text-[#05ef62]">Outcome:</span> {outcome}
+          <span className="font-semibold text-[#05ef62]">{outcomeLabel}</span> {outcome}
         </p>
       </div>
     </div>
@@ -90,35 +89,57 @@ function TrackCard({
 }
 
 export function TrackDetailsSection() {
+  const { t } = useTranslation('commerce');
+  const contentMarketing = t('subscribe.tracksSection.contentMarketing', {
+    returnObjects: true,
+  }) as {
+    title: string;
+    description: string;
+    outcome: string;
+    sessions: Session[];
+    bonus: string[];
+  };
+  const performanceMarketing = t('subscribe.tracksSection.performanceMarketing', {
+    returnObjects: true,
+  }) as {
+    title: string;
+    description: string;
+    outcome: string;
+    sessions: Session[];
+    bonus: string[];
+  };
+
   return (
     <section className="relative w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8">
       <div className="relative z-10 mx-auto max-w-3xl text-center">
-        <span className="text-sm font-normal text-neutral-500">Premium Content</span>
+        <span className="text-sm font-normal text-neutral-500">{t('subscribe.tracksSection.label')}</span>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-          Everything You Get With Premium
+          {t('subscribe.tracksSection.title')}
         </h2>
-        <p className="mt-3 text-sm text-neutral-600">
-          Two complete learning tracks designed to make you a specialized marketer
-        </p>
+        <p className="mt-3 text-sm text-neutral-600">{t('subscribe.tracksSection.subtitle')}</p>
       </div>
 
       <div className="relative z-10 mt-10 grid gap-8 lg:grid-cols-2">
         <TrackCard
-          title="Content Marketing Track"
-          description="6 sessions + offline day materials"
-          sessions={CONTENT_MARKETING_SESSIONS}
-          bonus={CONTENT_MARKETING_BONUS}
+          title={contentMarketing.title}
+          description={contentMarketing.description}
+          sessions={contentMarketing.sessions}
+          bonus={contentMarketing.bonus}
           icon={BookOpen}
-          outcome="Build a content system that attracts, engages, and converts, with a portfolio to prove you can do it."
+          outcome={contentMarketing.outcome}
+          bonusTitle={t('subscribe.tracksSection.bonusTitle')}
+          outcomeLabel={t('subscribe.tracksSection.outcomeLabel')}
         />
 
         <TrackCard
-          title="Performance Marketing Track"
-          description="7 sessions + offline day materials"
-          sessions={PERFORMANCE_MARKETING_SESSIONS}
-          bonus={PERFORMANCE_MARKETING_BONUS}
+          title={performanceMarketing.title}
+          description={performanceMarketing.description}
+          sessions={performanceMarketing.sessions}
+          bonus={performanceMarketing.bonus}
           icon={Megaphone}
-          outcome="Master paid advertising across Meta, Google, TikTok, and Snapchat, plus learn how to scale campaigns and even build an agency."
+          outcome={performanceMarketing.outcome}
+          bonusTitle={t('subscribe.tracksSection.bonusTitle')}
+          outcomeLabel={t('subscribe.tracksSection.outcomeLabel')}
         />
       </div>
     </section>

@@ -1,11 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
 import { lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Button } from '@/shared/components/ui/button';
 import { CalculatorAnalyticsProvider } from '../analytics';
 import { ANALYTICS_CATEGORY_MAP } from '../analytics-shared';
+import { useCalculatorMeta } from '../hooks/useCalculatorCopy';
 import { getCalculatorBySlug } from '../types';
 
 // SYNC REQUIRED: When adding new calculators, update BOTH:
@@ -40,17 +42,19 @@ const calculatorComponents: Record<string, React.LazyExoticComponent<React.Compo
 };
 
 const CalculatorDetail = () => {
+  const { t } = useTranslation('calculators');
   const { slug } = useParams<{ slug: string }>();
+  const localizedMeta = useCalculatorMeta(slug ?? '');
   const calculator = slug ? getCalculatorBySlug(slug) : undefined;
 
   if (!calculator) {
     return (
       <AppLayout variant="member">
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <h1 className="text-2xl font-bold text-neutral-900">Calculator Not Found</h1>
-          <p className="mt-2 text-neutral-600">The calculator you're looking for doesn't exist.</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('detail.notFound')}</h1>
+          <p className="mt-2 text-neutral-600">{t('detail.notFoundDescription')}</p>
           <Button asChild className="mt-6">
-            <Link to="/dashboard/calculators">Back to Calculators</Link>
+            <Link to="/dashboard/calculators">{t('common.backToAll')}</Link>
           </Button>
         </div>
       </AppLayout>
@@ -58,15 +62,16 @@ const CalculatorDetail = () => {
   }
 
   const CalculatorComponent = calculatorComponents[calculator.component];
+  const displayTitle = localizedMeta?.title ?? calculator.title;
 
   if (!CalculatorComponent) {
     return (
       <AppLayout variant="member">
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <h1 className="text-2xl font-bold text-neutral-900">Calculator Not Available</h1>
-          <p className="mt-2 text-neutral-600">This calculator is not yet implemented.</p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('detail.notAvailable')}</h1>
+          <p className="mt-2 text-neutral-600">{t('detail.notAvailableDescription')}</p>
           <Button asChild className="mt-6">
-            <Link to="/dashboard/calculators">Back to Calculators</Link>
+            <Link to="/dashboard/calculators">{t('common.backToAll')}</Link>
           </Button>
         </div>
       </AppLayout>
@@ -79,8 +84,8 @@ const CalculatorDetail = () => {
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
             <Link to="/dashboard/calculators" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              All Calculators
+              <ArrowLeft className="h-4 w-4 me-2 rtl:rotate-180" />
+              {t('detail.backToAll')}
             </Link>
           </Button>
         </div>
@@ -88,13 +93,13 @@ const CalculatorDetail = () => {
         <Suspense
           fallback={
             <div className="flex items-center justify-center py-16">
-              <LoadingSpinner size="lg" text={`Loading ${calculator.title}...`} />
+              <LoadingSpinner size="lg" text={t('detail.loading', { title: displayTitle })} />
             </div>
           }
         >
           <CalculatorAnalyticsProvider
             calculatorId={slug}
-            calculatorName={calculator.title}
+            calculatorName={displayTitle}
             calculatorCategory={ANALYTICS_CATEGORY_MAP[calculator.category]}
           >
             <CalculatorComponent />

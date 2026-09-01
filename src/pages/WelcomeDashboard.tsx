@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import { BookOpen, Calendar, FileText, FolderOpen, MapPin, Sparkles, Users } from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { fetchEvents } from '@/app/api/events';
 import { fetchLibraryAssets } from '@/app/api/library';
@@ -17,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui
 import { Skeleton } from '@/shared/components/ui/skeleton';
 
 const WelcomeDashboard: React.FC = () => {
+  const { t } = useTranslation(['dashboard', 'common']);
   const {
     data: eventsData,
     isLoading: eventsLoading,
@@ -87,9 +89,9 @@ const WelcomeDashboard: React.FC = () => {
   );
 
   const formatDate = (value: string | null | undefined) => {
-    if (!value) return 'Date TBA';
+    if (!value) return t('common:labels.dateTba');
     const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return 'Date TBA';
+    if (Number.isNaN(parsed.getTime())) return t('common:labels.dateTba');
     return parsed.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
@@ -122,14 +124,13 @@ const WelcomeDashboard: React.FC = () => {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-white">
                 <Sparkles className="h-6 w-6" />
               </div>
-              <h1 className="text-4xl font-bold text-neutral-900">Welcome to TrafficMENA</h1>
+              <h1 className="text-4xl font-bold text-neutral-900">{t('welcomeHome.title')}</h1>
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-tr from-[#29cf9f] to-[#00fdc2] text-white">
                 <Sparkles className="h-6 w-6" />
               </div>
             </div>
             <p className="mx-auto max-w-2xl text-lg text-neutral-700">
-              Glad to have you here. Explore upcoming events and dive into the knowledge library to
-              sharpen your marketing edge across the MENA region.
+              {t('welcomeHome.subtitle')}
             </p>
             <div className="flex justify-center pt-2">
               <SubscriptionStatusBadge />
@@ -145,7 +146,7 @@ const WelcomeDashboard: React.FC = () => {
                   <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <CardTitle className="text-lg sm:text-xl text-neutral-900">
-                  Upcoming Events
+                  {t('welcomeHome.upcomingEvents')}
                 </CardTitle>
               </div>
             </CardHeader>
@@ -158,9 +159,7 @@ const WelcomeDashboard: React.FC = () => {
                     <Skeleton className="h-3 w-32" />
                   </div>
                 ) : eventsError ? (
-                  <p className="text-sm text-destructive">
-                    Unable to load upcoming events right now.
-                  </p>
+                  <p className="text-sm text-destructive">{t('welcomeHome.eventsLoadError')}</p>
                 ) : events.length > 0 ? (
                   events.map((event) => (
                     <Link key={event.id} to={`/meetups/${event.id}`} className="block">
@@ -185,7 +184,7 @@ const WelcomeDashboard: React.FC = () => {
                         ) : (
                           <p className="mt-1 flex items-center gap-2 text-xs text-neutral-600">
                             <Users className="h-3 w-3" />
-                            Online Event
+                            {t('welcomeHome.onlineEvent')}
                           </p>
                         )}
                         <div className="mt-3 flex items-center gap-2">
@@ -197,9 +196,7 @@ const WelcomeDashboard: React.FC = () => {
                     </Link>
                   ))
                 ) : (
-                  <p className="text-sm text-neutral-600">
-                    No upcoming events yet. Check back soon or create your first meetup.
-                  </p>
+                  <p className="text-sm text-neutral-600">{t('welcomeHome.noEvents')}</p>
                 )}
               </div>
               <Button
@@ -207,7 +204,7 @@ const WelcomeDashboard: React.FC = () => {
                 variant="default"
                 asChild
               >
-                <Link to="/meetups">Browse Events</Link>
+                <Link to="/meetups">{t('welcomeHome.browseEvents')}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -219,7 +216,7 @@ const WelcomeDashboard: React.FC = () => {
                   <FolderOpen className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <CardTitle className="text-lg sm:text-xl text-neutral-900">
-                  Learning Tracks
+                  {t('welcomeHome.learningTracks')}
                 </CardTitle>
               </div>
             </CardHeader>
@@ -232,7 +229,7 @@ const WelcomeDashboard: React.FC = () => {
                     <Skeleton className="h-3 w-32" />
                   </div>
                 ) : tracksError ? (
-                  <p className="text-sm text-destructive">Unable to load tracks right now.</p>
+                  <p className="text-sm text-destructive">{t('welcomeHome.tracksLoadError')}</p>
                 ) : tracks.length > 0 ? (
                   tracks.map((track) => (
                     <Link key={track.id} to={`/tracks/${track.id}`} className="block">
@@ -252,16 +249,14 @@ const WelcomeDashboard: React.FC = () => {
                         ) : null}
                         <div className="mt-3 flex items-center gap-2">
                           <Badge className="rounded-full border border-[#29cf9f]/60 bg-[#29cf9f]/10 text-[#29cf9f] px-2 py-1 text-[10px] font-medium">
-                            {track.event_count} {track.event_count === 1 ? 'Event' : 'Events'}
+                            {t('welcomeHome.eventCount', { count: track.event_count })}
                           </Badge>
                         </div>
                       </div>
                     </Link>
                   ))
                 ) : (
-                  <p className="text-sm text-neutral-600">
-                    Tracks will appear here as soon as they&apos;re published.
-                  </p>
+                  <p className="text-sm text-neutral-600">{t('welcomeHome.noTracks')}</p>
                 )}
               </div>
               <Button
@@ -269,7 +264,7 @@ const WelcomeDashboard: React.FC = () => {
                 variant="default"
                 asChild
               >
-                <Link to="/meetups">Browse Tracks</Link>
+                <Link to="/meetups">{t('welcomeHome.browseTracks')}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -280,7 +275,9 @@ const WelcomeDashboard: React.FC = () => {
                 <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] text-white shadow-lg">
                   <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <CardTitle className="text-lg sm:text-xl text-neutral-900">Series</CardTitle>
+                <CardTitle className="text-lg sm:text-xl text-neutral-900">
+                  {t('welcomeHome.series')}
+                </CardTitle>
               </div>
             </CardHeader>
             <CardContent className="flex flex-1 flex-col justify-between space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">
@@ -292,7 +289,7 @@ const WelcomeDashboard: React.FC = () => {
                     <Skeleton className="h-3 w-32" />
                   </div>
                 ) : seriesError ? (
-                  <p className="text-sm text-destructive">Unable to load series right now.</p>
+                  <p className="text-sm text-destructive">{t('welcomeHome.seriesLoadError')}</p>
                 ) : series.length > 0 ? (
                   series.map((item) => (
                     <Link
@@ -316,7 +313,7 @@ const WelcomeDashboard: React.FC = () => {
                         ) : null}
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                           <Badge className="rounded-full border border-[#6366f1]/60 bg-[#6366f1]/10 text-[#6366f1] px-2 py-1 text-[10px] font-medium">
-                            {item.asset_count} {item.asset_count === 1 ? 'Item' : 'Items'}
+                            {t('welcomeHome.itemCount', { count: item.asset_count })}
                           </Badge>
                           <SeriesPriceBadge series={item} className="px-2 py-1 text-[10px] font-medium" />
                         </div>
@@ -324,9 +321,7 @@ const WelcomeDashboard: React.FC = () => {
                     </Link>
                   ))
                 ) : (
-                  <p className="text-sm text-neutral-600">
-                    Series will appear here as soon as they&apos;re published.
-                  </p>
+                  <p className="text-sm text-neutral-600">{t('welcomeHome.noSeries')}</p>
                 )}
               </div>
               <Button
@@ -334,7 +329,7 @@ const WelcomeDashboard: React.FC = () => {
                 variant="default"
                 asChild
               >
-                <Link to="/dashboard/library">View Series</Link>
+                <Link to="/dashboard/library">{t('welcomeHome.viewSeries')}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -346,7 +341,7 @@ const WelcomeDashboard: React.FC = () => {
                   <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <CardTitle className="text-lg sm:text-xl text-neutral-900">
-                  Single Content
+                  {t('welcomeHome.singleContent')}
                 </CardTitle>
               </div>
             </CardHeader>
@@ -359,9 +354,7 @@ const WelcomeDashboard: React.FC = () => {
                     <Skeleton className="h-3 w-32" />
                   </div>
                 ) : assetsError ? (
-                  <p className="text-sm text-destructive">
-                    Unable to load single content right now.
-                  </p>
+                  <p className="text-sm text-destructive">{t('welcomeHome.contentLoadError')}</p>
                 ) : singleContent.length > 0 ? (
                   singleContent.map((asset) => (
                     <Link key={asset.id} to={`/dashboard/library/${asset.id}`} className="block">
@@ -388,9 +381,7 @@ const WelcomeDashboard: React.FC = () => {
                     </Link>
                   ))
                 ) : (
-                  <p className="text-sm text-neutral-600">
-                    Single content will appear here once available.
-                  </p>
+                  <p className="text-sm text-neutral-600">{t('welcomeHome.noContent')}</p>
                 )}
               </div>
               <Button
@@ -398,7 +389,7 @@ const WelcomeDashboard: React.FC = () => {
                 variant="default"
                 asChild
               >
-                <Link to="/dashboard/library">View Library</Link>
+                <Link to="/dashboard/library">{t('goToLibrary')}</Link>
               </Button>
             </CardContent>
           </Card>

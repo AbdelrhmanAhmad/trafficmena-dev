@@ -1,6 +1,7 @@
 import { Mail } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import { trackSignUp, trackSignUpStep } from '@/lib/analytics/events';
@@ -25,6 +26,7 @@ import { getPostSignupRedirectUrl } from '@/shared/utils/postSignupRedirect';
 import { persistSignupProfile } from './persistProfile';
 
 const CheckEmail: React.FC = () => {
+  const { t } = useTranslation('auth');
   const location = useLocation();
   const navigate = useNavigate();
   const email = location.state?.email || '';
@@ -58,8 +60,8 @@ const CheckEmail: React.FC = () => {
 
     if (code.trim().length !== 6) {
       toast({
-        title: 'Invalid code',
-        description: 'Enter the 6-digit code we emailed you.',
+        title: t('signup.toast.invalidCodeTitle'),
+        description: t('signup.toast.invalidCodeDesc'),
         variant: 'destructive',
       });
       return;
@@ -83,8 +85,8 @@ const CheckEmail: React.FC = () => {
         console.warn('[analytics] skipped sign_up because no user id was available');
       }
       toast({
-        title: 'Welcome to TrafficMENA',
-        description: 'You are now signed in.',
+        title: t('signup.toast.welcomeTitle'),
+        description: t('signup.toast.welcomeDesc'),
       });
       // Use centralized redirect logic (subscription > event > dashboard)
       const redirectUrl = getPostSignupRedirectUrl();
@@ -92,8 +94,8 @@ const CheckEmail: React.FC = () => {
     } catch (error) {
       const appError = handleError(error);
       toast({
-        title: 'Code verification failed',
-        description: appError.message || 'Please try again with a fresh code.',
+        title: t('signup.toast.verificationFailedTitle'),
+        description: appError.message || t('signup.toast.verificationFailedDesc'),
         variant: 'destructive',
       });
     } finally {
@@ -109,8 +111,8 @@ const CheckEmail: React.FC = () => {
     // If Turnstile is shown but not verified, block
     if (showTurnstile && !turnstile.isVerified) {
       toast({
-        title: 'Security check required',
-        description: 'Please complete the security check below.',
+        title: t('signup.toast.securityRequiredTitle'),
+        description: t('signup.toast.securityRequiredDesc'),
         variant: 'destructive',
       });
       return;
@@ -122,8 +124,8 @@ const CheckEmail: React.FC = () => {
         turnstileToken: turnstile.token ?? undefined,
       });
       toast({
-        title: 'New code sent',
-        description: 'Check your inbox. Codes expire in 10 minutes.',
+        title: t('signup.toast.newCodeSentTitle'),
+        description: t('signup.toast.newCodeSentDesc'),
       });
       setShowTurnstile(false);
       turnstile.reset();
@@ -132,8 +134,8 @@ const CheckEmail: React.FC = () => {
       if (error instanceof ApiError && error.extra?.requiresTurnstile) {
         setShowTurnstile(true);
         toast({
-          title: 'Security check required',
-          description: 'Please complete the security check below and try again.',
+          title: t('signup.toast.securityRequiredTitle'),
+          description: t('signup.toast.securityRequiredRetryDesc'),
           variant: 'destructive',
         });
         setIsResending(false);
@@ -141,8 +143,8 @@ const CheckEmail: React.FC = () => {
       }
       const appError = handleError(error);
       toast({
-        title: 'Unable to resend code',
-        description: appError.message || 'Wait a moment before trying again.',
+        title: t('signup.toast.unableToResendTitle'),
+        description: appError.message || t('signup.toast.unableToResendDesc'),
         variant: 'destructive',
       });
     } finally {
@@ -162,14 +164,12 @@ const CheckEmail: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-primary">Check your email</h2>
+          <h2 className="text-2xl font-bold text-primary">{t('signup.checkEmail.title')}</h2>
           <p className="text-gray-600">
-            We sent a login code to <span className="font-medium text-primary">{email}</span>
+            {t('signup.checkEmail.sentTo')}{' '}
+            <span className="font-medium text-primary">{email}</span>
           </p>
-          <p className="text-sm text-gray-500">
-            Enter the 6-digit code to finish setting up your account. Codes expire in 10 minutes,
-            and you can request a new one if needed.
-          </p>
+          <p className="text-sm text-gray-500">{t('signup.checkEmail.instructions')}</p>
         </div>
 
         <form onSubmit={handleVerify} className="space-y-6">
@@ -178,7 +178,7 @@ const CheckEmail: React.FC = () => {
             value={code}
             onChange={setCode}
             containerClassName="justify-center"
-            aria-label="One-time password"
+            aria-label={t('signup.checkEmail.otpAriaLabel')}
           >
             <InputOTPGroup>
               <InputOTPSlot index={0} />
@@ -198,7 +198,7 @@ const CheckEmail: React.FC = () => {
             disabled={isVerifying || code.trim().length !== 6}
             className="w-full bg-gradient-to-r from-primary-green to-primary-gradient text-white hover:from-primary-gradient hover:to-secondary-teal"
           >
-            {isVerifying ? 'Verifying…' : 'Verify and continue'}
+            {isVerifying ? t('verifying') : t('signup.checkEmail.verifyAndContinue')}
           </Button>
         </form>
 
@@ -220,18 +220,18 @@ const CheckEmail: React.FC = () => {
             disabled={isResending || (showTurnstile && !turnstile.isVerified)}
             className="w-full text-primary transition hover:underline disabled:cursor-not-allowed disabled:text-gray-400"
           >
-            {isResending ? 'Sending new code…' : 'Request new code'}
+            {isResending ? t('signup.checkEmail.sendingNewCode') : t('signup.checkEmail.requestNewCode')}
           </button>
 
           <Button onClick={() => navigate('/signup/step-2')} variant="outline" className="w-full">
-            Back to Login Options
+            {t('signup.checkEmail.backToLoginOptions')}
           </Button>
 
           <Button
             onClick={() => navigate('/')}
             className="w-full bg-gradient-to-r from-primary-green to-primary-gradient text-white hover:from-primary-gradient hover:to-secondary-teal"
           >
-            Return to Home
+            {t('signup.checkEmail.returnToHome')}
           </Button>
         </div>
       </div>

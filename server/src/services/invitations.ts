@@ -4,7 +4,11 @@ import Papa from 'papaparse';
 import { env } from '../config/env.js';
 import { db } from '../db/client.js';
 import { invitations, profiles, users } from '../db/schema/index.js';
+import { bilingualCustomMessageFields } from '../utils/bilingualDb.js';
+import { resolveOptionalLocalizedText } from '../utils/localize.js';
 import { EmailDeliveryError, sendInvitationEmail } from './email.js';
+import type { AppLocale } from '../utils/locale.js';
+import { DEFAULT_LOCALE } from '../utils/locale.js';
 
 const DAILY_LIMIT = env.INVITATION_DAILY_LIMIT;
 
@@ -22,6 +26,8 @@ export type InvitationInput = {
   firstName?: string;
   lastName?: string;
   customMessage?: string;
+  customMessageEn?: string;
+  customMessageAr?: string;
 };
 
 export type BulkInvitationResult = {
@@ -45,13 +51,21 @@ export class InvitationError extends Error {
 export async function sendSingleInvitation(
   admin: AdminContext,
   input: InvitationInput,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<InvitationRecord> {
   await ensureDailyLimit(admin.id);
 
   const email = normalizeEmail(input.email);
   const firstName = optional(input.firstName);
   const lastName = optional(input.lastName);
-  const customMessage = optional(input.customMessage);
+  const customMessageEn = optional(input.customMessageEn ?? input.customMessage);
+  const customMessageAr = optional(input.customMessageAr ?? input.customMessage);
+  const messageFields = bilingualCustomMessageFields(customMessageEn, customMessageAr);
+  const localizedCustomMessage = resolveOptionalLocalizedText(
+    customMessageEn,
+    customMessageAr,
+    locale,
+  );
   const now = new Date();
   const token = randomBytes(20).toString('hex');
   const expiresAt = new Date(now.getTime() + INVITATION_EXPIRY_HOURS * 60 * 60 * 1000);
@@ -67,7 +81,7 @@ export async function sendSingleInvitation(
       email,
       firstName,
       lastName,
-      customMessage,
+      ...messageFields,
       token,
       source: 'single',
       status: 'pending',
@@ -84,7 +98,8 @@ export async function sendSingleInvitation(
     expiresAt,
     firstName: firstName ?? undefined,
     inviterName: buildAdminName(admin),
-    customMessage: customMessage ?? undefined,
+    customMessage: localizedCustomMessage ?? undefined,
+    locale,
   });
 
   return invite;
@@ -93,6 +108,7 @@ export async function sendSingleInvitation(
 export async function sendBulkInvitations(
   admin: AdminContext,
   csvText: string,
+  locale: AppLocale = DEFAULT_LOCALE,
 ): Promise<BulkInvitationResult> {
   const { rows, errors: parseErrors } = parseCsv(csvText);
   const created: InvitationRecord[] = [];
@@ -153,12 +169,18 @@ export async function sendBulkInvitations(
     }
 
     try {
-      const invite = await sendSingleInvitation(admin, {
-        email,
-        firstName: row.firstName,
-        lastName: row.lastName,
-        customMessage: row.customMessage,
-      });
+      const invite = await sendSingleInvitation(
+        admin,
+        {
+          email,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          customMessage: row.customMessage,
+          customMessageEn: row.customMessageEn,
+          customMessageAr: row.customMessageAr,
+        },
+        locale,
+      );
       created.push(invite);
     } catch (error) {
       let reason = 'Unknown error';
@@ -263,6 +285,10 @@ async function countInvitesToday(adminId: string) {
   return Number(total ?? 0);
 }
 
+function normalizeCsvHeader(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, '_');
+}
+
 function parseCsv(text: string): {
   rows: Array<InvitationInput & { __line: number }>;
   errors: Array<{ line: number; email: string; reason: string }>;
@@ -324,28 +350,79 @@ function parseCsv(text: string): {
   }
 
   const [firstRow, ...restRows] = rawRows;
-  const hasHeader = firstRow.columns[0]?.trim().toLowerCase() === 'email';
+  const normalizedHeaders = firstRow.columns.map((column) => normalizeCsvHeader(column));
+  const hasHeader = normalizedHeaders[0] === 'email';
   const dataRows = hasHeader ? restRows : rawRows;
+
+  const headerIndex = hasHeader
+    ? {
+        email: normalizedHeaders.indexOf('email'),
+        firstName: normalizedHeaders.findIndex((header) =>
+          ['first_name', 'firstname', 'first'].includes(header),
+        ),
+        lastName: normalizedHeaders.findIndex((header) =>
+          ['last_name', 'lastname', 'last'].includes(header),
+        ),
+        customMessage: normalizedHeaders.findIndex((header) => header === 'custom_message'),
+        customMessageEn: normalizedHeaders.findIndex((header) =>
+          ['custom_message_en', 'custommessageen'].includes(header),
+        ),
+        customMessageAr: normalizedHeaders.findIndex((header) =>
+          ['custom_message_ar', 'custommessagear'].includes(header),
+        ),
+      }
+    : null;
+
+  const readColumn = (columns: string[], index: number | undefined) => {
+    if (index === undefined || index < 0) return '';
+    return (columns[index] ?? '').trim();
+  };
 
   const rows = dataRows
     .map(({ columns, line }) => {
-      const emailRaw = (columns[0] ?? '').trim();
-      const firstNameRaw = (columns[1] ?? '').trim();
-      const lastNameRaw = (columns[2] ?? '').trim();
-      const messageParts = columns.slice(3);
-      const messageRaw = messageParts.length > 0 ? messageParts.join(',') : '';
-      const normalizedMessage = messageRaw.replace(/\r\n/g, '\n');
-      const trimmedMessage = normalizedMessage.trim();
+      const emailRaw = hasHeader ? readColumn(columns, headerIndex?.email) : readColumn(columns, 0);
+      const firstNameRaw = hasHeader
+        ? readColumn(columns, headerIndex?.firstName)
+        : readColumn(columns, 1);
+      const lastNameRaw = hasHeader
+        ? readColumn(columns, headerIndex?.lastName)
+        : readColumn(columns, 2);
+
+      let customMessageEn: string | undefined;
+      let customMessageAr: string | undefined;
+      let customMessage: string | undefined;
+
+      if (hasHeader && headerIndex) {
+        customMessageEn = readColumn(columns, headerIndex.customMessageEn) || undefined;
+        customMessageAr = readColumn(columns, headerIndex.customMessageAr) || undefined;
+        customMessage = readColumn(columns, headerIndex.customMessage) || undefined;
+      } else {
+        const messageParts = columns.slice(3);
+        const messageRaw = messageParts.length > 0 ? messageParts.join(',') : '';
+        const normalizedMessage = messageRaw.replace(/\r\n/g, '\n');
+        const trimmedMessage = normalizedMessage.trim();
+        customMessage = trimmedMessage.length > 0 ? trimmedMessage : undefined;
+      }
 
       return {
         email: emailRaw,
         firstName: firstNameRaw.length > 0 ? firstNameRaw : undefined,
         lastName: lastNameRaw.length > 0 ? lastNameRaw : undefined,
-        customMessage: trimmedMessage.length > 0 ? trimmedMessage : undefined,
+        customMessage,
+        customMessageEn,
+        customMessageAr,
         __line: line,
       };
     })
-    .filter((row) => row.email.length > 0 || row.firstName || row.lastName || row.customMessage);
+    .filter(
+      (row) =>
+        row.email.length > 0 ||
+        row.firstName ||
+        row.lastName ||
+        row.customMessage ||
+        row.customMessageEn ||
+        row.customMessageAr,
+    );
 
   return { rows, errors };
 }

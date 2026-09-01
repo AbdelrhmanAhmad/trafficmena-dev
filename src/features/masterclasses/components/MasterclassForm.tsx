@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { MasterclassAdmin } from '@/app/api/masterclasses';
 import { uploadFile } from '@/app/api/uploads';
+import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { Button } from '@/shared/components/ui/button';
 import {
   Form,
@@ -17,11 +18,20 @@ import {
 } from '@/shared/components/ui/form';
 import { Input } from '@/shared/components/ui/input';
 import { Switch } from '@/shared/components/ui/switch';
-import { Textarea } from '@/shared/components/ui/textarea';
 
 const formSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
-  description: z.string().max(5000).optional(),
+  titleEn: z
+    .string()
+    .trim()
+    .min(1, 'Title (English) is required.')
+    .max(200, 'Keep titles under 200 characters.'),
+  titleAr: z
+    .string()
+    .trim()
+    .min(1, 'Title (Arabic) is required.')
+    .max(200, 'Keep titles under 200 characters.'),
+  descriptionEn: z.string().max(5000).optional(),
+  descriptionAr: z.string().max(5000).optional(),
   imageUrl: z.string().url('Enter a valid URL').or(z.literal('')).optional(),
   priceEgp: z
     .string()
@@ -53,8 +63,10 @@ export function MasterclassForm({
   const form = useForm<MasterclassFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: masterclass?.title ?? '',
-      description: masterclass?.description ?? '',
+      titleEn: masterclass?.titleEn ?? masterclass?.title ?? '',
+      titleAr: masterclass?.titleAr ?? masterclass?.title ?? '',
+      descriptionEn: masterclass?.descriptionEn ?? masterclass?.description ?? '',
+      descriptionAr: masterclass?.descriptionAr ?? masterclass?.description ?? '',
       imageUrl: masterclass?.imageUrl ?? '',
       priceEgp: masterclass?.priceInCents ? String(masterclass.priceInCents / 100) : '',
       isPublished: masterclass?.isPublished ?? false,
@@ -62,6 +74,7 @@ export function MasterclassForm({
     },
   });
 
+  const values = form.watch();
   const [imagePreview, setImagePreview] = useState<string | null>(masterclass?.imageUrl ?? null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -69,8 +82,10 @@ export function MasterclassForm({
   useEffect(() => {
     if (!masterclass) return;
     form.reset({
-      title: masterclass.title,
-      description: masterclass.description ?? '',
+      titleEn: masterclass.titleEn ?? masterclass.title,
+      titleAr: masterclass.titleAr ?? masterclass.title,
+      descriptionEn: masterclass.descriptionEn ?? masterclass.description ?? '',
+      descriptionAr: masterclass.descriptionAr ?? masterclass.description ?? '',
       imageUrl: masterclass.imageUrl ?? '',
       priceEgp: masterclass.priceInCents ? String(masterclass.priceInCents / 100) : '',
       isPublished: masterclass.isPublished,
@@ -100,32 +115,36 @@ export function MasterclassForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
-              <FormControl>
-                <Input placeholder="AI Marketing Masterclass" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+        <BilingualTextField
+          label="Title"
+          englishLabel="Title (English)"
+          arabicLabel="Title (Arabic)"
+          required
+          valueEn={values.titleEn}
+          valueAr={values.titleAr}
+          onChangeEn={(value) => form.setValue('titleEn', value, { shouldDirty: true })}
+          onChangeAr={(value) => form.setValue('titleAr', value, { shouldDirty: true })}
+          englishPlaceholder="AI Marketing Masterclass"
+          arabicPlaceholder="ماستركلاس تسويق الذكاء الاصطناعي"
         />
+        {(form.formState.errors.titleEn || form.formState.errors.titleAr) && (
+          <p className="text-sm text-destructive">
+            {form.formState.errors.titleEn?.message ?? form.formState.errors.titleAr?.message}
+          </p>
+        )}
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea rows={4} placeholder="Course overview" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+        <BilingualTextField
+          label="Description"
+          englishLabel="Description (English)"
+          arabicLabel="Description (Arabic)"
+          multiline
+          rows={4}
+          valueEn={values.descriptionEn ?? ''}
+          valueAr={values.descriptionAr ?? ''}
+          onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
+          onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
+          englishPlaceholder="Course overview"
+          arabicPlaceholder="نظرة عامة على الدورة"
         />
 
         <FormField
@@ -237,8 +256,10 @@ export function masterclassFormValuesToPayload(values: MasterclassFormValues) {
       : null;
 
   return {
-    title: values.title.trim(),
-    description: values.description?.trim() || null,
+    titleEn: values.titleEn.trim(),
+    titleAr: values.titleAr.trim(),
+    descriptionEn: values.descriptionEn?.trim() || null,
+    descriptionAr: values.descriptionAr?.trim() || null,
     imageUrl: values.imageUrl?.trim() || null,
     priceInCents,
     isPublished: values.isPublished,

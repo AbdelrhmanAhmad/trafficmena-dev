@@ -48,6 +48,8 @@ const globalSettingsSchema = z.object({
 const masterclassCertSettingsSchema = z.object({
   certificateEnabled: z.boolean(),
   certificateTitle: z.string().max(200).nullable().optional(),
+  certificateTitleEn: z.string().max(200).nullable().optional(),
+  certificateTitleAr: z.string().max(200).nullable().optional(),
   certificateDescription: z.string().max(2000).nullable().optional(),
   certificateTemplateUrl: z.string().url().nullable().optional(),
 });

@@ -1,0 +1,311 @@
+{
+  "cartTitle": "Shopping cart",
+  "cartSubtitle": "Series and digital products — one checkout for permanent access.",
+  "emptyCart": "Your cart is empty.",
+  "digitalProductsLink": "Digital products",
+  "libraryLink": "Library",
+  "total": "Total",
+  "preparing": "Preparing…",
+  "completePurchase": "Complete purchase",
+  "removeItem": "Remove {{title}}",
+  "checkoutFailed": "Checkout failed",
+  "checkoutError": "Could not start checkout. Please try again.",
+  "orderLabel": "Order ({{count}} items)",
+  "buyActions": {
+    "inCart": "In cart",
+    "addToCart": "Add to cart",
+    "buyNow": "Buy now",
+    "preparing": "Preparing…",
+    "signIn": "Sign in",
+    "signUpFree": "Sign up free",
+    "itemCategoryDigital": "Digital Product",
+    "itemCategorySeries": "Series"
+  },
+  "store": {
+    "label": "Store",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{current}} of {{total}}",
+    "showingCount": "Showing {{shown}} of {{total}}",
+    "loadFailed": "Failed to load content. Please try again.",
+    "loading": "Loading…",
+    "recordings": {
+      "badge": "TrafficMENA Recordings",
+      "heroTitle": "Learn From Real Sessions",
+      "heroDesc": "Buy on-demand recording series from TrafficMENA events and workshops. Preview what is included, then unlock permanent access in your member dashboard.",
+      "sectionTitle": "Recordings",
+      "emptyTitle": "No recordings available",
+      "emptyDesc": "Check back soon for new recording series from our events and workshops.",
+      "ctaTitle": "Ready to unlock full access?",
+      "ctaDesc": "Sign in to purchase recordings, add them to your cart, and watch everything from your dashboard."
+    },
+    "digitalProducts": {
+      "badge": "TrafficMENA Digital Products",
+      "heroTitle": "Templates, Tools & Resources",
+      "heroDesc": "One-time purchases built for marketers in the MENA region. Preview what's included, then unlock downloads and videos forever after you buy.",
+      "sectionTitle": "Digital Products",
+      "emptyTitle": "No products available",
+      "emptyDesc": "Check back soon for new digital products and resources.",
+      "ctaTitle": "Ready to unlock full access?",
+      "ctaDesc": "Sign in to purchase products, add them to your cart, and access everything from your dashboard."
+    }
+  },
+  "subscribe": {
+    "badge": "Premium Membership",
+    "badgeTagline": "Become the Marketer Everyone Wants to Hire",
+    "heroTitle": "Your Fast Track to Becoming the Expert Others Turn To",
+    "heroDesc": "Premium gives you advanced knowledge and exclusive resources: expert-led tracks, done-for-you playbooks, and a community of 1,250+ MENA marketers who push you forward.",
+    "annualBadge": "Annual Subscription",
+    "perYear": "per year",
+    "benefitTracks": "Content + Performance Tracks",
+    "benefitPlaybooks": "Exclusive playbooks & templates",
+    "benefitSessions": "24 expert sessions per year",
+    "benefitFutureTracks": "All future tracks included",
+    "becomeMember": "Become a Member",
+    "accessDays": "365 days of premium access",
+    "foundingMemberCta": "Become a Founding Member: {{price}} EGP/year",
+    "heroBenefits": [
+      "Content Marketing Track (6 sessions)",
+      "Performance Marketing Track (7 sessions)",
+      "2x monthly expert sessions",
+      "All future online tracks included",
+      "20%+ off all offline events",
+      "Exclusive playbooks & templates"
+    ],
+    "finalCta": {
+      "headline": "Your Next Step",
+      "lead": "A year from now, you'll either be the generalist still hoping for a break, or the specialist who made it happen.",
+      "description": "Premium membership is your shortcut to specialization. Advanced tracks. Exclusive resources. A community that pushes you forward.",
+      "emphasis": "And right now, it's 50% off.",
+      "secondaryText": "Not ready?",
+      "secondaryLink": "Join Free",
+      "secondaryLinkSuffix": "and experience TrafficMENA first."
+    },
+    "tracksSection": {
+      "label": "Premium Content",
+      "title": "Everything You Get With Premium",
+      "subtitle": "Two complete learning tracks designed to make you a specialized marketer",
+      "bonusTitle": "BONUS: Offline Day Materials",
+      "outcomeLabel": "Outcome:",
+      "contentMarketing": {
+        "title": "Content Marketing Track",
+        "description": "6 sessions + offline day materials",
+        "outcome": "Build a content system that attracts, engages, and converts, with a portfolio to prove you can do it.",
+        "sessions": [
+          { "number": 1, "topic": "Build Content System with Content Pillars & Messaging Framework" },
+          { "number": 2, "topic": "Content Marketing Funnel Design: Mapping content to customer journey" },
+          { "number": 3, "topic": "Podcast Content Marketing" },
+          { "number": 4, "topic": "Content Types & Formats and The Art of Content Distribution" },
+          { "number": 5, "topic": "Content Marketing for Personal Branding" },
+          { "number": 6, "topic": "Content Strategy Presentation: How to build your Portfolio" }
+        ],
+        "bonus": [
+          "Full-Stack Generative AI for Content Creation (Presentation)",
+          "Reels Creation from the Kitchen (Recording + Presentation)",
+          "Performance Creatives Analysis (Recording + Presentation)"
+        ]
+      },
+      "performanceMarketing": {
+        "title": "Performance Marketing Track",
+        "description": "7 sessions + offline day materials",
+        "outcome": "Master paid advertising across Meta, Google, TikTok, and Snapchat, plus learn how to scale campaigns and even build an agency.",
+        "sessions": [
+          { "number": 1, "topic": "Performance Marketing Strategy" },
+          { "number": 2, "topic": "Performance Marketing Mindset" },
+          { "number": 3, "topic": "Performance Marketing: Meta Ads" },
+          { "number": 4, "topic": "Performance Marketing: TikTok & Snapchat Ads" },
+          { "number": 5, "topic": "Performance Marketing: Google Search Ads" },
+          { "number": 6, "topic": "Full B2B Performance Marketing" },
+          { "number": 7, "topic": "Meta Ads Scaling Strategies" }
+        ],
+        "bonus": [
+          "Google Ads Deep Dive: PMax, Demand Gen, Standard Shopping (Recording + Presentation)",
+          "Convert Your Skills to Agency: One Niche Agency Model (Recording + Presentation)"
+        ]
+      }
+    },
+    "comparisonSection": {
+      "label": "Compare Plans",
+      "title": "What's Included at Each Level",
+      "subtitle": "Free gives you the foundation. Premium gives you specialization.",
+      "featureColumn": "Feature",
+      "freeColumn": "FREE",
+      "premiumColumn": "PREMIUM",
+      "features": [
+        { "name": "E-commerce Business Track (7 sessions)", "free": true, "premium": true },
+        { "name": "AI for Marketers Track (5 sessions)", "free": true, "premium": true },
+        { "name": "23 Marketing Calculators", "free": true, "premium": true },
+        { "name": "Monthly Q&A Sessions", "free": "1/month", "premium": "2/month", "highlight": true },
+        { "name": "Community Access", "free": true, "premium": true },
+        { "name": "Content Marketing Track (6 sessions + offline day)", "free": false, "premium": true, "highlight": true },
+        { "name": "Performance Marketing Track (7 sessions + offline day)", "free": false, "premium": true, "highlight": true },
+        { "name": "Exclusive Guides & Playbooks", "free": false, "premium": true, "highlight": true },
+        { "name": "Templates & Checklists", "free": false, "premium": true, "highlight": true },
+        { "name": "Specialty Subgroups", "free": false, "premium": true, "highlight": true },
+        { "name": "Offline Event Discounts (20%+)", "free": false, "premium": true, "highlight": true },
+        { "name": "All Future Tracks Included", "free": "6+ months later", "premium": "Immediately", "highlight": true }
+      ]
+    },
+    "valueMathSection": {
+      "label": "The Value Equation",
+      "title": "The Numbers Don't Lie",
+      "subtitle": "Here's what you're actually getting with premium membership",
+      "whatYouGetting": "What You're Getting",
+      "totalValue": "TOTAL VALUE",
+      "yourInvestment": "Your Investment",
+      "regularPrice": "Regular Price",
+      "foundingMemberPrice": "Founding Member Price",
+      "valueToPriceRatio": "Value-to-Price Ratio",
+      "valueRatio": "{{ratio}}x value",
+      "monthlyBreakdown": "Monthly Breakdown",
+      "perMonth": "/month",
+      "approxUsdMonth": "That's approximately $8 USD/month",
+      "egpYear": "EGP/year",
+      "items": [
+        "Content Marketing Track + Offline Day Materials",
+        "Performance Marketing Track + Offline Day Materials",
+        "24 Monthly Q&A Sessions (value at 1000 EGP avg each)",
+        "Offline Discount Savings (8 events × avg 350 EGP Discount)",
+        "Exclusive Resources (playbooks, templates, guides) avg",
+        "All Future Online Tracks & Offline Recordings (estimated 5-8 new tracks/year)"
+      ]
+    },
+    "roiSection": {
+      "label": "Return on Investment",
+      "title": "The Real Question: What's NOT Investing Worth?",
+      "subtitle": "The real cost isn't the subscription. It's 12 months of staying exactly where you are.",
+      "scenarios": [
+        {
+          "icon": "briefcase",
+          "title": "You're Job Hunting",
+          "metric": "8-20x ROI",
+          "description": "Average salary increase for skilled digital marketer: 2,000-5,000 EGP/month. Premium helps you build portfolio and specialize."
+        },
+        {
+          "icon": "users",
+          "title": "You're Freelancing",
+          "metric": "Pays for itself",
+          "description": "One client closed using skills from Performance Marketing Track: 3,000-10,000 EGP/month. Premium pays for itself with one client."
+        },
+        {
+          "icon": "trendingUp",
+          "title": "You Want a Promotion",
+          "metric": "Priceless",
+          "description": "Specialization is what gets noticed. The person who \"knows Meta Ads deeply\" gets promoted over the generalist."
+        }
+      ]
+    },
+    "differentiationSection": {
+      "label": "Why TrafficMENA",
+      "title": "What Makes TrafficMENA Different",
+      "items": [
+        {
+          "icon": "users2",
+          "title": "Multiple Experts, Not One Instructor",
+          "description": "Every track features different specialists. When you learn Performance Marketing, you hear from a strategist, a Meta ads expert, a Google ads specialist, and more. That's 7+ different perspectives, not one person's opinion."
+        },
+        {
+          "icon": "briefcase",
+          "title": "Practitioners, Not Professors",
+          "description": "Every expert who presents at TrafficMENA is actively working in marketing. They're not academics teaching theory. They're professionals sharing what's working NOW."
+        },
+        {
+          "icon": "globe",
+          "title": "Your Market, Not Generic Content",
+          "description": "Western marketing tactics don't always translate. Our experts have succeeded HERE. They understand the market, the audience psychology, and what actually converts in this region."
+        },
+        {
+          "icon": "users",
+          "title": "Community, Not Just Content",
+          "description": "You're not buying videos to watch alone. You're joining 1,200+ marketers who share wins, ask questions, and support each other. That network becomes your professional advantage."
+        }
+      ]
+    },
+    "foundingMember": {
+      "badge": "Founding Member",
+      "headline": "Lock In 50% Off",
+      "description": "We're launching TrafficMENA Premium and offering founding members 50% off. This isn't a gimmick. It's our thank-you to early believers. Founding member pricing is available now but won't last forever. Your premium access, however, will.",
+      "percentOff": "{{savings}}% OFF",
+      "becomeFoundingMember": "Become a Founding Member",
+      "processing": "Processing...",
+      "egpYear": "EGP/year",
+      "egpMonth": "EGP/month",
+      "features": [
+        "Instant access to all premium content",
+        "Founding member pricing locked for this year",
+        "Cancel anytime (but you won't want to)"
+      ]
+    },
+    "premiumBenefits": [
+      {
+        "id": "01",
+        "icon": "calendar",
+        "title": "2x Monthly Sessions",
+        "description": "Two Q&A or topic-based sessions every month (vs one for free members). Topics chosen by premium member votes with direct access to experts.",
+        "value": "24 sessions per year × 50 EGP = 1,200 EGP/year"
+      },
+      {
+        "id": "02",
+        "icon": "mic",
+        "title": "Offline Event Discounts",
+        "description": "20%+ discount on all offline events and intensive days. Typical event savings: 200-450+ EGP per event.",
+        "value": "Attend 2 events/year = 400-900 EGP saved"
+      },
+      {
+        "id": "03",
+        "icon": "fileText",
+        "title": "Exclusive Resources",
+        "description": "Ready-to-use templates, step-by-step playbooks, exclusive guides, and checklists that save hours of work.",
+        "value": "New resources added throughout the year"
+      },
+      {
+        "id": "04",
+        "icon": "users",
+        "title": "Specialty Subgroups",
+        "description": "Access to focused communities: Performance Marketing, Content Marketing, E-commerce, and more as the community grows.",
+        "value": "Connect with members who share your specialization"
+      },
+      {
+        "id": "05",
+        "icon": "rocket",
+        "title": "All Future Tracks",
+        "description": "Every new online track we create is included. No additional payments as we expand our curriculum.",
+        "value": "Early access before content becomes available to free members"
+      }
+    ],
+    "faqSection": {
+      "label": "FAQ",
+      "title": "Questions? We've Got Answers",
+      "items": [
+        {
+          "question": "What's the difference between free and premium?",
+          "answer": "Free gives you our E-commerce and AI tracks, 23 calculators, and monthly Q&A. That's a complete learning foundation. Premium adds advanced tracks (Content Marketing, Performance Marketing), exclusive resources, 2x monthly sessions, offline discounts, and specialty subgroups. Think of it as: Free = Foundation, Premium = Specialization."
+        },
+        {
+          "question": "What if I'm already a free member?",
+          "answer": "Upgrading is seamless. You keep everything you had, plus unlock all premium benefits instantly. Your learning progress carries over."
+        },
+        {
+          "question": "When does founding member pricing end?",
+          "answer": "We haven't set an exact date, but it won't last indefinitely. We'll give notice before pricing changes, but the best way to lock in this rate is to join now."
+        },
+        {
+          "question": "Can I cancel my subscription?",
+          "answer": "Yes, you can cancel anytime. Your access continues through the end of your subscription period."
+        },
+        {
+          "question": "Are offline events included?",
+          "answer": "Offline events have a separate ticket price, but premium members get 20%+ off all offline events. For events like TrafficMENA Next (our SEO/organic growth intensive), that's significant savings."
+        },
+        {
+          "question": "What if I don't see value?",
+          "answer": "If you attend the sessions, use the resources, and engage with the community, you'll see value. But if for any reason you're not satisfied, reach out to us. We care more about your growth than your money."
+        },
+        {
+          "question": "How is this different from other courses?",
+          "answer": "Three ways: (1) Multiple experts per track, not one instructor. (2) Practitioners, not professors. Everyone teaching is actively working in marketing. (3) Content and community designed for marketers working in this region, not generic Western tactics."
+        }
+      ]
+    }
+  }
+}

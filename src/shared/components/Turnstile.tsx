@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Cloudflare Turnstile Site Key (Vite env)
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '';
@@ -78,6 +79,7 @@ export function Turnstile({
   size = 'normal',
   className,
 }: TurnstileProps) {
+  const { t } = useTranslation('auth');
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -136,12 +138,12 @@ export function Turnstile({
       <div ref={containerRef} />
       {!TURNSTILE_SITE_KEY && !isLoading && (
         <div className="flex h-[65px] items-center justify-center text-sm text-muted-foreground">
-          Security check is unavailable. Please try again later.
+          {t('errors.turnstileUnavailable')}
         </div>
       )}
       {TURNSTILE_SITE_KEY && isLoading && (
         <div className="flex h-[65px] items-center justify-center text-sm text-muted-foreground">
-          Loading security check...
+          {t('errors.turnstileLoading')}
         </div>
       )}
     </div>

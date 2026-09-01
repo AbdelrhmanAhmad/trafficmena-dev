@@ -1,6 +1,7 @@
 import { FileStack } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PublicDigitalProductCard } from '@/features/digital-products/components/PublicDigitalProductCard';
 import { usePublicDigitalProducts } from '@/features/digital-products/hooks/useDigitalProducts';
@@ -13,6 +14,7 @@ import { Card, CardContent } from '@/shared/components/ui/card';
 const PAGE_SIZE = 12;
 
 const PublicDigitalProductsPage: React.FC = () => {
+  const { t } = useTranslation('commerce');
   const location = useLocation();
   const navigate = useNavigate();
   const goToSignIn = useCallback(() => {
@@ -28,35 +30,34 @@ const PublicDigitalProductsPage: React.FC = () => {
   return (
     <Layout>
       <div className="relative isolate overflow-hidden">
-        <div className="pointer-events-none absolute -left-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
-        <div className="pointer-events-none absolute -right-[50vw] bottom-[-30vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
+        <div className="pointer-events-none absolute -start-[45vw] top-[-25vh] -z-10 h-[55vh] w-[85vw] rounded-full bg-gradient-to-br from-[#d5ffe9]/70 via-[#f4fff9]/40 to-transparent blur-3xl" />
+        <div className="pointer-events-none absolute -end-[50vw] bottom-[-30vh] -z-10 h-[55vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-12 px-4 pb-20 pt-12 sm:px-6 lg:px-0">
           <section className="w-full rounded-[28px] border border-neutral-200 bg-white/90 px-6 py-10 text-center shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur sm:px-12">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-xs font-medium text-neutral-600">
               <FileStack className="h-3.5 w-3.5 text-[#05ef62]" />
-              TrafficMENA Digital Products
+              {t('store.digitalProducts.badge')}
             </span>
             <h1 className="mt-5 text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl">
-              Templates, Tools & Resources
+              {t('store.digitalProducts.heroTitle')}
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-neutral-700">
-              One-time purchases built for marketers in the MENA region. Preview what&apos;s included,
-              then unlock downloads and videos forever after you buy.
+              {t('store.digitalProducts.heroDesc')}
             </p>
           </section>
 
           <section className="relative w-full rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-10">
             <div className="flex flex-col items-center gap-2 text-center">
               <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-                Store
+                {t('store.label')}
               </span>
               <h2 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-                Digital Products
+                {t('store.digitalProducts.sectionTitle')}
               </h2>
               {data && (
                 <p className="mt-1 text-sm text-neutral-500">
-                  Showing {products.length} of {total} products
+                  {t('store.showingCount', { shown: products.length, total })}
                 </p>
               )}
             </div>
@@ -64,8 +65,8 @@ const PublicDigitalProductsPage: React.FC = () => {
             <div className="mt-10">
               <DataLoader
                 loading={isLoading}
-                error={error ? 'Failed to load products' : null}
-                loadingText="Loading products..."
+                error={error ? t('store.loadFailed') : null}
+                loadingText={t('store.loading')}
                 onRetry={() => window.location.reload()}
               >
                 {products.length > 0 ? (
@@ -85,7 +86,7 @@ const PublicDigitalProductsPage: React.FC = () => {
                             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                             className="rounded-xl border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
                           >
-                            Previous
+                            {t('store.previous')}
                           </Button>
                           <Button
                             variant="outline"
@@ -93,11 +94,11 @@ const PublicDigitalProductsPage: React.FC = () => {
                             onClick={() => setCurrentPage((prev) => prev + 1)}
                             className="rounded-xl border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
                           >
-                            Next
+                            {t('store.next')}
                           </Button>
                         </div>
                         <p className="text-sm text-neutral-500">
-                          Page {currentPage} of {totalPages}
+                          {t('store.pageOf', { current: currentPage, total: totalPages })}
                         </p>
                       </div>
                     )}
@@ -107,10 +108,10 @@ const PublicDigitalProductsPage: React.FC = () => {
                     <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                       <FileStack className="mb-4 h-12 w-12 text-neutral-400" />
                       <h3 className="mb-2 text-lg font-semibold text-neutral-900">
-                        No products available
+                        {t('store.digitalProducts.emptyTitle')}
                       </h3>
                       <p className="max-w-sm text-sm text-neutral-600">
-                        Check back soon for new digital products and resources.
+                        {t('store.digitalProducts.emptyDesc')}
                       </p>
                     </CardContent>
                   </Card>
@@ -124,25 +125,24 @@ const PublicDigitalProductsPage: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-green-900/20 via-blue-900/10 to-transparent" />
             <div className="relative px-6 py-12 text-center sm:px-10">
               <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                Ready to unlock full access?
+                {t('store.digitalProducts.ctaTitle')}
               </h2>
               <p className="mx-auto mt-2 max-w-2xl text-sm text-white/70">
-                Sign in to purchase, add items to your cart, and access everything from your member
-                dashboard.
+                {t('store.digitalProducts.ctaDesc')}
               </p>
               <div className="mt-6 flex justify-center gap-3">
                 <Button
                   className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-5 py-3 text-sm font-medium text-[#101010] transition-all hover:brightness-95"
                   onClick={() => navigate('/signup')}
                 >
-                  Sign up free
+                  {t('buyActions.signUpFree')}
                 </Button>
                 <Button
                   variant="outline"
                   className="rounded-xl border-white/30 bg-white/10 text-white hover:bg-white/20"
                   onClick={goToSignIn}
                 >
-                  Sign in
+                  {t('buyActions.signIn')}
                 </Button>
               </div>
             </div>

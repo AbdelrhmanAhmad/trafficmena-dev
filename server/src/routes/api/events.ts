@@ -18,9 +18,10 @@ import {
 } from '../../db/schema/index.js';
 import { attendeeAmountCents } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
-import { loadEventCalendarSource } from '../../services/eventCalendarAccess.js';
 import { queueEventRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
+import { presentAdminEvent, presentPublicEvent } from '../../utils/eventPresentation.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import {
   createEventIsPublishedSchema,
@@ -146,10 +147,13 @@ const priceInCentsSchema = z
   .transform((value) => (value === undefined ? undefined : value));
 
 const baseEventSchema = z.object({
-  title: z.string().trim().min(3, 'Title is required.').max(180),
-  description: z.string().trim().min(1, 'Description is required.').max(8000),
+  titleEn: z.string().trim().min(3, 'Title (English) is required.').max(180),
+  titleAr: z.string().trim().min(3, 'Title (Arabic) is required.').max(180),
+  descriptionEn: z.string().trim().min(1, 'Description (English) is required.').max(8000),
+  descriptionAr: z.string().trim().min(1, 'Description (Arabic) is required.').max(8000),
   date: isoDateSchema,
-  location: stringOrNull,
+  locationEn: stringOrNull,
+  locationAr: stringOrNull,
   locationUrl: locationUrlSchema,
   meetingLink: meetingLinkSchema,
   maxAttendees: maxAttendeesSchema,
@@ -367,6 +371,7 @@ export function registerEventRoutes(app: Hono) {
         }
 
         const { page, pageSize, search, type, upcoming } = parsed.data;
+        const locale = resolveLocaleFromRequest(c);
         const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
         const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
 
@@ -381,7 +386,14 @@ export function registerEventRoutes(app: Hono) {
         }
 
         if (search) {
-          filters.push(ilike(events.title, `%${escapeLikePattern(search)}%`));
+          const pattern = `%${escapeLikePattern(search)}%`;
+          filters.push(
+            or(
+              ilike(events.titleEn, pattern),
+              ilike(events.titleAr, pattern),
+              ilike(events.title, pattern),
+            ),
+          );
         }
 
         // Hide drafts and events in unpublished tracks (unless staff)
@@ -406,15 +418,19 @@ export function registerEventRoutes(app: Hono) {
         const items = await db
           .select({
             id: events.id,
-            title: events.title,
-            eventDescription: events.eventDescription,
+            titleEn: events.titleEn,
+            titleAr: events.titleAr,
+            eventDescriptionEn: events.eventDescriptionEn,
+            eventDescriptionAr: events.eventDescriptionAr,
             date: events.date,
-            location: events.location,
+            locationEn: events.locationEn,
+            locationAr: events.locationAr,
             locationUrl: events.locationUrl,
             maxAttendees: events.maxAttendees,
             meetingLink: events.meetingLink,
             imageUrl: events.imageUrl,
             tags: events.tags,
+            guestExperts: events.guestExperts,
             eventType: events.eventType,
             eventFormat: events.eventFormat,
             priceInCents: events.priceInCents,
@@ -429,11 +445,16 @@ export function registerEventRoutes(app: Hono) {
           .limit(pageSize)
           .offset(offset);
 
-        const sanitizedItems = items.map(({ meetingLink, locationUrl, ...rest }) => ({
-          ...rest,
-          meetingLink: null,
-          locationUrl: null,
-        }));
+        const sanitizedItems = items.map(({ meetingLink, locationUrl, ...rest }) => {
+          const presented = isStaff
+            ? presentAdminEvent({ ...rest, meetingLink, locationUrl })
+            : presentPublicEvent({ ...rest, meetingLink, locationUrl }, locale);
+          return {
+            ...presented,
+            meetingLink: null,
+            locationUrl: null,
+          };
+        });
 
         return c.json({
           items: sanitizedItems,
@@ -462,19 +483,24 @@ export function registerEventRoutes(app: Hono) {
         const eventId = eventIdParsed.data;
         const session = await getSessionFromRequest(c);
         const viewerId = session?.user?.id;
+        const locale = resolveLocaleFromRequest(c);
 
         const [event] = await db
           .select({
             id: events.id,
-            title: events.title,
-            eventDescription: events.eventDescription,
+            titleEn: events.titleEn,
+            titleAr: events.titleAr,
+            eventDescriptionEn: events.eventDescriptionEn,
+            eventDescriptionAr: events.eventDescriptionAr,
             date: events.date,
-            location: events.location,
+            locationEn: events.locationEn,
+            locationAr: events.locationAr,
             locationUrl: events.locationUrl,
             maxAttendees: events.maxAttendees,
             meetingLink: events.meetingLink,
             imageUrl: events.imageUrl,
             tags: events.tags,
+            guestExperts: events.guestExperts,
             eventType: events.eventType,
             eventFormat: events.eventFormat,
             priceInCents: events.priceInCents,
@@ -538,7 +564,7 @@ export function registerEventRoutes(app: Hono) {
         }
 
         if (!trackInfo && isStaff) {
-          await ensureEventRecordingsSeries(eventId, event.title);
+          await ensureEventRecordingsSeries(eventId, event.titleEn);
         }
 
         // Check if user has booked the track (for track events) and which ticket variant they hold.
@@ -594,10 +620,15 @@ export function registerEventRoutes(app: Hono) {
             userHasTrackBooking: trackBooked,
             userHasTrackEventAttendance: attending,
           },
+          locale,
         );
 
+        const presentedEvent = isStaff
+          ? presentAdminEvent(event)
+          : presentPublicEvent(event, locale);
+
         return c.json({
-          ...event,
+          ...presentedEvent,
           attendeeCount,
           attending,
           registrationStatus,
@@ -737,10 +768,16 @@ export function registerEventRoutes(app: Hono) {
           const [event] = await tx
             .insert(events)
             .values({
-              title: payload.title,
-              eventDescription: normalizeDescription(payload.description),
+              title: payload.titleEn,
+              titleEn: payload.titleEn,
+              titleAr: payload.titleAr,
+              eventDescription: normalizeDescription(payload.descriptionEn),
+              eventDescriptionEn: normalizeDescription(payload.descriptionEn),
+              eventDescriptionAr: normalizeDescription(payload.descriptionAr),
               date: new Date(payload.date),
-              location: payload.location ?? null,
+              location: payload.locationEn ?? null,
+              locationEn: payload.locationEn ?? null,
+              locationAr: payload.locationAr ?? null,
               locationUrl: payload.locationUrl ?? null,
               meetingLink: payload.meetingLink ?? null,
               maxAttendees: payload.maxAttendees === undefined ? null : payload.maxAttendees,
@@ -754,15 +791,19 @@ export function registerEventRoutes(app: Hono) {
             })
             .returning({
               id: events.id,
-              title: events.title,
-              eventDescription: events.eventDescription,
+              titleEn: events.titleEn,
+              titleAr: events.titleAr,
+              eventDescriptionEn: events.eventDescriptionEn,
+              eventDescriptionAr: events.eventDescriptionAr,
               date: events.date,
-              location: events.location,
+              locationEn: events.locationEn,
+              locationAr: events.locationAr,
               locationUrl: events.locationUrl,
               maxAttendees: events.maxAttendees,
               meetingLink: events.meetingLink,
               imageUrl: events.imageUrl,
               tags: events.tags,
+              guestExperts: events.guestExperts,
               eventType: events.eventType,
               eventFormat: events.eventFormat,
               priceInCents: events.priceInCents,
@@ -772,8 +813,12 @@ export function registerEventRoutes(app: Hono) {
           const [recordingAsset] = await tx
             .insert(libraryAssets)
             .values({
-              title: `${payload.title} - Recording`,
-              description: `Recording from ${payload.title}`,
+              title: `${payload.titleEn} - Recording`,
+              titleEn: `${payload.titleEn} - Recording`,
+              titleAr: `${payload.titleAr} - Recording`,
+              description: `Recording from ${payload.titleEn}`,
+              descriptionEn: `Recording from ${payload.titleEn}`,
+              descriptionAr: `Recording from ${payload.titleAr}`,
               fileType: 'Video',
               eventId: event.id,
               isPublic: false,
@@ -784,12 +829,12 @@ export function registerEventRoutes(app: Hono) {
             await createEventRecordingsSeriesInTx(
               tx,
               event.id,
-              payload.title,
+              payload.titleEn,
               recordingAsset.id,
             );
           }
 
-          return event;
+          return presentAdminEvent(event);
         });
 
         return c.json(
@@ -882,11 +927,25 @@ export function registerEventRoutes(app: Hono) {
           }
         }
 
-        if (updates.title !== undefined) updateValues.title = updates.title;
-        if (updates.description !== undefined)
-          updateValues.eventDescription = normalizeDescription(updates.description);
+        if (updates.titleEn !== undefined) {
+          updateValues.titleEn = updates.titleEn;
+          updateValues.title = updates.titleEn;
+        }
+        if (updates.titleAr !== undefined) updateValues.titleAr = updates.titleAr;
+        if (updates.descriptionEn !== undefined) {
+          const normalized = normalizeDescription(updates.descriptionEn);
+          updateValues.eventDescriptionEn = normalized;
+          updateValues.eventDescription = normalized;
+        }
+        if (updates.descriptionAr !== undefined) {
+          updateValues.eventDescriptionAr = normalizeDescription(updates.descriptionAr);
+        }
         if (updates.date !== undefined) updateValues.date = new Date(updates.date);
-        if (updates.location !== undefined) updateValues.location = updates.location ?? null;
+        if (updates.locationEn !== undefined) {
+          updateValues.locationEn = updates.locationEn ?? null;
+          updateValues.location = updates.locationEn ?? null;
+        }
+        if (updates.locationAr !== undefined) updateValues.locationAr = updates.locationAr ?? null;
         if (updates.locationUrl !== undefined)
           updateValues.locationUrl = updates.locationUrl ?? null;
         if (updates.meetingLink !== undefined)
@@ -942,15 +1001,19 @@ export function registerEventRoutes(app: Hono) {
           .where(eq(events.id, eventId))
           .returning({
             id: events.id,
-            title: events.title,
-            eventDescription: events.eventDescription,
+            titleEn: events.titleEn,
+            titleAr: events.titleAr,
+            eventDescriptionEn: events.eventDescriptionEn,
+            eventDescriptionAr: events.eventDescriptionAr,
             date: events.date,
-            location: events.location,
+            locationEn: events.locationEn,
+            locationAr: events.locationAr,
             locationUrl: events.locationUrl,
             maxAttendees: events.maxAttendees,
             meetingLink: events.meetingLink,
             imageUrl: events.imageUrl,
             tags: events.tags,
+            guestExperts: events.guestExperts,
             eventType: events.eventType,
             eventFormat: events.eventFormat,
             priceInCents: events.priceInCents,
@@ -961,7 +1024,7 @@ export function registerEventRoutes(app: Hono) {
           throw new ApiError('EVENT_NOT_FOUND', 'Event not found.', 404);
         }
 
-        return c.json({ event: updated, eventFormatChangeReport });
+        return c.json({ event: presentAdminEvent(updated), eventFormatChangeReport });
       },
       'EVENT_UPDATE_FAILED',
       'Unable to update event.',
@@ -1229,10 +1292,7 @@ export function registerEventRoutes(app: Hono) {
         });
 
         if (result.success && !('alreadyRegistered' in result && result.alreadyRegistered)) {
-          const source = await loadEventCalendarSource(eventId);
-          if (source) {
-            queueEventRegistrationConfirmation(userId, source);
-          }
+          queueEventRegistrationConfirmation(userId, eventId, resolveLocaleFromRequest(c));
         }
 
         return c.json(result);

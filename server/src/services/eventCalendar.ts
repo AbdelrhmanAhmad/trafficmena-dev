@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import type { AppLocale } from '../utils/locale.js';
 
 export const CAIRO_TZ = 'Africa/Cairo';
 
@@ -56,21 +57,22 @@ function stripHtml(input: string): string {
 export function buildEventCalendarData(
   event: EventCalendarSource,
   appBaseUrl = env.APP_BASE_URL,
+  locale: AppLocale = 'en',
 ): EventCalendarData {
   const eventPageUrl = buildCanonicalEventPageUrl(event.id, appBaseUrl);
   const startUtc = new Date(event.date);
   const endUtc = new Date(startUtc.getTime() + DEFAULT_EVENT_DURATION_MS);
 
   const plainDescription = event.eventDescription ? stripHtml(event.eventDescription) : '';
-  const descriptionParts = [
-    plainDescription,
-    `View event details: ${eventPageUrl}`,
-  ].filter(Boolean);
+  const viewDetailsLabel =
+    locale === 'ar' ? `عرض تفاصيل الفعالية: ${eventPageUrl}` : `View event details: ${eventPageUrl}`;
+  const descriptionParts = [plainDescription, viewDetailsLabel].filter(Boolean);
 
+  const locationTbd = locale === 'ar' ? 'الموقع سيُحدد لاحقًا' : 'Location TBD';
   const location =
     event.eventFormat === 'online'
       ? eventPageUrl
-      : event.location?.trim() || event.locationUrl?.trim() || 'Location TBD';
+      : event.location?.trim() || event.locationUrl?.trim() || locationTbd;
 
   return {
     id: event.id,

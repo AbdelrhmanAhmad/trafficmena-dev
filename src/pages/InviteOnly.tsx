@@ -1,5 +1,6 @@
 import { ArrowRight, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
@@ -8,6 +9,7 @@ import { prepareSignInFromCurrentPage } from '@/shared/utils/authNavigation';
 const INVITATION_CACHE_KEY = 'trafficmena:last-invitation-token';
 
 export default function InviteOnlyPage() {
+  const { t } = useTranslation('auth');
   const location = useLocation();
   const navigate = useNavigate();
   const [cachedInvitePath, setCachedInvitePath] = useState<string | null>(null);
@@ -32,16 +34,12 @@ export default function InviteOnlyPage() {
 
         <div className="mx-auto flex min-h-[70vh] max-w-2xl flex-col justify-center px-6 py-24 text-center">
           <span className="inline-flex items-center justify-center rounded-full border border-neutral-200 bg-white px-4 py-1 text-xs font-medium uppercase tracking-wide text-neutral-600">
-            Private beta
+            {t('inviteOnly.badge')}
           </span>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-neutral-900">
-            TrafficMENA is currently invite-only
+            {t('inviteOnly.title')}
           </h1>
-          <p className="mt-4 text-base text-neutral-600">
-            We’re onboarding founding members in small batches to keep the experience personal. If
-            you have an invitation, you can continue from your email link. Otherwise, reach out and
-            we’ll let you know when the next cohort opens.
-          </p>
+          <p className="mt-4 text-base text-neutral-600">{t('inviteOnly.description')}</p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button
@@ -54,7 +52,9 @@ export default function InviteOnlyPage() {
                 }
               }}
             >
-              <span>{cachedInvitePath ? 'Resume invitation' : 'I have an invite'}</span>
+              <span>
+                {cachedInvitePath ? t('inviteOnly.resumeInvitation') : t('inviteOnly.haveInvite')}
+              </span>
               <ArrowRight className="h-4 w-4" />
             </Button>
             <Button
@@ -65,7 +65,7 @@ export default function InviteOnlyPage() {
               }}
             >
               <Mail className="h-4 w-4" />
-              Contact the team
+              {t('inviteOnly.contactTeam')}
             </Button>
           </div>
         </div>

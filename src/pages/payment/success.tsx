@@ -1,6 +1,7 @@
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { useVerifyPayment } from '@/app/hooks/usePayments';
 import { clearCommerceCartStorage } from '@/features/series/context/SeriesCartContext';
@@ -22,6 +23,7 @@ import {
 import { useAuth } from '@/shared/context/AuthContext';
 
 export default function PaymentSuccessPage() {
+  const { t } = useTranslation('payments');
   const [searchParams] = useSearchParams();
   const paymentId = searchParams.get('payment_id');
   const { user } = useAuth();
@@ -65,7 +67,6 @@ export default function PaymentSuccessPage() {
     return () => window.clearTimeout(retryTimer);
   }, [paymentId, verifyPayment, verifyPayment.data]);
 
-  // Fire purchase analytics THEN navigate — single effect to avoid race conditions.
   useEffect(() => {
     const verifyData = verifyPayment.data;
     if (!isVerifiedPaymentAnalyticsReady(verifyData)) return;
@@ -162,8 +163,8 @@ export default function PaymentSuccessPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-                <CardTitle className="text-2xl">Verifying Payment...</CardTitle>
-                <CardDescription>Please wait while we confirm your payment.</CardDescription>
+                <CardTitle className="text-2xl">{t('verifyingTitle')}</CardTitle>
+                <CardDescription>{t('verifyingDesc')}</CardDescription>
               </>
             )}
 
@@ -172,11 +173,11 @@ export default function PaymentSuccessPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                   <CheckCircle2 className="h-10 w-10 text-green-600" />
                 </div>
-                <CardTitle className="text-2xl text-green-700">Payment Successful!</CardTitle>
+                <CardTitle className="text-2xl text-green-700">{t('successTitle')}</CardTitle>
                 <CardDescription>
                   {verifyPayment.data?.itemName
-                    ? `Your purchase of "${verifyPayment.data.itemName}" is complete.`
-                    : 'Your payment has been processed successfully.'}
+                    ? t('successWithItem', { itemName: verifyPayment.data.itemName })
+                    : t('successGeneric')}
                 </CardDescription>
               </>
             )}
@@ -186,11 +187,8 @@ export default function PaymentSuccessPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
                   <CheckCircle2 className="h-10 w-10 text-amber-600" />
                 </div>
-                <CardTitle className="text-2xl text-amber-700">Payment Processing</CardTitle>
-                <CardDescription>
-                  Your payment may still be processing. Please check your dashboard for the latest
-                  status.
-                </CardDescription>
+                <CardTitle className="text-2xl text-amber-700">{t('processingTitle')}</CardTitle>
+                <CardDescription>{t('processingDesc')}</CardDescription>
               </>
             )}
 
@@ -199,8 +197,8 @@ export default function PaymentSuccessPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
                   <CheckCircle2 className="h-10 w-10 text-amber-600" />
                 </div>
-                <CardTitle className="text-2xl text-amber-700">Payment Received</CardTitle>
-                <CardDescription>Sign in to verify your payment status.</CardDescription>
+                <CardTitle className="text-2xl text-amber-700">{t('receivedTitle')}</CardTitle>
+                <CardDescription>{t('receivedDesc')}</CardDescription>
               </>
             )}
 
@@ -209,21 +207,18 @@ export default function PaymentSuccessPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
                   <CheckCircle2 className="h-10 w-10 text-amber-600" />
                 </div>
-                <CardTitle className="text-2xl text-amber-700">Payment Processing</CardTitle>
-                <CardDescription>
-                  Confirming your payment — this can take a moment. Check your dashboard for the
-                  latest status.
-                </CardDescription>
+                <CardTitle className="text-2xl text-amber-700">{t('confirmingTitle')}</CardTitle>
+                <CardDescription>{t('confirmingDesc')}</CardDescription>
               </>
             )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col gap-2">
               <Button asChild className="w-full">
-                <Link to="/dashboard">Go to Dashboard</Link>
+                <Link to="/dashboard">{t('goToDashboard')}</Link>
               </Button>
               <Button asChild variant="outline" className="w-full">
-                <Link to="/dashboard/meetups">View My Events</Link>
+                <Link to="/dashboard/meetups">{t('viewMyEvents')}</Link>
               </Button>
             </div>
           </CardContent>

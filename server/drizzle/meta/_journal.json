@@ -227,10 +227,38 @@
       "breakpoints": true
     },
     {
+      "idx": 32,
+      "version": "7",
+      "when": 1786525000000,
+      "tag": "0032_library_store_enabled",
+      "breakpoints": true
+    },
+    {
       "idx": 33,
       "version": "7",
       "when": 1786526000000,
       "tag": "0033_email_change_current_verification",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1786527000000,
+      "tag": "0034_product_visibility",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1786528000000,
+      "tag": "0035_bilingual_content",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1786529000000,
+      "tag": "0036_checkout_locale",
       "breakpoints": true
     }
   ]

@@ -42,6 +42,8 @@ export type CreateInvitationPayload = {
   firstName?: string;
   lastName?: string;
   customMessage?: string;
+  customMessageEn?: string;
+  customMessageAr?: string;
 };
 
 export type AcceptInvitationPayload = {

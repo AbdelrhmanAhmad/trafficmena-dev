@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import type { PaymentItemType, TicketType } from '@/app/api/payments';
@@ -63,6 +64,7 @@ export function PaymentCheckoutDialog({
   forceNewCode,
   onSuccess,
 }: PaymentCheckoutDialogProps) {
+  const { t } = useTranslation('payments');
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -119,15 +121,18 @@ export function PaymentCheckoutDialog({
   let checkoutDescription: string | null = null;
   if (!priceLoading) {
     checkoutDescription = pricePreview?.isFree
-      ? `Register for ${itemName} for free.`
-      : `Pay ${checkoutAmountLabel || 'the latest price'} for ${itemName}.`;
+      ? t('registerForFree', { itemName })
+      : t('payForItem', {
+          amount: checkoutAmountLabel || t('latestPrice'),
+          itemName,
+        });
   }
 
-  let checkoutButtonLabel = 'Continue to Payment';
+  let checkoutButtonLabel = t('continueToPayment');
   if (pricePreview?.isFree) {
-    checkoutButtonLabel = 'Register Now';
+    checkoutButtonLabel = t('registerNow');
   } else if (checkoutAmountLabel) {
-    checkoutButtonLabel = `Pay ${checkoutAmountLabel}`;
+    checkoutButtonLabel = t('payAmount', { amount: checkoutAmountLabel });
   }
 
   // Fire begin_checkout once per dialog open, after pricePreview loads so the
@@ -171,8 +176,8 @@ export function PaymentCheckoutDialog({
   const handleCheckout = async () => {
     if (!selectedMethodId) {
       toast({
-        title: 'Select payment method',
-        description: 'Please select a payment method to continue.',
+        title: t('selectMethodTitle'),
+        description: t('selectMethodDesc'),
         variant: 'destructive',
       });
       return;
@@ -220,8 +225,8 @@ export function PaymentCheckoutDialog({
 
       if (result.free) {
         toast({
-          title: 'Registration complete',
-          description: `You've been registered for ${itemName}.`,
+          title: t('registrationComplete'),
+          description: t('registeredFor', { itemName }),
         });
         onSuccess?.();
         onOpenChange(false);
@@ -256,9 +261,9 @@ export function PaymentCheckoutDialog({
         }
       }
 
-      const message = error instanceof Error ? error.message : 'Payment failed. Please try again.';
+      const message = error instanceof Error ? error.message : t('paymentFailedDesc');
       toast({
-        title: 'Payment failed',
+        title: t('paymentFailed'),
         description: message,
         variant: 'destructive',
       });
@@ -277,12 +282,12 @@ export function PaymentCheckoutDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Complete Payment</DialogTitle>
+          <DialogTitle>{t('checkoutTitle')}</DialogTitle>
           <DialogDescription>
             {priceLoading ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Calculating price...
+                {t('calculatingPrice')}
               </span>
             ) : (
               checkoutDescription
@@ -292,22 +297,20 @@ export function PaymentCheckoutDialog({
 
         {pricePreview?.discountSource === 'subscriber' && !pricePreview.isFree && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            <span className="font-medium">Subscriber discount applied!</span>
-            <p className="text-xs text-amber-700">
-              As a subscriber, you're getting the best price.
-            </p>
+            <span className="font-medium">{t('subscriberDiscountApplied')}</span>
+            <p className="text-xs text-amber-700">{t('subscriberDiscountHint')}</p>
           </div>
         )}
 
         {hasPromoApplied && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-            <span className="font-medium">Promo {appliedPromoCode} applied</span>
-            <p className="text-xs text-emerald-700">Your discount is locked in for checkout.</p>
+            <span className="font-medium">{t('promoApplied', { code: appliedPromoCode })}</span>
+            <p className="text-xs text-emerald-700">{t('promoLockedIn')}</p>
           </div>
         )}
 
         <div className="py-4">
-          <p className="mb-3 text-sm font-medium">Select payment method</p>
+          <p className="mb-3 text-sm font-medium">{t('selectPaymentMethod')}</p>
           <PaymentMethodSelector
             value={selectedMethodId}
             onChange={setSelectedMethodId}
@@ -333,10 +336,10 @@ export function PaymentCheckoutDialog({
             }}
             disabled={createCheckout.isPending && !checkoutStuck}
           >
-            Cancel
+            {t('cancel')}
           </Button>
           <Button onClick={handleCheckout} disabled={!canSubmitCheckout}>
-            {createCheckout.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {createCheckout.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             {checkoutButtonLabel}
           </Button>
         </DialogFooter>

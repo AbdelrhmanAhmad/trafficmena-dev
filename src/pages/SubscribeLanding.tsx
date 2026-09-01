@@ -1,5 +1,6 @@
 import { Check, Crown } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSubscriptionInfo } from '@/app/hooks/useSubscriptions';
 import {
@@ -12,7 +13,7 @@ import {
   ValueMathSection,
   VideoReviewsSection,
 } from '@/features/subscribe/components';
-import { FINAL_CTA_COPY, HERO_BENEFITS, PRICING } from '@/features/subscribe/content';
+import { PRICING, SUBSCRIBE_SIGNUP_HREF } from '@/features/subscribe/content';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -32,6 +33,12 @@ function HeroSection({
   onSubscribe: () => void;
   isLoaded: boolean;
 }) {
+  const { t } = useTranslation('commerce');
+  const heroBenefits = useMemo(
+    () => t('subscribe.heroBenefits', { returnObjects: true }) as string[],
+    [t],
+  );
+
   return (
     <section
       className={`relative mx-auto w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur ${isLoaded ? 'animate-fade-in' : ''}`}
@@ -47,28 +54,27 @@ function HeroSection({
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white">
                 <Crown className="h-3.5 w-3.5" />
               </span>
-              Premium Membership
+              {t('subscribe.badge')}
               <span className="mx-1.5 h-1 w-1 rounded-full bg-amber-400" />
-              Become the Marketer Everyone Wants to Hire
+              {t('subscribe.badgeTagline')}
             </div>
 
             {/* Headline */}
             <h1
               className={`text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              Your Fast Track to Becoming the Expert Others Turn To
+              {t('subscribe.heroTitle')}
             </h1>
 
             <p
               className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
             >
-              Premium gives you advanced knowledge and exclusive resources: expert-led tracks,
-              done-for-you playbooks, and a community of 1,250+ MENA marketers who push you forward.
+              {t('subscribe.heroDesc')}
             </p>
 
             {/* Benefits List */}
             <ul className={`mt-6 space-y-3 ${isLoaded ? 'animate-fade-in-up' : ''}`}>
-              {HERO_BENEFITS.map((benefit) => (
+              {heroBenefits.map((benefit) => (
                 <li key={benefit} className="flex items-center gap-3">
                   <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f]">
                     <Check className="h-3 w-3 text-white" />
@@ -88,7 +94,7 @@ function HeroSection({
             <div className="rounded-[28px] border-2 border-amber-200 bg-white p-8 shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
               <div className="mb-6 text-center">
                 <Badge className="mb-4 bg-amber-100 text-amber-800 hover:bg-amber-100">
-                  Annual Subscription
+                  {t('subscribe.annualBadge')}
                 </Badge>
                 <div className="text-4xl font-medium text-neutral-400 line-through">
                   {PRICING.regular.toLocaleString()} EGP
@@ -97,25 +103,25 @@ function HeroSection({
                   {subscriptionInfo?.priceEgp ?? '---'}{' '}
                   <span className="text-lg font-medium text-neutral-500">EGP</span>
                 </div>
-                <p className="mt-1 text-neutral-500">per year</p>
+                <p className="mt-1 text-neutral-500">{t('subscribe.perYear')}</p>
               </div>
 
               <ul className="mb-6 space-y-3 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-amber-500" />
-                  Content + Performance Tracks
+                  {t('subscribe.benefitTracks')}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-amber-500" />
-                  Exclusive playbooks & templates
+                  {t('subscribe.benefitPlaybooks')}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-amber-500" />
-                  24 expert sessions per year
+                  {t('subscribe.benefitSessions')}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-amber-500" />
-                  All future tracks included
+                  {t('subscribe.benefitFutureTracks')}
                 </li>
               </ul>
 
@@ -124,11 +130,11 @@ function HeroSection({
                 className="group w-full transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:shadow-xl active:scale-95"
               >
                 <Crown className="mr-2 h-4 w-4" />
-                Become a Member
+                {t('subscribe.becomeMember')}
               </Button>
 
               <p className="mt-4 text-center text-xs text-neutral-500">
-                365 days of premium access
+                {t('subscribe.accessDays')}
               </p>
             </div>
           </div>
@@ -146,6 +152,8 @@ function FinalCTASection({
   subscriptionInfo: { priceEgp?: number | null; discountPercent?: number } | undefined;
   onSubscribe: () => void;
 }) {
+  const { t } = useTranslation('commerce');
+
   return (
     <section className="relative w-full overflow-hidden rounded-[28px] content-visibility-auto">
       <div className="absolute inset-0 bg-gradient-to-r from-neutral-900 via-neutral-900 to-[#0b3a3f]" />
@@ -157,13 +165,15 @@ function FinalCTASection({
         </div>
 
         <h3 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-          {FINAL_CTA_COPY.headline}
+          {t('subscribe.finalCta.headline')}
         </h3>
         <p className="mx-auto mt-4 max-w-2xl text-base text-white/80 leading-relaxed">
-          {FINAL_CTA_COPY.lead}
+          {t('subscribe.finalCta.lead')}
         </p>
-        <p className="mx-auto mt-4 max-w-2xl text-sm text-white/60">{FINAL_CTA_COPY.description}</p>
-        <p className="mt-4 text-lg font-semibold text-[#05ef62]">{FINAL_CTA_COPY.emphasis}</p>
+        <p className="mx-auto mt-4 max-w-2xl text-sm text-white/60">
+          {t('subscribe.finalCta.description')}
+        </p>
+        <p className="mt-4 text-lg font-semibold text-[#05ef62]">{t('subscribe.finalCta.emphasis')}</p>
 
         <div className="mt-8">
           <Button
@@ -171,19 +181,23 @@ function FinalCTASection({
             className="group inline-flex max-w-full transform items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-4 text-base font-semibold text-[#101010] shadow-lg transition-all duration-300 hover:-translate-y-1 hover:scale-105 hover:brightness-95 whitespace-normal text-center"
           >
             <Crown className="h-5 w-5 shrink-0" />
-            <span>Become a Founding Member: {subscriptionInfo?.priceEgp ?? '---'} EGP/year</span>
+            <span>
+              {t('subscribe.foundingMemberCta', {
+                price: subscriptionInfo?.priceEgp ?? '---',
+              })}
+            </span>
           </Button>
         </div>
 
         <p className="mt-6 text-sm text-white/50">
-          {FINAL_CTA_COPY.secondaryText}{' '}
+          {t('subscribe.finalCta.secondaryText')}{' '}
           <Link
-            to={FINAL_CTA_COPY.secondaryLinkHref}
+            to={SUBSCRIBE_SIGNUP_HREF}
             className="text-white/70 underline hover:text-white"
           >
-            {FINAL_CTA_COPY.secondaryLink}
+            {t('subscribe.finalCta.secondaryLink')}
           </Link>{' '}
-          {FINAL_CTA_COPY.secondaryLinkSuffix}
+          {t('subscribe.finalCta.secondaryLinkSuffix')}
         </p>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { PaymentMethod } from '@/app/api/payments';
 import { usePaymentMethods } from '@/app/hooks/usePayments';
 import { Button } from '@/shared/components/ui/button';
@@ -19,6 +20,7 @@ export function PaymentMethodSelector({
   disabled,
   enabled = true,
 }: PaymentMethodSelectorProps) {
+  const { t } = useTranslation('payments');
   const shouldFetch = enabled;
   const {
     data: methods,
@@ -31,7 +33,7 @@ export function PaymentMethodSelector({
   if (!shouldFetch) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-center text-sm text-neutral-600">
-        Sign in to view payment methods.
+        {t('signInForMethods')}
       </div>
     );
   }
@@ -41,7 +43,7 @@ export function PaymentMethodSelector({
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">Loading payment methods...</span>
+        <span className="ms-2 text-sm text-muted-foreground">{t('loadingMethods')}</span>
       </div>
     );
   }
@@ -49,7 +51,7 @@ export function PaymentMethodSelector({
   if (error) {
     return (
       <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-sm text-destructive">
-        <p>Unable to load payment methods.</p>
+        <p>{t('methodsLoadFailed')}</p>
         <Button
           type="button"
           variant="outline"
@@ -58,8 +60,8 @@ export function PaymentMethodSelector({
           onClick={() => refetch()}
           disabled={isFetching}
         >
-          {isFetching && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-          Try again
+          {isFetching && <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" />}
+          {t('tryAgain')}
         </Button>
       </div>
     );
@@ -68,7 +70,7 @@ export function PaymentMethodSelector({
   if (!methods?.length) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-center text-sm text-neutral-600">
-        No payment methods available at the moment.
+        {t('noMethodsAvailable')}
       </div>
     );
   }

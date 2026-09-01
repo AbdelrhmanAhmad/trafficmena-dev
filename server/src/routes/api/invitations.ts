@@ -19,6 +19,7 @@ import {
 } from '../../services/invitationLifecycle.js';
 import { invitationRateLimiter } from '../../services/rateLimiter.js';
 import { getSessionFromRequest } from '../../utils/session.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { parseInvitationListQuery } from './invitations-list.js';
 import { escapeLikePattern, getRequestIp, normalizeEmail } from './utils.js';
 
@@ -27,6 +28,8 @@ const singleInviteSchema = z.object({
   firstName: z.string().max(120).optional(),
   lastName: z.string().max(120).optional(),
   customMessage: z.string().max(600).optional(),
+  customMessageEn: z.string().max(600).optional(),
+  customMessageAr: z.string().max(600).optional(),
 });
 
 const acceptSchema = z.object({
@@ -65,7 +68,7 @@ export function registerInvitationRoutes(app: Hono) {
     adminRoute(
       async (c, admin) => {
         const payload = await parseJson(c, singleInviteSchema);
-        const invitation = await sendSingleInvitation(admin, payload);
+        const invitation = await sendSingleInvitation(admin, payload, resolveLocaleFromRequest(c));
         return c.json({ invitation });
       },
       'INVITATION_SEND_FAILED',
@@ -86,7 +89,7 @@ export function registerInvitationRoutes(app: Hono) {
             400,
           );
         }
-        return c.json(await sendBulkInvitations(admin, csv));
+        return c.json(await sendBulkInvitations(admin, csv, resolveLocaleFromRequest(c)));
       },
       'INVITATION_SEND_FAILED',
       'Unable to process CSV invitation upload.',

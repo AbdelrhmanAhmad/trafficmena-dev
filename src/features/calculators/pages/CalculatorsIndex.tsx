@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Calculator,
   DollarSign,
@@ -9,7 +10,7 @@ import {
 import { Link } from 'react-router-dom';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Card } from '@/shared/components/ui/card';
-import { CALCULATOR_CATEGORIES, CALCULATORS, type CalculatorCategory } from '../types';
+import { CALCULATORS, type CalculatorCategory } from '../types';
 
 const categoryIcons: Record<CalculatorCategory, typeof Calculator> = {
   traffic: MousePointerClick,
@@ -28,16 +29,15 @@ const categoryColors: Record<CalculatorCategory, string> = {
 };
 
 const CalculatorsIndex = () => {
-  const categories = Object.keys(CALCULATOR_CATEGORIES) as CalculatorCategory[];
+  const { t } = useTranslation('calculators');
+  const categories = ['traffic', 'conversion', 'revenue', 'retention', 'efficiency'] as CalculatorCategory[];
 
   return (
     <AppLayout variant="member">
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Marketing Calculators</h1>
-          <p className="mt-1 text-neutral-600">
-            23 essential calculators to measure and optimize your marketing performance
-          </p>
+          <h1 className="text-2xl font-bold text-neutral-900">{t('index.title')}</h1>
+          <p className="mt-1 text-neutral-600">{t('index.subtitle')}</p>
         </div>
 
         {categories.map((category) => {
@@ -48,9 +48,7 @@ const CalculatorsIndex = () => {
             <section key={category}>
               <div className="mb-4 flex items-center gap-2">
                 <Icon className="h-5 w-5 text-neutral-700" />
-                <h2 className="text-lg font-semibold text-neutral-900">
-                  {CALCULATOR_CATEGORIES[category]}
-                </h2>
+                <h2 className="text-lg font-semibold text-neutral-900">{t(`categories.${category}`)}</h2>
                 <span className="text-sm text-neutral-500">({calculators.length})</span>
               </div>
 
@@ -63,12 +61,12 @@ const CalculatorsIndex = () => {
                           <Calculator className="h-5 w-5 text-neutral-600" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-medium text-neutral-900">{calc.title}</h3>
-                          <p className="mt-0.5 text-sm text-neutral-500">{calc.description}</p>
+                          <h3 className="font-medium text-neutral-900">{t(`calcs.${calc.slug}.title`)}</h3>
+                          <p className="mt-0.5 text-sm text-neutral-500">{t(`calcs.${calc.slug}.description`)}</p>
                           <span
                             className={`mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${categoryColors[category]}`}
                           >
-                            {CALCULATOR_CATEGORIES[category]}
+                            {t(`categories.${category}`)}
                           </span>
                         </div>
                       </div>

@@ -11,6 +11,7 @@ import { env, isProduction } from './config/env.js';
 import { db } from './db/client.js';
 import { authAccounts, authSessions, authVerifications, users } from './db/schema/index.js';
 import { sendOtpEmail } from './services/email.js';
+import { consumePendingOtpLocale } from './i18n/otpLocaleContext.js';
 
 const OTP_TTL_SECONDS = 10 * 60;
 const OTP_TTL_MINUTES = Math.ceil(OTP_TTL_SECONDS / 60);
@@ -63,7 +64,8 @@ export const auth = betterAuth({
       storeOTP: 'hashed',
       generateOTP: () => generateAuthOtp(),
       sendVerificationOTP: async ({ email, otp, type }) => {
-        await sendOtpEmail({ email, otp, ttlMinutes: OTP_TTL_MINUTES });
+        const locale = consumePendingOtpLocale(email);
+        await sendOtpEmail({ email, otp, ttlMinutes: OTP_TTL_MINUTES, locale });
         if (!isProduction) {
           console.info('[auth] OTP dispatched', { type });
         }

@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
@@ -19,7 +20,7 @@ import {
 import { ALL_COUNTRIES, MENA_COUNTRIES, OTHER_COUNTRIES } from '@/shared/data/countries';
 import {
   assembleE164,
-  EGYPT_PHONE_HELPER,
+  EGYPT_DIAL,
   normalizeLocalPart,
   parseE164,
   validateLocalPart,
@@ -31,6 +32,7 @@ const WHATSAPP_SVG_PATH =
 const DEFAULT_COUNTRY = MENA_COUNTRIES[0];
 
 const Step3: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { formData, updateFormData } = useSignUpContext();
   const phoneInputId = useId();
@@ -44,11 +46,17 @@ const Step3: React.FC = () => {
 
   const dial = ALL_COUNTRIES.find((c) => c.code === selectedCode)?.dial ?? DEFAULT_COUNTRY.dial;
 
+  const translatePhoneError = (phoneError: string | null): string | undefined => {
+    if (!phoneError) return undefined;
+    if (dial === EGYPT_DIAL) return t('signup.errors.egyptMobileInvalid');
+    return t('signup.errors.phoneInvalid');
+  };
+
   const validatePhone = (): string | undefined => {
-    if (!localNumber) return 'WhatsApp number is required';
+    if (!localNumber) return t('signup.errors.whatsappRequired');
     const normalized = normalizeLocalPart(localNumber, dial);
-    if (!/^\d+$/.test(normalized)) return 'Please enter a valid phone number';
-    return validateLocalPart(normalized, dial) ?? undefined;
+    if (!/^\d+$/.test(normalized)) return t('signup.errors.phoneDigitsOnly');
+    return translatePhoneError(validateLocalPart(normalized, dial));
   };
 
   const buildFullPhone = () => assembleE164(dial, normalizeLocalPart(localNumber, dial));
@@ -57,7 +65,7 @@ const Step3: React.FC = () => {
     const normalized = normalizeLocalPart(localNumber, dial);
     setLocalNumber(normalized);
     const phoneError = validateLocalPart(normalized, dial);
-    setErrors(phoneError ? { phoneNumber: phoneError } : {});
+    setErrors(phoneError ? { phoneNumber: translatePhoneError(phoneError) } : {});
   };
 
   const handleNext = () => {
@@ -87,21 +95,19 @@ const Step3: React.FC = () => {
       <div className="space-y-6">
         <div className="mb-8 text-center">
           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            Step 3
+            {t('signup.stepLabel', { step: 3 })}
           </span>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
-            What&apos;s your WhatsApp number?
+            {t('signup.step3.title')}
           </h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            This is how you&apos;ll get instant meetup details, reminders, and Zoom links.
-          </p>
-          <p className="text-xs text-neutral-500">We will never spam you.</p>
+          <p className="mt-2 text-sm text-neutral-600">{t('signup.step3.subtitle')}</p>
+          <p className="text-xs text-neutral-500">{t('signup.step3.noSpam')}</p>
         </div>
 
         <div className="space-y-4">
           <div>
             <Label htmlFor={phoneInputId} className="text-sm font-medium text-neutral-700">
-              WhatsApp Number *
+              {t('signup.step3.whatsappLabel')} {t('signup.required')}
             </Label>
             <div className="mt-1 flex gap-2">
               <Select
@@ -116,7 +122,7 @@ const Step3: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectLabel>MENA Region</SelectLabel>
+                    <SelectLabel>{t('signup.step3.menaRegion')}</SelectLabel>
                     {MENA_COUNTRIES.map((c) => (
                       <SelectItem key={c.code} value={c.code}>
                         {c.flag} +{c.dial}
@@ -125,7 +131,7 @@ const Step3: React.FC = () => {
                   </SelectGroup>
                   <SelectSeparator />
                   <SelectGroup>
-                    <SelectLabel>Other Countries</SelectLabel>
+                    <SelectLabel>{t('signup.step3.otherCountries')}</SelectLabel>
                     {OTHER_COUNTRIES.map((c) => (
                       <SelectItem key={c.code} value={c.code}>
                         {c.flag} +{c.dial}
@@ -148,7 +154,7 @@ const Step3: React.FC = () => {
                     if (errors.phoneNumber) setErrors({});
                   }}
                   onBlur={handleLocalBlur}
-                  placeholder="1234567890"
+                  placeholder={t('signup.step3.phonePlaceholder')}
                   className={`rounded-xl border-neutral-200 ${errors.phoneNumber ? 'border-red-500' : ''}`}
                   aria-invalid={Boolean(errors.phoneNumber)}
                   aria-describedby={errors.phoneNumber ? phoneErrorId : undefined}
@@ -174,7 +180,7 @@ const Step3: React.FC = () => {
             )}
             <p className="mt-1 flex items-center text-xs text-neutral-500">
               <svg
-                className="mr-1 h-4 w-4 text-green-500"
+                className="me-1 h-4 w-4 text-green-500"
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 aria-hidden="true"
@@ -182,10 +188,10 @@ const Step3: React.FC = () => {
               >
                 <path d={WHATSAPP_SVG_PATH} />
               </svg>
-              A WhatsApp number is required for event communication.
+              {t('signup.step3.whatsappRequiredHint')}
             </p>
             {selectedCode === 'EG' && (
-              <p className="mt-1 text-xs text-neutral-500">{EGYPT_PHONE_HELPER}</p>
+              <p className="mt-1 text-xs text-neutral-500">{t('signup.step3.egyptPhoneHelper')}</p>
             )}
           </div>
         </div>
@@ -196,14 +202,14 @@ const Step3: React.FC = () => {
             onClick={handleBack}
             className="rounded-xl border-neutral-200 px-8 py-3 text-neutral-700 hover:bg-neutral-50"
           >
-            Back
+            {t('signup.buttons.back')}
           </Button>
           <Button
             onClick={handleNext}
             disabled={!isValid}
             className="rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-8 py-3 font-semibold text-[#101010] shadow hover:brightness-95"
           >
-            Next
+            {t('signup.buttons.next')}
           </Button>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { usePricePreview } from '@/app/hooks/usePayments';
 import { formatSeriesPriceLabel } from '@/features/series/utils/seriesPricing';
@@ -56,11 +57,11 @@ const trustedMeetingDomains = [
   'jitsi.org',
 ];
 
-const validateMeetingUrl = (url: string) => {
+const validateMeetingUrl = (url: string, translate: (key: string) => string) => {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:') {
-      return { isValid: false, error: 'Meeting links must use HTTPS.' };
+      return { isValid: false, error: translate('detail.meetingHttpsRequired') };
     }
 
     const hostname = parsed.hostname.toLowerCase();
@@ -71,13 +72,13 @@ const validateMeetingUrl = (url: string) => {
     if (!isTrusted) {
       return {
         isValid: false,
-        error: 'Meeting links must be hosted on an approved provider like Zoom or Google Meet.',
+        error: translate('detail.meetingUntrustedProvider'),
       };
     }
 
     return { isValid: true, validatedUrl: url };
   } catch {
-    return { isValid: false, error: 'Invalid meeting link.' };
+    return { isValid: false, error: translate('detail.meetingInvalid') };
   }
 };
 
@@ -97,6 +98,7 @@ const SanitizedDescription = ({ className, html }: SanitizedHtmlProps) => (
 );
 
 const EventDetail: React.FC = () => {
+  const { t } = useTranslation(['events', 'common']);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -135,11 +137,11 @@ const EventDetail: React.FC = () => {
   const isPromoApplied =
     Boolean(appliedPromoCode) && pricePreview?.discountSource === 'promo' && !promoError;
   const promoDisabledReason = !user
-    ? 'Sign in to apply a promo code.'
+    ? t('detail.promoSignIn')
     : pricePreview?.discountSource === 'subscriber'
-      ? 'Subscriber discount already applied.'
+      ? t('detail.promoSubscriberApplied')
       : pricePreview?.isFree
-        ? 'Promo codes are not available for free items.'
+        ? t('detail.promoFreeItem')
         : null;
   const promoDisabled = Boolean(promoDisabledReason);
   const isStandaloneEvent = !event?.trackInfo;
@@ -203,15 +205,15 @@ const EventDetail: React.FC = () => {
   }, [event, id]);
 
   const attendeeCountLabel = useMemo(() => {
-    if (!event) return 'Limited Spots';
+    if (!event) return t('detail.limitedSpots');
     const spotsRemaining = event.max_attendees
       ? event.max_attendees - (event.attendee_count ?? 0)
       : null;
     if (spotsRemaining !== null && spotsRemaining <= 0) {
-      return 'Sold Out';
+      return t('soldOut');
     }
-    return 'Limited Spots';
-  }, [event]);
+    return t('detail.limitedSpots');
+  }, [event, t]);
 
   const showMeetingLink = useMemo(() => {
     if (!event?.meeting_link || adminLoading) return false;
@@ -320,15 +322,15 @@ const EventDetail: React.FC = () => {
     event?.location && event.location.trim().length > 0
       ? event.location.trim()
       : event?.meeting_link
-        ? 'Online'
-        : 'Location coming soon';
+        ? t('online')
+        : t('detail.locationComingSoon');
 
   return (
     <Layout>
       <DataLoader
         loading={isLoading}
-        error={error ? 'Unable to load this event right now.' : null}
-        loadingText="Loading event details..."
+        error={error ? t('detail.loadError') : null}
+        loadingText={t('detail.loading')}
       >
         {event && (
           <div className="relative isolate overflow-hidden">
@@ -340,7 +342,7 @@ const EventDetail: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-neutral-600">
                   <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1">
                     <Sparkles className="h-3 w-3 text-[#05ef62]" />
-                    TrafficMENA Event
+                    {t('detail.badge')}
                   </span>
                   <span className="rounded-full bg-neutral-900/90 px-3 py-1 text-[11px] font-semibold text-white">
                     {event.event_type}
@@ -361,7 +363,7 @@ const EventDetail: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-neutral-600">
                     <span className="hidden items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 lg:inline-flex">
                       <Sparkles className="h-3 w-3 text-[#05ef62]" />
-                      TrafficMENA Event
+                      {t('detail.badge')}
                     </span>
                     <span className="hidden rounded-full bg-neutral-900/90 px-3 py-1 text-[11px] font-semibold text-white lg:inline">
                       {event.event_type}
@@ -372,7 +374,7 @@ const EventDetail: React.FC = () => {
                         className="hidden cursor-pointer items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700 transition-colors hover:bg-emerald-100 lg:inline-flex"
                         onClick={() => navigate(`/tracks/${event.trackInfo?.id}`)}
                       >
-                        Part of: {event.trackInfo.title}
+                        {t('detail.partOfTrack', { title: event.trackInfo.title })}
                       </button>
                     )}
                     {event.tags[0] && (
@@ -388,7 +390,7 @@ const EventDetail: React.FC = () => {
 
                   {sanitizedDescription && (
                     <div className="mt-8 space-y-4">
-                      <h2 className="text-lg font-semibold text-neutral-900">What to Expect</h2>
+                      <h2 className="text-lg font-semibold text-neutral-900">{t('detail.whatToExpect')}</h2>
                       <SanitizedDescription
                         className="prose prose-base max-w-none text-neutral-700 prose-headings:text-neutral-900 prose-strong:text-neutral-900 prose-a:text-[#05ef62]"
                         html={sanitizedDescription}
@@ -402,7 +404,7 @@ const EventDetail: React.FC = () => {
                     <div className="aspect-[2/1] w-full overflow-hidden bg-neutral-100">
                       <img
                         src={eventImageUrl}
-                        alt={`${event.title} cover`}
+                        alt={t('detail.coverAlt', { title: event.title })}
                         className="h-full w-full object-contain"
                         loading="lazy"
                       />
@@ -415,14 +417,14 @@ const EventDetail: React.FC = () => {
                             : 'bg-neutral-100 text-neutral-600'
                         }`}
                       >
-                        {isUpcoming ? 'Upcoming Session' : 'Past Session'}
+                        {isUpcoming ? t('detail.upcomingSession') : t('detail.pastSession')}
                       </span>
                       <div className="space-y-3 text-sm">
                         <div className="flex items-center gap-3 rounded-xl bg-neutral-100 px-4 py-3">
                           <Calendar className="h-5 w-5 text-[#05ef62]" />
                           <div>
                             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                              Date
+                              {t('detail.date')}
                             </p>
                             <p className="text-sm font-semibold text-neutral-900">
                               {formatLongDate(event.date)}
@@ -433,7 +435,7 @@ const EventDetail: React.FC = () => {
                           <Clock className="h-5 w-5 text-[#05ef62]" />
                           <div>
                             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                              Time
+                              {t('detail.time')}
                             </p>
                             <p className="text-sm font-semibold text-neutral-900">
                               {formatTime(event.date)}
@@ -444,7 +446,7 @@ const EventDetail: React.FC = () => {
                           <MapPin className="h-5 w-5 text-[#05ef62]" />
                           <div>
                             <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                              Location
+                              {t('detail.location')}
                             </p>
                             {showLocationUrl ? (
                               <>
@@ -459,15 +461,15 @@ const EventDetail: React.FC = () => {
                                     className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#05ef62] hover:underline"
                                   >
                                     <ExternalLink className="h-3 w-3" />
-                                    View on Map
+                                    {t('detail.viewOnMap')}
                                   </a>
                                 )}
                               </>
                             ) : (
                               <p className="text-sm text-neutral-500">
                                 {isTrackEvent
-                                  ? 'Book the track to view location'
-                                  : 'Register to view location'}
+                                  ? t('detail.bookTrackForLocation')
+                                  : t('detail.registerForLocation')}
                               </p>
                             )}
                           </div>
@@ -485,7 +487,7 @@ const EventDetail: React.FC = () => {
                             <Sparkles className="h-5 w-5 text-indigo-500" />
                             <div>
                               <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-                                Recordings
+                                {t('detail.recordings')}
                               </p>
                               <p className="text-sm font-semibold text-indigo-700">
                                 {formatSeriesPriceLabel(recordingsPriceCents)}
@@ -549,7 +551,7 @@ const EventDetail: React.FC = () => {
                             showTrackBookingOnly = true;
                           } else if (end && now > end) {
                             canBookSingle = false;
-                            bookingMessage = 'Individual registration has closed.';
+                            bookingMessage = t('detail.individualClosed');
                           }
                         } else if (trackInfo && !trackInfo.singleBookingStart) {
                           // If in track but no single booking dates, direct to track
@@ -567,10 +569,10 @@ const EventDetail: React.FC = () => {
                                 className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
                                 onClick={() => navigate(`/tracks/${trackInfo.id}`)}
                               >
-                                Book Full Track
+                                {t('tracks:detail.bookFullTrack')}
                               </Button>
                               <p className="text-center text-xs text-muted-foreground">
-                                This event is part of a learning track
+                                {t('detail.trackEventNote')}
                               </p>
                             </div>
                           );
@@ -583,7 +585,7 @@ const EventDetail: React.FC = () => {
                               className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
                               onClick={handleNavigateToRecordings}
                             >
-                              Buy Recordings
+                              {t('detail.buyRecordings')}
                             </Button>
                           );
                         }
@@ -597,18 +599,18 @@ const EventDetail: React.FC = () => {
                           return (
                             <div className="space-y-3">
                               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                                <p className="font-medium">Registration Closed</p>
+                                <p className="font-medium">{t('detail.registrationClosed')}</p>
                                 <p className="mt-1">{bookingMessage}</p>
                                 <Button
                                   variant="link"
                                   className="mt-2 h-auto p-0 text-amber-900 underline"
                                   onClick={() => navigate(`/tracks/${trackInfo?.id}`)}
                                 >
-                                  View Full Track
+                                  {t('detail.viewFullTrack')}
                                 </Button>
                               </div>
                               <Button disabled className="w-full rounded-xl" variant="secondary">
-                                Registration Closed
+                                {t('detail.registrationClosed')}
                               </Button>
                             </div>
                           );
@@ -618,7 +620,7 @@ const EventDetail: React.FC = () => {
                         if (event.registrationStatus === 'refund_requested') {
                           return (
                             <Button className="w-full rounded-xl" variant="secondary" disabled>
-                              Refund Request Pending
+                              {t('detail.refundPending')}
                             </Button>
                           );
                         }
@@ -629,7 +631,7 @@ const EventDetail: React.FC = () => {
                             onClick={event.attending ? handleCancel : handleRegister}
                             disabled={isBooking || isCancelling}
                           >
-                            {event.attending ? 'Cancel Registration' : 'Register for Event'}
+                            {event.attending ? t('detail.cancelRegistration') : t('detail.registerForEvent')}
                           </Button>
                         );
                       })()}
@@ -637,21 +639,21 @@ const EventDetail: React.FC = () => {
                       {event.registrationStatus === 'refund_requested' && (
                         <div className="flex items-center gap-2 rounded-xl bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700">
                           <ClockIcon className="h-4 w-4" />
-                          <span>Refund Requested - Pending Review</span>
+                          <span>{t('detail.refundRequested')}</span>
                         </div>
                       )}
 
                       {event.attending && (
                         <div className="flex items-center gap-2 rounded-xl bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
                           <CheckCircle className="h-4 w-4" />
-                          <span>You're registered</span>
+                          <span>{t('detail.youRegistered')}</span>
                         </div>
                       )}
 
                       {hasAccess && id && event.date && (
                         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-4">
                           <p className="mb-3 text-sm font-semibold text-neutral-900">
-                            Add to calendar
+                            {t('detail.addToCalendar')}
                           </p>
                           <EventCalendarActions
                             kind="event"
@@ -667,7 +669,7 @@ const EventDetail: React.FC = () => {
                           className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-3 text-sm font-medium text-white hover:brightness-95"
                           onClick={handleNavigateToRecordings}
                         >
-                          Buy Recordings
+                          {t('detail.buyRecordings')}
                         </Button>
                       ) : null}
 
@@ -675,12 +677,12 @@ const EventDetail: React.FC = () => {
                         <div className="mt-6 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
                           <div className="flex items-center gap-2 text-neutral-900">
                             <Video className="h-4 w-4 text-[#05ef62]" />
-                            <span className="text-sm font-semibold">Meeting Link</span>
+                            <span className="text-sm font-semibold">{t('detail.meetingLink')}</span>
                           </div>
                           <div className="mt-3">
                             {showMeetingLink ? (
                               (() => {
-                                const validation = validateMeetingUrl(event.meeting_link ?? '');
+                                const validation = validateMeetingUrl(event.meeting_link ?? '', t);
                                 if (!validation.isValid) {
                                   return <p className="text-xs text-red-500">{validation.error}</p>;
                                 }
@@ -699,13 +701,13 @@ const EventDetail: React.FC = () => {
                                       })
                                     }
                                   >
-                                    Join Live Session
+                                    {t('detail.joinLiveSession')}
                                   </a>
                                 );
                               })()
                             ) : (
                               <p className="text-xs text-neutral-600">
-                                Register to unlock the secure meeting link.
+                                {t('detail.registerForMeetingLink')}
                               </p>
                             )}
                           </div>
@@ -715,7 +717,7 @@ const EventDetail: React.FC = () => {
                       {event.tags.length > 0 && (
                         <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
                           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-                            Topics & Focus Areas
+                            {t('detail.topicsLabel')}
                           </span>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {event.tags.map((tag) => (

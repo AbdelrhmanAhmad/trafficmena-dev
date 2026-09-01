@@ -19,9 +19,25 @@ import {
 } from '../../db/schema/index.js';
 import { buildTrackAttendeesQuery } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere, hasTrackBookingRow } from '../../utils/booking.js';
-import { loadTrackCalendarEvents, loadTrackTitle } from '../../services/eventCalendarAccess.js';
+import {
+  bilingualDescriptionFields,
+  bilingualDescriptionFromLegacy,
+  bilingualTitleFields,
+  bilingualTitleFromLegacy,
+} from '../../utils/bilingualDb.js';
+import {
+  optionalBilingualDescriptionFields,
+  requiredBilingualTitleFields,
+} from '../../utils/bilingualSchemas.js';
 import { queueTrackRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
+import {
+  presentAdminContent,
+  presentPublicContent,
+  presentPublicRow,
+} from '../../utils/contentPresentation.js';
+import { presentAdminEvent, presentPublicEvent } from '../../utils/eventPresentation.js';
 import { ApiError, handleRoute } from '../../utils/errors.js';
+import { resolveLocaleFromRequest } from '../../utils/locale.js';
 import { getSessionFromRequest } from '../../utils/session.js';
 import { extractJsonPayload } from './jsonPayload.js';
 import {
@@ -81,24 +97,30 @@ const locationUrlSchema = z
   .optional()
   .or(z.literal(''));
 
-const createTrackSchema = z.object({
-  title: z.string().trim().min(3, 'Title is required.').max(180),
-  description: z.union([z.string().trim().max(4000), z.null()]).optional(),
-  imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
-  isPublished: z.boolean().default(false),
-  trackBookingStart: z.coerce.date().nullable().optional(),
-  trackBookingEnd: z.coerce.date().nullable().optional(),
-  singleBookingStart: z.coerce.date().nullable().optional(),
-  singleBookingEnd: z.coerce.date().nullable().optional(),
-  allowIndividualBooking: z.boolean().default(false),
-  maxTrackBookings: z.number().int().positive().nullable().optional(),
-  priceInCents: priceInCentsSchema,
-  onlineOnlyPriceCents: priceInCentsSchema,
-  onlineOfflinePriceCents: priceInCentsSchema,
-  offlineOnlyPriceCents: priceInCentsSchema,
-  location: locationSchema,
-  locationUrl: locationUrlSchema,
-});
+const createTrackSchema = z
+  .object({
+    title: z.string().trim().min(3, 'Title is required.').max(180).optional(),
+    description: z.union([z.string().trim().max(4000), z.null()]).optional(),
+    imageUrl: z.union([z.string().url().max(500), z.literal(''), z.null()]).optional(),
+    isPublished: z.boolean().default(false),
+    trackBookingStart: z.coerce.date().nullable().optional(),
+    trackBookingEnd: z.coerce.date().nullable().optional(),
+    singleBookingStart: z.coerce.date().nullable().optional(),
+    singleBookingEnd: z.coerce.date().nullable().optional(),
+    allowIndividualBooking: z.boolean().default(false),
+    maxTrackBookings: z.number().int().positive().nullable().optional(),
+    priceInCents: priceInCentsSchema,
+    onlineOnlyPriceCents: priceInCentsSchema,
+    onlineOfflinePriceCents: priceInCentsSchema,
+    offlineOnlyPriceCents: priceInCentsSchema,
+    location: locationSchema,
+    locationUrl: locationUrlSchema,
+  })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields)
+  .refine((data) => (data.titleEn && data.titleAr) || data.title, {
+    message: 'Provide title or titleEn/titleAr.',
+  });
 
 const updateTrackSchema = z
   .object({
@@ -136,6 +158,8 @@ const updateTrackSchema = z
       ])
       .optional(),
   })
+  .merge(requiredBilingualTitleFields.partial())
+  .merge(optionalBilingualDescriptionFields)
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
 type BookingFields = {
@@ -331,6 +355,7 @@ export function registerTrackRoutes(app: Hono) {
         }
 
         const { page, pageSize } = parsed.data;
+        const locale = resolveLocaleFromRequest(c);
         const offset = (page - 1) * pageSize;
 
         // Get total count of published tracks
@@ -343,14 +368,17 @@ export function registerTrackRoutes(app: Hono) {
         const trackList = await db
           .select({
             id: tracks.id,
-            title: tracks.title,
-            description: tracks.description,
+            titleEn: tracks.titleEn,
+            titleAr: tracks.titleAr,
+            descriptionEn: tracks.descriptionEn,
+            descriptionAr: tracks.descriptionAr,
             imageUrl: tracks.imageUrl,
             trackBookingStart: tracks.trackBookingStart,
             trackBookingEnd: tracks.trackBookingEnd,
             maxTrackBookings: tracks.maxTrackBookings,
             priceInCents: tracks.priceInCents,
-            location: tracks.location,
+            locationEn: tracks.locationEn,
+            locationAr: tracks.locationAr,
             locationUrl: tracks.locationUrl,
           })
           .from(tracks)
@@ -404,10 +432,11 @@ export function registerTrackRoutes(app: Hono) {
         const items = trackList.map((t) => {
           const stats = eventStats.get(t.id) ?? { count: 0, firstDate: null };
           const currentBookings = bookingCounts.get(t.id) ?? 0;
+          const presented = presentPublicContent(t, locale);
           return {
-            id: t.id,
-            title: t.title,
-            description: t.description,
+            id: presented.id,
+            title: presented.title,
+            description: presented.description,
             imageUrl: t.imageUrl,
             eventCount: stats.count,
             firstEventDate: stats.firstDate,
@@ -416,7 +445,7 @@ export function registerTrackRoutes(app: Hono) {
             spotsRemaining:
               t.maxTrackBookings !== null ? t.maxTrackBookings - currentBookings : null,
             priceInCents: t.priceInCents,
-            location: t.location,
+            location: presented.location,
             locationUrl: null, // Only reveal URL to booked users (via detail endpoint)
           };
         });
@@ -450,13 +479,16 @@ export function registerTrackRoutes(app: Hono) {
           return c.json({ error: idValidation.error }, 400);
         }
         const id = idValidation.value;
+        const locale = resolveLocaleFromRequest(c);
         const session = await getSessionFromRequest(c);
 
         const [track] = await db
           .select({
             id: tracks.id,
-            title: tracks.title,
-            description: tracks.description,
+            titleEn: tracks.titleEn,
+            titleAr: tracks.titleAr,
+            descriptionEn: tracks.descriptionEn,
+            descriptionAr: tracks.descriptionAr,
             imageUrl: tracks.imageUrl,
             isPublished: tracks.isPublished,
             trackBookingStart: tracks.trackBookingStart,
@@ -469,7 +501,8 @@ export function registerTrackRoutes(app: Hono) {
             onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
             onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
             offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
-            location: tracks.location,
+            locationEn: tracks.locationEn,
+            locationAr: tracks.locationAr,
             locationUrl: tracks.locationUrl,
           })
           .from(tracks)
@@ -487,14 +520,18 @@ export function registerTrackRoutes(app: Hono) {
             sortOrder: trackEvents.sortOrder,
             event: {
               id: events.id,
-              title: events.title,
-              description: events.eventDescription,
+              titleEn: events.titleEn,
+              titleAr: events.titleAr,
+              eventDescriptionEn: events.eventDescriptionEn,
+              eventDescriptionAr: events.eventDescriptionAr,
               date: events.date,
-              location: events.location,
+              locationEn: events.locationEn,
+              locationAr: events.locationAr,
               eventType: events.eventType,
               eventFormat: events.eventFormat,
               imageUrl: events.imageUrl,
               maxAttendees: events.maxAttendees,
+              isPublished: events.isPublished,
             },
           })
           .from(trackEvents)
@@ -523,26 +560,6 @@ export function registerTrackRoutes(app: Hono) {
           }
         }
 
-        const trackEventsFormatted = trackEventsList.map((te) => ({
-          id: te.event.id,
-          title: te.event.title,
-          description: te.event.description,
-          date: te.event.date,
-          location: te.event.location,
-          eventType: te.event.eventType,
-          eventFormat: te.event.eventFormat,
-          imageUrl: te.event.imageUrl,
-          maxAttendees: te.event.maxAttendees,
-          attendeeCount: attendeeCountsMap.get(te.eventId) ?? 0,
-        }));
-
-        // Get booking stats
-        const [bookingStats] = await db
-          .select({ value: count(trackBookings.id) })
-          .from(trackBookings)
-          .where(activeTrackBookingWhere(eq(trackBookings.trackId, id)));
-
-        // Check if current user has booked
         let userHasBooked = false;
         let isStaff = false;
         let userHasPendingPayment = false;
@@ -610,17 +627,37 @@ export function registerTrackRoutes(app: Hono) {
           }
         }
 
-        const recordingsSeries = await loadRecordingsSeriesForTrack(id, null, {
-          userId: session?.user?.id ?? null,
-          isStaff,
-          userHasTrackBooking: userHasBooked,
+        const trackEventsFormatted = trackEventsList.map((te) => {
+          const eventRow = {
+            ...te.event,
+            attendeeCount: attendeeCountsMap.get(te.eventId) ?? 0,
+          };
+          return isStaff ? presentAdminEvent(eventRow) : presentPublicEvent(eventRow, locale);
         });
+
+        const [bookingStats] = await db
+          .select({ value: count(trackBookings.id) })
+          .from(trackBookings)
+          .where(activeTrackBookingWhere(eq(trackBookings.trackId, id)));
+
+        const presentedTrack = isStaff
+          ? presentAdminContent(track)
+          : presentPublicContent(track, locale);
+
+        const recordingsSeries = await loadRecordingsSeriesForTrack(
+          id,
+          null,
+          {
+            userId: session?.user?.id ?? null,
+            isStaff,
+            userHasTrackBooking: userHasBooked,
+          },
+          locale,
+        );
 
         return c.json({
           track: {
-            id: track.id,
-            title: track.title,
-            description: track.description,
+            ...presentedTrack,
             imageUrl: track.imageUrl,
             trackBookingStart: track.trackBookingStart,
             trackBookingEnd: track.trackBookingEnd,
@@ -642,9 +679,6 @@ export function registerTrackRoutes(app: Hono) {
             onlineOnlyPriceCents: track.onlineOnlyPriceCents,
             onlineOfflinePriceCents: track.onlineOfflinePriceCents,
             offlineOnlyPriceCents: track.offlineOnlyPriceCents,
-            location: track.location,
-            // Track-level map URL is for the offline day: only offline-entitled buyers + staff see it.
-            // The location text above stays public.
             locationUrl: serializeTrackLocationUrl({
               locationUrl: track.locationUrl,
               isStaff,
@@ -680,6 +714,7 @@ export function registerTrackRoutes(app: Hono) {
     }
 
     const { page, pageSize, search } = parsed.data;
+    const locale = resolveLocaleFromRequest(c);
     const role = session?.user ? await getOptionalUserRole(session.user.id) : null;
     const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
 
@@ -688,7 +723,14 @@ export function registerTrackRoutes(app: Hono) {
       filters.push(eq(tracks.isPublished, true));
     }
     if (search) {
-      filters.push(ilike(tracks.title, `%${escapeLikePattern(search)}%`));
+      const pattern = `%${escapeLikePattern(search)}%`;
+      filters.push(
+        or(
+          ilike(tracks.titleEn, pattern),
+          ilike(tracks.titleAr, pattern),
+          ilike(tracks.title, pattern),
+        ),
+      );
     }
 
     const whereClause = filters.length ? and(...filters) : undefined;
@@ -705,8 +747,10 @@ export function registerTrackRoutes(app: Hono) {
     const trackList = await db
       .select({
         id: tracks.id,
-        title: tracks.title,
-        description: tracks.description,
+        titleEn: tracks.titleEn,
+        titleAr: tracks.titleAr,
+        descriptionEn: tracks.descriptionEn,
+        descriptionAr: tracks.descriptionAr,
         imageUrl: tracks.imageUrl,
         sortOrder: tracks.sortOrder,
         isPublished: tracks.isPublished,
@@ -718,7 +762,8 @@ export function registerTrackRoutes(app: Hono) {
         allowIndividualBooking: tracks.allowIndividualBooking,
         maxTrackBookings: tracks.maxTrackBookings,
         priceInCents: tracks.priceInCents,
-        location: tracks.location,
+        locationEn: tracks.locationEn,
+        locationAr: tracks.locationAr,
         locationUrl: tracks.locationUrl,
       })
       .from(tracks)
@@ -765,8 +810,9 @@ export function registerTrackRoutes(app: Hono) {
     const items = trackList.map((t) => {
       const bookingTicketType = bookingTicketTypesByTrackId.get(t.id) ?? null;
       const userHasBooked = isStaff ? false : bookingTicketTypesByTrackId.has(t.id);
+      const presented = presentPublicRow(t, locale, Boolean(isStaff));
       return {
-        ...t,
+        ...presented,
         locationUrl: serializeTrackLocationUrl({
           locationUrl: t.locationUrl,
           isStaff: Boolean(isStaff),
@@ -795,14 +841,17 @@ export function registerTrackRoutes(app: Hono) {
       return c.json({ error: idValidation.error }, 400);
     }
     const id = idValidation.value;
+    const locale = resolveLocaleFromRequest(c);
     const role = await getOptionalUserRole(session.user.id);
     const isStaff = role && ['owner', 'admin', 'manager'].includes(role);
 
     const [track] = await db
       .select({
         id: tracks.id,
-        title: tracks.title,
-        description: tracks.description,
+        titleEn: tracks.titleEn,
+        titleAr: tracks.titleAr,
+        descriptionEn: tracks.descriptionEn,
+        descriptionAr: tracks.descriptionAr,
         imageUrl: tracks.imageUrl,
         sortOrder: tracks.sortOrder,
         isPublished: tracks.isPublished,
@@ -818,7 +867,8 @@ export function registerTrackRoutes(app: Hono) {
         onlineOnlyPriceCents: tracks.onlineOnlyPriceCents,
         onlineOfflinePriceCents: tracks.onlineOfflinePriceCents,
         offlineOnlyPriceCents: tracks.offlineOnlyPriceCents,
-        location: tracks.location,
+        locationEn: tracks.locationEn,
+        locationAr: tracks.locationAr,
         locationUrl: tracks.locationUrl,
       })
       .from(tracks)
@@ -841,12 +891,17 @@ export function registerTrackRoutes(app: Hono) {
         sortOrder: trackEvents.sortOrder,
         event: {
           id: events.id,
-          title: events.title,
-          eventDescription: events.eventDescription,
+          titleEn: events.titleEn,
+          titleAr: events.titleAr,
+          eventDescriptionEn: events.eventDescriptionEn,
+          eventDescriptionAr: events.eventDescriptionAr,
           date: events.date,
-          location: events.location,
+          locationEn: events.locationEn,
+          locationAr: events.locationAr,
           eventType: events.eventType,
+          eventFormat: events.eventFormat,
           imageUrl: events.imageUrl,
+          isPublished: events.isPublished,
         },
       })
       .from(trackEvents)
@@ -875,16 +930,15 @@ export function registerTrackRoutes(app: Hono) {
       }
     }
 
-    const eventsWithAssets = trackEventsList.map((te) => ({
-      id: te.event.id,
-      title: te.event.title,
-      description: te.event.eventDescription,
-      date: te.event.date,
-      location: te.event.location,
-      eventType: te.event.eventType,
-      imageUrl: te.event.imageUrl,
-      assetCount: assetCountsMap.get(te.eventId) ?? 0,
-    }));
+    const eventsWithAssets = trackEventsList.map((te) => {
+      const presented = isStaff
+        ? presentAdminEvent(te.event)
+        : presentPublicEvent(te.event, locale);
+      return {
+        ...presented,
+        assetCount: assetCountsMap.get(te.eventId) ?? 0,
+      };
+    });
 
     const [bookingStats] = await db
       .select({ value: count(trackBookings.id) })
@@ -908,14 +962,23 @@ export function registerTrackRoutes(app: Hono) {
       bookingTicketType = booking?.ticketType ?? null;
     }
 
-    const recordingsSeries = await loadRecordingsSeriesForTrack(id, null, {
-      userId: session?.user?.id ?? null,
-      isStaff: Boolean(isStaff),
-      userHasTrackBooking: userHasBooked,
-    });
+    const recordingsSeries = await loadRecordingsSeriesForTrack(
+      id,
+      null,
+      {
+        userId: session?.user?.id ?? null,
+        isStaff: Boolean(isStaff),
+        userHasTrackBooking: userHasBooked,
+      },
+      locale,
+    );
+
+    const presentedTrack = isStaff
+      ? presentAdminContent(track)
+      : presentPublicContent(track, locale);
 
     return c.json({
-      ...track,
+      ...presentedTrack,
       locationUrl: serializeTrackLocationUrl({
         locationUrl: track.locationUrl,
         isStaff: Boolean(isStaff),
@@ -1047,13 +1110,27 @@ export function registerTrackRoutes(app: Hono) {
           );
         }
 
+        const titleFields =
+          payload.titleEn && payload.titleAr
+            ? bilingualTitleFields(payload.titleEn, payload.titleAr)
+            : bilingualTitleFromLegacy(payload.title!);
+        const descriptionFields =
+          payload.descriptionEn !== undefined || payload.descriptionAr !== undefined
+            ? bilingualDescriptionFields(
+                payload.descriptionEn ?? payload.description ?? null,
+                payload.descriptionAr ?? payload.description ?? null,
+              )
+            : bilingualDescriptionFromLegacy(payload.description);
+        const titleEn = titleFields.titleEn;
+        const titleAr = titleFields.titleAr;
+
         // Use transaction to ensure track + auto-created series are atomic
         const created = await db.transaction(async (tx) => {
           const [track] = await tx
             .insert(tracks)
             .values({
-              title: payload.title,
-              description: payload.description ?? null,
+              ...titleFields,
+              ...descriptionFields,
               imageUrl: payload.imageUrl || null,
               isPublished: false,
               trackBookingStart: payload.trackBookingStart ?? null,
@@ -1073,8 +1150,11 @@ export function registerTrackRoutes(app: Hono) {
 
           // Auto-create Series for track recordings
           await tx.insert(series).values({
-            title: `${payload.title} Recordings`,
-            description: `Session recordings and materials from ${payload.title}`,
+            ...bilingualTitleFields(`${titleEn} Recordings`, `${titleAr} Recordings`),
+            ...bilingualDescriptionFields(
+              `Session recordings and materials from ${titleEn}`,
+              `Session recordings and materials from ${titleAr}`,
+            ),
             trackId: track.id,
             isPublished: false,
           });
@@ -1082,7 +1162,7 @@ export function registerTrackRoutes(app: Hono) {
           return track;
         });
 
-        return c.json({ track: created }, 201);
+        return c.json({ track: presentAdminContent(created) }, 201);
       },
       'TRACK_CREATE_FAILED',
       'Unable to create track.',
@@ -1297,7 +1377,7 @@ export function registerTrackRoutes(app: Hono) {
           return trackResult;
         });
 
-        return c.json({ track: updated });
+        return c.json({ track: presentAdminContent(updated) });
       },
       'TRACK_UPDATE_FAILED',
       'Unable to update track.',
@@ -2150,13 +2230,7 @@ export function registerTrackRoutes(app: Hono) {
         });
 
         if (result.success && !('alreadyBooked' in result && result.alreadyBooked)) {
-          const [events, trackTitle] = await Promise.all([
-            loadTrackCalendarEvents(trackId),
-            loadTrackTitle(trackId),
-          ]);
-          if (trackTitle && events.length > 0) {
-            queueTrackRegistrationConfirmation(userId, trackId, trackTitle, events);
-          }
+          queueTrackRegistrationConfirmation(userId, trackId, resolveLocaleFromRequest(c));
         }
 
         return c.json(result);

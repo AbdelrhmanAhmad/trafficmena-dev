@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
@@ -9,6 +10,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 
 const Step1: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { formData, updateFormData, setCurrentStep: setSignUpCurrentStep } = useSignUpContext();
   const [firstName, setFirstName] = useState(formData.firstName);
@@ -25,18 +27,18 @@ const Step1: React.FC = () => {
     setSignUpCurrentStep(1);
   }, [setSignUpCurrentStep]);
 
-  const validateName = (name: string, field: string): string | undefined => {
-    if (!name.trim()) return `${field} is required`;
-    if (name.trim().length < 2) return `${field} must be at least 2 characters`;
+  const validateName = (name: string, fieldLabel: string): string | undefined => {
+    if (!name.trim()) return t('signup.errors.fieldRequired', { field: fieldLabel });
+    if (name.trim().length < 2) return t('signup.errors.fieldMinLength', { field: fieldLabel });
     if (!/^[\p{L}\s'-]+$/u.test(name))
-      return `${field} can only contain letters, spaces, hyphens, and apostrophes`;
+      return t('signup.errors.fieldInvalidChars', { field: fieldLabel });
     return undefined;
   };
 
   const validateForm = () => {
     const newErrors: { firstName?: string; lastName?: string } = {};
-    newErrors.firstName = validateName(firstName, 'First name');
-    newErrors.lastName = validateName(lastName, 'Last name');
+    newErrors.firstName = validateName(firstName, t('signup.fields.firstName'));
+    newErrors.lastName = validateName(lastName, t('signup.fields.lastName'));
     setErrors(newErrors);
     return !newErrors.firstName && !newErrors.lastName;
   };
@@ -64,20 +66,18 @@ const Step1: React.FC = () => {
       <div className="space-y-6">
         <div className="mb-8 text-center">
           <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            Step 1
+            {t('signup.stepLabel', { step: 1 })}
           </span>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
-            Tell us about yourself
+            {t('signup.step1.title')}
           </h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            Let&apos;s start with your basic information.
-          </p>
+          <p className="mt-2 text-sm text-neutral-600">{t('signup.step1.subtitle')}</p>
         </div>
 
         <div className="space-y-4">
           <div>
             <Label htmlFor={firstNameId} className="text-sm font-medium text-neutral-700">
-              First Name *
+              {t('signup.step1.firstNameLabel')} {t('signup.required')}
             </Label>
             <Input
               id={firstNameId}
@@ -89,7 +89,7 @@ const Step1: React.FC = () => {
                   setErrors((prev) => ({ ...prev, firstName: undefined }));
                 }
               }}
-              placeholder="Enter your first name"
+              placeholder={t('signup.step1.firstNamePlaceholder')}
               className={`mt-1 rounded-xl border-neutral-200 ${errors.firstName ? 'border-red-500' : ''}`}
               required
             />
@@ -98,7 +98,7 @@ const Step1: React.FC = () => {
 
           <div>
             <Label htmlFor={lastNameId} className="text-sm font-medium text-neutral-700">
-              Last Name *
+              {t('signup.step1.lastNameLabel')} {t('signup.required')}
             </Label>
             <Input
               id={lastNameId}
@@ -110,7 +110,7 @@ const Step1: React.FC = () => {
                   setErrors((prev) => ({ ...prev, lastName: undefined }));
                 }
               }}
-              placeholder="Enter your last name"
+              placeholder={t('signup.step1.lastNamePlaceholder')}
               className={`mt-1 rounded-xl border-neutral-200 ${errors.lastName ? 'border-red-500' : ''}`}
               required
             />
@@ -126,11 +126,11 @@ const Step1: React.FC = () => {
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                {t('signup.buttons.processing')}
               </>
             ) : (
-              'Next'
+              t('signup.buttons.next')
             )}
           </Button>
         </div>

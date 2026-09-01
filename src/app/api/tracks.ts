@@ -6,7 +6,11 @@ import type { PaginatedResult } from './types';
 export interface ApiTrack {
   id: string;
   title: string;
+  titleEn?: string;
+  titleAr?: string;
   description: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   imageUrl: string | null;
   sortOrder: number;
   isPublished: boolean;
@@ -30,6 +34,8 @@ export interface ApiTrack {
   offlineOnlyPriceCents?: number | null;
   // Location fields
   location?: string | null;
+  locationEn?: string | null;
+  locationAr?: string | null;
   locationUrl?: string | null;
 }
 
@@ -100,7 +106,11 @@ type ApiTrackDetail = ApiTrack & {
 export interface TrackRecord {
   id: string;
   title: string;
+  titleEn?: string;
+  titleAr?: string;
   description: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   image_url: string | null;
   sort_order: number;
   is_published: boolean;
@@ -122,6 +132,8 @@ export interface TrackRecord {
   offline_only_price_cents: number | null;
   // Location fields
   location: string | null;
+  locationEn?: string | null;
+  locationAr?: string | null;
   location_url: string | null;
 }
 
@@ -154,7 +166,11 @@ export type TrackDetailRecord = TrackRecord & {
 const mapTrack = (api: ApiTrack): TrackRecord => ({
   id: api.id,
   title: api.title,
+  titleEn: api.titleEn,
+  titleAr: api.titleAr,
   description: api.description,
+  descriptionEn: api.descriptionEn ?? api.description ?? null,
+  descriptionAr: api.descriptionAr ?? api.description ?? null,
   image_url: api.imageUrl,
   sort_order: api.sortOrder,
   is_published: api.isPublished,
@@ -173,7 +189,9 @@ const mapTrack = (api: ApiTrack): TrackRecord => ({
   online_only_price_cents: api.onlineOnlyPriceCents ?? null,
   online_offline_price_cents: api.onlineOfflinePriceCents ?? null,
   offline_only_price_cents: api.offlineOnlyPriceCents ?? null,
-  location: api.location ?? null,
+  location: api.location ?? api.locationEn ?? null,
+  locationEn: api.locationEn ?? api.location ?? null,
+  locationAr: api.locationAr ?? api.location ?? null,
   location_url: api.locationUrl ?? null,
 });
 
@@ -203,8 +221,10 @@ export type FetchTracksParams = {
 };
 
 export type CreateTrackPayload = {
-  title: string;
-  description?: string | null;
+  titleEn: string;
+  titleAr: string;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
   imageUrl?: string | null;
   isPublished?: boolean;
   trackBookingStart?: string | null;
@@ -217,7 +237,8 @@ export type CreateTrackPayload = {
   onlineOnlyPriceCents?: number | null;
   onlineOfflinePriceCents?: number | null;
   offlineOnlyPriceCents?: number | null;
-  location?: string | null;
+  locationEn?: string | null;
+  locationAr?: string | null;
   locationUrl?: string | null;
 };
 

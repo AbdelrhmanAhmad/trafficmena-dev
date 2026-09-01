@@ -1,6 +1,7 @@
 import { FileText, Search } from 'lucide-react';
 import type React from 'react';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLibraryList } from '@/app/hooks/useLibraryAssets';
 import { useModuleFlags } from '@/app/hooks/useSettings';
 import LibraryItemCard from '@/features/library/components/LibraryItemCard';
@@ -15,6 +16,7 @@ import { Input } from '@/shared/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 
 const DashboardLibrary: React.FC = () => {
+  const { t } = useTranslation('library');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('series');
   const { libraryStoreEnabled } = useModuleFlags();
@@ -66,16 +68,16 @@ const DashboardLibrary: React.FC = () => {
   );
 
   const emptySeriesMessage = accessibleOnly
-    ? 'Purchased and complimentary recordings appear here after you buy or unlock them from a track or event.'
-    : 'Library content will appear here once available.';
+    ? t('myRecordings.emptySeriesOwned')
+    : t('myRecordings.emptySeriesStore');
 
   const emptyContentMessage = accessibleOnly
     ? searchQuery
-      ? 'No items match your search. Try different keywords.'
-      : 'Content you have access to will appear here.'
+      ? t('myRecordings.emptySearch')
+      : t('myRecordings.emptyContentOwned')
     : searchQuery
-      ? 'No items match your search. Try different keywords.'
-      : 'Library content will appear here once available.';
+      ? t('myRecordings.emptySearch')
+      : t('myRecordings.emptyContentStore');
 
   return (
     <ProtectedRoute>
@@ -90,12 +92,12 @@ const DashboardLibrary: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900">
-                    My Recordings
+                    {t('myRecordings.title')}
                   </h1>
                   <p className="text-sm sm:text-base text-neutral-600 mt-0.5">
                     {accessibleOnly
-                      ? 'Content you own or can access'
-                      : 'Access your exclusive marketing resources and content'}
+                      ? t('myRecordings.subtitleOwned')
+                      : t('myRecordings.subtitleStore')}
                   </p>
                 </div>
               </div>
@@ -109,20 +111,20 @@ const DashboardLibrary: React.FC = () => {
                 value="series"
                 className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
-                Series
+                {t('myRecordings.tabSeries')}
               </TabsTrigger>
               <TabsTrigger
                 value="content"
                 className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
               >
-                Single Content
+                {t('myRecordings.tabContent')}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="series">
               {seriesLoading ? (
                 <div className="flex justify-center py-12">
-                  <LoadingSpinner size="lg" text="Loading series..." />
+                  <LoadingSpinner size="lg" text={t('myRecordings.loadingSeries')} />
                 </div>
               ) : (seriesData?.items?.length ?? 0) > 0 ? (
                 <SeriesGrid
@@ -144,7 +146,7 @@ const DashboardLibrary: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                 <Input
                   type="search"
-                  placeholder="Search library content..."
+                  placeholder={t('myRecordings.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full sm:max-w-md rounded-xl border-neutral-200 bg-white/80 backdrop-blur pl-10 pr-4 py-2.5 sm:py-3 text-sm transition-all duration-300 focus:border-[#29cf9f] focus:shadow-md"
@@ -153,16 +155,14 @@ const DashboardLibrary: React.FC = () => {
 
               {isLoading && (
                 <div className="flex justify-center py-12">
-                  <LoadingSpinner size="lg" text="Loading library content..." />
+                  <LoadingSpinner size="lg" text={t('myRecordings.loadingContent')} />
                 </div>
               )}
 
               {isError && (
                 <Card className="rounded-2xl sm:rounded-[28px] border border-neutral-200 bg-white/95 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur">
                   <CardContent className="py-8 sm:py-12 text-center">
-                    <p className="text-sm sm:text-base text-red-600">
-                      Failed to load library content. Please try again later.
-                    </p>
+                    <p className="text-sm sm:text-base text-red-600">{t('myRecordings.loadError')}</p>
                   </CardContent>
                 </Card>
               )}
@@ -174,7 +174,7 @@ const DashboardLibrary: React.FC = () => {
                       <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-[#29cf9f]" />
                     </div>
                     <h3 className="mb-2 text-base sm:text-lg font-medium text-neutral-900">
-                      No content available
+                      {t('myRecordings.emptyTitle')}
                     </h3>
                     <p className="text-sm sm:text-base text-neutral-600">{emptyContentMessage}</p>
                   </CardContent>
