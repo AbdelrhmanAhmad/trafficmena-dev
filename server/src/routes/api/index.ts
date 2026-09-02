@@ -10,6 +10,7 @@ import { registerCalendarRoutes } from './calendar.js';
 import { registerCertificateRoutes } from './certificates.js';
 import { registerDigitalProductRoutes } from './digitalProducts.js';
 import { registerMasterclassRoutes } from './masterclasses.js';
+import { registerNotificationRoutes } from './notifications.js';
 import { registerOrderRoutes } from './orders.js';
 import { registerPaymentRoutes } from './payments.js';
 import { registerPromoCodeRoutes } from './promoCodes.js';
@@ -55,6 +56,7 @@ export function registerApiRoutes(app: Hono) {
   registerOrderRoutes(api);
   registerPaymentRoutes(api);
   registerPromoCodeRoutes(api);
+  registerNotificationRoutes(api);
   registerSubscriptionGrantRoutes(api);
   registerSubscriptionRoutes(api);
   registerFactoryResetRoute(api);

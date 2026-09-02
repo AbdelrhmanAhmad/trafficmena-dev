@@ -102,6 +102,11 @@ const AdminCommunityChannels = lazy(() => import('./pages/admin/community/channe
 const AdminCommunityChannelEdit = lazy(() => import('./pages/admin/community/channels/[id]'));
 const AdminCommunityAnnouncements = lazy(() => import('./pages/admin/community/announcements/index'));
 const AdminCommunityModeration = lazy(() => import('./pages/admin/community/moderation/index'));
+const AdminNotificationTemplates = lazy(() => import('./pages/admin/notifications/templates/index'));
+const AdminNotificationDeliveries = lazy(() => import('./pages/admin/notifications/deliveries/index'));
+const AdminNotificationAnnouncements = lazy(
+  () => import('./pages/admin/notifications/announcements/index'),
+);
 const PublicExperts = lazy(() => import('./pages/experts/index'));
 const PublicExpertDetail = lazy(() => import('./pages/experts/[slug]'));
 const DashboardExpertProfile = lazy(() => import('./pages/dashboard/expert-profile'));
@@ -924,6 +929,30 @@ const App = () => {
                     element={
                       <ErrorBoundary>
                         <AdminCommunityAnnouncements />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/notifications/templates"
+                    element={
+                      <ErrorBoundary>
+                        <AdminNotificationTemplates />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/notifications/deliveries"
+                    element={
+                      <ErrorBoundary>
+                        <AdminNotificationDeliveries />
+                      </ErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/admin/notifications/announcements"
+                    element={
+                      <ErrorBoundary>
+                        <AdminNotificationAnnouncements />
                       </ErrorBoundary>
                     }
                   />

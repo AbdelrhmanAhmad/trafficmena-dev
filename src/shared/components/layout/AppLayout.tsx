@@ -1,10 +1,12 @@
 import {
   Award,
   BarChart3,
+  Bell,
   BookOpen,
   Boxes,
   Calculator,
   Calendar,
+  ClipboardList,
   Crown,
   Edit,
   FileStack,
@@ -188,6 +190,24 @@ const adminMenuItems = [
     title: 'Announcements',
     url: '/admin/community/announcements',
     icon: Megaphone,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'Notification Templates',
+    url: '/admin/notifications/templates',
+    icon: Mail,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'Delivery Logs',
+    url: '/admin/notifications/deliveries',
+    icon: ClipboardList,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'Notification Campaigns',
+    url: '/admin/notifications/announcements',
+    icon: Bell,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
