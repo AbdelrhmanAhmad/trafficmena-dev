@@ -3,14 +3,29 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { fetchExpertBySlug } from '@/app/api/experts';
+import { getExpertLinkedContentHref } from '@/pages/experts/expertPublicLinks';
 import LoadingSpinner from '@/shared/components/LoadingSpinner';
 import Layout from '@/shared/components/layout/Layout';
+import { useAuth } from '@/shared/context/AuthContext';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
 
+function LinkedContentTitle({ href, title }: { href: string | null; title: string }) {
+  if (href) {
+    return (
+      <Link to={href} className="hover:underline">
+        {title}
+      </Link>
+    );
+  }
+  return <span>{title}</span>;
+}
+
 function ExpertProfilePage() {
   const { slug = '' } = useParams();
+  const { user } = useAuth();
   const { t } = useTranslation('experts');
+  const isAuthenticated = Boolean(user);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<Awaited<ReturnType<typeof fetchExpertBySlug>> | null>(null);
@@ -127,7 +142,10 @@ function ExpertProfilePage() {
               <Card key={event.id}>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    <Link to={`/meetups/${event.id}`}>{event.title}</Link>
+                    <LinkedContentTitle
+                      href={getExpertLinkedContentHref('event', event.id, isAuthenticated)}
+                      title={event.title}
+                    />
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm text-neutral-600">
@@ -147,7 +165,10 @@ function ExpertProfilePage() {
               <Card key={track.id}>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    <Link to={`/tracks/${track.id}`}>{track.title}</Link>
+                    <LinkedContentTitle
+                      href={getExpertLinkedContentHref('track', track.id, isAuthenticated)}
+                      title={track.title}
+                    />
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -164,7 +185,10 @@ function ExpertProfilePage() {
               <Card key={item.id}>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    <Link to={`/series/${item.id}`}>{item.title}</Link>
+                    <LinkedContentTitle
+                      href={getExpertLinkedContentHref('series', item.id, isAuthenticated)}
+                      title={item.title}
+                    />
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -181,7 +205,10 @@ function ExpertProfilePage() {
               <Card key={item.id}>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    <Link to={`/masterclasses/${item.id}`}>{item.title}</Link>
+                    <LinkedContentTitle
+                      href={getExpertLinkedContentHref('masterclass', item.id, isAuthenticated)}
+                      title={item.title}
+                    />
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -198,7 +225,10 @@ function ExpertProfilePage() {
               <Card key={item.id}>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    <Link to={`/dashboard/library/${item.id}`}>{item.title}</Link>
+                    <LinkedContentTitle
+                      href={getExpertLinkedContentHref('libraryAsset', item.id, isAuthenticated)}
+                      title={item.title}
+                    />
                   </CardTitle>
                 </CardHeader>
               </Card>
