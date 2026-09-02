@@ -69,6 +69,10 @@ export async function fetchExpertBySlug(slug: string) {
     expert: ExpertPublicRecord | ExpertAdminRecord;
     skills: Array<{ id: string; name: string; category: string | null }>;
     events: Array<{ id: string; title: string; date: string; imageUrl: string | null }>;
+    tracks: Array<{ id: string; title: string; imageUrl: string | null }>;
+    series: Array<{ id: string; title: string; imageUrl: string | null }>;
+    masterclasses: Array<{ id: string; title: string; imageUrl: string | null }>;
+    libraryAssets: Array<{ id: string; title: string; imageUrl: string | null }>;
   }>(`${API_BASE}/experts/s/${encodeURIComponent(slug)}`, { method: 'GET' });
 }
 

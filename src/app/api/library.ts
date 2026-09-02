@@ -24,6 +24,7 @@ type ApiLibraryAsset = {
   fileSizeBytes: number | null;
   createdAt: string;
   hasAccess?: boolean;
+  expertIds?: string[];
 };
 
 export type LibraryAssetRecord = {
@@ -49,6 +50,7 @@ export type LibraryAssetRecord = {
   file_size_bytes: number | null;
   created_at: string;
   has_access: boolean;
+  expert_ids?: string[];
 };
 
 const mapAsset = (asset: ApiLibraryAsset): LibraryAssetRecord => ({
@@ -74,6 +76,7 @@ const mapAsset = (asset: ApiLibraryAsset): LibraryAssetRecord => ({
   file_size_bytes: asset.fileSizeBytes,
   created_at: asset.createdAt,
   has_access: asset.hasAccess ?? true,
+  expert_ids: asset.expertIds,
 });
 
 export type FetchLibraryParams = {
@@ -101,6 +104,7 @@ export type CreateLibraryAssetPayload = {
   isPublic?: boolean;
   isPremium?: boolean;
   fileSizeBytes?: number | null;
+  expertIds?: string[];
 };
 
 export type UpdateLibraryAssetPayload = Partial<CreateLibraryAssetPayload>;

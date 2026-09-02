@@ -3,8 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { MasterclassCurriculumEditor } from '@/features/masterclasses/components/MasterclassCurriculumEditor';
 import {
   MasterclassForm,
-  masterclassFormValuesToPayload,
-  type MasterclassFormValues,
 } from '@/features/masterclasses/components/MasterclassForm';
 import { MasterclassManualEnrollment } from '@/features/masterclasses/components/MasterclassManualEnrollment';
 import { MasterclassCertificatesAdmin } from '@/features/certificates/components/MasterclassCertificatesAdmin';
@@ -32,8 +30,8 @@ function EditMasterclassPage() {
   const { isAdmin } = useIsAdmin();
   const { canDeleteContent } = useRolePermissions();
 
-  const handleSubmit = async (values: MasterclassFormValues) => {
-    await updateMutation.mutateAsync(masterclassFormValuesToPayload(values));
+  const handleSubmit = async (payload: Parameters<typeof updateMutation.mutateAsync>[0]) => {
+    await updateMutation.mutateAsync(payload);
   };
 
   const handleDelete = async () => {

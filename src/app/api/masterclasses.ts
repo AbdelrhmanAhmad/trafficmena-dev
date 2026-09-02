@@ -33,6 +33,7 @@ export type MasterclassAdmin = {
   createdAt: string;
   updatedAt: string;
   lessonCount?: number;
+  expertIds?: string[];
 };
 
 export type MasterclassLessonVideo = {
@@ -168,10 +169,10 @@ export async function fetchAdminMasterclasses(): Promise<MasterclassAdmin[]> {
 }
 
 export async function fetchAdminMasterclass(id: string): Promise<MasterclassAdmin> {
-  const data = await fetchJson<{ data: { masterclass: MasterclassAdmin; lessonCount: number } }>(
-    `${API_BASE}/masterclasses/${id}`,
-  );
-  return data.data.masterclass;
+  const data = await fetchJson<{
+    data: { masterclass: MasterclassAdmin; lessonCount: number; expertIds?: string[] };
+  }>(`${API_BASE}/masterclasses/${id}`);
+  return { ...data.data.masterclass, expertIds: data.data.expertIds };
 }
 
 export async function fetchMasterclassPreview(id: string): Promise<MasterclassPreview> {
@@ -197,6 +198,7 @@ export async function createMasterclass(payload: {
   priceInCents?: number | null;
   isPublished?: boolean;
   sortOrder?: number;
+  expertIds?: string[];
 }): Promise<MasterclassAdmin> {
   const data = await fetchJson<{ data: MasterclassAdmin }>(`${API_BASE}/masterclasses`, {
     method: 'POST',
@@ -216,6 +218,7 @@ export async function updateMasterclass(
     priceInCents: number | null;
     isPublished: boolean;
     sortOrder: number;
+    expertIds?: string[];
   }>,
 ): Promise<MasterclassAdmin> {
   const data = await fetchJson<{ data: MasterclassAdmin }>(`${API_BASE}/masterclasses/${id}`, {

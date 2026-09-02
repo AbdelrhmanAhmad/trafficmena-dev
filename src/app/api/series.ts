@@ -52,6 +52,7 @@ type ApiSeriesDetail = ApiSeries & {
   hasPurchased?: boolean;
   hasSeriesGrant?: boolean;
   isSellable?: boolean;
+  expertIds?: string[];
 };
 
 export type ApiStoreSeriesDetail = ApiSeriesDetail & {
@@ -80,6 +81,7 @@ export interface SeriesRecord {
   has_series_grant?: boolean;
   has_access?: boolean;
   created_at: Date;
+  expert_ids?: string[];
 }
 
 export type SeriesAssetRecord = {
@@ -108,6 +110,7 @@ export type SeriesDetailRecord = SeriesRecord & {
   has_purchased?: boolean;
   has_series_grant?: boolean;
   is_sellable?: boolean;
+  expert_ids?: string[];
 };
 
 export type StoreSeriesDetailRecord = SeriesDetailRecord & {
@@ -165,6 +168,7 @@ const mapSeriesDetail = (series: ApiSeriesDetail): SeriesDetailRecord => ({
   has_purchased: series.hasPurchased,
   has_series_grant: series.hasSeriesGrant,
   is_sellable: series.isSellable,
+  expert_ids: series.expertIds,
 });
 
 const mapStoreSeriesDetail = (series: ApiStoreSeriesDetail): StoreSeriesDetailRecord => ({
@@ -191,6 +195,7 @@ export type CreateSeriesPayload = {
   priceInCents?: number | null;
   salesEnabled?: boolean;
   recordingsAccessPolicy?: 'free_for_prior_buyers' | 'everyone_pays';
+  expertIds?: string[];
 };
 
 export type UpdateSeriesPayload = Partial<CreateSeriesPayload> & {

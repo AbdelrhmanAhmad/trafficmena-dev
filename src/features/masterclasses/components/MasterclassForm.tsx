@@ -4,6 +4,7 @@ import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { MasterclassAdmin } from '@/app/api/masterclasses';
+import { EventExpertPicker } from '@/features/experts/components/EventExpertPicker';
 import { uploadFile } from '@/app/api/uploads';
 import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
 import { Button } from '@/shared/components/ui/button';
@@ -49,7 +50,7 @@ export type MasterclassFormValues = z.infer<typeof formSchema>;
 
 type MasterclassFormProps = {
   masterclass?: MasterclassAdmin;
-  onSubmit: (values: MasterclassFormValues) => Promise<void>;
+  onSubmit: (payload: ReturnType<typeof masterclassFormValuesToPayload>) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
 };
@@ -60,6 +61,14 @@ export function MasterclassForm({
   onCancel,
   isLoading = false,
 }: MasterclassFormProps) {
+  const [selectedExpertIds, setSelectedExpertIds] = useState<string[]>(
+    () => masterclass?.expertIds ?? [],
+  );
+
+  useEffect(() => {
+    setSelectedExpertIds(masterclass?.expertIds ?? []);
+  }, [masterclass?.id, masterclass?.expertIds]);
+
   const form = useForm<MasterclassFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -114,7 +123,12 @@ export function MasterclassForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(async (values) => {
+          await onSubmit(masterclassFormValuesToPayload(values, selectedExpertIds));
+        })}
+        className="space-y-6"
+      >
         <BilingualTextField
           label="Title"
           englishLabel="Title (English)"
@@ -146,6 +160,8 @@ export function MasterclassForm({
           englishPlaceholder="Course overview"
           arabicPlaceholder="نظرة عامة على الدورة"
         />
+
+        <EventExpertPicker selectedExpertIds={selectedExpertIds} onChange={setSelectedExpertIds} />
 
         <FormField
           control={form.control}
@@ -249,7 +265,10 @@ export function MasterclassForm({
   );
 }
 
-export function masterclassFormValuesToPayload(values: MasterclassFormValues) {
+export function masterclassFormValuesToPayload(
+  values: MasterclassFormValues,
+  expertIds?: string[],
+) {
   const priceInCents =
     values.priceEgp && values.priceEgp.trim() !== ''
       ? Math.round(Number(values.priceEgp) * 100)
@@ -264,5 +283,6 @@ export function masterclassFormValuesToPayload(values: MasterclassFormValues) {
     priceInCents,
     isPublished: values.isPublished,
     sortOrder: values.sortOrder,
+    expertIds,
   };
 }
