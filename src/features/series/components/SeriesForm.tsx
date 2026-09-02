@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DOMPurify from 'dompurify';
 import { Loader2, Upload } from 'lucide-react';
-import { type ChangeEvent, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { EventExpertPicker } from '@/features/experts/components/EventExpertPicker';
 import { uploadFile } from '@/app/api/uploads';
 import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
 import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
@@ -39,7 +40,9 @@ const seriesFormSchema = z.object({
   isPremium: z.boolean(),
 });
 
-export type SeriesFormValues = z.infer<typeof seriesFormSchema>;
+export type SeriesFormValues = z.infer<typeof seriesFormSchema> & {
+  expertIds?: string[];
+};
 
 interface SeriesFormProps {
   series?: Series;
@@ -49,6 +52,12 @@ interface SeriesFormProps {
 }
 
 function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFormProps) {
+  const [selectedExpertIds, setSelectedExpertIds] = useState<string[]>(() => series?.expert_ids ?? []);
+
+  useEffect(() => {
+    setSelectedExpertIds(series?.expert_ids ?? []);
+  }, [series?.id, series?.expert_ids]);
+
   const form = useForm<SeriesFormValues>({
     resolver: zodResolver(seriesFormSchema),
     defaultValues: {
@@ -105,6 +114,7 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
       ...formValues,
       descriptionEn: sanitizeDescription(formValues.descriptionEn),
       descriptionAr: sanitizeDescription(formValues.descriptionAr),
+      expertIds: selectedExpertIds,
     });
   };
 
@@ -136,6 +146,8 @@ function SeriesForm({ series, onSubmit, onCancel, isLoading = false }: SeriesFor
           onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
           onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
         />
+
+        <EventExpertPicker selectedExpertIds={selectedExpertIds} onChange={setSelectedExpertIds} />
 
         <FormField
           control={form.control}

@@ -4,11 +4,13 @@ import { experts, users } from '../../db/schema/index.js';
 import {
   assertSlugAvailable,
   assertUserAssignmentAvailable,
+  countExpertContentLinks,
   countEventExpertLinks,
   findExpertByAssignedUser,
   loadExpertSkillIds,
   loadExpertWithAssignee,
   loadPublicExpertEvents,
+  loadPublicExpertLinkedContent,
   replaceExpertSkills,
 } from '../../services/experts.js';
 import { getSessionFromRequest } from '../../utils/session.js';
@@ -25,10 +27,12 @@ export type ExpertRouteDeps = {
   loadExpertSkillIds: typeof loadExpertSkillIds;
   replaceExpertSkills: typeof replaceExpertSkills;
   loadExpertWithAssignee: typeof loadExpertWithAssignee;
+  countExpertContentLinks: typeof countExpertContentLinks;
   countEventExpertLinks: typeof countEventExpertLinks;
   assertSlugAvailable: typeof assertSlugAvailable;
   assertUserAssignmentAvailable: typeof assertUserAssignmentAvailable;
   loadPublicExpertEvents: typeof loadPublicExpertEvents;
+  loadPublicExpertLinkedContent: typeof loadPublicExpertLinkedContent;
   loadExpertSkillsPublic: (
     expertId: string,
     locale: import('../../utils/locale.js').AppLocale,
@@ -53,10 +57,12 @@ export function createDefaultExpertRouteDeps(): ExpertRouteDeps {
     loadExpertSkillIds,
     replaceExpertSkills,
     loadExpertWithAssignee,
+    countExpertContentLinks,
     countEventExpertLinks,
     assertSlugAvailable,
     assertUserAssignmentAvailable,
     loadPublicExpertEvents,
+    loadPublicExpertLinkedContent,
     listExperts: async (isStaff) =>
       isStaff
         ? db.select().from(experts).orderBy(asc(experts.displayNameEn))

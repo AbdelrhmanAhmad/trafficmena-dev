@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import {
   MasterclassForm,
-  masterclassFormValuesToPayload,
-  type MasterclassFormValues,
 } from '@/features/masterclasses/components/MasterclassForm';
 import { useCreateMasterclass } from '@/features/masterclasses/hooks/useMasterclasses';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
@@ -12,8 +10,8 @@ function NewMasterclassPage() {
   const navigate = useNavigate();
   const createMutation = useCreateMasterclass();
 
-  const handleSubmit = async (values: MasterclassFormValues) => {
-    const created = await createMutation.mutateAsync(masterclassFormValuesToPayload(values));
+  const handleSubmit = async (payload: Parameters<typeof createMutation.mutateAsync>[0]) => {
+    const created = await createMutation.mutateAsync(payload);
     navigate(`/admin/masterclasses/${created.id}`);
   };
 

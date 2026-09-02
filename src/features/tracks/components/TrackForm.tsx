@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DOMPurify from 'dompurify';
 import { Loader2, Upload } from 'lucide-react';
-import { type ChangeEvent, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type { CreateTrackPayload } from '@/app/api/tracks';
+import { EventExpertPicker } from '@/features/experts/components/EventExpertPicker';
 import { uploadFile } from '@/app/api/uploads';
 import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
 import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
@@ -200,6 +201,12 @@ interface TrackFormProps {
 }
 
 function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormProps) {
+  const [selectedExpertIds, setSelectedExpertIds] = useState<string[]>(() => track?.expert_ids ?? []);
+
+  useEffect(() => {
+    setSelectedExpertIds(track?.expert_ids ?? []);
+  }, [track?.id, track?.expert_ids]);
+
   // Prefill datetime-local inputs from stored UTC, shown in Cairo wall-clock (empty stays empty).
   const prefillCairo = (date: Date | string | null | undefined): string =>
     date ? toCairoDatetimeLocal(date) : '';
@@ -260,7 +267,7 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
   };
 
   const handleSubmit = async (formValues: TrackFormValues) => {
-    await onSubmit(trackFormValuesToPayload(formValues));
+    await onSubmit({ ...trackFormValuesToPayload(formValues), expertIds: selectedExpertIds });
   };
 
   return (
@@ -291,6 +298,8 @@ function TrackForm({ track, onSubmit, onCancel, isLoading = false }: TrackFormPr
           onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
           onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
         />
+
+        <EventExpertPicker selectedExpertIds={selectedExpertIds} onChange={setSelectedExpertIds} />
 
         <FormField
           control={form.control}

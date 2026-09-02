@@ -4,8 +4,9 @@ import { z } from 'zod';
 import { db } from '../../db/client.js';
 import { expertSkills, skills } from '../../db/schema/index.js';
 import {
+  countExpertContentLinks,
   loadExpertSkillIds,
-  loadPublicExpertEvents,
+  loadPublicExpertLinkedContent,
   replaceExpertSkills,
 } from '../../services/experts.js';
 import { bilingualDisplayNameFields } from '../../utils/bilingualDb.js';
@@ -157,19 +158,42 @@ export function registerExpertRoutes(app: Hono, deps: Partial<ExpertRouteDeps> =
     }
 
     const skillItems = await resolved.loadExpertSkillsPublic(row.id, locale, isStaff);
-    const relatedEvents = isPublic
-      ? (await resolved.loadPublicExpertEvents(row.id)).map((event) => ({
+    const showLinkedContent = isPublic || isStaff;
+    const linked = showLinkedContent
+      ? await resolved.loadPublicExpertLinkedContent(row.id, { isStaff })
+      : null;
+
+    const mapLinkedTitle = (item: {
+      id: string;
+      titleEn: string;
+      titleAr: string;
+      imageUrl: string | null;
+    }) => ({
+      ...presentPublicTitleOnly(item, locale),
+      imageUrl: item.imageUrl,
+    });
+
+    const relatedEvents = linked
+      ? linked.events.map((event) => ({
           ...presentPublicTitleOnly(event, locale),
           date: event.date,
           imageUrl: event.imageUrl,
         }))
       : [];
+    const relatedTracks = linked ? linked.tracks.map(mapLinkedTitle) : [];
+    const relatedSeries = linked ? linked.series.map(mapLinkedTitle) : [];
+    const relatedMasterclasses = linked ? linked.masterclasses.map(mapLinkedTitle) : [];
+    const relatedLibraryAssets = linked ? linked.libraryAssets.map(mapLinkedTitle) : [];
 
     const publicExpert = presentPublicExpert(row, locale);
     return c.json({
       expert: isStaff ? presentAdminExpert(row) : publicExpert,
       skills: skillItems,
       events: relatedEvents,
+      tracks: relatedTracks,
+      series: relatedSeries,
+      masterclasses: relatedMasterclasses,
+      libraryAssets: relatedLibraryAssets,
     });
   });
 
@@ -438,13 +462,14 @@ export function registerExpertRoutes(app: Hono, deps: Partial<ExpertRouteDeps> =
     if ('response' in staff) return staff.response;
 
     const expertId = c.req.param('id');
-    const links = await resolved.countEventExpertLinks(expertId);
+    const links = await resolved.countExpertContentLinks(expertId);
     if (links > 0) {
       return c.json(
         {
           error: {
             code: 'EXPERT_IN_USE',
-            message: 'Cannot permanently delete an expert linked to events. Archive instead.',
+            message:
+              'Cannot permanently delete an expert linked to content. Archive instead.',
           },
         },
         409,

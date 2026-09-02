@@ -31,6 +31,11 @@ import {
 } from '../../utils/bilingualSchemas.js';
 import { queueTrackRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
 import {
+  expertIdsExist,
+  loadLinkedExpertIdsForTrack,
+  replaceTrackExpertLinks,
+} from '../../services/experts.js';
+import {
   presentAdminContent,
   presentPublicContent,
   presentPublicRow,
@@ -115,6 +120,7 @@ const createTrackSchema = z
     offlineOnlyPriceCents: priceInCentsSchema,
     location: locationSchema,
     locationUrl: locationUrlSchema,
+    expertIds: z.array(z.string().uuid()).max(50).optional(),
   })
   .merge(requiredBilingualTitleFields.partial())
   .merge(optionalBilingualDescriptionFields)
@@ -157,6 +163,7 @@ const updateTrackSchema = z
         z.null(),
       ])
       .optional(),
+    expertIds: z.array(z.string().uuid()).max(50).optional(),
   })
   .merge(requiredBilingualTitleFields.partial())
   .merge(optionalBilingualDescriptionFields)
@@ -985,6 +992,7 @@ export function registerTrackRoutes(app: Hono) {
         userHasBooked,
         bookingTicketType,
       }),
+      ...(isStaff ? { expertIds: await loadLinkedExpertIdsForTrack(id) } : {}),
       eventCount: eventsWithAssets.length,
       events: eventsWithAssets,
       bookingsCount: Number(bookingStats?.value ?? 0),
@@ -1110,6 +1118,13 @@ export function registerTrackRoutes(app: Hono) {
           );
         }
 
+        if (payload.expertIds?.length) {
+          const valid = await expertIdsExist(payload.expertIds);
+          if (!valid) {
+            throw new ApiError('INVALID_EXPERT_IDS', 'One or more expert IDs are invalid.', 400);
+          }
+        }
+
         const titleFields =
           payload.titleEn && payload.titleAr
             ? bilingualTitleFields(payload.titleEn, payload.titleAr)
@@ -1162,7 +1177,17 @@ export function registerTrackRoutes(app: Hono) {
           return track;
         });
 
-        return c.json({ track: presentAdminContent(created) }, 201);
+        if (payload.expertIds?.length) {
+          await replaceTrackExpertLinks(created.id, payload.expertIds);
+        }
+
+        return c.json(
+          {
+            track: presentAdminContent(created),
+            expertIds: payload.expertIds ?? [],
+          },
+          201,
+        );
       },
       'TRACK_CREATE_FAILED',
       'Unable to create track.',
@@ -1193,6 +1218,15 @@ export function registerTrackRoutes(app: Hono) {
         const updates = parsed.data;
         const updatedAt = new Date();
         const updateValues: Record<string, unknown> = { updatedAt };
+
+        if (updates.expertIds !== undefined) {
+          if (updates.expertIds.length > 0) {
+            const valid = await expertIdsExist(updates.expertIds);
+            if (!valid) {
+              throw new ApiError('INVALID_EXPERT_IDS', 'One or more expert IDs are invalid.', 400);
+            }
+          }
+        }
 
         if (updates.title !== undefined) updateValues.title = updates.title;
         if (updates.description !== undefined)
@@ -1377,7 +1411,12 @@ export function registerTrackRoutes(app: Hono) {
           return trackResult;
         });
 
-        return c.json({ track: presentAdminContent(updated) });
+        if (updates.expertIds !== undefined) {
+          await replaceTrackExpertLinks(id, updates.expertIds);
+        }
+
+        const expertIds = await loadLinkedExpertIdsForTrack(id);
+        return c.json({ track: presentAdminContent(updated), expertIds });
       },
       'TRACK_UPDATE_FAILED',
       'Unable to update track.',

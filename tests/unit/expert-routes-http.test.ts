@@ -90,6 +90,7 @@ function createMemoryStore(initial: ExpertRow[]) {
       if (!expert) return null;
       return { expert, assignedUserEmail: expert.assignedUserId ? 'assigned@example.com' : null };
     },
+    countExpertContentLinks: async () => 0,
     countEventExpertLinks: async () => 0,
     assertSlugAvailable: async () => true,
     assertUserAssignmentAvailable: async (userId: string, excludeExpertId?: string) => {
@@ -99,6 +100,13 @@ function createMemoryStore(initial: ExpertRow[]) {
       return !conflict;
     },
     loadPublicExpertEvents: async () => [],
+    loadPublicExpertLinkedContent: async () => ({
+      events: [],
+      tracks: [],
+      series: [],
+      masterclasses: [],
+      libraryAssets: [],
+    }),
     loadExpertSkillsPublic: async () => [],
   };
 }

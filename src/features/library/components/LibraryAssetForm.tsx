@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import DOMPurify from 'dompurify';
 import { FileText, Globe, HelpCircle, Link2, Lock, Upload, Video } from 'lucide-react';
-import { type ChangeEvent, useId, useMemo, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import type {
@@ -10,6 +10,7 @@ import type {
   UpdateLibraryAssetPayload,
 } from '@/app/api/library';
 import { uploadFile } from '@/app/api/uploads';
+import { EventExpertPicker } from '@/features/experts/components/EventExpertPicker';
 import { useEvents } from '@/features/events/hooks/useEvents';
 import { BilingualRichTextField } from '@/shared/components/admin/BilingualRichTextField';
 import { BilingualTextField } from '@/shared/components/admin/BilingualTextField';
@@ -123,6 +124,12 @@ export function LibraryAssetForm({
   isDeleting,
   canDelete = true,
 }: LibraryAssetFormProps) {
+  const [selectedExpertIds, setSelectedExpertIds] = useState<string[]>(() => asset?.expert_ids ?? []);
+
+  useEffect(() => {
+    setSelectedExpertIds(asset?.expert_ids ?? []);
+  }, [asset?.id, asset?.expert_ids]);
+
   const defaultValues: LibraryAssetFormValues = {
     titleEn: asset?.titleEn ?? asset?.title ?? '',
     titleAr: asset?.titleAr ?? asset?.title ?? '',
@@ -250,6 +257,7 @@ export function LibraryAssetForm({
       isPublic: values.isPublic ?? false,
       isPremium: values.isPremium ?? false,
       fileSizeBytes: documentUrl ? (values.fileSizeBytes ?? null) : null,
+      expertIds: selectedExpertIds,
     };
 
     await onSubmit(payload);
@@ -351,6 +359,8 @@ export function LibraryAssetForm({
               onChangeEn={(value) => form.setValue('descriptionEn', value, { shouldDirty: true })}
               onChangeAr={(value) => form.setValue('descriptionAr', value, { shouldDirty: true })}
             />
+
+            <EventExpertPicker selectedExpertIds={selectedExpertIds} onChange={setSelectedExpertIds} />
 
             <FormField
               control={form.control}

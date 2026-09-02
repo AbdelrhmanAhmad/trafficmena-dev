@@ -14,6 +14,7 @@ export function mapSeriesFormToContentPayload(values: SeriesFormContentValues): 
     imageUrl: values.imageUrl || null,
     isPublished: values.isPublished,
     isPremium: values.isPremium,
+    expertIds: values.expertIds,
   };
 }
 

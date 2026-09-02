@@ -24,6 +24,11 @@ import {
   grantMasterclassEnrollment,
   isMasterclassSellable,
 } from '../../services/masterclassSales.js';
+import {
+  expertIdsExist,
+  loadLinkedExpertIdsForMasterclass,
+  replaceMasterclassExpertLinks,
+} from '../../services/experts.js';
 import { notifyBusinessEvent } from '../../services/notifications/notify.js';
 import {
   applyFirstPublishLaunch,
@@ -111,6 +116,7 @@ const masterclassFieldsSchema = z
     priceInCents: z.number().int().min(0).optional().nullable(),
     isPublished: z.boolean().optional(),
     sortOrder: z.number().int().optional(),
+    expertIds: z.array(z.string().uuid()).max(50).optional(),
   })
   .merge(requiredBilingualTitleFields.partial())
   .merge(optionalBilingualDescriptionFields);
@@ -865,6 +871,16 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'INVALID_INPUT', message: parsed.error.message } }, 400);
     }
 
+    if (parsed.data.expertIds?.length) {
+      const valid = await expertIdsExist(parsed.data.expertIds);
+      if (!valid) {
+        return c.json(
+          { error: { code: 'INVALID_EXPERT_IDS', message: 'One or more expert IDs are invalid.' } },
+          400,
+        );
+      }
+    }
+
     const titleFields =
       parsed.data.titleEn && parsed.data.titleAr
         ? bilingualTitleFields(parsed.data.titleEn, parsed.data.titleAr)
@@ -891,7 +907,11 @@ export function registerMasterclassRoutes(app: Hono) {
 
     await applyFirstPublishLaunch('masterclasses', false, created.isPublished);
 
-    return c.json({ data: created }, 201);
+    if (parsed.data.expertIds?.length) {
+      await replaceMasterclassExpertLinks(created.id, parsed.data.expertIds);
+    }
+
+    return c.json({ data: created, expertIds: parsed.data.expertIds ?? [] }, 201);
   });
 
   app.get('/masterclasses/:id/preview', async (c) => {
@@ -1688,10 +1708,12 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const lessonCount = await countMasterclassLessons(masterclass.id);
+    const expertIds = await loadLinkedExpertIdsForMasterclass(masterclass.id);
     return c.json({
       data: {
         masterclass: presentAdminContent(masterclass),
         lessonCount,
+        expertIds,
       },
     });
   });
@@ -1721,9 +1743,23 @@ export function registerMasterclassRoutes(app: Hono) {
       return c.json({ error: { code: 'NOT_FOUND', message: 'Masterclass not found.' } }, 404);
     }
 
+    if (parsed.data.expertIds !== undefined) {
+      if (parsed.data.expertIds.length > 0) {
+        const valid = await expertIdsExist(parsed.data.expertIds);
+        if (!valid) {
+          return c.json(
+            { error: { code: 'INVALID_EXPERT_IDS', message: 'One or more expert IDs are invalid.' } },
+            400,
+          );
+        }
+      }
+    }
+
+    const { expertIds, ...masterclassUpdates } = parsed.data;
+
     const [updated] = await db
       .update(masterclasses)
-      .set({ ...parsed.data, updatedAt: new Date() })
+      .set({ ...masterclassUpdates, updatedAt: new Date() })
       .where(eq(masterclasses.id, idParsed.data))
       .returning();
 
@@ -1738,7 +1774,12 @@ export function registerMasterclassRoutes(app: Hono) {
       willBePublished,
     );
 
-    return c.json({ data: updated });
+    if (expertIds !== undefined) {
+      await replaceMasterclassExpertLinks(idParsed.data, expertIds);
+    }
+
+    const linkedExpertIds = await loadLinkedExpertIdsForMasterclass(idParsed.data);
+    return c.json({ data: updated, expertIds: linkedExpertIds });
   });
 
   app.delete('/masterclasses/:id', async (c) => {

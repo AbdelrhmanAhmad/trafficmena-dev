@@ -37,6 +37,7 @@ export interface ApiTrack {
   locationEn?: string | null;
   locationAr?: string | null;
   locationUrl?: string | null;
+  expertIds?: string[];
 }
 
 type ApiTrackEvent = {
@@ -100,6 +101,7 @@ export function mapRecordingsSeriesSummary(
 type ApiTrackDetail = ApiTrack & {
   events: ApiTrackEvent[];
   recordingsSeries?: ApiRecordingsSeriesSummary | null;
+  expertIds?: string[];
 };
 
 // Frontend types (snake_case for consistency)
@@ -135,6 +137,7 @@ export interface TrackRecord {
   locationEn?: string | null;
   locationAr?: string | null;
   location_url: string | null;
+  expert_ids?: string[];
 }
 
 export interface TrackBookingSuccess {
@@ -160,6 +163,7 @@ export type TrackDetailRecord = TrackRecord & {
   updated_at: string;
   events: TrackEventRecord[];
   recordings_series: RecordingsSeriesSummaryRecord | null;
+  expert_ids?: string[];
 };
 
 // Mappers
@@ -193,6 +197,7 @@ const mapTrack = (api: ApiTrack): TrackRecord => ({
   locationEn: api.locationEn ?? api.location ?? null,
   locationAr: api.locationAr ?? api.location ?? null,
   location_url: api.locationUrl ?? null,
+  expert_ids: api.expertIds,
 });
 
 const mapTrackEvent = (event: ApiTrackEvent): TrackEventRecord => ({
@@ -211,6 +216,7 @@ const mapTrackDetail = (track: ApiTrackDetail): TrackDetailRecord => ({
   updated_at: track.updatedAt ?? track.createdAt,
   events: (track.events ?? []).map(mapTrackEvent),
   recordings_series: mapRecordingsSeriesSummary(track.recordingsSeries),
+  expert_ids: track.expertIds,
 });
 
 // Params and payloads
@@ -240,6 +246,7 @@ export type CreateTrackPayload = {
   locationEn?: string | null;
   locationAr?: string | null;
   locationUrl?: string | null;
+  expertIds?: string[];
 };
 
 export type UpdateTrackPayload = Partial<CreateTrackPayload> & {

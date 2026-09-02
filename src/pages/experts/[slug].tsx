@@ -127,12 +127,80 @@ function ExpertProfilePage() {
               <Card key={event.id}>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    <Link to={`/events/${event.id}`}>{event.title}</Link>
+                    <Link to={`/meetups/${event.id}`}>{event.title}</Link>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm text-neutral-600">
                   {new Date(event.date).toLocaleString()}
                 </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {profile.tracks.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">{t('relatedTracks')}</h2>
+          <div className="grid gap-3">
+            {profile.tracks.map((track) => (
+              <Card key={track.id}>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    <Link to={`/tracks/${track.id}`}>{track.title}</Link>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {profile.series.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">{t('relatedSeries')}</h2>
+          <div className="grid gap-3">
+            {profile.series.map((item) => (
+              <Card key={item.id}>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    <Link to={`/series/${item.id}`}>{item.title}</Link>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {profile.masterclasses.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">{t('relatedMasterclasses')}</h2>
+          <div className="grid gap-3">
+            {profile.masterclasses.map((item) => (
+              <Card key={item.id}>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    <Link to={`/masterclasses/${item.id}`}>{item.title}</Link>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {profile.libraryAssets.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">{t('relatedLibraryAssets')}</h2>
+          <div className="grid gap-3">
+            {profile.libraryAssets.map((item) => (
+              <Card key={item.id}>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    <Link to={`/dashboard/library/${item.id}`}>{item.title}</Link>
+                  </CardTitle>
+                </CardHeader>
               </Card>
             ))}
           </div>
