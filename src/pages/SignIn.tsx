@@ -1,12 +1,14 @@
 import type React from 'react';
-import { useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ApiError } from '@/app/api/client';
 import { completeSignInVerification, requestSignInCode, sanitizeOtp } from '@/app/auth/signIn';
+import { isTurnstileRequiredApiError } from '@/app/auth/turnstileOtpGate';
+import { useTurnstileOtpGate } from '@/app/auth/useTurnstileOtpGate';
 import { trackLogin, trackLoginStart } from '@/lib/analytics/events';
 import Layout from '@/shared/components/layout/Layout';
-import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
+import { Turnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -23,7 +25,6 @@ const SignIn: React.FC = () => {
   const location = useLocation();
   const { user, loading, requestOtp, verifyOtp, refreshSession } = useAuth();
   const { toast } = useToast();
-  const turnstile = useTurnstile();
   const requestEmailId = useId();
   const verifyEmailId = useId();
   const otpId = useId();
@@ -33,19 +34,31 @@ const SignIn: React.FC = () => {
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTurnstile, setShowTurnstile] = useState(false);
+  const otpRequestInFlightRef = useRef(false);
 
-  useEffect(() => {
-    captureAuthReturnFromSignInEntry(location);
-  }, [location]);
+  const clearTurnstileError = useCallback(() => {
+    setErrorMessage(null);
+  }, []);
 
-  useEffect(() => {
-    if (!loading && user) {
-      navigate(consumeAuthReturnPath(), { replace: true });
-    }
-  }, [loading, user, navigate]);
+  const requestLoginCodeRef = useRef<() => Promise<void>>(async () => {});
 
-  const requestLoginCode = async () => {
+  const {
+    turnstile,
+    showTurnstile,
+    widgetEpoch,
+    handleTurnstileRequired,
+    handleVerify,
+    handleExpire,
+    handleError,
+    resetGate,
+    remountWidget,
+  } = useTurnstileOtpGate({
+    isSubmitting,
+    onAutoRetry: () => requestLoginCodeRef.current(),
+    onVerified: clearTurnstileError,
+  });
+
+  const requestLoginCode = useCallback(async () => {
     if (!email.trim()) {
       setErrorMessage(t('errors.emailRequired'));
       return;
@@ -56,6 +69,11 @@ const SignIn: React.FC = () => {
       return;
     }
 
+    if (otpRequestInFlightRef.current) {
+      return;
+    }
+
+    otpRequestInFlightRef.current = true;
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -71,20 +89,46 @@ const SignIn: React.FC = () => {
         description: t('toast.checkInboxDesc'),
       });
       setStep('verify');
-      setShowTurnstile(false);
-      turnstile.reset();
+      resetGate();
     } catch (error) {
-      if (error instanceof ApiError && error.extra?.requiresTurnstile) {
-        setShowTurnstile(true);
+      if (isTurnstileRequiredApiError(error)) {
+        handleTurnstileRequired();
+        if (error instanceof ApiError && error.code === 'TURNSTILE_FAILED') {
+          remountWidget();
+        }
         setErrorMessage(t('errors.turnstileBelow'));
         return;
       }
       const message = error instanceof Error ? error.message : t('errors.sendCodeFailed');
       setErrorMessage(message);
     } finally {
+      otpRequestInFlightRef.current = false;
       setIsSubmitting(false);
     }
-  };
+  }, [
+    email,
+    handleTurnstileRequired,
+    remountWidget,
+    requestOtp,
+    resetGate,
+    showTurnstile,
+    t,
+    toast,
+    turnstile.isVerified,
+    turnstile.token,
+  ]);
+
+  requestLoginCodeRef.current = requestLoginCode;
+
+  useEffect(() => {
+    captureAuthReturnFromSignInEntry(location);
+  }, [location]);
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate(consumeAuthReturnPath(), { replace: true });
+    }
+  }, [loading, user, navigate]);
 
   const handleRequestOtp = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -168,9 +212,10 @@ const SignIn: React.FC = () => {
                 {showTurnstile && (
                   <div className="flex justify-center">
                     <Turnstile
-                      onVerify={turnstile.handleVerify}
-                      onExpire={turnstile.handleExpire}
-                      onError={turnstile.handleError}
+                      key={widgetEpoch}
+                      onVerify={handleVerify}
+                      onExpire={handleExpire}
+                      onError={handleError}
                       theme="light"
                     />
                   </div>

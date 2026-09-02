@@ -1,12 +1,14 @@
 import type React from 'react';
-import { useId, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
 import { activateInvitation } from '@/app/api/invitations';
+import { isTurnstileRequiredApiError } from '@/app/auth/turnstileOtpGate';
+import { useTurnstileOtpGate } from '@/app/auth/useTurnstileOtpGate';
 import { trackSignUpStep } from '@/lib/analytics/events';
 import SignUpLayout, { useSignUpContext } from '@/shared/components/layout/SignUpLayout';
-import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
+import { Turnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useToast } from '@/shared/hooks/custom/use-toast';
@@ -20,14 +22,29 @@ const Step5: React.FC = () => {
   const { toast } = useToast();
   const { handleError } = useErrorHandler();
   const { requestOtp } = useAuth();
-  const turnstile = useTurnstile();
   const { formData, updateFormData } = useSignUpContext();
   const [primaryChallenge, setPrimaryChallenge] = useState(formData.primaryChallenge);
   const [isSending, setIsSending] = useState(false);
-  const [showTurnstile, setShowTurnstile] = useState(false);
   const challengeGroupId = useId();
+  const otpRequestInFlightRef = useRef(false);
+  const handleCompleteRef = useRef<() => Promise<void>>(async () => {});
 
-  const handleComplete = async () => {
+  const {
+    turnstile,
+    showTurnstile,
+    widgetEpoch,
+    handleTurnstileRequired,
+    handleVerify,
+    handleExpire,
+    handleError: handleTurnstileWidgetError,
+    resetGate,
+    remountWidget,
+  } = useTurnstileOtpGate({
+    isSubmitting: isSending,
+    onAutoRetry: () => handleCompleteRef.current(),
+  });
+
+  const handleComplete = useCallback(async () => {
     if (!formData.email) {
       toast({
         title: t('signup.toast.missingEmailTitle'),
@@ -38,7 +55,6 @@ const Step5: React.FC = () => {
       return;
     }
 
-    // If Turnstile is shown but not verified, block submission
     if (showTurnstile && !turnstile.isVerified) {
       toast({
         title: t('signup.toast.securityRequiredTitle'),
@@ -48,6 +64,11 @@ const Step5: React.FC = () => {
       return;
     }
 
+    if (otpRequestInFlightRef.current) {
+      return;
+    }
+
+    otpRequestInFlightRef.current = true;
     setIsSending(true);
 
     try {
@@ -74,19 +95,19 @@ const Step5: React.FC = () => {
         description: t('signup.toast.almostThereDesc'),
       });
 
-      setShowTurnstile(false);
-      turnstile.reset();
+      resetGate();
       navigate('/signup/check-email', { state: { email: formData.email } });
     } catch (error) {
-      // Handle Turnstile requirement
-      if (error instanceof ApiError && error.extra?.requiresTurnstile) {
-        setShowTurnstile(true);
+      if (isTurnstileRequiredApiError(error)) {
+        handleTurnstileRequired();
+        if (error instanceof ApiError && error.code === 'TURNSTILE_FAILED') {
+          remountWidget();
+        }
         toast({
           title: t('signup.toast.securityRequiredTitle'),
           description: t('signup.toast.securityRequiredRetryDesc'),
           variant: 'destructive',
         });
-        setIsSending(false);
         return;
       }
       const appError = handleError(error);
@@ -96,9 +117,28 @@ const Step5: React.FC = () => {
         variant: 'destructive',
       });
     } finally {
+      otpRequestInFlightRef.current = false;
       setIsSending(false);
     }
-  };
+  }, [
+    formData.email,
+    formData.invitationToken,
+    handleError,
+    handleTurnstileRequired,
+    navigate,
+    primaryChallenge,
+    remountWidget,
+    requestOtp,
+    resetGate,
+    showTurnstile,
+    t,
+    toast,
+    turnstile.isVerified,
+    turnstile.token,
+    updateFormData,
+  ]);
+
+  handleCompleteRef.current = handleComplete;
 
   const handleBack = () => {
     updateFormData({ primaryChallenge });
@@ -152,9 +192,10 @@ const Step5: React.FC = () => {
         {showTurnstile && (
           <div className="flex justify-center pt-4">
             <Turnstile
-              onVerify={turnstile.handleVerify}
-              onExpire={turnstile.handleExpire}
-              onError={turnstile.handleError}
+              key={widgetEpoch}
+              onVerify={handleVerify}
+              onExpire={handleExpire}
+              onError={handleTurnstileWidgetError}
               theme="light"
             />
           </div>

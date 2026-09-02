@@ -1,9 +1,11 @@
 import { Mail } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '@/app/api/client';
+import { isTurnstileRequiredApiError } from '@/app/auth/turnstileOtpGate';
+import { useTurnstileOtpGate } from '@/app/auth/useTurnstileOtpGate';
 import { trackSignUp, trackSignUpStep } from '@/lib/analytics/events';
 import { buildCompletedSignUpTrackingParams } from '@/lib/analytics/signup';
 import SignUpLayout, {
@@ -11,7 +13,7 @@ import SignUpLayout, {
   SIGNUP_TOTAL_STEPS,
   useSignUpContext,
 } from '@/shared/components/layout/SignUpLayout';
-import { Turnstile, useTurnstile } from '@/shared/components/Turnstile';
+import { Turnstile } from '@/shared/components/Turnstile';
 import { Button } from '@/shared/components/ui/button';
 import {
   InputOTP,
@@ -34,11 +36,26 @@ const CheckEmail: React.FC = () => {
   const { formData } = useSignUpContext();
   const { toast } = useToast();
   const { handleError } = useErrorHandler();
-  const turnstile = useTurnstile();
   const [code, setCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [showTurnstile, setShowTurnstile] = useState(false);
+  const otpRequestInFlightRef = useRef(false);
+  const handleResendRef = useRef<() => Promise<void>>(async () => {});
+
+  const {
+    turnstile,
+    showTurnstile,
+    widgetEpoch,
+    handleTurnstileRequired,
+    handleVerify: handleTurnstileVerify,
+    handleExpire,
+    handleError: handleTurnstileWidgetError,
+    resetGate,
+    remountWidget,
+  } = useTurnstileOtpGate({
+    isSubmitting: isResending,
+    onAutoRetry: () => handleResendRef.current(),
+  });
 
   useEffect(() => {
     if (!email) {
@@ -52,7 +69,7 @@ const CheckEmail: React.FC = () => {
     }
   }, [navigate, user]);
 
-  const handleVerify = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleVerifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!email) {
       return;
@@ -88,7 +105,6 @@ const CheckEmail: React.FC = () => {
         title: t('signup.toast.welcomeTitle'),
         description: t('signup.toast.welcomeDesc'),
       });
-      // Use centralized redirect logic (subscription > event > dashboard)
       const redirectUrl = getPostSignupRedirectUrl();
       navigate(redirectUrl);
     } catch (error) {
@@ -103,12 +119,11 @@ const CheckEmail: React.FC = () => {
     }
   };
 
-  const handleResend = async () => {
+  const handleResend = useCallback(async () => {
     if (!email) {
       return;
     }
 
-    // If Turnstile is shown but not verified, block
     if (showTurnstile && !turnstile.isVerified) {
       toast({
         title: t('signup.toast.securityRequiredTitle'),
@@ -118,6 +133,11 @@ const CheckEmail: React.FC = () => {
       return;
     }
 
+    if (otpRequestInFlightRef.current) {
+      return;
+    }
+
+    otpRequestInFlightRef.current = true;
     setIsResending(true);
     try {
       await requestOtp(email, 'signup', {
@@ -127,18 +147,18 @@ const CheckEmail: React.FC = () => {
         title: t('signup.toast.newCodeSentTitle'),
         description: t('signup.toast.newCodeSentDesc'),
       });
-      setShowTurnstile(false);
-      turnstile.reset();
+      resetGate();
     } catch (error) {
-      // Handle Turnstile requirement
-      if (error instanceof ApiError && error.extra?.requiresTurnstile) {
-        setShowTurnstile(true);
+      if (isTurnstileRequiredApiError(error)) {
+        handleTurnstileRequired();
+        if (error instanceof ApiError && error.code === 'TURNSTILE_FAILED') {
+          remountWidget();
+        }
         toast({
           title: t('signup.toast.securityRequiredTitle'),
           description: t('signup.toast.securityRequiredRetryDesc'),
           variant: 'destructive',
         });
-        setIsResending(false);
         return;
       }
       const appError = handleError(error);
@@ -148,9 +168,24 @@ const CheckEmail: React.FC = () => {
         variant: 'destructive',
       });
     } finally {
+      otpRequestInFlightRef.current = false;
       setIsResending(false);
     }
-  };
+  }, [
+    email,
+    handleError,
+    handleTurnstileRequired,
+    remountWidget,
+    requestOtp,
+    resetGate,
+    showTurnstile,
+    t,
+    toast,
+    turnstile.isVerified,
+    turnstile.token,
+  ]);
+
+  handleResendRef.current = handleResend;
 
   return (
     <SignUpLayout
@@ -172,7 +207,7 @@ const CheckEmail: React.FC = () => {
           <p className="text-sm text-gray-500">{t('signup.checkEmail.instructions')}</p>
         </div>
 
-        <form onSubmit={handleVerify} className="space-y-6">
+        <form onSubmit={handleVerifyOtp} className="space-y-6">
           <InputOTP
             maxLength={6}
             value={code}
@@ -205,9 +240,10 @@ const CheckEmail: React.FC = () => {
         {showTurnstile && (
           <div className="flex justify-center">
             <Turnstile
-              onVerify={turnstile.handleVerify}
-              onExpire={turnstile.handleExpire}
-              onError={turnstile.handleError}
+              key={widgetEpoch}
+              onVerify={handleTurnstileVerify}
+              onExpire={handleExpire}
+              onError={handleTurnstileWidgetError}
               theme="light"
             />
           </div>

@@ -171,10 +171,11 @@ describe('auth flow wiring', () => {
     assert.equal(typeof navigation.redirectToSignIn, 'function');
   });
 
-  it('SignIn uses safe return consumption', () => {
+  it('SignIn uses safe return consumption and turnstile auto-retry gate', () => {
     const source = readFileSync('src/pages/SignIn.tsx', 'utf8');
     assert.ok(source.includes('consumeAuthReturnPath'));
     assert.ok(source.includes('captureAuthReturnFromSignInEntry'));
+    assert.ok(source.includes('useTurnstileOtpGate'));
   });
 
   it('CheckEmail uses getPostSignupRedirectUrl', () => {
