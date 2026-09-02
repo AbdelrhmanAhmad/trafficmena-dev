@@ -111,3 +111,5 @@ export const otpVerificationRateLimiter = new InMemoryRateLimiter();
 // Payment-specific rate limiter instance
 // See class documentation for scaling limitations
 export const paymentRateLimiter = new InMemoryRateLimiter();
+/** Staff announcement campaign send rate (per user id). See class docs for multi-instance caveat. */
+export const notificationCampaignRateLimiter = new InMemoryRateLimiter();

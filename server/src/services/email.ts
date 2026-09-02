@@ -119,20 +119,20 @@ type RegistrationConfirmationEmailArgs = {
   footer?: string;
 };
 
-// Single transport for all three senders. Throws EmailDeliveryError on failure — callers (Better
-// Auth's sendVerificationOTP) rely on the throw to surface a failed delivery to the user. On
-// success, fires the contact upsert off the critical path so list-building never adds a Resend
-// round-trip to OTP-login latency and can never fail a send.
+// Single transport for OTP, invitations, and notification outbox. Throws EmailDeliveryError on
+// failure — callers (Better Auth's sendVerificationOTP) rely on the throw to surface a failed
+// delivery to the user. On success, fires the contact upsert off the critical path so
+// list-building never adds a Resend round-trip to OTP-login latency and can never fail a send.
 async function sendTransactionalEmail({
   to,
   subject,
   html,
   text,
   attachments,
-}: TransactionalEmail) {
+}: TransactionalEmail): Promise<{ providerMessageId: string | null }> {
   if (!hasValidKey()) {
     console.warn('[resend] Valid RESEND_API_KEY missing; email simulated (details redacted)');
-    return;
+    return { providerMessageId: null };
   }
 
   const { data, error } = await getResend().emails.send({
@@ -163,6 +163,18 @@ async function sendTransactionalEmail({
 
   // Fire off the critical path — best-effort, never awaited, never throws.
   void subscribeContact(to);
+  return { providerMessageId: data?.id ?? null };
+}
+
+/** Public Resend transport for the notification outbox (and any future non-OTP mailers). */
+export async function sendRawTransactionalEmail(args: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  attachments?: Array<{ filename: string; content: string }>;
+}): Promise<{ providerMessageId: string | null }> {
+  return sendTransactionalEmail(args);
 }
 
 export async function sendOtpEmail({ email, otp, ttlMinutes, locale = DEFAULT_LOCALE }: SendOtpEmailArgs) {

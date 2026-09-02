@@ -1367,3 +1367,148 @@ export const activityAnnouncements = pgTable(
     scheduledAtIdx: index('activity_announcements_scheduled_at_idx').on(table.scheduledAt),
   }),
 );
+
+// --- Notifications (W11A) --------------------------------------------------
+
+export const notificationChannelEnum = pgEnum('notification_channel', ['email', 'whatsapp']);
+
+export const notificationDeliveryStatusEnum = pgEnum('notification_delivery_status', [
+  'pending',
+  'processing',
+  'sent',
+  'failed',
+  'skipped',
+]);
+
+export const notificationCampaignStatusEnum = pgEnum('notification_campaign_status', [
+  'draft',
+  'scheduled',
+  'processing',
+  'completed',
+  'cancelled',
+]);
+
+export const notificationCampaignKindEnum = pgEnum('notification_campaign_kind', [
+  'announcement',
+  'system',
+]);
+
+export const notificationAudienceTypeEnum = pgEnum('notification_audience_type', [
+  'all_users',
+  'event_attendees',
+  'track_buyers',
+  'masterclass_enrollees',
+  'activity_channel_members',
+  'role_based',
+  'explicit_users',
+]);
+
+export const notificationTemplates = pgTable(
+  'notification_templates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    key: text('key').notNull(),
+    category: text('category').notNull(),
+    channel: notificationChannelEnum('channel').notNull(),
+    isActive: boolean('is_active').default(true).notNull(),
+    subjectEn: text('subject_en').default('').notNull(),
+    subjectAr: text('subject_ar').default('').notNull(),
+    bodyHtmlEn: text('body_html_en').default('').notNull(),
+    bodyHtmlAr: text('body_html_ar').default('').notNull(),
+    bodyTextEn: text('body_text_en').default('').notNull(),
+    bodyTextAr: text('body_text_ar').default('').notNull(),
+    whatsappProviderTemplateId: text('whatsapp_provider_template_id'),
+    allowedVariables: jsonb('allowed_variables').$type<string[]>().default([]).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    keyChannelIdx: uniqueIndex('notification_templates_key_channel_idx').on(
+      table.key,
+      table.channel,
+    ),
+  }),
+);
+
+export const notificationCampaigns = pgTable(
+  'notification_campaigns',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: notificationCampaignKindEnum('kind').default('announcement').notNull(),
+    eventType: text('event_type').notNull(),
+    entityType: text('entity_type'),
+    entityId: text('entity_id'),
+    activityAnnouncementId: uuid('activity_announcement_id').references(
+      () => activityAnnouncements.id,
+      { onDelete: 'set null' },
+    ),
+    templateId: uuid('template_id').references(() => notificationTemplates.id, {
+      onDelete: 'set null',
+    }),
+    audienceType: notificationAudienceTypeEnum('audience_type'),
+    audienceRef: jsonb('audience_ref').$type<Record<string, unknown>>().default({}).notNull(),
+    status: notificationCampaignStatusEnum('status').default('draft').notNull(),
+    scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+    titleEn: text('title_en').default('').notNull(),
+    titleAr: text('title_ar').default('').notNull(),
+    bodyHtmlEn: text('body_html_en').default('').notNull(),
+    bodyHtmlAr: text('body_html_ar').default('').notNull(),
+    bodyTextEn: text('body_text_en').default('').notNull(),
+    bodyTextAr: text('body_text_ar').default('').notNull(),
+    summary: jsonb('summary').$type<Record<string, unknown>>().default({}).notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index('notification_campaigns_status_idx').on(table.status),
+    scheduledAtIdx: index('notification_campaigns_scheduled_at_idx').on(table.scheduledAt),
+    eventTypeIdx: index('notification_campaigns_event_type_idx').on(table.eventType),
+  }),
+);
+
+export const notificationDeliveries = pgTable(
+  'notification_deliveries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    campaignId: uuid('campaign_id').references(() => notificationCampaigns.id, {
+      onDelete: 'set null',
+    }),
+    eventType: text('event_type').notNull(),
+    entityType: text('entity_type'),
+    entityId: text('entity_id'),
+    recipientUserId: uuid('recipient_user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    channel: notificationChannelEnum('channel').notNull(),
+    status: notificationDeliveryStatusEnum('status').default('pending').notNull(),
+    skipReason: text('skip_reason'),
+    idempotencyKey: text('idempotency_key').notNull(),
+    destinationMasked: text('destination_masked'),
+    provider: text('provider'),
+    providerMessageId: text('provider_message_id'),
+    attemptCount: integer('attempt_count').default(0).notNull(),
+    lastErrorCode: text('last_error_code'),
+    lastErrorMessage: text('last_error_message'),
+    payload: jsonb('payload').$type<Record<string, unknown>>().default({}).notNull(),
+    locale: text('locale').default('en').notNull(),
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    failedAt: timestamp('failed_at', { withTimezone: true }),
+    skippedAt: timestamp('skipped_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    idempotencyIdx: uniqueIndex('notification_deliveries_idempotency_key_idx').on(
+      table.idempotencyKey,
+    ),
+    statusIdx: index('notification_deliveries_status_idx').on(table.status),
+    campaignIdx: index('notification_deliveries_campaign_idx').on(table.campaignId),
+    recipientIdx: index('notification_deliveries_recipient_idx').on(table.recipientUserId),
+    eventIdx: index('notification_deliveries_event_idx').on(table.eventType, table.entityId),
+  }),
+);
