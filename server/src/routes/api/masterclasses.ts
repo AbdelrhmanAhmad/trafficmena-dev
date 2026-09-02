@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
+import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import {
   masterclassEnrollments,
@@ -23,6 +24,7 @@ import {
   grantMasterclassEnrollment,
   isMasterclassSellable,
 } from '../../services/masterclassSales.js';
+import { notifyBusinessEvent } from '../../services/notifications/notify.js';
 import {
   applyFirstPublishLaunch,
   getEffectiveProductVisibility,
@@ -1025,7 +1027,7 @@ export function registerMasterclassRoutes(app: Hono) {
     }
 
     const [masterclass] = await db
-      .select({ id: masterclasses.id })
+      .select({ id: masterclasses.id, title: masterclasses.title })
       .from(masterclasses)
       .where(eq(masterclasses.id, idParsed.data))
       .limit(1);
@@ -1059,6 +1061,18 @@ export function registerMasterclassRoutes(app: Hono) {
       enrolledBy: staff.userId,
       enrollmentNote: parsed.data.note ?? null,
     });
+
+    void notifyBusinessEvent({
+      type: 'access_granted',
+      entityType: 'masterclass',
+      entityId: idParsed.data,
+      recipientUserIds: [parsed.data.userId],
+      templateKey: 'access_granted',
+      payload: {
+        itemTitle: masterclass.title,
+        itemUrl: `${env.APP_BASE_URL.replace(/\/$/, '')}/dashboard/masterclasses/${idParsed.data}/learn`,
+      },
+    }).catch((err) => console.error('[notifications]', err));
 
     return c.json({ data: { userId: parsed.data.userId, masterclassId: idParsed.data } }, 201);
   });

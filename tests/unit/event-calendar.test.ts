@@ -195,6 +195,14 @@ describe('registration confirmation email wiring', () => {
     assert.ok(emailService.includes('Add to Google Calendar'));
     assert.ok(!emailService.includes('meetingLink'));
   });
+
+  it('registration confirmation queues notifyBusinessEvent with ICS attachments', () => {
+    const source = readFileSync('server/src/services/registrationConfirmationEmail.ts', 'utf8');
+    assert.ok(source.includes('notifyBusinessEvent'));
+    assert.ok(source.includes('attachments'));
+    assert.ok(source.includes('icsContent'));
+    assert.ok(!source.includes('sendRegistrationConfirmationEmail'));
+  });
 });
 
 describe('calendar access helpers', () => {

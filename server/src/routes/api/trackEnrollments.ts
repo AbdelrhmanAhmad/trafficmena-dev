@@ -1,8 +1,10 @@
 import { eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
+import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import { tracks, users } from '../../db/schema/index.js';
+import { notifyBusinessEvent } from '../../services/notifications/notify.js';
 import { handleRoute } from '../../utils/errors.js';
 import { extractJsonPayload, jsonPayloadErrorStatusCode } from './jsonPayload.js';
 import { resolveTrackBasePrice, TICKET_TYPES } from './ticketAccess.js';
@@ -217,6 +219,18 @@ export function registerTrackEnrollmentRoutes(
             409,
           );
         }
+
+        void notifyBusinessEvent({
+          type: 'access_granted',
+          entityType: 'track',
+          entityId: trackId,
+          recipientUserIds: [parsed.data.userId],
+          templateKey: 'access_granted',
+          payload: {
+            itemTitle: result.trackTitle,
+            itemUrl: `${env.APP_BASE_URL.replace(/\/$/, '')}/tracks/${trackId}`,
+          },
+        }).catch((err) => console.error('[notifications]', err));
 
         return c.json(
           {
