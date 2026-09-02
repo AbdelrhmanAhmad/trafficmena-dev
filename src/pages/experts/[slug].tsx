@@ -198,7 +198,7 @@ function ExpertProfilePage() {
               <Card key={item.id}>
                 <CardHeader>
                   <CardTitle className="text-base">
-                    <Link to={`/library/${item.id}`}>{item.title}</Link>
+                    <Link to={`/dashboard/library/${item.id}`}>{item.title}</Link>
                   </CardTitle>
                 </CardHeader>
               </Card>
