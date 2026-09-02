@@ -281,6 +281,13 @@
       "when": 1786533000000,
       "tag": "0040_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1786534000000,
+      "tag": "0041_expert_linked_content",
+      "breakpoints": true
     }
   ]
 }

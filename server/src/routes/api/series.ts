@@ -13,6 +13,11 @@ import {
   trackBookings,
   trackEvents,
 } from '../../db/schema/index.js';
+import {
+  expertIdsExist,
+  loadLinkedExpertIdsForSeries,
+  replaceSeriesExpertLinks,
+} from '../../services/experts.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import {
   bilingualDescriptionFields,
@@ -76,6 +81,7 @@ const createSeriesSchema = z
     priceInCents: priceInCentsSchema,
     salesEnabled: z.boolean().default(false),
     recordingsAccessPolicy: recordingsAccessPolicySchema.default('free_for_prior_buyers'),
+    expertIds: z.array(z.string().uuid()).max(50).optional(),
   })
   .merge(requiredBilingualTitleFields.partial())
   .merge(optionalBilingualDescriptionFields)
@@ -94,6 +100,7 @@ const updateSeriesSchema = z
     salesEnabled: z.boolean().optional(),
     recordingsAccessPolicy: recordingsAccessPolicySchema.optional(),
     sortOrder: z.number().int().min(0).optional(),
+    expertIds: z.array(z.string().uuid()).max(50).optional(),
   })
   .merge(requiredBilingualTitleFields.partial())
   .merge(optionalBilingualDescriptionFields)
@@ -582,6 +589,7 @@ export function registerSeriesRoutes(app: Hono) {
     return c.json({
       ...presentedSeries,
       recordingsAccessPolicy,
+      ...(isStaff ? { expertIds: await loadLinkedExpertIdsForSeries(id) } : {}),
       assetCount: assets.length,
       assets,
       hasAccess: hasSeriesAccess,
@@ -604,6 +612,16 @@ export function registerSeriesRoutes(app: Hono) {
     }
 
     const payload = parsed.data;
+
+    if (payload.expertIds?.length) {
+      const valid = await expertIdsExist(payload.expertIds);
+      if (!valid) {
+        return c.json(
+          { error: { code: 'INVALID_EXPERT_IDS', message: 'One or more expert IDs are invalid.' } },
+          400,
+        );
+      }
+    }
 
     const titleFields =
       payload.titleEn && payload.titleAr
@@ -631,7 +649,11 @@ export function registerSeriesRoutes(app: Hono) {
       })
       .returning();
 
-    return c.json({ series: presentAdminContent(created) }, 201);
+    if (payload.expertIds?.length) {
+      await replaceSeriesExpertLinks(created.id, payload.expertIds);
+    }
+
+    return c.json({ series: presentAdminContent(created), expertIds: payload.expertIds ?? [] }, 201);
   });
 
   // Update series
@@ -660,6 +682,18 @@ export function registerSeriesRoutes(app: Hono) {
     const [currentSeries] = await db.select().from(series).where(eq(series.id, id)).limit(1);
     if (!currentSeries) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
+    }
+
+    if (updates.expertIds !== undefined) {
+      if (updates.expertIds.length > 0) {
+        const valid = await expertIdsExist(updates.expertIds);
+        if (!valid) {
+          return c.json(
+            { error: { code: 'INVALID_EXPERT_IDS', message: 'One or more expert IDs are invalid.' } },
+            400,
+          );
+        }
+      }
     }
 
     const nextSalesEnabled = updates.salesEnabled ?? currentSeries.salesEnabled;
@@ -703,7 +737,12 @@ export function registerSeriesRoutes(app: Hono) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
     }
 
-    return c.json({ series: presentAdminContent(updated) });
+    if (updates.expertIds !== undefined) {
+      await replaceSeriesExpertLinks(id, updates.expertIds);
+    }
+
+    const expertIds = await loadLinkedExpertIdsForSeries(id);
+    return c.json({ series: presentAdminContent(updated), expertIds });
   });
 
   // Delete series

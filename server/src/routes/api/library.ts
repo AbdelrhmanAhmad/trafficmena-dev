@@ -13,6 +13,11 @@ import {
   trackBookings,
   trackEvents,
 } from '../../db/schema/index.js';
+import {
+  expertIdsExist,
+  loadLinkedExpertIdsForLibraryAsset,
+  replaceLibraryAssetExpertLinks,
+} from '../../services/experts.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import {
   bilingualDescriptionFields,
@@ -82,6 +87,7 @@ const assetFieldsSchema = z
       .refine((value) => value == null || value <= 20 * 1024 * 1024, {
         message: 'File size must be 20 MB or less.',
       }),
+    expertIds: z.array(z.string().uuid()).max(50).optional(),
   })
   .merge(requiredBilingualTitleFields.partial())
   .merge(optionalBilingualDescriptionFields);
@@ -125,6 +131,7 @@ const createAssetSchema = assetObjectSchema.superRefine((payload, ctx) => {
 
 const updateAssetSchema = assetFieldsSchema
   .partial()
+  .extend({ expertIds: z.array(z.string().uuid()).max(50).optional() })
   .refine((value) => Object.keys(value).length > 0, 'Provide at least one field to update.');
 
 export function registerLibraryRoutes(app: Hono) {
@@ -637,7 +644,8 @@ export function registerLibraryRoutes(app: Hono) {
     }
 
     const presentedAsset = presentPublicRow(asset[0], locale, Boolean(isStaff));
-    return c.json({ ...presentedAsset, hasAccess: true });
+    const expertIds = isStaff ? await loadLinkedExpertIdsForLibraryAsset(id) : undefined;
+    return c.json({ ...presentedAsset, hasAccess: true, ...(expertIds ? { expertIds } : {}) });
   });
 
   app.post('/library', async (c) => {
@@ -660,6 +668,16 @@ export function registerLibraryRoutes(app: Hono) {
     }
 
     const payload = parsed.data;
+
+    if (payload.expertIds?.length) {
+      const valid = await expertIdsExist(payload.expertIds);
+      if (!valid) {
+        return c.json(
+          { error: { code: 'INVALID_EXPERT_IDS', message: 'One or more expert IDs are invalid.' } },
+          400,
+        );
+      }
+    }
 
     const titleFields =
       payload.titleEn && payload.titleAr
@@ -712,7 +730,11 @@ export function registerLibraryRoutes(app: Hono) {
         createdAt: libraryAssets.createdAt,
       });
 
-    return c.json({ asset: presentAdminContent(created) }, 201);
+    if (payload.expertIds?.length) {
+      await replaceLibraryAssetExpertLinks(created.id, payload.expertIds);
+    }
+
+    return c.json({ asset: presentAdminContent(created), expertIds: payload.expertIds ?? [] }, 201);
   });
 
   app.put('/library/:id', async (c) => {
@@ -745,65 +767,132 @@ export function registerLibraryRoutes(app: Hono) {
     }
 
     const updates = parsed.data;
+    const { expertIds, ...assetUpdates } = updates;
     const updateValues: Record<string, unknown> = {};
 
-    if (updates.title !== undefined) updateValues.title = updates.title;
-    if (updates.description !== undefined) updateValues.description = updates.description ?? null;
-    if (updates.fileType !== undefined) updateValues.fileType = updates.fileType;
-    if (updates.videoUrl !== undefined) updateValues.videoUrl = updates.videoUrl ?? null;
-    if (updates.documentUrl !== undefined) updateValues.documentUrl = updates.documentUrl ?? null;
-    if (updates.embedUrl !== undefined) updateValues.embedUrl = updates.embedUrl ?? null;
-    if (updates.embedType !== undefined) updateValues.embedType = updates.embedType ?? null;
-    if (updates.thumbnailUrl !== undefined)
-      updateValues.thumbnailUrl = updates.thumbnailUrl || null;
-    if (updates.eventId !== undefined) updateValues.eventId = updates.eventId ?? null;
-    if (updates.isPublic !== undefined) updateValues.isPublic = updates.isPublic;
-    if (updates.isPremium !== undefined) updateValues.isPremium = updates.isPremium;
-    if (updates.fileSizeBytes !== undefined)
-      updateValues.fileSizeBytes = updates.fileSizeBytes ?? null;
+    if (expertIds !== undefined) {
+      if (expertIds.length > 0) {
+        const valid = await expertIdsExist(expertIds);
+        if (!valid) {
+          return c.json(
+            { error: { code: 'INVALID_EXPERT_IDS', message: 'One or more expert IDs are invalid.' } },
+            400,
+          );
+        }
+      }
+    }
+
+    if (assetUpdates.title !== undefined) updateValues.title = assetUpdates.title;
+    if (assetUpdates.description !== undefined) updateValues.description = assetUpdates.description ?? null;
+    if (assetUpdates.fileType !== undefined) updateValues.fileType = assetUpdates.fileType;
+    if (assetUpdates.videoUrl !== undefined) updateValues.videoUrl = assetUpdates.videoUrl ?? null;
+    if (assetUpdates.documentUrl !== undefined) updateValues.documentUrl = assetUpdates.documentUrl ?? null;
+    if (assetUpdates.embedUrl !== undefined) updateValues.embedUrl = assetUpdates.embedUrl ?? null;
+    if (assetUpdates.embedType !== undefined) updateValues.embedType = assetUpdates.embedType ?? null;
+    if (assetUpdates.thumbnailUrl !== undefined)
+      updateValues.thumbnailUrl = assetUpdates.thumbnailUrl || null;
+    if (assetUpdates.eventId !== undefined) updateValues.eventId = assetUpdates.eventId ?? null;
+    if (assetUpdates.isPublic !== undefined) updateValues.isPublic = assetUpdates.isPublic;
+    if (assetUpdates.isPremium !== undefined) updateValues.isPremium = assetUpdates.isPremium;
+    if (assetUpdates.fileSizeBytes !== undefined)
+      updateValues.fileSizeBytes = assetUpdates.fileSizeBytes ?? null;
 
     const fileUrlCandidate =
-      updates.documentUrl !== undefined
-        ? updates.documentUrl
-        : updates.videoUrl !== undefined
-          ? updates.videoUrl
-          : updates.embedUrl !== undefined
-            ? updates.embedUrl
+      assetUpdates.documentUrl !== undefined
+        ? assetUpdates.documentUrl
+        : assetUpdates.videoUrl !== undefined
+          ? assetUpdates.videoUrl
+          : assetUpdates.embedUrl !== undefined
+            ? assetUpdates.embedUrl
             : undefined;
 
     if (fileUrlCandidate !== undefined) {
       updateValues.fileUrl = fileUrlCandidate ?? null;
     }
 
-    if (Object.keys(updateValues).length === 0) {
+    if (Object.keys(updateValues).length === 0 && expertIds === undefined) {
       return c.json({ success: true, message: 'No changes applied.' });
     }
 
-    const [updated] = await db
-      .update(libraryAssets)
-      .set(updateValues)
-      .where(eq(libraryAssets.id, id))
-      .returning({
-        id: libraryAssets.id,
-        titleEn: libraryAssets.titleEn,
-        titleAr: libraryAssets.titleAr,
-        descriptionEn: libraryAssets.descriptionEn,
-        descriptionAr: libraryAssets.descriptionAr,
-        fileType: libraryAssets.fileType,
-        fileUrl: libraryAssets.fileUrl,
-        videoUrl: libraryAssets.videoUrl,
-        documentUrl: libraryAssets.documentUrl,
-        embedUrl: libraryAssets.embedUrl,
-        embedType: libraryAssets.embedType,
-        thumbnailUrl: libraryAssets.thumbnailUrl,
-        eventId: libraryAssets.eventId,
-        isPublic: libraryAssets.isPublic,
-        isPremium: libraryAssets.isPremium,
-        viewCount: libraryAssets.viewCount,
-        downloadCount: libraryAssets.downloadCount,
-        fileSizeBytes: libraryAssets.fileSizeBytes,
-        createdAt: libraryAssets.createdAt,
-      });
+    let updated:
+      | {
+          id: string;
+          titleEn: string;
+          titleAr: string;
+          descriptionEn: string | null;
+          descriptionAr: string | null;
+          fileType: (typeof libraryAssets.$inferSelect)['fileType'];
+          fileUrl: string | null;
+          videoUrl: string | null;
+          documentUrl: string | null;
+          embedUrl: string | null;
+          embedType: string | null;
+          thumbnailUrl: string | null;
+          eventId: string | null;
+          isPublic: boolean;
+          isPremium: boolean;
+          viewCount: number;
+          downloadCount: number;
+          fileSizeBytes: number | null;
+          createdAt: Date;
+        }
+      | undefined;
+
+    if (Object.keys(updateValues).length > 0) {
+      const [row] = await db
+        .update(libraryAssets)
+        .set(updateValues)
+        .where(eq(libraryAssets.id, id))
+        .returning({
+          id: libraryAssets.id,
+          titleEn: libraryAssets.titleEn,
+          titleAr: libraryAssets.titleAr,
+          descriptionEn: libraryAssets.descriptionEn,
+          descriptionAr: libraryAssets.descriptionAr,
+          fileType: libraryAssets.fileType,
+          fileUrl: libraryAssets.fileUrl,
+          videoUrl: libraryAssets.videoUrl,
+          documentUrl: libraryAssets.documentUrl,
+          embedUrl: libraryAssets.embedUrl,
+          embedType: libraryAssets.embedType,
+          thumbnailUrl: libraryAssets.thumbnailUrl,
+          eventId: libraryAssets.eventId,
+          isPublic: libraryAssets.isPublic,
+          isPremium: libraryAssets.isPremium,
+          viewCount: libraryAssets.viewCount,
+          downloadCount: libraryAssets.downloadCount,
+          fileSizeBytes: libraryAssets.fileSizeBytes,
+          createdAt: libraryAssets.createdAt,
+        });
+      updated = row;
+    } else {
+      const [row] = await db
+        .select({
+          id: libraryAssets.id,
+          titleEn: libraryAssets.titleEn,
+          titleAr: libraryAssets.titleAr,
+          descriptionEn: libraryAssets.descriptionEn,
+          descriptionAr: libraryAssets.descriptionAr,
+          fileType: libraryAssets.fileType,
+          fileUrl: libraryAssets.fileUrl,
+          videoUrl: libraryAssets.videoUrl,
+          documentUrl: libraryAssets.documentUrl,
+          embedUrl: libraryAssets.embedUrl,
+          embedType: libraryAssets.embedType,
+          thumbnailUrl: libraryAssets.thumbnailUrl,
+          eventId: libraryAssets.eventId,
+          isPublic: libraryAssets.isPublic,
+          isPremium: libraryAssets.isPremium,
+          viewCount: libraryAssets.viewCount,
+          downloadCount: libraryAssets.downloadCount,
+          fileSizeBytes: libraryAssets.fileSizeBytes,
+          createdAt: libraryAssets.createdAt,
+        })
+        .from(libraryAssets)
+        .where(eq(libraryAssets.id, id))
+        .limit(1);
+      updated = row;
+    }
 
     if (!updated) {
       return c.json(
@@ -817,7 +906,12 @@ export function registerLibraryRoutes(app: Hono) {
       );
     }
 
-    return c.json({ asset: presentAdminContent(updated) });
+    if (expertIds !== undefined) {
+      await replaceLibraryAssetExpertLinks(id, expertIds);
+    }
+
+    const linkedExpertIds = await loadLinkedExpertIdsForLibraryAsset(id);
+    return c.json({ asset: presentAdminContent(updated), expertIds: linkedExpertIds });
   });
 
   app.delete('/library/:id', async (c) => {

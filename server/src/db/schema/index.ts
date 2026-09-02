@@ -526,6 +526,99 @@ export const eventExperts = pgTable(
   }),
 );
 
+export const trackExperts = pgTable(
+  'track_experts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    trackId: uuid('track_id')
+      .references(() => tracks.id, { onDelete: 'cascade' })
+      .notNull(),
+    expertId: uuid('expert_id')
+      .references(() => experts.id, { onDelete: 'restrict' })
+      .notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    trackExpertUnique: uniqueIndex('track_experts_track_expert_unique').on(
+      table.trackId,
+      table.expertId,
+    ),
+    trackIdx: index('track_experts_track_idx').on(table.trackId),
+    expertIdx: index('track_experts_expert_idx').on(table.expertId),
+  }),
+);
+
+export const seriesExperts = pgTable(
+  'series_experts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    seriesId: uuid('series_id')
+      .references(() => series.id, { onDelete: 'cascade' })
+      .notNull(),
+    expertId: uuid('expert_id')
+      .references(() => experts.id, { onDelete: 'restrict' })
+      .notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    seriesExpertUnique: uniqueIndex('series_experts_series_expert_unique').on(
+      table.seriesId,
+      table.expertId,
+    ),
+    seriesIdx: index('series_experts_series_idx').on(table.seriesId),
+    expertIdx: index('series_experts_expert_idx').on(table.expertId),
+  }),
+);
+
+export const masterclassExperts = pgTable(
+  'masterclass_experts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    masterclassId: uuid('masterclass_id')
+      .references(() => masterclasses.id, { onDelete: 'cascade' })
+      .notNull(),
+    expertId: uuid('expert_id')
+      .references(() => experts.id, { onDelete: 'restrict' })
+      .notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    masterclassExpertUnique: uniqueIndex('masterclass_experts_masterclass_expert_unique').on(
+      table.masterclassId,
+      table.expertId,
+    ),
+    masterclassIdx: index('masterclass_experts_masterclass_idx').on(table.masterclassId),
+    expertIdx: index('masterclass_experts_expert_idx').on(table.expertId),
+  }),
+);
+
+// Direct normalized expert ↔ library asset links (PRD explicit association; not via series membership).
+export const libraryAssetExperts = pgTable(
+  'library_asset_experts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    libraryAssetId: uuid('library_asset_id')
+      .references(() => libraryAssets.id, { onDelete: 'cascade' })
+      .notNull(),
+    expertId: uuid('expert_id')
+      .references(() => experts.id, { onDelete: 'restrict' })
+      .notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    libraryAssetExpertUnique: uniqueIndex('library_asset_experts_asset_expert_unique').on(
+      table.libraryAssetId,
+      table.expertId,
+    ),
+    libraryAssetIdx: index('library_asset_experts_asset_idx').on(table.libraryAssetId),
+    expertIdx: index('library_asset_experts_expert_idx').on(table.expertId),
+  }),
+);
+
 export const invitations = pgTable(
   'invitations',
   {
