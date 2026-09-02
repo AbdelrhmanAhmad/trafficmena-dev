@@ -9,6 +9,7 @@ import {
   eventAttendees,
   eventReservations,
   events,
+  masterclasses,
   orderItems,
   orders,
   paymentFulfillmentFailures,
@@ -24,6 +25,7 @@ import {
   users,
 } from '../../db/schema/index.js';
 import { queuePaymentRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
+import { notifyBusinessEvent } from '../../services/notifications/notify.js';
 import type { AppLocale } from '../../utils/locale.js';
 import { DEFAULT_LOCALE, resolveLocaleFromRequest } from '../../utils/locale.js';
 import {
@@ -1276,6 +1278,7 @@ async function processSuccessfulPayment(
 
     if (result.status === 'paid' && !result.alreadyProcessed) {
       queuePaymentRegistrationConfirmation(paymentId, locale);
+      queuePaymentSuccessNotifications(paymentId, locale);
     }
 
     return result;
@@ -1285,6 +1288,100 @@ async function processSuccessfulPayment(
     await reportPaidFulfillmentFailure(paymentId, error, confirmationSource);
     throw error;
   }
+}
+
+function queuePaymentSuccessNotifications(paymentId: string, locale: AppLocale = DEFAULT_LOCALE) {
+  void (async () => {
+    const [payment] = await db
+      .select({
+        id: payments.id,
+        userId: payments.userId,
+        amountCents: payments.amountCents,
+        currency: payments.currency,
+        itemType: payments.itemType,
+        itemId: payments.itemId,
+      })
+      .from(payments)
+      .where(eq(payments.id, paymentId))
+      .limit(1);
+
+    if (!payment) return;
+
+    const base = env.APP_BASE_URL.replace(/\/$/, '');
+
+    await notifyBusinessEvent({
+      type: 'payment_success',
+      entityType: 'payment',
+      entityId: payment.id,
+      recipientUserIds: [payment.userId],
+      templateKey: 'payment_success',
+      locale,
+      payload: {
+        amount: (payment.amountCents / 100).toFixed(2),
+        currency: payment.currency ?? 'EGP',
+        itemType: payment.itemType,
+      },
+    });
+
+    if (payment.itemType === 'masterclass' && payment.itemId) {
+      const [masterclass] = await db
+        .select({ title: masterclasses.title })
+        .from(masterclasses)
+        .where(eq(masterclasses.id, payment.itemId))
+        .limit(1);
+      if (masterclass) {
+        await notifyBusinessEvent({
+          type: 'access_granted',
+          entityType: 'masterclass',
+          entityId: payment.itemId,
+          recipientUserIds: [payment.userId],
+          templateKey: 'access_granted',
+          locale,
+          payload: {
+            itemTitle: masterclass.title,
+            itemUrl: `${base}/dashboard/masterclasses/${payment.itemId}/learn`,
+          },
+        });
+      }
+      return;
+    }
+
+    if (payment.itemType === 'order' && payment.itemId) {
+      const items = await db
+        .select({
+          itemType: orderItems.itemType,
+          digitalProductId: orderItems.digitalProductId,
+          productTitle: digitalProducts.title,
+        })
+        .from(orderItems)
+        .leftJoin(digitalProducts, eq(digitalProducts.id, orderItems.digitalProductId))
+        .where(eq(orderItems.orderId, payment.itemId));
+
+      const productNotifies = items
+        .filter(
+          (item): item is typeof item & { digitalProductId: string; productTitle: string } =>
+            item.itemType === 'digital_product' &&
+            Boolean(item.digitalProductId) &&
+            Boolean(item.productTitle),
+        )
+        .map((item) =>
+          notifyBusinessEvent({
+            type: 'access_granted',
+            entityType: 'digital_product',
+            entityId: item.digitalProductId,
+            recipientUserIds: [payment.userId],
+            templateKey: 'access_granted',
+            locale,
+            payload: {
+              itemTitle: item.productTitle,
+              itemUrl: `${base}/dashboard/digital-products/${item.digitalProductId}`,
+            },
+          }),
+        );
+
+      await Promise.all(productNotifies);
+    }
+  })().catch((err) => console.error('[notifications]', err));
 }
 
 // Pure decision helper — gateway vs local amount + currency equality. Returns the matched cents on
@@ -2360,6 +2457,14 @@ export function registerPaymentRoutes(app: Hono) {
         await db.delete(eventReservations).where(eq(eventReservations.paymentId, paymentId));
         await db.delete(trackReservations).where(eq(trackReservations.paymentId, paymentId));
         await restoreReplacedPendingPayment(replacedPendingPaymentIds);
+        void notifyBusinessEvent({
+          type: 'payment_failed',
+          entityType: 'payment',
+          entityId: paymentId,
+          recipientUserIds: [userId],
+          templateKey: 'payment_failed',
+          payload: { itemType },
+        }).catch((err) => console.error('[notifications]', err));
         throw error;
       }
 
@@ -2676,6 +2781,26 @@ export function registerPaymentRoutes(app: Hono) {
           transactionKey: data.transaction_key,
           paymentMethod: data.payment_method,
         });
+        void (async () => {
+          const [payment] = await db
+            .select({
+              id: payments.id,
+              userId: payments.userId,
+              itemType: payments.itemType,
+            })
+            .from(payments)
+            .where(eq(payments.fawaterkIntentKey, data.transaction_key))
+            .limit(1);
+          if (!payment) return;
+          await notifyBusinessEvent({
+            type: 'payment_pending',
+            entityType: 'payment',
+            entityId: payment.id,
+            recipientUserIds: [payment.userId],
+            templateKey: 'payment_pending',
+            payload: { itemType: payment.itemType },
+          });
+        })().catch((err) => console.error('[notifications]', err));
         return c.json({ data: { status: 'pending' } });
       }
 

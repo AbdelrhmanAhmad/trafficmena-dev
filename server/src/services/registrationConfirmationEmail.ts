@@ -2,13 +2,8 @@ import { eq } from 'drizzle-orm';
 import { env } from '../config/env.js';
 import { db } from '../db/client.js';
 import { payments } from '../db/schema/index.js';
-import {
-  getEventRegistrationEmailCopy,
-  getTrackRegistrationEmailCopy,
-} from '../i18n/emailCopy.js';
 import type { AppLocale } from '../utils/locale.js';
 import { DEFAULT_LOCALE, parseAppLocale } from '../utils/locale.js';
-import { sendRegistrationConfirmationEmail } from './email.js';
 import {
   buildApiCalendarIcsUrl,
   buildEventCalendarData,
@@ -20,22 +15,30 @@ import {
   loadEventCalendarSource,
   loadTrackCalendarEvents,
   loadTrackTitle,
-  loadUserEmail,
 } from './eventCalendarAccess.js';
+import { notifyBusinessEvent } from './notifications/notify.js';
 
 type SendEventRegistrationConfirmationArgs = {
-  email: string;
+  userId: string;
   event: EventCalendarSource;
   locale?: AppLocale;
 };
 
 type SendTrackRegistrationConfirmationArgs = {
-  email: string;
+  userId: string;
   trackId: string;
   trackTitle: string;
   events: EventCalendarSource[];
   locale?: AppLocale;
 };
+
+function appBase(): string {
+  return env.APP_BASE_URL.replace(/\/$/, '');
+}
+
+function sanitizeFilename(value: string): string {
+  return value.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'event';
+}
 
 export async function notifyEventRegistrationConfirmation(
   args: SendEventRegistrationConfirmationArgs,
@@ -43,26 +46,28 @@ export async function notifyEventRegistrationConfirmation(
   const locale = args.locale ?? DEFAULT_LOCALE;
   const calendarData = buildEventCalendarData(args.event, undefined, locale);
   const googleCalendarUrl = buildGoogleCalendarUrl(calendarData);
-  const copy = getEventRegistrationEmailCopy(locale, args.event.title);
-  const icsAttachment = {
-    filename: `trafficmena-${sanitizeFilename(args.event.title)}.ics`,
-    content: buildIcsCalendarBody([calendarData]),
-  };
+  const icsFilename = `trafficmena-${sanitizeFilename(args.event.title)}.ics`;
+  const icsContent = buildIcsCalendarBody([calendarData]);
+  const base = appBase();
 
-  await sendRegistrationConfirmationEmail({
-    to: args.email,
-    subject: copy.subject,
-    headline: copy.headline,
-    intro: copy.intro,
-    googleCalendarUrl,
-    webCalendarUrl: `${env.APP_BASE_URL.replace(/\/$/, '')}/thank-you-event/${args.event.id}`,
-    icsDownloadUrl: buildApiCalendarIcsUrl('event', args.event.id),
-    attachment: icsAttachment,
+  await notifyBusinessEvent({
+    type: 'event_registration',
+    entityType: 'event',
+    entityId: args.event.id,
+    recipientUserIds: [args.userId],
+    templateKey: 'event_registration',
     locale,
-    googleCalendarLabel: copy.googleCalendar,
-    viewConfirmationLabel: copy.viewConfirmation,
-    icsNote: copy.icsNote,
-    footer: copy.footer,
+    payload: {
+      eventTitle: args.event.title,
+      eventUrl: `${base}/meetups/${args.event.id}`,
+      calendarUrl: googleCalendarUrl,
+      googleCalendarUrl,
+      icsDownloadUrl: buildApiCalendarIcsUrl('event', args.event.id),
+      webCalendarUrl: `${base}/thank-you-event/${args.event.id}`,
+      icsContent,
+      icsFilename,
+      attachments: [{ filename: icsFilename, content: icsContent }],
+    },
   });
 }
 
@@ -75,32 +80,30 @@ export async function notifyTrackRegistrationConfirmation(
   const calendarEvents = args.events.map((event) => buildEventCalendarData(event, undefined, locale));
   const firstSession = calendarEvents[0];
   const googleCalendarUrl = buildGoogleCalendarUrl(firstSession);
-  const trackThankYouUrl = `${env.APP_BASE_URL.replace(/\/$/, '')}/thank-you-track/${args.trackId}`;
-  const copy = getTrackRegistrationEmailCopy(locale, args.trackTitle, calendarEvents.length);
-  const icsAttachment = {
-    filename: `trafficmena-${sanitizeFilename(args.trackTitle)}-sessions.ics`,
-    content: buildIcsCalendarBody(calendarEvents, '-//TrafficMENA//Track//EN'),
-  };
+  const base = appBase();
+  const trackThankYouUrl = `${base}/thank-you-track/${args.trackId}`;
+  const icsFilename = `trafficmena-${sanitizeFilename(args.trackTitle)}-sessions.ics`;
+  const icsContent = buildIcsCalendarBody(calendarEvents, '-//TrafficMENA//Track//EN');
 
-  await sendRegistrationConfirmationEmail({
-    to: args.email,
-    subject: copy.subject,
-    headline: copy.headline,
-    intro: copy.intro,
-    googleCalendarUrl,
-    webCalendarUrl: trackThankYouUrl,
-    icsDownloadUrl: buildApiCalendarIcsUrl('track', args.trackId),
-    attachment: icsAttachment,
+  await notifyBusinessEvent({
+    type: 'track_registration',
+    entityType: 'track',
+    entityId: args.trackId,
+    recipientUserIds: [args.userId],
+    templateKey: 'track_registration',
     locale,
-    googleCalendarLabel: copy.googleCalendar,
-    viewConfirmationLabel: copy.viewConfirmation,
-    icsNote: copy.icsNote,
-    footer: copy.footer,
+    payload: {
+      trackTitle: args.trackTitle,
+      trackUrl: `${base}/tracks/${args.trackId}`,
+      calendarUrl: googleCalendarUrl,
+      googleCalendarUrl,
+      icsDownloadUrl: buildApiCalendarIcsUrl('track', args.trackId),
+      webCalendarUrl: trackThankYouUrl,
+      icsContent,
+      icsFilename,
+      attachments: [{ filename: icsFilename, content: icsContent }],
+    },
   });
-}
-
-function sanitizeFilename(value: string): string {
-  return value.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'event';
 }
 
 export function queueEventRegistrationConfirmation(
@@ -108,15 +111,13 @@ export function queueEventRegistrationConfirmation(
   eventId: string,
   locale: AppLocale = DEFAULT_LOCALE,
 ): void {
-  void loadUserEmail(userId)
-    .then(async (email) => {
-      if (!email) return;
-      const source = await loadEventCalendarSource(eventId, locale);
+  void loadEventCalendarSource(eventId, locale)
+    .then(async (source) => {
       if (!source) return;
-      await notifyEventRegistrationConfirmation({ email, event: source, locale });
+      await notifyEventRegistrationConfirmation({ userId, event: source, locale });
     })
     .catch((error) => {
-      console.error('[calendar-email] event confirmation failed', error);
+      console.error('[notifications]', error);
     });
 }
 
@@ -125,23 +126,20 @@ export function queueTrackRegistrationConfirmation(
   trackId: string,
   locale: AppLocale = DEFAULT_LOCALE,
 ): void {
-  void loadUserEmail(userId)
-    .then(async (email) => {
-      if (!email) return;
-      const trackTitle = await loadTrackTitle(trackId, locale);
-      const events = await loadTrackCalendarEvents(trackId, locale);
-      if (!trackTitle || events.length === 0) return;
-      await notifyTrackRegistrationConfirmation({
-        email,
-        trackId,
-        trackTitle,
-        events,
-        locale,
-      });
-    })
-    .catch((error) => {
-      console.error('[calendar-email] track confirmation failed', error);
+  void (async () => {
+    const trackTitle = await loadTrackTitle(trackId, locale);
+    const events = await loadTrackCalendarEvents(trackId, locale);
+    if (!trackTitle || events.length === 0) return;
+    await notifyTrackRegistrationConfirmation({
+      userId,
+      trackId,
+      trackTitle,
+      events,
+      locale,
     });
+  })().catch((error) => {
+    console.error('[notifications]', error);
+  });
 }
 
 export function queuePaymentRegistrationConfirmation(
@@ -165,13 +163,14 @@ export function queuePaymentRegistrationConfirmation(
 
     const effectiveLocale = parseAppLocale(payment.checkoutLocale) ?? locale;
 
-    const email = await loadUserEmail(payment.userId);
-    if (!email) return;
-
     if (payment.itemType === 'event' && payment.itemId) {
       const source = await loadEventCalendarSource(payment.itemId, effectiveLocale);
       if (source) {
-        await notifyEventRegistrationConfirmation({ email, event: source, locale: effectiveLocale });
+        await notifyEventRegistrationConfirmation({
+          userId: payment.userId,
+          event: source,
+          locale: effectiveLocale,
+        });
       }
       return;
     }
@@ -181,7 +180,7 @@ export function queuePaymentRegistrationConfirmation(
       const events = await loadTrackCalendarEvents(payment.itemId, effectiveLocale);
       if (trackTitle && events.length > 0) {
         await notifyTrackRegistrationConfirmation({
-          email,
+          userId: payment.userId,
           trackId: payment.itemId,
           trackTitle,
           events,
@@ -190,6 +189,6 @@ export function queuePaymentRegistrationConfirmation(
       }
     }
   })().catch((error) => {
-    console.error('[calendar-email] payment confirmation failed', error);
+    console.error('[notifications]', error);
   });
 }

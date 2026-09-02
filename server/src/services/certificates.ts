@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { env } from '../config/env.js';
 import { db } from '../db/client.js';
 import {
   certificateSettings,
@@ -21,6 +22,7 @@ import { ApiError } from '../utils/errors.js';
 import { bilingualCertificateTitleFields } from '../utils/bilingualDb.js';
 import { countCompletedLessons, countMasterclassLessons } from './masterclassSales.js';
 import { fetchRemoteFileBytes, uploadCertificatePdfBuffer, deleteRemoteFileByUrl } from './certificateStorage.js';
+import { notifyBusinessEvent } from './notifications/notify.js';
 import { isKnownDatabaseConflict } from '../routes/api/utils.js';
 
 export const DEFAULT_CERTIFICATE_DESIGN: CertificateDesignSettings = {
@@ -489,6 +491,21 @@ async function createCertificateRecord(params: {
         issuedManually: params.issuedManually,
       })
       .returning();
+
+    const certificateUrl = `${env.APP_BASE_URL.replace(/\/$/, '')}/certificates/${created.certificateCode}`;
+    void notifyBusinessEvent({
+      type: 'certificate_issued',
+      entityType: 'certificate',
+      entityId: created.id,
+      recipientUserIds: [params.userId],
+      templateKey: 'certificate_issued',
+      payload: {
+        userName: studentName,
+        courseTitle,
+        certificateUrl,
+      },
+    }).catch((err) => console.error('[notifications]', err));
+
     return created;
   } catch (error) {
     if (isKnownDatabaseConflict(error) === 'unique') {

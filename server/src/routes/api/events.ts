@@ -1,6 +1,7 @@
 import { and, count, desc, eq, gt, gte, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
+import { env } from '../../config/env.js';
 import { db } from '../../db/client.js';
 import {
   eventAttendees,
@@ -19,6 +20,7 @@ import {
 import { attendeeAmountCents } from '../../utils/attendeesQuery.js';
 import { activeTrackBookingWhere } from '../../utils/booking.js';
 import { queueEventRegistrationConfirmation } from '../../services/registrationConfirmationEmail.js';
+import { notifyBusinessEvent } from '../../services/notifications/notify.js';
 import {
   expertIdsExist,
   loadLinkedExpertsForEvent,
@@ -919,6 +921,18 @@ export function registerEventRoutes(app: Hono) {
         const updates = parsed.data;
         const updateValues: Record<string, unknown> = { updatedAt: new Date() };
         let eventFormatChangeReport: EventFormatChangeReport | null = null;
+        let previousDateMs: number | null = null;
+
+        if (updates.date !== undefined) {
+          const [currentForDate] = await db
+            .select({ date: events.date })
+            .from(events)
+            .where(eq(events.id, eventId))
+            .limit(1);
+          if (currentForDate) {
+            previousDateMs = new Date(currentForDate.date).getTime();
+          }
+        }
 
         if (updates.eventFormat !== undefined) {
           const [currentEvent] = await db
@@ -1085,6 +1099,24 @@ export function registerEventRoutes(app: Hono) {
 
         if (updates.expertIds !== undefined) {
           await replaceEventExpertLinks(eventId, updates.expertIds);
+        }
+
+        if (previousDateMs !== null && updated.date) {
+          const newDateMs = new Date(updated.date).getTime();
+          if (newDateMs !== previousDateMs) {
+            const newStartIso = new Date(updated.date).toISOString();
+            void notifyBusinessEvent({
+              type: 'event_rescheduled',
+              entityType: 'event',
+              entityId: `${eventId}:${newStartIso}`,
+              audience: { type: 'event_attendees', eventId },
+              templateKey: 'event_rescheduled',
+              payload: {
+                eventTitle: updated.titleEn,
+                eventUrl: `${env.APP_BASE_URL.replace(/\/$/, '')}/meetups/${eventId}`,
+              },
+            }).catch((err) => console.error('[notifications]', err));
+          }
         }
 
         const guestExperts = await presentEventGuestExperts({
@@ -1467,6 +1499,41 @@ export function registerEventRoutes(app: Hono) {
           };
         });
 
+        if (result.success && 'status' in result) {
+          void (async () => {
+            const [event] = await db
+              .select({ titleEn: events.titleEn })
+              .from(events)
+              .where(eq(events.id, eventId))
+              .limit(1);
+            const eventTitle = event?.titleEn ?? 'Event';
+            const eventUrl = `${env.APP_BASE_URL.replace(/\/$/, '')}/meetups/${eventId}`;
+
+            if (result.status === 'cancelled') {
+              await notifyBusinessEvent({
+                type: 'event_cancelled',
+                entityType: 'event',
+                entityId: `${eventId}:cancelled:${userId}`,
+                recipientUserIds: [userId],
+                templateKey: 'event_cancelled',
+                payload: { eventTitle, eventUrl },
+              });
+              return;
+            }
+
+            if (result.status === 'refund_requested') {
+              await notifyBusinessEvent({
+                type: 'refund_status_update',
+                entityType: 'event',
+                entityId: `${eventId}:refund:requested:${userId}`,
+                recipientUserIds: [userId],
+                templateKey: 'refund_status_update',
+                payload: { eventTitle, refundStatus: 'requested' },
+              });
+            }
+          })().catch((err) => console.error('[notifications]', err));
+        }
+
         return c.json(result);
       },
       'EVENT_CANCELLATION_FAILED',
@@ -1572,7 +1639,11 @@ export function registerEventRoutes(app: Hono) {
 
         const result = await db.transaction(async (tx) => {
           const [registration] = await tx
-            .select({ id: eventAttendees.id, status: eventAttendees.status })
+            .select({
+              id: eventAttendees.id,
+              status: eventAttendees.status,
+              userId: eventAttendees.userId,
+            })
             .from(eventAttendees)
             .where(and(eq(eventAttendees.id, registrationId), eq(eventAttendees.eventId, eventId)))
             .for('update')
@@ -1594,10 +1665,33 @@ export function registerEventRoutes(app: Hono) {
             })
             .where(eq(eventAttendees.id, registrationId));
 
-          return { success: true, message: 'Refund approved and registration cancelled.' };
+          return {
+            success: true,
+            message: 'Refund approved and registration cancelled.',
+            userId: registration.userId,
+          };
         });
 
-        return c.json(result);
+        void (async () => {
+          const [event] = await db
+            .select({ titleEn: events.titleEn })
+            .from(events)
+            .where(eq(events.id, eventId))
+            .limit(1);
+          await notifyBusinessEvent({
+            type: 'refund_status_update',
+            entityType: 'event',
+            entityId: `${eventId}:refund:approved:${result.userId}`,
+            recipientUserIds: [result.userId],
+            templateKey: 'refund_status_update',
+            payload: {
+              eventTitle: event?.titleEn ?? 'Event',
+              refundStatus: 'approved',
+            },
+          });
+        })().catch((err) => console.error('[notifications]', err));
+
+        return c.json({ success: result.success, message: result.message });
       },
       'CANCELLATION_APPROVE_FAILED',
       'Unable to approve cancellation request.',
@@ -1631,7 +1725,11 @@ export function registerEventRoutes(app: Hono) {
 
         const result = await db.transaction(async (tx) => {
           const [registration] = await tx
-            .select({ id: eventAttendees.id, status: eventAttendees.status })
+            .select({
+              id: eventAttendees.id,
+              status: eventAttendees.status,
+              userId: eventAttendees.userId,
+            })
             .from(eventAttendees)
             .where(and(eq(eventAttendees.id, registrationId), eq(eventAttendees.eventId, eventId)))
             .for('update')
@@ -1657,10 +1755,30 @@ export function registerEventRoutes(app: Hono) {
           return {
             success: true,
             message: 'Refund request rejected. Registration restored.',
+            userId: registration.userId,
           };
         });
 
-        return c.json(result);
+        void (async () => {
+          const [event] = await db
+            .select({ titleEn: events.titleEn })
+            .from(events)
+            .where(eq(events.id, eventId))
+            .limit(1);
+          await notifyBusinessEvent({
+            type: 'refund_status_update',
+            entityType: 'event',
+            entityId: `${eventId}:refund:rejected:${result.userId}`,
+            recipientUserIds: [result.userId],
+            templateKey: 'refund_status_update',
+            payload: {
+              eventTitle: event?.titleEn ?? 'Event',
+              refundStatus: 'rejected',
+            },
+          });
+        })().catch((err) => console.error('[notifications]', err));
+
+        return c.json({ success: result.success, message: result.message });
       },
       'CANCELLATION_REJECT_FAILED',
       'Unable to reject cancellation request.',

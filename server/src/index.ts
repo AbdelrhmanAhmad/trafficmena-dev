@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { connectionPool } from './db/client.js';
 import { startAnnouncementSchedulerJob } from './jobs/announcementScheduler.js';
+import { startNotificationDeliveryJob } from './jobs/notificationDelivery.js';
 import { startPaymentExpirationJob } from './jobs/paymentExpiration.js';
 import { startPaymentReconciliationJob } from './jobs/paymentReconciliation.js';
 
@@ -51,3 +52,4 @@ console.log(`[trafficmena] ✅ Server listening on http://localhost:${port}`);
 startPaymentExpirationJob();
 startAnnouncementSchedulerJob();
 startPaymentReconciliationJob();
+startNotificationDeliveryJob();
