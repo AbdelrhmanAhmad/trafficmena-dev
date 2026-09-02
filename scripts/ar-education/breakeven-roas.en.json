@@ -1,0 +1,93 @@
+{
+  "sections": [
+    {
+      "heading": "What is Break-even ROAS?",
+      "paragraphs": [
+        "Break-even ROAS (Return on Ad Spend) is the minimum ROAS you need to achieve to cover your costs and not lose money on advertising. It's the point where your ad revenue exactly equals your total costs (including both ad spend and cost of goods sold).",
+        "Any ROAS above your break-even point generates profit, while any ROAS below means you're losing money on those ad campaigns."
+      ]
+    },
+    {
+      "heading": "Why is Break-even ROAS Important?",
+      "bullets": [
+        {
+          "label": "Sets minimum performance targets",
+          "text": "Gives you a clear threshold for campaign profitability"
+        },
+        {
+          "label": "Prevents losses",
+          "text": "Helps identify unprofitable campaigns before they drain budget"
+        },
+        {
+          "label": "Guides bid strategies",
+          "text": "Informs target ROAS bidding in platforms like Google Ads"
+        },
+        {
+          "label": "Product-level insights",
+          "text": "Different products have different margins, thus different break-even points"
+        },
+        {
+          "label": "Strategic decisions",
+          "text": "Helps decide when to scale or cut campaigns"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate Break-even ROAS",
+      "paragraphs": [
+        "The formula is elegantly simple:",
+        "Example: If your gross margin is 40%:",
+        "Break-even ROAS = 2.5x",
+        "This means you need to generate $2.50 in revenue for every $1 spent on ads just to break even. Anything above 2.5x ROAS is profit."
+      ],
+      "formula": "Break-even ROAS = 1 / Gross Margin %"
+    },
+    {
+      "heading": "Break-even ROAS by Gross Margin",
+      "table": {
+        "headers": [
+          "Gross Margin",
+          "Break-even ROAS",
+          "Common Industries"
+        ],
+        "rows": [
+          [
+            "20%",
+            "5.0x",
+            "Grocery, Low-margin retail"
+          ],
+          [
+            "30%",
+            "3.33x",
+            "Consumer electronics"
+          ],
+          [
+            "40%",
+            "2.5x",
+            "Fashion, Apparel"
+          ],
+          [
+            "50%",
+            "2.0x",
+            "Beauty, Cosmetics"
+          ],
+          [
+            "60%",
+            "1.67x",
+            "Jewelry, Luxury goods"
+          ],
+          [
+            "70%",
+            "1.43x",
+            "Software, Digital products"
+          ],
+          [
+            "80%",
+            "1.25x",
+            "SaaS, Subscriptions"
+          ]
+        ]
+      }
+    }
+  ]
+}

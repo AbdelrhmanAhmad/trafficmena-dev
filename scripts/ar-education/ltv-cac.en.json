@@ -1,0 +1,98 @@
+{
+  "sections": [
+    {
+      "heading": "What is LTV:CAC Ratio?",
+      "paragraphs": [
+        "The LTV:CAC ratio measures how much value a customer generates compared to the cost of acquiring them . It's the gold standard metric for evaluating unit economics health.",
+        "A ratio of 3:1 means each customer generates 3x what you spent to acquire them, the widely accepted benchmark for sustainable growth. According to industry research, this ratio is one of the most scrutinized metrics by VCs and growth investors."
+      ]
+    },
+    {
+      "heading": "Why is LTV:CAC Ratio Important?",
+      "bullets": [
+        {
+          "label": "Profitability Signal",
+          "text": "Shows whether customer acquisition is profitable at the unit level"
+        },
+        {
+          "label": "Investment Decisions",
+          "text": "Guides how much to invest in marketing and sales"
+        },
+        {
+          "label": "Scalability Check",
+          "text": "High ratios indicate room to scale; low ratios signal unit economics problems"
+        },
+        {
+          "label": "Fundraising Metric",
+          "text": "Critical for investor due diligence and company valuation"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate LTV:CAC Ratio",
+      "paragraphs": [
+        "The formula is straightforward:",
+        "For example, if your LTV is $100 and your CAC is $500 , your ratio is $100 / $500 = 3:1"
+      ],
+      "formula": "LTV:CAC Ratio = LTV / CAC"
+    },
+    {
+      "heading": "LTV:CAC Ratio Benchmarks",
+      "paragraphs": [
+        "Industry-standard benchmarks for interpreting your ratio:",
+        "Source: Industry benchmarks from Bessemer, a]16z, and growth equity standards"
+      ],
+      "bullets": [
+        {
+          "text": "Below 1:1: Losing money on every customer. Urgent action needed"
+        },
+        {
+          "text": "1:1 to 2:1: Unprofitable after overhead. Optimize LTV or reduce CAC"
+        },
+        {
+          "text": "2:1 to 3:1: Break-even territory. Getting close to healthy economics"
+        },
+        {
+          "text": "3:1 to 5:1: Healthy. The gold standard for sustainable growth"
+        },
+        {
+          "text": "Above 5:1: Excellent, but may indicate under-investment in growth"
+        }
+      ],
+      "note": "Source: Industry benchmarks from Bessemer, a]16z, and growth equity standards"
+    },
+    {
+      "heading": "How to Improve LTV:CAC Ratio",
+      "paragraphs": [
+        "There are two levers to improve your ratio:"
+      ],
+      "bullets": [
+        {
+          "text": "Reduce churn through better onboarding and customer success"
+        },
+        {
+          "text": "Increase ARPU via upsells, cross-sells, and premium tiers"
+        },
+        {
+          "text": "Improve gross margins by optimizing costs"
+        },
+        {
+          "text": "Improve conversion rates across the funnel"
+        },
+        {
+          "text": "Focus on organic channels (SEO, content, referrals)"
+        },
+        {
+          "text": "Optimize paid ad targeting and creative"
+        }
+      ]
+    },
+    {
+      "heading": "When High Ratios May Be a Problem",
+      "paragraphs": [
+        "While a high LTV:CAC ratio (above 5:1) sounds great, it can indicate under-investment in growth. If your ratio is very high, you may be leaving market share on the table by not spending enough on customer acquisition.",
+        "The optimal strategy is often to invest more in marketing and sales until your ratio approaches the 3:1 to 5:1 sweet spot, maximizing growth while maintaining healthy unit economics."
+      ]
+    }
+  ]
+}

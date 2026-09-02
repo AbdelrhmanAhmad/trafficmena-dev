@@ -1,0 +1,474 @@
+B2B SaaS
+B2C SaaS
+CMGR
+Diversify Channels
+Drive Expansion
+Drives Retention Focus
+Each customer generates $100 in gross profit over their lifetime.
+Early-stage Startup
+Easy Comparison
+Easy to scale up or down based on budget
+Ecommerce stores lose roughly $18 billion annually due to cart abandonment
+Education
+Electronics
+Electronics & Tech
+Email Marketing
+Email Opt-in
+Email marketing, subscriptions, and loyalty programs
+Enable Guest Checkout
+Enables A/B Testing
+Enables direct comparison of different marketing campaigns
+Ensure seamless experience on all devices
+Ensures marketing spend drives new business rather than re-acquiring existing customers
+Enterprise SaaS 12-18 months acceptable
+Enterprise deals can have longer payback due to higher ACVs and lower churn.
+Essential for predicting pipeline and setting growth targets
+Essential input for calculating overall marketing ROI when combined with conversion rates
+Evaluate whether products are gaining market traction
+Every 1-second delay reduces conversions by ~7%
+Excludes expansion. Reveals core retention without upsells masking churn
+Expanding existing customers costs 5x less than acquiring new ones
+Fair. Maintaining revenue with limited expansion
+Fashion
+Fashion & Apparel
+Fashion, Apparel
+Faster Onboarding
+Finance
+Finance/Insurance
+Financial Services
+Find which customer groups generate the most long-term profit
+Fintech SaaS
+Fix Cancel Flow
+Fix Involuntary Churn
+Fixed cost for a set number of impressions makes budgeting predictable
+Focus on SEO
+Focus on audiences less likely to have purchased before using exclusion lists
+Focus on high-intent audiences to increase conversion rates
+Focus on organic channels (SEO, content, referrals)
+Food & Beverage
+For accurate MER calculation, include all marketing-related costs:
+For projecting future revenue:
+Forecasting
+Foundation building, typically negative or break-even ROI
+Free Shipping Thresholds
+Frequency
+Fundraising Metric
+Funnel Health
+Funnel Stage Benchmarks
+Furniture & Home Decor
+Furniture, electronics, and luxury items are infrequent purchases. Customers may not return for months or years.
+GRR (Gross Revenue Retention)
+GRR = (Starting MRR - Contraction - Churn) / Starting MRR × 100
+GRR Benchmarks (2025)
+GRR Excludes expansion, max 100%, shows true retention
+GRR vs NRR: Key Differences
+Get customers to value faster to prevent early churn
+Get customers to value faster to reduce early churn
+Gives you a clear threshold for campaign profitability
+Google Ads (Display)
+Google Ads (Search)
+Grocery & Food Delivery
+Grocery, Low-margin retail
+Gross Margin
+Gross Revenue Retention (GRR) measures the percentage of recurring revenue retained from existing customers , accounting only for churn and contractions, not expansion.
+Growth Sustainability
+Guides bid strategies
+Guides how much to invest in marketing and sales
+Health & Beauty
+Health & Supplements
+Healthcare
+Healthy
+Helps allocate resources to the most cost-effective channels
+Helps decide when to scale or cut campaigns
+Helps determine which channels deliver the most cost-effective leads
+Helps identify unprofitable campaigns before they drain budget
+High GRR indicates customers see lasting value and renew contracts
+High abandonment wastes acquisition spend. You're paying for traffic that doesn't convert
+High churn warning
+High ratios indicate room to scale; low ratios signal unit economics problems
+Higher ACV correlates with higher GRR due to stickier enterprise deals.
+Higher ACV correlates with higher NRR due to stickier enterprise customers.
+Higher ACV customers have stickier contracts and more expansion potential
+Higher CTR improves your Quality Score on Google Ads, lowering CPC
+Higher CVR means more customers from the same traffic, lowering CAC
+Higher Education
+Higher Profitability
+Home & Furniture
+How much have they spent?
+How often do they buy?
+How to Improve CVR
+How to Improve GRR
+How to Improve LTV:CAC Ratio
+How to Improve Lead-to-Customer Rate
+How to Improve NRR
+How to Improve Your Repeat Purchase Rate
+How to Increase LTV
+How to Increase SaaS LTV
+How to Reduce CAC Payback Period
+How to Reduce Cart Abandonment
+How to Reduce Checkout Abandonment
+IT / Managed Services
+Identifies UX Issues
+Identifies Valuable Segments
+Identifies bottlenecks between marketing and sales handoffs
+Identifies friction points in your purchase flow
+Identify Short-term Trends
+Implement Referral Programs
+Implement pause walls, trial extensions, and win-back offers
+Implement precision retries, dunning emails, and failed payment recovery
+Improve Landing Pages
+Improve Lead Scoring
+Improve Margins
+Improve Onboarding
+Improve Retention
+Improve Targeting
+Improve conversion rates across the funnel
+Improve conversion rates, focus on organic channels, optimize ad spend
+Improve gross margins by optimizing costs
+Improve landing pages and reduce friction in the buying process
+Improve onboarding, customer success, and cancel flow with trial extensions and pause walls
+Improve onboarding, proactive customer success, and cancel flow optimization
+Improves Profit Margins
+In this example, 60% of conversions were repeat buyers. The true cost to acquire someone new is 2.5x higher than the blended CAC suggests.
+Includes expansion. Shows total growth potential from existing customers
+Increase AOV
+Increase ARPU
+Increase ARPU via upsells, cross-sells, and premium tiers
+Increases Revenue Without More Traffic: Higher AOV means more revenue per customer without additional acquisition costs
+Indicates Relevance
+Informs Budget Decisions
+Informs Pricing Strategy
+Informs target ROAS bidding in platforms like Google Ads
+Instagram
+Instead of chasing new customers, many businesses focus on increasing AOV to maximize revenue from existing traffic. According to Shopify, the global AOV is approximately $145 across all industries.
+Invest in Customer Success
+Invest in Organic Channels
+Invest in SEO
+Investment Decisions
+Investor Confidence
+Investor Focus
+Investor Metric
+Investor Priority
+Jewelry, Luxury goods
+Know how much you can profitably spend to acquire new subscribers
+Knowing LTV tells you how much you can profitably spend to acquire customers
+LTV (or CLV), Customer Lifetime Value, measures the total profit a customer generates over their entire relationship with your business .
+LTV = AOV × Purchases per Customer × Gross Margin %
+LTV = ARPU × Gross Margin % × (1 / Monthly Churn Rate)
+LTV:CAC 1:1 to 2:1: Barely breaking even
+LTV:CAC 3:1: Healthy, sustainable business
+LTV:CAC Ratio = LTV / CAC
+LTV:CAC Ratio Benchmarks
+LTV:CAC below 1:1: Losing money on each customer
+LTV:CAC ratio is one of the most scrutinized metrics by VCs and growth equity investors
+LTV:CAC: Value-focused. Total return on acquisition investment
+LTV:nCAC 2:1 to 3:1: Break-even territory. Optimize funnels
+LTV:nCAC 3:1 to 4:1: Healthy, scalable growth
+LTV:nCAC below 2:1: Unprofitable. Re-evaluate acquisition strategy
+Launch a Loyalty Program
+Lead Generation
+Lead → MQL
+Lead-to-Customer Rate (also called Lead Conversion Rate) measures the percentage of leads that convert into paying customers. It's one of the most critical B2B metrics, showing how effectively your sales funnel turns prospects into revenue. According to 2025 benchmark data, the average lead-to-customer conversion rate is 2-5% across B2B industries.
+Legal Services
+Leverage word-of-mouth to acquire customers at lower cost
+LinkedIn
+Long-term Health
+Long-term trends, removing seasonality
+Low AOV may indicate pricing issues or missed upselling opportunities
+Low CTR may signal a mismatch between ad content and audience
+Low CVR often signals friction in the user journey
+Loyalty Programs
+Luxury & Jewelry
+MER = Total Revenue / Total Marketing Spend
+MER accounts for the full marketing ecosystem including team salaries, software, agencies, and creative costs
+MER vs ROAS: What's the Difference?
+Manufacturing
+Market research
+Marketing Efficiency
+Marketing Efficiency Ratio (MER), also known as Blended ROAS or Ecosystem ROAS, measures how many dollars in revenue your business generates for every $1 spent on marketing , regardless of which platform or channel drove the conversion.
+Marketing ROI
+Marketing experts recommend analyzing not just the mean (average), but also the mode (most common order value). A few high-value orders can skew your average, hiding that most customers spend much less. Focus on improving the modal order value for sustainable gains.
+Marketing team salaries
+Mature Company
+Measures Engagement
+Measures Funnel Effectiveness
+Measures Marketing ROI
+Measures True Growth
+Measures how efficiently your marketing spend converts to pipeline
+Measures how well your sales team converts leads into revenue
+Measures shoppers who add items to cart but never proceed to checkout. Includes window shoppers and price comparers.
+Measures shoppers who start checkout but don't complete it. These users showed clear purchase intent, making this more actionable for optimization.
+Medical Device
+Meta (Facebook)
+Meta (Facebook/Instagram)
+Metric
+Mid-Market SaaS 6-12 months
+MoM Growth = (Current Month - Previous Month) / Previous Month × 100
+MoM calculations are commonly used across business functions including finance (revenue monitoring), marketing (follower growth), sales (customer acquisition), and production (volume tracking).
+MoM vs Other Growth Metrics
+Mobile
+Mobile Optimization
+Mobile users abandon more due to smaller screens and complex forms
+Monetary
+Monitor Usage Drops
+Monitor usage drops, intervene before downgrades, demonstrate value continuously
+Month-over-month (MoM) growth measures the percentage change in a specific metric from one month to the next. It's a critical indicator used by businesses to understand quick changes in market conditions, operational results, and overall performance trajectories.
+Monthly
+Monthly Churn Rate Benchmarks
+Months 1-6
+Months 6-12
+Move beyond last-click to understand true drivers of new customers
+Multi-brand Retail
+Multi-month avg
+NRR = (Starting MRR + Expansion - Contraction - Churn) / Starting MRR × 100
+NRR Benchmarks (2025)
+NRR Includes expansion, can exceed 100%, shows growth potential
+NRR above 100% indicates customers see enough value to invest more
+Net Revenue Retention (NRR), also called Net Dollar Retention (NDR), measures how much recurring revenue you retain and grow from existing customers over a specific period.
+Offer "complete the look" or "starter kit" packages at a discount
+Offer Guest Checkout
+Offer Multiple Payment Options
+Offer Subscriptions
+Offer add-ons immediately after checkout
+Offsets Rising Ad Costs
+Often the single most important metric after revenue growth for VCs
+Opportunity → Customer
+Optimize Conversion Funnels
+Optimize Landing Pages
+Optimize Margins
+Optimize Page Speed
+Optimize for Mobile
+Optimize paid ad targeting and creative
+Optimizes Budget
+Optimizing nCAC to LTV
+Organic CPL
+Organic marketing channels (SEO, content marketing, social media) typically deliver 30-50% lower CPL than paid channels, though they require longer timeframes to generate results.
+Organic vs Paid CPL
+Paid CPL
+Pay for impressions. Best for brand awareness campaigns
+Pay only when users click. Best for driving traffic and engagement
+Pay only when users take a specific action (purchase, signup). Best for conversions
+Payback by Business Model
+Peak ROI as content matures and domain authority grows
+Personalize Communications
+Personalized suggestions can increase AOV by 30%+
+Pet Care & Veterinary
+Pet Supplies
+Positive ROI typically achieved, traffic compounds
+Post-Purchase Engagement
+Post-Purchase Upsells
+Predictable Revenue
+Predicts Sustainable Growth
+Predicts lead volume based on available marketing budget
+Predicts sustainable growth through customer loyalty
+Prevents losses
+Pro Tip: Look Beyond the Mean
+Proactively intervene before customers downgrade
+Product Bundles
+Product-Market Fit
+Product-level insights
+Products like groceries, supplements, and pet food require regular repurchasing, naturally boosting repeat rates.
+Professional Services
+Profitability Signal
+Provides actionable KPIs to motivate teams and align efforts
+Provides apples-to-apples comparison across campaigns and competitors
+Quarterly
+Quarterly planning, investor updates
+RFM Analysis for Segmentation
+ROAS
+ROAS = (Revenue from advertising / Cost of advertising) × 100
+ROI Calculation
+RPR = (Repeat Customers / Total Customers) × 100
+Rate = ((Checkouts Started - Checkouts Completed) / Checkouts Started) × 100
+Rate = (Customers Acquired / Total Leads) × 100
+Real Estate
+Recency
+Recommend complementary products during checkout
+Recovery Opportunities
+Reduce CAC
+Reduce COGS, negotiate supplier deals, or adjust pricing
+Reduce Churn
+Reduce Contraction
+Reduce churn through better onboarding and customer success
+Reduce fields to only what's essential
+Reduce hosting costs, automate support, optimize infrastructure
+Reduce over-reliance on single platforms vulnerable to algorithm shifts
+Reduces Acquisition Costs
+Refine Audience Targeting
+Repeat Purchase Rate (RPR), also known as Repeat Customer Rate, measures the percentage of customers who have made more than one purchase from your business. It's a direct indicator of customer loyalty, product satisfaction, and the overall health of your brand. A higher rate signals that your products and customer experience are meeting expectations.
+Repeat customers create more stable, predictable revenue streams
+Repeat customers spend more per order and have higher lifetime value
+Retail (General)
+Retained customers buy more often and spend more than new ones
+Retention Focus
+Return on ad spend or ROAS is the amount of revenue a company generates for every dollar spent on an advertising source .
+Reveals Customer Behavior
+Reveals True Churn Impact
+Reveals gaps in trust, pricing, or UX that drive customers away
+Revenue Forecasting
+Revenue Impact
+Reviews, testimonials, and trust badges increase confidence
+Reward higher spending with points or exclusive perks
+Runway Planning
+SEO ROI (Return on Investment) measures how much revenue SEO activities generate for a business compared to their cost. It helps tie your SEO efforts directly to business goals and proves the value of organic search.
+SEO ROI = (Revenue from SEO - Cost of SEO) / Cost of SEO × 100
+SEO ROI Timeline
+SEO ROI by Service Type
+SEO Service
+SEO and content marketing have 40-60% lower CAC than paid ads
+SMB SaaS (self-serve) <6 months ideal
+SQL → Opportunity
+SaaS (Post-$1M ARR)
+SaaS (Pre-$1M ARR)
+SaaS / Software
+SaaS Free Trial
+SaaS LTV (Customer Lifetime Value) measures the total gross profit a subscription customer generates over their entire relationship with your business .
+SaaS, Subscriptions
+Sales Efficiency
+Sales-Marketing Alignment
+Scalability
+Scalability Check
+Send Recovery Emails
+Set 30% above your current AOV (e.g., "$50 for free shipping")
+Set Measurable Targets
+Sets Acquisition Budgets
+Sets minimum performance targets
+Sharpen Targeting
+Shipping a $100 order costs the same as shipping a $140 order; the second is more profitable
+Shopify recommends using RFM analysis (Recency, Frequency, Monetary) to segment customers by value. This helps identify your most valuable segments:
+Short-term trends, quick decisions
+Shorter payback means faster reinvestment cycles
+Show All Costs Upfront
+Show Costs Early
+Shows how compelling your ad is to your target audience
+Shows how efficiently you convert marketing spend into customers
+Shows how long capital is tied up before generating profit
+Shows how well your site converts traffic into customers or leads
+Shows if your lead generation efforts attract qualified buyers
+Shows the direct impact of reducing churn on customer value
+Shows the real cost of expanding your customer base, not just generating repeat sales
+Shows whether customer acquisition is profitable at the unit level
+Simplify Checkout
+Simplify Forms
+Small reductions in churn create exponential LTV gains:
+Smoothed growth rate over time
+Snapchat
+Software & tool subscriptions
+Software, Digital products
+Some brands barely break even on first sales. Profit comes from repeat purchases
+Sources: First Page Sage, Ruler Analytics (2025 benchmarks)
+Sources: MobiLoud, Bluecore, Shopify, Metrilo (2024-2025 benchmarks)
+Sources: OpenSend, Hotjar, VWO (2024 benchmarks)
+Speed to Lead
+Spot Seasonal Patterns
+Stable
+Stage
+Standard CAC includes all customers, both new and returning. This can significantly understate your true acquisition costs:
+Startup Validation
+Status
+Strategic decisions
+Streamline Checkout
+Sustainable Growth
+Tablet
+Target Enterprise
+Technical SEO
+That means that if you spent $100 on Facebook ads in one month and your revenue for that month is $100 , your ROAS is ($100/$100 ) × 100 = 3 × 100 = 300% per spent on advertising.
+The AOV formula is:
+The CAC formula is:
+The CPM formula is:
+The CTR formula is:
+The CVR formula is:
+The GRR formula is:
+The LTV:CAC ratio measures customer acquisition profitability:
+The LTV:CAC ratio measures how much value a customer generates compared to the cost of acquiring them . It's the gold standard metric for evaluating unit economics health.
+The LTV:CAC ratio shows if your customer acquisition is profitable:
+The MER formula is:
+The ROAS formula is:
+The average repeat customer rate in ecommerce ranges from 15-30%, but varies widely by industry:
+The churn-based SaaS LTV formula is:
+The customer lifetime (1 / churn rate) in this case is 20 months.
+The formula is elegantly simple:
+The formula is straightforward:
+The formula to calculate month-over-month growth:
+The key difference from CAC is the denominator: you must segment your customer data to include only first-time buyers, excluding repeat purchasers entirely.
+The nCAC formula is:
+The optimal strategy is often to invest more in marketing and sales until your ratio approaches the 3:1 to 5:1 sweet spot, maximizing growth while maintaining healthy unit economics.
+The simplest way to think about NRR: How much would your revenue grow or shrink if you acquired zero new customers? According to research, SaaS companies with high NRR grow 2.5x faster than low-NRR counterparts.
+The simplified eCommerce LTV formula is:
+The standard NRR formula is:
+The standard SEO ROI formula:
+The true power of nCAC comes when paired with Customer Lifetime Value (LTV). CMOs should optimize the nCAC-to-LTV ratio for sustainable, profitable growth:
+There are two levers to improve your ratio:
+This means 1.5% of people who saw your ad clicked on it.
+This means 3% of visitors completed the desired action.
+This means it costs you $100 to acquire each new customer .
+This means on average, each customer spends $100 per order .
+This means you generate $3 in revenue for every $1 spent on marketing .
+This means you need to generate $2.50 in revenue for every $1 spent on ads just to break even. Anything above 2.5x ROAS is profit.
+This means you paid $2.00 for every 1,000 ad impressions .
+Thought Leadership SEO
+Tiered Discounts
+TikTok
+Time Frame
+Time-focused. How quickly you recover investment
+Top Performers
+Top Reasons Customers Abandon Carts
+Top Reasons for Checkout Abandonment
+Track conversion lift from experiments and optimizations
+Track if business is improving or deteriorating for strategic decisions
+Travel
+Understand cyclicality for inventory, staffing, and marketing planning
+Understand perceived value to optimize product pricing
+Unit Economics
+Unlike LTV:CAC ratio which shows total value, payback period focuses on time to breakeven. A shorter payback means faster reinvestment in growth. According to Bessemer Venture Partners, the benchmark is 12 months or less for healthy SaaS companies.
+Unlike NRR, GRR cannot exceed 100% and reveals the true impact of churn without expansion revenue masking problems. A healthy SaaS business should retain 85-95% of recurring revenue year-over-year, with best-in-class achieving 95-100%.
+Unlike NRR, expansion can't hide retention problems in GRR
+Unlike channel-specific ROAS, MER gives you a holistic, big-picture view of your entire marketing performance across all channels combined.
+Unlike eCommerce LTV, SaaS LTV uses monthly churn rate to estimate customer lifespan. According to Churnkey and industry benchmarks, a 3:1 LTV:CAC ratio is the gold standard for sustainable SaaS growth.
+Unlike paid ads that stop when you stop paying, SEO provides compounding returns over time with ongoing optimization.
+Unlike revenue-focused metrics, this simplified eCommerce LTV formula factors in gross margin to show actual profit contribution. According to Shopify, a good LTV:CAC ratio is 3:1, meaning each customer should generate 3x what you spent to acquire them.
+Unlike traditional CAC which blends costs of acquiring both new and returning customers, nCAC isolates the true cost of expanding your customer base. This distinction is critical for understanding real growth versus revenue from existing customers.
+Upsell higher tiers, add seats, cross-sell new products, usage-based pricing
+Upsell premium plans, add-ons, and usage-based pricing tiers
+Upsell to higher tiers, add premium features, usage-based pricing
+Upsells & Cross-sells
+Use AI Scoring
+Use Lead Magnets
+Use Multi-Touch Attribution
+Use action-oriented, contrasting buttons
+Use bundles, upsells, and free shipping thresholds
+VCs closely monitor this alongside LTV:CAC for funding decisions
+VCs use GRR to spot churn issues in high-growth companies
+Visitor → Lead
+Warning. High churn risk before payback; reduce CAC or increase ARPU
+What's Included in Total Marketing Spend?
+When High Ratios May Be a Problem
+When a business tests a new advertising source for a campaign, it may compare the ROAS at different stages of the campaign with other advertising sources to gauge their performance and determine which should get renewed.
+When compared to LTV, reveals if customers are worth acquiring
+When did they last purchase?
+Where n is the number of months between measurements.
+While a high LTV:CAC ratio (above 5:1) sounds great, it can indicate under-investment in growth. If your ratio is very high, you may be leaving market share on the table by not spending enough on customer acquisition.
+Why track both: A strong upsell motion can mask underlying retention problems. If NRR is 110% but GRR is 70%, you have a serious churn problem that expansion is covering up.
+Why track both: If NRR is 110% but GRR is 75%, expansion is masking a serious churn problem. Strong companies have high GRR AND high NRR.
+With CPCs rising 15%+ on Meta and Google, higher AOV helps maintain ROAS
+Year 2-3
+Yearly
+You're losing money
+YouTube
+eCommerce
+eCommerce / D2C <3 months ideal
+includes ALL revenue regardless of attribution and ALL marketing costs
+is channel-specific and attribution-dependent (e.g., Facebook ROAS, Google ROAS)
+nCAC = Total Ad Spend / Number of NEW Customers Only
+nCAC vs CAC: The Key Difference
+nCAC, or New Customer Acquisition Cost, measures the specific cost to acquire first-time customers only , excluding repeat buyers from the calculation.
+~$12.84 CPM (Q4 peak)
+~$9.46 CPM (premium visual placements)
+• Display Advertising
+• Email Marketing
+• Google Ads
+• LinkedIn Ads
+• Meta Ads
+• Referrals
+• SEO & Content
+• Social Media (organic)

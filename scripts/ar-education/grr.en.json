@@ -1,0 +1,128 @@
+{
+  "sections": [
+    {
+      "heading": "What is Gross Revenue Retention (GRR)?",
+      "paragraphs": [
+        "Gross Revenue Retention (GRR) measures the percentage of recurring revenue retained from existing customers , accounting only for churn and contractions, not expansion.",
+        "Unlike NRR, GRR cannot exceed 100% and reveals the true impact of churn without expansion revenue masking problems. A healthy SaaS business should retain 85-95% of recurring revenue year-over-year, with best-in-class achieving 95-100%."
+      ]
+    },
+    {
+      "heading": "Why is GRR Important?",
+      "bullets": [
+        {
+          "label": "Reveals True Churn Impact",
+          "text": "Unlike NRR, expansion can't hide retention problems in GRR"
+        },
+        {
+          "label": "Customer Stickiness",
+          "text": "High GRR indicates customers see lasting value and renew contracts"
+        },
+        {
+          "label": "Investor Focus",
+          "text": "VCs use GRR to spot churn issues in high-growth companies"
+        },
+        {
+          "label": "Long-term Health",
+          "text": "Predicts sustainable growth through customer loyalty"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate GRR: The Formula",
+      "paragraphs": [
+        "The GRR formula is:",
+        "For example, with $100 starting MRR , $5,000 contraction , and $5,000 churn :"
+      ],
+      "formula": "GRR = (Starting MRR - Contraction - Churn) / Starting MRR × 100"
+    },
+    {
+      "heading": "GRR Benchmarks (2025)",
+      "paragraphs": [
+        "Industry benchmarks from SaaS Capital and Ordway Labs:",
+        "Source: SaaS Capital 2025 Retention Benchmarks, Ordway Labs"
+      ],
+      "bullets": [
+        {
+          "label": "Below 80%",
+          "text": "Critical. Severe churn problem affecting growth potential",
+          "tier": "loss"
+        },
+        {
+          "label": "80-85%",
+          "text": "Below average. Customer satisfaction issues likely",
+          "tier": "breakeven"
+        },
+        {
+          "label": "85-95%",
+          "text": "Good. Healthy retention for most SaaS companies",
+          "tier": "good"
+        },
+        {
+          "label": "95-100%",
+          "text": "Excellent. Best-in-class customer stickiness",
+          "tier": "excellent"
+        }
+      ],
+      "note": "Source: SaaS Capital 2025 Retention Benchmarks, Ordway Labs"
+    },
+    {
+      "heading": "GRR by Average Contract Value (ACV)",
+      "paragraphs": [
+        "Higher ACV correlates with higher GRR due to stickier enterprise deals."
+      ],
+      "bullets": [
+        {
+          "text": "<$12K ACV (SMB) Median: 90%"
+        },
+        {
+          "text": "$12K-$50K ACV Median: 92%"
+        },
+        {
+          "text": "$50K-$100K ACV Median: 92%"
+        },
+        {
+          "text": "$100K-$250K ACV Median: 95%"
+        },
+        {
+          "text": ">$250K ACV (Enterprise) Median: 95%"
+        }
+      ]
+    },
+    {
+      "heading": "GRR vs NRR: Key Differences",
+      "paragraphs": [
+        "Why track both: If NRR is 110% but GRR is 75%, expansion is masking a serious churn problem. Strong companies have high GRR AND high NRR."
+      ],
+      "bullets": [
+        {
+          "text": "GRR Excludes expansion, max 100%, shows true retention"
+        },
+        {
+          "text": "NRR Includes expansion, can exceed 100%, shows growth potential"
+        }
+      ]
+    },
+    {
+      "heading": "How to Improve GRR",
+      "bullets": [
+        {
+          "label": "Improve Onboarding",
+          "text": "Get customers to value faster to prevent early churn"
+        },
+        {
+          "label": "Invest in Customer Success",
+          "text": "1-2% of revenue in CS drives measurable retention gains"
+        },
+        {
+          "label": "Monitor Usage Drops",
+          "text": "Proactively intervene before customers downgrade"
+        },
+        {
+          "label": "Fix Cancel Flow",
+          "text": "Implement pause walls, trial extensions, and win-back offers"
+        }
+      ]
+    }
+  ]
+}

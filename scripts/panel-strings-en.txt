@@ -1,0 +1,117 @@
+AOV (Average Order Value)
+Above average CAC. Typical for B2B and SaaS industries.
+Above average CPC. May be a competitive industry.
+Above average CPM. May be premium inventory.
+Above average nCAC. Typical for B2B, SaaS, or competitive niches.
+Average CPC range for most platforms.
+Average CPM range for most platforms.
+Average customer lifetime
+Based on {{margin}}% profit margin and {{roas}}% ROAS
+Below Break-even
+Below average CTR. Room for optimization.
+Below average CVR. Room for improvement.
+Break-even to moderate return.
+CAC (Customer Acquisition Cost)
+CAC Payback Period
+CAC Payback Period Calculator
+CPM (Cost Per 1,000 Impressions)
+CTR (Click-Through Rate)
+CVR (Conversion Rate)
+Calculate Break-even ROAS
+Cart Abandonment Rate
+Cart Abandonment Rate Calculator
+Checkout Abandonment Rate
+Checkout Abandonment Rate Calculator
+Compound Monthly Growth Rate
+Cost Per Lead (CPL)
+Cost per single impression
+Ecommerce LTV (Customer Lifetime Value)
+Ending MRR (from existing customers)
+Enter number of carts created
+Enter number of checkouts initiated
+Enter number of completed purchases
+Enter number of leads
+Enter number of repeat customers
+Enter to calculate ROI projection
+Enter total number of customers
+Enter total spend
+Enter your current ROAS to see if you're profitable
+Excellent AOV. High-value products or effective upselling!
+Excellent CAC. Very efficient customer acquisition!
+Excellent CPC. Very cost-efficient clicks!
+Excellent CPM. Very cost-efficient impressions!
+Excellent CTR. Highly engaging ads!
+Excellent CVR. Top-performing conversion rate!
+Excellent growth! Typical for high-performing startups.
+Excellent nCAC. Efficient new customer acquisition!
+Excellent performance!
+Exceptional compound growth! Strong momentum.
+First-purchase profit per customer
+Good CTR. Your ads are performing well.
+Good CVR. Performing well for most industries.
+Good performance!
+Gross Revenue Retention (GRR)
+Gross Revenue Retention (GRR) Calculator
+Healthy growth rate for established businesses.
+High CAC. Ensure your LTV justifies this acquisition cost.
+High CPC. Consider improving ad quality or adjusting targeting.
+High CPM. Consider optimizing targeting or creative.
+High nCAC. Ensure LTV justifies this cost or optimize targeting.
+LTV (Customer Lifetime Value)
+LTV:CAC Ratio
+LTV:CAC Ratio Calculator
+Lead-to-Customer Rate
+Lead-to-Customer Rate Calculator
+Low AOV. Consider bundles, upsells, or free shipping thresholds.
+Low CTR. Consider improving ad copy, creative, or targeting.
+Low CVR. Significant optimization needed on your funnel.
+Low compound growth. Typical for mature, stable businesses.
+MER (Percentage)
+MER (Ratio)
+Marketing Efficiency Ratio (MER)
+Marketing spend as % of revenue
+MoM Growth Calculator
+MoM Growth Rate
+Moderate AOV. Typical for apparel, beauty, or food industries.
+Month
+Month {{month}}
+Monthly gross profit per customer
+Negative CMGR indicates overall decline over the period.
+Negative first-purchase profit is acceptable if customer LTV exceeds nCAC over time.
+Negative growth indicates decline. Analyze root causes immediately.
+Net Revenue Retention (NRR)
+Net Revenue Retention (NRR) Calculator
+New Revenue
+New Sales
+Note: Count months between start and end (Jan to Dec = 11 months)
+Profitability Status
+Profitable on first purchase. Strong acquisition efficiency!
+Profitable!
+Projected ROI:
+ROAS
+ROAS vs ROI: ROAS measures revenue per ad dollar, while ROI accounts for profit margins and other costs.
+ROI
+Reasonable CAC. Competitive for most industries.
+Reasonable nCAC. Compare against your AOV and LTV.
+Repeat Purchase Rate
+Repeat Purchase Rate Calculator
+Required ad revenue
+Retained MRR
+SaaS LTV (Customer Lifetime Value)
+SaaS LTV (Subscription Lifetime Value)
+Slow growth. Consider strategies to accelerate momentum.
+Solid compound growth rate for growing businesses.
+Strong AOV. Above global average of $145.
+Total 12-Month Revenue:
+Total LTV Revenue:
+Total MRR lost (contraction + churn)
+Total clicks received
+Traffic
+Typical SEO growth: 5-15% MoM for well-optimized sites
+You need {{amount}} in revenue to achieve {{target}}% ROAS
+You're losing money on this campaign.
+nCAC (New Customer Acquisition Cost)
+⚠️ High CPL. Ensure lead quality justifies the cost.
+✅ Good CPL. Competitive for most industries.
+📊 Above average CPL. Typical for B2B/SaaS sectors.
+🚀 Excellent CPL! Well below industry average.

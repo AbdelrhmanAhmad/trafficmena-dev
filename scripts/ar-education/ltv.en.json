@@ -1,0 +1,104 @@
+{
+  "sections": [
+    {
+      "heading": "What is Ecommerce LTV?: Customer Lifetime Value",
+      "paragraphs": [
+        "LTV (or CLV), Customer Lifetime Value, measures the total profit a customer generates over their entire relationship with your business .",
+        "Unlike revenue-focused metrics, this simplified eCommerce LTV formula factors in gross margin to show actual profit contribution. According to Shopify, a good LTV:CAC ratio is 3:1, meaning each customer should generate 3x what you spent to acquire them."
+      ]
+    },
+    {
+      "heading": "Why is LTV Important?",
+      "bullets": [
+        {
+          "label": "Sets Acquisition Budgets",
+          "text": "Knowing LTV tells you how much you can profitably spend to acquire customers"
+        },
+        {
+          "label": "Identifies Valuable Segments",
+          "text": "Find which customer groups generate the most long-term profit"
+        },
+        {
+          "label": "Drives Retention Focus",
+          "text": "Retained customers buy more often and spend more than new ones"
+        },
+        {
+          "label": "Informs Pricing Strategy",
+          "text": "Understand perceived value to optimize product pricing"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate Ecommerce LTV: The Formula",
+      "paragraphs": [
+        "The simplified eCommerce LTV formula is:",
+        "For example, if your AOV is $100 , customers make 6 purchases over their lifetime, with a 40% gross margin , your LTV is $100 × 6 × 0.40 = $100",
+        "Each customer generates $100 in gross profit over their lifetime."
+      ],
+      "formula": "LTV = AOV × Purchases per Customer × Gross Margin %"
+    },
+    {
+      "heading": "LTV:CAC Ratio Benchmarks",
+      "paragraphs": [
+        "The LTV:CAC ratio shows if your customer acquisition is profitable:",
+        "Source: TrueProfit, Shopify (2025). A ratio above 5:1 may indicate under-investment in growth."
+      ],
+      "bullets": [
+        {
+          "text": "Below 2:1: Unprofitable. Spending too much to acquire customers"
+        },
+        {
+          "text": "2:1 to 3:1: Break-even territory. Optimize LTV or reduce CAC"
+        },
+        {
+          "text": "3:1 to 4:1: Ideal balance. Profitable and sustainable growth"
+        },
+        {
+          "text": "Above 5:1: Opportunity to scale. Consider investing more in marketing"
+        }
+      ],
+      "note": "Source: TrueProfit, Shopify (2025). A ratio above 5:1 may indicate under-investment in growth."
+    },
+    {
+      "heading": "How to Increase LTV",
+      "bullets": [
+        {
+          "label": "Increase AOV",
+          "text": "Use bundles, upsells, and free shipping thresholds"
+        },
+        {
+          "label": "Boost Purchase Frequency",
+          "text": "Email marketing, subscriptions, and loyalty programs"
+        },
+        {
+          "label": "Improve Retention",
+          "text": "Better onboarding, customer service, and personalization"
+        },
+        {
+          "label": "Optimize Margins",
+          "text": "Reduce COGS, negotiate supplier deals, or adjust pricing"
+        }
+      ]
+    },
+    {
+      "heading": "RFM Analysis for Segmentation",
+      "paragraphs": [
+        "Shopify recommends using RFM analysis (Recency, Frequency, Monetary) to segment customers by value. This helps identify your most valuable segments:"
+      ],
+      "bullets": [
+        {
+          "label": "Recency",
+          "text": "When did they last purchase?"
+        },
+        {
+          "label": "Frequency",
+          "text": "How often do they buy?"
+        },
+        {
+          "label": "Monetary",
+          "text": "How much have they spent?"
+        }
+      ]
+    }
+  ]
+}

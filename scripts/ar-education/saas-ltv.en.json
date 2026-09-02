@@ -1,0 +1,133 @@
+{
+  "sections": [
+    {
+      "heading": "What is SaaS LTV?: Subscription Lifetime Value",
+      "paragraphs": [
+        "SaaS LTV (Customer Lifetime Value) measures the total gross profit a subscription customer generates over their entire relationship with your business .",
+        "Unlike eCommerce LTV, SaaS LTV uses monthly churn rate to estimate customer lifespan. According to Churnkey and industry benchmarks, a 3:1 LTV:CAC ratio is the gold standard for sustainable SaaS growth."
+      ]
+    },
+    {
+      "heading": "Why is SaaS LTV Important?",
+      "bullets": [
+        {
+          "label": "Unit Economics",
+          "text": "Determine if acquiring customers is profitable at the individual level"
+        },
+        {
+          "label": "CAC Budget",
+          "text": "Know how much you can profitably spend to acquire new subscribers"
+        },
+        {
+          "label": "Investor Metric",
+          "text": "LTV:CAC ratio is one of the most scrutinized metrics by VCs and growth equity investors"
+        },
+        {
+          "label": "Retention Focus",
+          "text": "Shows the direct impact of reducing churn on customer value"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate SaaS LTV: The Formula",
+      "paragraphs": [
+        "The churn-based SaaS LTV formula is:",
+        "For example, if your ARPU is $100/month , with a 80% gross margin and 5% monthly churn , your LTV is $100 × 0.80 × 20 = $100",
+        "The customer lifetime (1 / churn rate) in this case is 20 months."
+      ],
+      "formula": "LTV = ARPU × Gross Margin % × (1 / Monthly Churn Rate)"
+    },
+    {
+      "heading": "Monthly Churn Rate Benchmarks",
+      "paragraphs": [
+        "Based on data from Lenny Rachitsky and Churnkey (2024-2025):",
+        "Source: Lenny's Newsletter, Churnkey (2024-2025)"
+      ],
+      "bullets": [
+        {
+          "text": "B2B Enterprise (>1,000 employees): <0.5% monthly / <6% annual is GREAT"
+        },
+        {
+          "label": "B2B SMB + Mid-Market",
+          "text": "<1.5% monthly / <17% annual is GREAT",
+          "tier": "good"
+        },
+        {
+          "label": "B2C SaaS",
+          "text": "<2% monthly / <22% annual is GREAT",
+          "tier": "breakeven"
+        },
+        {
+          "label": "High churn warning",
+          "text": ">5% monthly means losing ~45% of customers annually",
+          "tier": "loss"
+        }
+      ],
+      "note": "Source: Lenny's Newsletter, Churnkey (2024-2025)"
+    },
+    {
+      "heading": "LTV:CAC Ratio Benchmarks",
+      "paragraphs": [
+        "The LTV:CAC ratio measures customer acquisition profitability:",
+        "Source: Growth Equity Interview Guide, industry standard benchmarks"
+      ],
+      "bullets": [
+        {
+          "text": "Below 2:1: Unprofitable. Customer value doesn't cover acquisition cost"
+        },
+        {
+          "text": "2:1 to 3:1: Break-even. Optimize retention or reduce CAC"
+        },
+        {
+          "text": "3:1 to 5:1: Healthy. The industry gold standard for sustainable growth"
+        },
+        {
+          "text": "Above 5:1: Excellent. May indicate room to invest more in growth"
+        }
+      ],
+      "note": "Source: Growth Equity Interview Guide, industry standard benchmarks"
+    },
+    {
+      "heading": "How to Increase SaaS LTV",
+      "bullets": [
+        {
+          "label": "Reduce Churn",
+          "text": "Improve onboarding, customer success, and cancel flow with trial extensions and pause walls"
+        },
+        {
+          "label": "Increase ARPU",
+          "text": "Upsell premium plans, add-ons, and usage-based pricing tiers"
+        },
+        {
+          "label": "Target Enterprise",
+          "text": "B2B enterprise clients have 10x+ longer lifetimes and higher ARPU"
+        },
+        {
+          "label": "Fix Involuntary Churn",
+          "text": "Implement precision retries, dunning emails, and failed payment recovery"
+        }
+      ]
+    },
+    {
+      "heading": "Churn Impact on LTV",
+      "paragraphs": [
+        "Small reductions in churn create exponential LTV gains:",
+        "A 1% reduction in churn can increase LTV by 25-50% depending on your starting point."
+      ],
+      "bullets": [
+        {
+          "text": "5% monthly churn → 20-month lifetime"
+        },
+        {
+          "text": "4% monthly churn → 25-month lifetime (+25%)"
+        },
+        {
+          "text": "3% monthly churn → 33-month lifetime (+65%)"
+        },
+        {
+          "text": "2% monthly churn → 50-month lifetime (+150%)"
+        }
+      ]
+    }
+  ]
+}

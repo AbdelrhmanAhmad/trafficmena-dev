@@ -1,0 +1,49 @@
+{
+  "sections": [
+    {
+      "heading": "What is ROAS?: ROAS meaning",
+      "paragraphs": [
+        "Return on ad spend or ROAS is the amount of revenue a company generates for every dollar spent on an advertising source .",
+        "When a business tests a new advertising source for a campaign, it may compare the ROAS at different stages of the campaign with other advertising sources to gauge their performance and determine which should get renewed."
+      ]
+    },
+    {
+      "heading": "How to calculate ROAS: ROAS calculation formula",
+      "paragraphs": [
+        "The ROAS formula is:",
+        "That means that if you spent $100 on Facebook ads in one month and your revenue for that month is $100 , your ROAS is ($100/$100 ) × 100 = 3 × 100 = 300% per spent on advertising.",
+        "But if you made $100 in revenue in the same month, your ROAS is ($100/ $100) × 100 = 0.9 × 100 = 90% .",
+        "90% may look acceptable at face value, but don't be fooled by anyone throwing such ROAS numbers. Anything less than 100% is a loss when evaluating ROAS. The ROAS calculator will help you make sure you don't interpret your ROAS results wrongly or confusing ."
+      ],
+      "formula": "ROAS = (Revenue from advertising / Cost of advertising) × 100"
+    },
+    {
+      "heading": "What is a good ROAS?",
+      "paragraphs": [
+        "A good ROAS varies by industry, but generally:"
+      ],
+      "bullets": [
+        {
+          "label": "Below 100%",
+          "text": "You're losing money",
+          "tier": "loss"
+        },
+        {
+          "label": "100-300%",
+          "text": "Break-even to moderate",
+          "tier": "breakeven"
+        },
+        {
+          "label": "400-800%",
+          "text": "Good performance",
+          "tier": "good"
+        },
+        {
+          "label": "800%+",
+          "text": "Excellent performance",
+          "tier": "excellent"
+        }
+      ]
+    }
+  ]
+}

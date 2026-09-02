@@ -1,0 +1,109 @@
+{
+  "sections": [
+    {
+      "heading": "What is Checkout Abandonment Rate?",
+      "paragraphs": [
+        "Checkout Abandonment Rate measures the percentage of shoppers who start the checkout process but leave before completing their purchase. Unlike cart abandonment (which tracks all created carts), checkout abandonment specifically focuses on users who demonstrated clear purchase intent by initiating checkout. The global average checkout abandonment rate is approximately 75.19%."
+      ]
+    },
+    {
+      "heading": "Checkout vs Cart Abandonment",
+      "paragraphs": [
+        "Measures shoppers who add items to cart but never proceed to checkout. Includes window shoppers and price comparers.",
+        "Measures shoppers who start checkout but don't complete it. These users showed clear purchase intent, making this more actionable for optimization."
+      ]
+    },
+    {
+      "heading": "How to Calculate Checkout Abandonment Rate",
+      "paragraphs": [
+        "Example: If 100 customers begin checkout but only 30 complete their purchase:"
+      ],
+      "formula": "Rate = ((Checkouts Started - Checkouts Completed) / Checkouts Started) × 100"
+    },
+    {
+      "heading": "What is a Good Checkout Abandonment Rate?",
+      "paragraphs": [
+        "According to AgencyAnalytics, benchmark rates for checkout abandonment are:"
+      ]
+    },
+    {
+      "heading": "Checkout Abandonment by Industry",
+      "paragraphs": [
+        "Different industries experience varying checkout abandonment rates:",
+        "Sources: OpenSend, Hotjar, VWO (2024 benchmarks)"
+      ],
+      "table": {
+        "headers": [
+          "Industry",
+          "Abandonment Rate"
+        ],
+        "rows": [
+          [
+            "Finance",
+            "83.6%"
+          ],
+          [
+            "Travel",
+            "81.7%"
+          ],
+          [
+            "Fashion",
+            "74.8%"
+          ],
+          [
+            "Retail (General)",
+            "71.2%"
+          ],
+          [
+            "Health & Beauty",
+            "68.3%"
+          ]
+        ]
+      }
+    },
+    {
+      "heading": "Top Reasons for Checkout Abandonment"
+    },
+    {
+      "heading": "Checkout Abandonment by Device",
+      "paragraphs": [
+        "85.6%",
+        "Mobile",
+        "68.5%",
+        "Tablet",
+        "69.0%",
+        "Desktop",
+        "Mobile checkout abandonment can be 17% higher than desktop (Source: Hotjar)"
+      ]
+    },
+    {
+      "heading": "How to Reduce Checkout Abandonment",
+      "bullets": [
+        {
+          "label": "Streamline Checkout",
+          "text": "1. Keep to 12-14 form elements max, or 7-8 actual fields. Each extra step increases abandonment."
+        },
+        {
+          "label": "Show Costs Early",
+          "text": "2. Display shipping, taxes, and fees before checkout. Surprises cause 48% of abandonments."
+        },
+        {
+          "label": "Offer Guest Checkout",
+          "text": "3. Requiring account creation increases abandonment by 35%."
+        },
+        {
+          "label": "Add Progress Indicators",
+          "text": "4. Show users where they are in the checkout process."
+        },
+        {
+          "label": "Optimize for Mobile",
+          "text": "5. Mobile abandonment is 17% higher. Prioritize mobile-first design."
+        },
+        {
+          "label": "Display Trust Signals",
+          "text": "6. Security badges and payment icons reduce trust concerns."
+        }
+      ]
+    }
+  ]
+}

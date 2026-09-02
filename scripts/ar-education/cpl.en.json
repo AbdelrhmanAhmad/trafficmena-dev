@@ -1,0 +1,151 @@
+{
+  "sections": [
+    {
+      "heading": "What is CPL (Cost Per Lead)?",
+      "paragraphs": [
+        "Cost Per Lead (CPL) measures how much money you spend on marketing or advertising to acquire a single lead. A lead is a potential customer who has shown interest in your product or service by providing contact information or taking a qualifying action. CPL is distinct from CAC (Customer Acquisition Cost), which measures the cost to acquire an actual paying customer."
+      ]
+    },
+    {
+      "heading": "Why is CPL Important?",
+      "bullets": [
+        {
+          "label": "Budget Allocation",
+          "text": "Helps determine which channels deliver the most cost-effective leads"
+        },
+        {
+          "label": "Campaign Comparison",
+          "text": "Enables direct comparison of different marketing campaigns"
+        },
+        {
+          "label": "Forecasting",
+          "text": "Predicts lead volume based on available marketing budget"
+        },
+        {
+          "label": "Marketing Efficiency",
+          "text": "Measures how efficiently your marketing spend converts to pipeline"
+        },
+        {
+          "label": "ROI Calculation",
+          "text": "Essential input for calculating overall marketing ROI when combined with conversion rates"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate CPL",
+      "paragraphs": [
+        "Example: If you spend $5,000 on a Google Ads campaign and generate 50 leads:"
+      ],
+      "formula": "CPL = Total Marketing Spend / Number of Leads Generated"
+    },
+    {
+      "heading": "Average CPL by Industry (2024-2025)",
+      "paragraphs": [
+        "According to First Page Sage research, average CPL varies significantly by industry and channel:"
+      ],
+      "table": {
+        "headers": [
+          "Industry",
+          "Paid CPL",
+          "Organic CPL",
+          "Blended"
+        ],
+        "rows": [
+          [
+            "eCommerce",
+            "$98",
+            "$83",
+            "$91"
+          ],
+          [
+            "B2B SaaS",
+            "$310",
+            "$164",
+            "$237"
+          ],
+          [
+            "Healthcare",
+            "$401",
+            "$320",
+            "$361"
+          ],
+          [
+            "Financial Services",
+            "$761",
+            "$555",
+            "$653"
+          ],
+          [
+            "Legal Services",
+            "$784",
+            "$516",
+            "$649"
+          ],
+          [
+            "Higher Education",
+            "$1,143",
+            "$705",
+            "$982"
+          ]
+        ]
+      }
+    },
+    {
+      "heading": "Organic vs Paid CPL",
+      "paragraphs": [
+        "Organic marketing channels (SEO, content marketing, social media) typically deliver 30-50% lower CPL than paid channels, though they require longer timeframes to generate results."
+      ],
+      "bullets": [
+        {
+          "text": "• SEO & Content"
+        },
+        {
+          "text": "• Email Marketing"
+        },
+        {
+          "text": "• Social Media (organic)"
+        },
+        {
+          "text": "• Referrals"
+        },
+        {
+          "text": "• Google Ads"
+        },
+        {
+          "text": "• Meta Ads"
+        },
+        {
+          "text": "• LinkedIn Ads"
+        },
+        {
+          "text": "• Display Advertising"
+        }
+      ]
+    },
+    {
+      "heading": "How to Lower Your CPL",
+      "bullets": [
+        {
+          "label": "Invest in SEO",
+          "text": "1. Organic leads cost 30-50% less than paid leads on average"
+        },
+        {
+          "label": "Improve Landing Pages",
+          "text": "2. Higher conversion rates mean more leads from the same spend"
+        },
+        {
+          "label": "Refine Audience Targeting",
+          "text": "3. Better targeting reduces wasted ad spend"
+        },
+        {
+          "label": "A/B Test Creatives",
+          "text": "4. Continuously optimize ad copy and visuals"
+        },
+        {
+          "label": "Use Lead Magnets",
+          "text": "5. Offer valuable content to increase conversion rates"
+        }
+      ]
+    }
+  ]
+}

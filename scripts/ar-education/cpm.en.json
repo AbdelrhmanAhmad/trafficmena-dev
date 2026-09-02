@@ -1,0 +1,93 @@
+{
+  "sections": [
+    {
+      "heading": "What is CPM?: Cost Per Mille",
+      "paragraphs": [
+        "CPM, or Cost Per Mille (mille is Latin for \"thousand\"), is a pricing model in digital advertising where advertisers pay a fixed price for every 1,000 impressions of their ad .",
+        "An impression is counted when an ad loads on a page or app and is viewed by the user. CPM is the most common pricing model in programmatic advertising and is particularly useful when the goal is building brand awareness rather than driving direct conversions."
+      ]
+    },
+    {
+      "heading": "Why is CPM Important?",
+      "bullets": [
+        {
+          "label": "Brand Awareness",
+          "text": "CPM prioritizes exposure over clicks, making it ideal for getting your brand noticed"
+        },
+        {
+          "label": "Clear Pricing",
+          "text": "Fixed cost for a set number of impressions makes budgeting predictable"
+        },
+        {
+          "label": "Easy Comparison",
+          "text": "Compare channels and media sources based on cost efficiency"
+        },
+        {
+          "label": "Scalability",
+          "text": "Easy to scale up or down based on budget"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate CPM: The Formula",
+      "paragraphs": [
+        "The CPM formula is:",
+        "For example, if you paid $100 to serve your ad and received 750,000 impressions , your CPM is ($100 / 750,000) x 1,000 = $2.00",
+        "This means you paid $2.00 for every 1,000 ad impressions ."
+      ],
+      "formula": "CPM = (Total Ad Spend / Impressions) x 1,000"
+    },
+    {
+      "heading": "CPM vs CPC vs CPA",
+      "bullets": [
+        {
+          "label": "CPM (Cost Per Mille)",
+          "text": "Pay for impressions. Best for brand awareness campaigns"
+        },
+        {
+          "label": "CPC (Cost Per Click)",
+          "text": "Pay only when users click. Best for driving traffic and engagement"
+        },
+        {
+          "label": "CPA (Cost Per Action)",
+          "text": "Pay only when users take a specific action (purchase, signup). Best for conversions"
+        }
+      ]
+    },
+    {
+      "heading": "Average CPM Rates by Platform (2025)",
+      "paragraphs": [
+        "CPM rates vary significantly by platform, audience, and seasonality:",
+        "Note: CPM rates spike significantly in Q4 due to holiday advertising competition."
+      ],
+      "bullets": [
+        {
+          "label": "Meta (Facebook)",
+          "text": "~$6.59 CPM",
+          "tier": "good"
+        },
+        {
+          "label": "Instagram",
+          "text": "~$9.46 CPM (premium visual placements)",
+          "tier": "breakeven"
+        },
+        {
+          "label": "TikTok",
+          "text": "~$6-8 CPM",
+          "tier": "good"
+        },
+        {
+          "label": "YouTube",
+          "text": "~$3-6 CPM",
+          "tier": "excellent"
+        },
+        {
+          "label": "Snapchat",
+          "text": "~$12.84 CPM (Q4 peak)",
+          "tier": "loss"
+        }
+      ],
+      "note": "Note: CPM rates spike significantly in Q4 due to holiday advertising competition."
+    }
+  ]
+}

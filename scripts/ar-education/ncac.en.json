@@ -1,0 +1,94 @@
+{
+  "sections": [
+    {
+      "heading": "What is nCAC?: New Customer Acquisition Cost",
+      "paragraphs": [
+        "nCAC, or New Customer Acquisition Cost, measures the specific cost to acquire first-time customers only , excluding repeat buyers from the calculation.",
+        "Unlike traditional CAC which blends costs of acquiring both new and returning customers, nCAC isolates the true cost of expanding your customer base. This distinction is critical for understanding real growth versus revenue from existing customers."
+      ]
+    },
+    {
+      "heading": "nCAC vs CAC: The Key Difference",
+      "paragraphs": [
+        "Standard CAC includes all customers, both new and returning. This can significantly understate your true acquisition costs:",
+        "In this example, 60% of conversions were repeat buyers. The true cost to acquire someone new is 2.5x higher than the blended CAC suggests."
+      ],
+      "formula": "$10,000"
+    },
+    {
+      "heading": "Why is nCAC Important?",
+      "bullets": [
+        {
+          "label": "Measures True Growth",
+          "text": "Shows the real cost of expanding your customer base, not just generating repeat sales"
+        },
+        {
+          "label": "Better Budget Allocation",
+          "text": "Ensures marketing spend drives new business rather than re-acquiring existing customers"
+        },
+        {
+          "label": "Accurate Benchmarking",
+          "text": "Provides apples-to-apples comparison across campaigns and competitors"
+        },
+        {
+          "label": "Investor Confidence",
+          "text": "Demonstrates scalability and market expansion potential to stakeholders"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate nCAC: The Formula",
+      "paragraphs": [
+        "The nCAC formula is:",
+        "The key difference from CAC is the denominator: you must segment your customer data to include only first-time buyers, excluding repeat purchasers entirely.",
+        "For example, if you spent $10,000 on ads and acquired 40 new customers (out of 100 total conversions), your nCAC is $10,000 / 40 = $100"
+      ],
+      "formula": "nCAC = Total Ad Spend / Number of NEW Customers Only"
+    },
+    {
+      "heading": "Optimizing nCAC to LTV",
+      "paragraphs": [
+        "The true power of nCAC comes when paired with Customer Lifetime Value (LTV). CMOs should optimize the nCAC-to-LTV ratio for sustainable, profitable growth:"
+      ],
+      "bullets": [
+        {
+          "text": "LTV:nCAC below 2:1: Unprofitable. Re-evaluate acquisition strategy"
+        },
+        {
+          "text": "LTV:nCAC 2:1 to 3:1: Break-even territory. Optimize funnels"
+        },
+        {
+          "text": "LTV:nCAC 3:1 to 4:1: Healthy, scalable growth"
+        },
+        {
+          "text": "LTV:nCAC 4:1+: Excellent. Consider scaling spend"
+        }
+      ]
+    },
+    {
+      "heading": "How to Lower Your nCAC",
+      "paragraphs": [
+        "Source: Power Digital Marketing, Wicked Reports (2025)"
+      ],
+      "bullets": [
+        {
+          "label": "Sharpen Targeting",
+          "text": "Focus on audiences less likely to have purchased before using exclusion lists"
+        },
+        {
+          "label": "Diversify Channels",
+          "text": "Reduce over-reliance on single platforms vulnerable to algorithm shifts"
+        },
+        {
+          "label": "Boost Conversion Rates",
+          "text": "A/B test landing pages, creatives, and checkout to increase efficiency"
+        },
+        {
+          "label": "Use Multi-Touch Attribution",
+          "text": "Move beyond last-click to understand true drivers of new customers"
+        }
+      ],
+      "note": "Source: Power Digital Marketing, Wicked Reports (2025)"
+    }
+  ]
+}

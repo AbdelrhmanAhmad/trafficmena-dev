@@ -1,0 +1,133 @@
+{
+  "sections": [
+    {
+      "heading": "What is Cart Abandonment Rate?",
+      "paragraphs": [
+        "Cart Abandonment Rate measures the percentage of online shoppers who add items to their shopping cart but leave before completing the purchase. It's a critical ecommerce metric that reveals friction in your checkout process, pricing concerns, or trust issues. According to Baymard Institute, the average documented online cart abandonment rate is 70.22% based on 50 different studies."
+      ]
+    },
+    {
+      "heading": "Why is Cart Abandonment Rate Important?",
+      "bullets": [
+        {
+          "label": "Revenue Impact",
+          "text": "Ecommerce stores lose roughly $18 billion annually due to cart abandonment"
+        },
+        {
+          "label": "Checkout Optimization",
+          "text": "Identifies friction points in your purchase flow"
+        },
+        {
+          "label": "Customer Experience",
+          "text": "Reveals gaps in trust, pricing, or UX that drive customers away"
+        },
+        {
+          "label": "Marketing ROI",
+          "text": "High abandonment wastes acquisition spend. You're paying for traffic that doesn't convert"
+        },
+        {
+          "label": "Recovery Opportunities",
+          "text": "Cart recovery emails can recapture ~10% of lost revenue"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate Cart Abandonment Rate",
+      "paragraphs": [
+        "Example: If 1,000 shopping carts are created and only 300 complete checkout:"
+      ],
+      "formula": "Abandonment Rate = ((Carts Created - Carts Completed) / Carts Created) × 100"
+    },
+    {
+      "heading": "Cart Abandonment Rate by Industry (2024)",
+      "paragraphs": [
+        "Abandonment rates vary significantly by product type and price point:",
+        "Source: ClickPost, Baymard Institute (2024 benchmarks)"
+      ],
+      "table": {
+        "headers": [
+          "Industry",
+          "Abandonment Rate"
+        ],
+        "rows": [
+          [
+            "Luxury & Jewelry",
+            "82.84%"
+          ],
+          [
+            "Beauty & Personal Care",
+            "80.92%"
+          ],
+          [
+            "Home & Furniture",
+            "80.32%"
+          ],
+          [
+            "Fashion & Apparel",
+            "78.53%"
+          ],
+          [
+            "Multi-brand Retail",
+            "76.90%"
+          ],
+          [
+            "Food & Beverage",
+            "63.62%"
+          ],
+          [
+            "Consumer Goods",
+            "57.37%"
+          ],
+          [
+            "Pet Care & Veterinary",
+            "54.78%"
+          ]
+        ]
+      }
+    },
+    {
+      "heading": "Top Reasons Customers Abandon Carts"
+    },
+    {
+      "heading": "Abandonment by Device",
+      "paragraphs": [
+        "75.5%",
+        "Mobile",
+        "68.5%",
+        "Tablet",
+        "~67%",
+        "Desktop",
+        "Mobile users abandon more due to smaller screens and complex forms"
+      ]
+    },
+    {
+      "heading": "How to Reduce Cart Abandonment",
+      "bullets": [
+        {
+          "label": "Show All Costs Upfront",
+          "text": "1. Display shipping, taxes, and fees on product pages, not at checkout"
+        },
+        {
+          "label": "Enable Guest Checkout",
+          "text": "2. 26% abandon because of mandatory account creation"
+        },
+        {
+          "label": "Add Trust Badges",
+          "text": "3. Display security seals and payment icons prominently"
+        },
+        {
+          "label": "Simplify Checkout",
+          "text": "4. Keep it under 3 steps; use address auto-fill"
+        },
+        {
+          "label": "Send Recovery Emails",
+          "text": "5. Abandoned cart emails can recover ~10% of lost orders"
+        },
+        {
+          "label": "Offer Multiple Payment Options",
+          "text": "6. Include digital wallets, BNPL, and local methods"
+        }
+      ]
+    }
+  ]
+}

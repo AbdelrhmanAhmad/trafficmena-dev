@@ -1,0 +1,124 @@
+{
+  "sections": [
+    {
+      "heading": "What is AOV?: Average Order Value",
+      "paragraphs": [
+        "AOV, or Average Order Value, is a key eCommerce metric that measures the average amount spent per transaction on your website or store.",
+        "Instead of chasing new customers, many businesses focus on increasing AOV to maximize revenue from existing traffic. According to Shopify, the global AOV is approximately $145 across all industries."
+      ]
+    },
+    {
+      "heading": "Why is AOV Important?",
+      "bullets": [
+        {
+          "text": "Increases Revenue Without More Traffic: Higher AOV means more revenue per customer without additional acquisition costs"
+        },
+        {
+          "label": "Improves Profit Margins",
+          "text": "Shipping a $100 order costs the same as shipping a $140 order; the second is more profitable"
+        },
+        {
+          "label": "Offsets Rising Ad Costs",
+          "text": "With CPCs rising 15%+ on Meta and Google, higher AOV helps maintain ROAS"
+        },
+        {
+          "label": "Reveals Customer Behavior",
+          "text": "Low AOV may indicate pricing issues or missed upselling opportunities"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate AOV: The Formula",
+      "paragraphs": [
+        "The AOV formula is:",
+        "For example, if your store generated $100 in revenue from 100 orders , your AOV is $100 ÷ 100 = $100",
+        "This means on average, each customer spends $100 per order ."
+      ],
+      "formula": "AOV = Total Revenue ÷ Number of Orders"
+    },
+    {
+      "heading": "Average AOV by Industry (2025)",
+      "paragraphs": [
+        "AOV varies significantly by industry due to product price points and purchase behavior:",
+        "Source: Dynamic Yield, Shopify, Digital Web Solutions (2025). Global average AOV is ~$145 across all industries."
+      ],
+      "bullets": [
+        {
+          "label": "Luxury & Jewelry",
+          "text": "$300+ per order",
+          "tier": "excellent"
+        },
+        {
+          "label": "B2B eCommerce",
+          "text": "$400-$600+ (bulk/recurring)",
+          "tier": "excellent"
+        },
+        {
+          "label": "Electronics",
+          "text": "$200-$350",
+          "tier": "good"
+        },
+        {
+          "label": "Furniture & Home Decor",
+          "text": "$150-$250",
+          "tier": "good"
+        },
+        {
+          "label": "Apparel & Accessories",
+          "text": "$40-$170",
+          "tier": "breakeven"
+        },
+        {
+          "label": "Beauty & Personal Care",
+          "text": "$15-$90",
+          "tier": "breakeven"
+        },
+        {
+          "label": "Food & Beverage",
+          "text": "$25-$50",
+          "tier": "loss"
+        }
+      ],
+      "note": "Source: Dynamic Yield, Shopify, Digital Web Solutions (2025). Global average AOV is ~$145 across all industries."
+    },
+    {
+      "heading": "7 Ways to Increase AOV",
+      "bullets": [
+        {
+          "label": "Free Shipping Thresholds",
+          "text": "Set 30% above your current AOV (e.g., \"$50 for free shipping\")"
+        },
+        {
+          "label": "Product Bundles",
+          "text": "Offer \"complete the look\" or \"starter kit\" packages at a discount"
+        },
+        {
+          "label": "Upsells & Cross-sells",
+          "text": "Recommend complementary products during checkout"
+        },
+        {
+          "label": "Loyalty Programs",
+          "text": "Reward higher spending with points or exclusive perks"
+        },
+        {
+          "label": "AI Recommendations",
+          "text": "Personalized suggestions can increase AOV by 30%+"
+        },
+        {
+          "label": "Tiered Discounts",
+          "text": "\"Spend $100, get 10% off\" encourages larger carts"
+        },
+        {
+          "label": "Post-Purchase Upsells",
+          "text": "Offer add-ons immediately after checkout"
+        }
+      ]
+    },
+    {
+      "heading": "Pro Tip: Look Beyond the Mean",
+      "paragraphs": [
+        "Marketing experts recommend analyzing not just the mean (average), but also the mode (most common order value). A few high-value orders can skew your average, hiding that most customers spend much less. Focus on improving the modal order value for sustainable gains."
+      ]
+    }
+  ]
+}

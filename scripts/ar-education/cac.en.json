@@ -1,0 +1,127 @@
+{
+  "sections": [
+    {
+      "heading": "What is CAC?: Customer Acquisition Cost",
+      "paragraphs": [
+        "CAC, or Customer Acquisition Cost, is a business metric that measures the total cost of acquiring a new customer , including all marketing and sales expenses.",
+        "CAC is one of the most critical metrics for evaluating marketing efficiency and business sustainability. When combined with Customer Lifetime Value (LTV), it reveals whether your customer acquisition strategy is profitable."
+      ]
+    },
+    {
+      "heading": "Why is CAC Important?",
+      "bullets": [
+        {
+          "label": "Measures Marketing ROI",
+          "text": "Shows how efficiently you convert marketing spend into customers"
+        },
+        {
+          "label": "Informs Budget Decisions",
+          "text": "Helps allocate resources to the most cost-effective channels"
+        },
+        {
+          "label": "Determines Profitability",
+          "text": "When compared to LTV, reveals if customers are worth acquiring"
+        },
+        {
+          "label": "Benchmarks Performance",
+          "text": "Compare against industry standards to assess competitiveness"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate CAC: The Formula",
+      "paragraphs": [
+        "The CAC formula is:",
+        "For example, if you spent $10,000 on marketing and sales and acquired 100 new customers , your CAC is $10,000 ÷ 100 = $100",
+        "This means it costs you $100 to acquire each new customer ."
+      ],
+      "formula": "CAC = Total Sales & Marketing Spend ÷ Number of New Customers"
+    },
+    {
+      "heading": "What is a Good CAC?",
+      "paragraphs": [
+        "A \"good\" CAC depends on your industry and Customer Lifetime Value (LTV). The ideal LTV:CAC ratio is 3:1 or higher, meaning each customer should generate at least 3x what you spent to acquire them."
+      ],
+      "bullets": [
+        {
+          "text": "LTV:CAC below 1:1: Losing money on each customer"
+        },
+        {
+          "text": "LTV:CAC 1:1 to 2:1: Barely breaking even"
+        },
+        {
+          "text": "LTV:CAC 3:1: Healthy, sustainable business"
+        },
+        {
+          "text": "LTV:CAC 4:1+: Excellent efficiency"
+        }
+      ]
+    },
+    {
+      "heading": "Average CAC by Industry (2025)",
+      "paragraphs": [
+        "CAC varies dramatically across industries based on competition, sales cycle, and deal size:",
+        "Source: First Page Sage B2B CAC Benchmarks (2025). Organic channels typically have 40-60% lower CAC than paid channels."
+      ],
+      "bullets": [
+        {
+          "label": "eCommerce",
+          "text": "$70-$86 average",
+          "tier": "excellent"
+        },
+        {
+          "label": "B2B SaaS",
+          "text": "$239-$702 average",
+          "tier": "good"
+        },
+        {
+          "label": "B2B Companies",
+          "text": "$536 average",
+          "tier": "good"
+        },
+        {
+          "label": "Financial Services",
+          "text": "$784 average",
+          "tier": "breakeven"
+        },
+        {
+          "label": "Legal Services",
+          "text": "$749 average",
+          "tier": "breakeven"
+        },
+        {
+          "label": "Fintech SaaS",
+          "text": "$1,450 average",
+          "tier": "loss"
+        },
+        {
+          "label": "Education",
+          "text": "$1,143 average",
+          "tier": "loss"
+        }
+      ],
+      "note": "Source: First Page Sage B2B CAC Benchmarks (2025). Organic channels typically have 40-60% lower CAC than paid channels."
+    },
+    {
+      "heading": "How to Lower Your CAC",
+      "bullets": [
+        {
+          "label": "Invest in Organic Channels",
+          "text": "SEO and content marketing have 40-60% lower CAC than paid ads"
+        },
+        {
+          "label": "Optimize Conversion Funnels",
+          "text": "Improve landing pages and reduce friction in the buying process"
+        },
+        {
+          "label": "Implement Referral Programs",
+          "text": "Leverage word-of-mouth to acquire customers at lower cost"
+        },
+        {
+          "label": "Improve Targeting",
+          "text": "Focus on high-intent audiences to increase conversion rates"
+        }
+      ]
+    }
+  ]
+}

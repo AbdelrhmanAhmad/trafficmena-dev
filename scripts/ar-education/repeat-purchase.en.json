@@ -1,0 +1,128 @@
+{
+  "sections": [
+    {
+      "heading": "What is Repeat Purchase Rate?",
+      "paragraphs": [
+        "Repeat Purchase Rate (RPR), also known as Repeat Customer Rate, measures the percentage of customers who have made more than one purchase from your business. It's a direct indicator of customer loyalty, product satisfaction, and the overall health of your brand. A higher rate signals that your products and customer experience are meeting expectations."
+      ]
+    },
+    {
+      "heading": "Why is Repeat Purchase Rate Important?",
+      "bullets": [
+        {
+          "label": "Cost Efficiency",
+          "text": "Acquiring new customers costs 5-7x more than retaining existing ones"
+        },
+        {
+          "label": "Higher Profitability",
+          "text": "Repeat customers spend more per order and have higher lifetime value"
+        },
+        {
+          "label": "Brand Health",
+          "text": "A high RPR indicates strong customer satisfaction and brand loyalty"
+        },
+        {
+          "label": "Sustainable Growth",
+          "text": "Some brands barely break even on first sales. Profit comes from repeat purchases"
+        },
+        {
+          "label": "Predictable Revenue",
+          "text": "Repeat customers create more stable, predictable revenue streams"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate Repeat Purchase Rate",
+      "paragraphs": [
+        "Example: If you have 2,500 total customers and 625 have purchased more than once:"
+      ],
+      "formula": "RPR = (Repeat Customers / Total Customers) × 100"
+    },
+    {
+      "heading": "What is a Good Repeat Purchase Rate?",
+      "paragraphs": [
+        "The average repeat customer rate in ecommerce ranges from 15-30%, but varies widely by industry:"
+      ]
+    },
+    {
+      "heading": "Average RPR by Industry (2024-2025)",
+      "paragraphs": [
+        "Benchmarks vary significantly based on product type and purchase frequency:",
+        "Sources: MobiLoud, Bluecore, Shopify, Metrilo (2024-2025 benchmarks)"
+      ],
+      "table": {
+        "headers": [
+          "Industry",
+          "Avg. RPR"
+        ],
+        "rows": [
+          [
+            "Grocery & Food Delivery",
+            "40%+"
+          ],
+          [
+            "Pet Supplies",
+            "30%+"
+          ],
+          [
+            "Health & Supplements",
+            "~29%"
+          ],
+          [
+            "Beauty & Cosmetics",
+            "~26%"
+          ],
+          [
+            "Fashion & Apparel",
+            "~25%"
+          ],
+          [
+            "Electronics & Tech",
+            "~18%"
+          ],
+          [
+            "Home & Furniture",
+            "~15%"
+          ],
+          [
+            "Luxury Goods",
+            "~10%"
+          ]
+        ]
+      }
+    },
+    {
+      "heading": "Why Industry Rates Vary",
+      "paragraphs": [
+        "Products like groceries, supplements, and pet food require regular repurchasing, naturally boosting repeat rates.",
+        "Furniture, electronics, and luxury items are infrequent purchases. Customers may not return for months or years.",
+        "Chewy reports 78% of sales from Autoship subscriptions. Subscriptions dramatically increase repeat purchase behavior."
+      ]
+    },
+    {
+      "heading": "How to Improve Your Repeat Purchase Rate",
+      "bullets": [
+        {
+          "label": "Launch a Loyalty Program",
+          "text": "1. Reward repeat purchases with points, discounts, or exclusive perks"
+        },
+        {
+          "label": "Offer Subscriptions",
+          "text": "2. Auto-replenishment for consumables ensures regular repeat purchases"
+        },
+        {
+          "label": "Personalize Communications",
+          "text": "3. Targeted emails based on purchase history drive 2nd and 3rd orders"
+        },
+        {
+          "label": "Excellent Customer Service",
+          "text": "4. Quick resolutions turn one-time buyers into loyal customers"
+        },
+        {
+          "label": "Post-Purchase Engagement",
+          "text": "5. Follow up after delivery with tips, related products, and review requests"
+        }
+      ]
+    }
+  ]
+}

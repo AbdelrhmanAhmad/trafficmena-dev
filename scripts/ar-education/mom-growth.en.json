@@ -1,0 +1,126 @@
+{
+  "sections": [
+    {
+      "heading": "What is Month-Over-Month Growth?",
+      "paragraphs": [
+        "Month-over-month (MoM) growth measures the percentage change in a specific metric from one month to the next. It's a critical indicator used by businesses to understand quick changes in market conditions, operational results, and overall performance trajectories.",
+        "MoM calculations are commonly used across business functions including finance (revenue monitoring), marketing (follower growth), sales (customer acquisition), and production (volume tracking)."
+      ]
+    },
+    {
+      "heading": "Why is MoM Growth Important?",
+      "bullets": [
+        {
+          "label": "Identify Short-term Trends",
+          "text": "Detect changes that aren't apparent from longer periods, allowing rapid adaptation"
+        },
+        {
+          "label": "Spot Seasonal Patterns",
+          "text": "Understand cyclicality for inventory, staffing, and marketing planning"
+        },
+        {
+          "label": "Set Measurable Targets",
+          "text": "Provides actionable KPIs to motivate teams and align efforts"
+        },
+        {
+          "label": "Startup Validation",
+          "text": "Evaluate whether products are gaining market traction"
+        },
+        {
+          "label": "Distress Monitoring",
+          "text": "Track if business is improving or deteriorating for strategic decisions"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate MoM Growth",
+      "paragraphs": [
+        "The formula to calculate month-over-month growth:",
+        "Alternatively:",
+        "Example: If you had 200 active users in January and 240 in February:"
+      ],
+      "formula": "MoM Growth = (Current Month - Previous Month) / Previous Month × 100"
+    },
+    {
+      "heading": "Compound Monthly Growth Rate (CMGR)",
+      "paragraphs": [
+        "CMGR measures the average month-over-month growth over a longer period, accounting for compounding effects. It's similar to CAGR but on a monthly basis.",
+        "Where n is the number of months between measurements.",
+        "Example: If users grew from 10,000 in January to 20,000 in December (11 months):"
+      ],
+      "formula": "CMGR = (End Value / Start Value)^(1/n) - 1"
+    },
+    {
+      "heading": "What is Good MoM Growth?",
+      "paragraphs": [
+        "Source: Wall Street Prep, Corporate Finance Institute, SaaS Insights"
+      ],
+      "table": {
+        "headers": [
+          "Business Stage",
+          "Good MoM Growth",
+          "Status"
+        ],
+        "rows": [
+          [
+            "Early-stage Startup",
+            "15-20%+",
+            "Excellent"
+          ],
+          [
+            "SaaS (Pre-$1M ARR)",
+            "10-20%",
+            "Good"
+          ],
+          [
+            "SaaS (Post-$1M ARR)",
+            "5-15%",
+            "Healthy"
+          ],
+          [
+            "Mature Company",
+            "2-5%",
+            "Stable"
+          ],
+          [
+            "Any Stage",
+            "< 0%",
+            "Declining"
+          ]
+        ]
+      }
+    },
+    {
+      "heading": "MoM vs Other Growth Metrics",
+      "table": {
+        "headers": [
+          "Metric",
+          "Time Frame",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "MoM",
+            "Monthly",
+            "Short-term trends, quick decisions"
+          ],
+          [
+            "QoQ",
+            "Quarterly",
+            "Quarterly planning, investor updates"
+          ],
+          [
+            "YoY",
+            "Yearly",
+            "Long-term trends, removing seasonality"
+          ],
+          [
+            "CMGR",
+            "Multi-month avg",
+            "Smoothed growth rate over time"
+          ]
+        ]
+      }
+    }
+  ]
+}

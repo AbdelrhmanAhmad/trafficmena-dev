@@ -1,0 +1,134 @@
+{
+  "sections": [
+    {
+      "heading": "What is CVR?: Conversion Rate",
+      "paragraphs": [
+        "CVR, or Conversion Rate, is a marketing metric that measures the percentage of visitors who complete a desired action on your website, landing page, or app.",
+        "A \"conversion\" can be any valuable action: making a purchase, signing up for a newsletter, downloading a resource, filling out a form, or starting a free trial. CVR is one of the most critical metrics for evaluating funnel efficiency and user experience."
+      ]
+    },
+    {
+      "heading": "Why is CVR Important?",
+      "bullets": [
+        {
+          "label": "Measures Funnel Effectiveness",
+          "text": "Shows how well your site converts traffic into customers or leads"
+        },
+        {
+          "label": "Reduces Acquisition Costs",
+          "text": "Higher CVR means more customers from the same traffic, lowering CAC"
+        },
+        {
+          "label": "Identifies UX Issues",
+          "text": "Low CVR often signals friction in the user journey"
+        },
+        {
+          "label": "Enables A/B Testing",
+          "text": "Track conversion lift from experiments and optimizations"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate CVR: The Formula",
+      "paragraphs": [
+        "The CVR formula is:",
+        "For example, if your landing page received 5,000 visitors and 150 conversions , your CVR is (150 ÷ 5,000) × 100 = 3%",
+        "This means 3% of visitors completed the desired action."
+      ],
+      "formula": "CVR = (Conversions ÷ Total Visitors) × 100"
+    },
+    {
+      "heading": "What is a Good CVR?",
+      "paragraphs": [
+        "A \"good\" CVR varies significantly by industry, traffic source, and conversion type:"
+      ],
+      "bullets": [
+        {
+          "label": "Below 1%",
+          "text": "Poor. Significant optimization needed",
+          "tier": "loss"
+        },
+        {
+          "label": "1% - 2%",
+          "text": "Below average. Room for improvement",
+          "tier": "breakeven"
+        },
+        {
+          "label": "2% - 5%",
+          "text": "Average to good for most industries",
+          "tier": "good"
+        },
+        {
+          "label": "Above 5%",
+          "text": "Excellent. Top-performing pages",
+          "tier": "excellent"
+        }
+      ]
+    },
+    {
+      "heading": "Average CVR by Industry (2025)",
+      "paragraphs": [
+        "Conversion rate benchmarks vary across industries and conversion types:",
+        "Note: Paid traffic typically has higher CVR than organic due to intent. Mobile CVR is often 50% lower than desktop."
+      ],
+      "bullets": [
+        {
+          "label": "eCommerce",
+          "text": "2-3% average purchase rate",
+          "tier": "good"
+        },
+        {
+          "label": "SaaS Free Trial",
+          "text": "3-8% visitor-to-trial",
+          "tier": "excellent"
+        },
+        {
+          "label": "Lead Generation",
+          "text": "5-15% form completion",
+          "tier": "excellent"
+        },
+        {
+          "label": "B2B Services",
+          "text": "2-5% average",
+          "tier": "good"
+        },
+        {
+          "label": "Finance/Insurance",
+          "text": "1-3% average",
+          "tier": "breakeven"
+        },
+        {
+          "label": "Email Opt-in",
+          "text": "5-15% average",
+          "tier": "excellent"
+        }
+      ],
+      "note": "Note: Paid traffic typically has higher CVR than organic due to intent. Mobile CVR is often 50% lower than desktop."
+    },
+    {
+      "heading": "How to Improve CVR",
+      "bullets": [
+        {
+          "label": "Optimize Page Speed",
+          "text": "Every 1-second delay reduces conversions by ~7%"
+        },
+        {
+          "label": "Simplify Forms",
+          "text": "Reduce fields to only what's essential"
+        },
+        {
+          "label": "Add Social Proof",
+          "text": "Reviews, testimonials, and trust badges increase confidence"
+        },
+        {
+          "label": "Clear CTAs",
+          "text": "Use action-oriented, contrasting buttons"
+        },
+        {
+          "label": "Mobile Optimization",
+          "text": "Ensure seamless experience on all devices"
+        }
+      ]
+    }
+  ]
+}

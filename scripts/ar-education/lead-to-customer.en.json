@@ -1,0 +1,166 @@
+{
+  "sections": [
+    {
+      "heading": "What is Lead-to-Customer Rate?",
+      "paragraphs": [
+        "Lead-to-Customer Rate (also called Lead Conversion Rate) measures the percentage of leads that convert into paying customers. It's one of the most critical B2B metrics, showing how effectively your sales funnel turns prospects into revenue. According to 2025 benchmark data, the average lead-to-customer conversion rate is 2-5% across B2B industries."
+      ]
+    },
+    {
+      "heading": "Why is Lead-to-Customer Rate Important?",
+      "bullets": [
+        {
+          "label": "Sales Efficiency",
+          "text": "Measures how well your sales team converts leads into revenue"
+        },
+        {
+          "label": "Marketing ROI",
+          "text": "Shows if your lead generation efforts attract qualified buyers"
+        },
+        {
+          "label": "CAC Impact",
+          "text": "A 1-point lift (e.g., 2% → 3%) can cut Customer Acquisition Cost by 15-25%"
+        },
+        {
+          "label": "Funnel Health",
+          "text": "Identifies bottlenecks between marketing and sales handoffs"
+        },
+        {
+          "label": "Revenue Forecasting",
+          "text": "Essential for predicting pipeline and setting growth targets"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate Lead-to-Customer Rate",
+      "paragraphs": [
+        "Example: If you generate 500 leads and 15 become paying customers:"
+      ],
+      "formula": "Rate = (Customers Acquired / Total Leads) × 100"
+    },
+    {
+      "heading": "Lead-to-Customer Rate by Industry (2025)",
+      "paragraphs": [
+        "Conversion rates vary significantly by industry vertical:",
+        "Sources: First Page Sage, Ruler Analytics (2025 benchmarks)"
+      ],
+      "table": {
+        "headers": [
+          "Industry",
+          "Avg. Rate"
+        ],
+        "rows": [
+          [
+            "Legal Services",
+            "7.4%"
+          ],
+          [
+            "Professional Services",
+            "4-6%"
+          ],
+          [
+            "Healthcare",
+            "3-4%"
+          ],
+          [
+            "Manufacturing",
+            "3-5%"
+          ],
+          [
+            "Financial Services",
+            "1.9%"
+          ],
+          [
+            "B2B E-commerce",
+            "1.8%"
+          ],
+          [
+            "IT / Managed Services",
+            "1.5%"
+          ],
+          [
+            "SaaS / Software",
+            "1.1-3%"
+          ]
+        ]
+      }
+    },
+    {
+      "heading": "Conversion Rate by Marketing Channel",
+      "paragraphs": [
+        "Different channels produce leads with varying conversion potential:",
+        "Source: First Page Sage, Ruler Analytics (2025)"
+      ]
+    },
+    {
+      "heading": "Funnel Stage Benchmarks",
+      "paragraphs": [
+        "B2B funnels lose over 90% of leads before opportunity stage. Stage-by-stage breakdown:",
+        "Note: MQL→SQL is typically the biggest bottleneck"
+      ],
+      "table": {
+        "headers": [
+          "Stage",
+          "Avg. Rate",
+          "Top Performers"
+        ],
+        "rows": [
+          [
+            "Visitor → Lead",
+            "~2%",
+            "4-5%"
+          ],
+          [
+            "Lead → MQL",
+            "31%",
+            "40-50%"
+          ],
+          [
+            "MQL → SQL",
+            "13%",
+            "20-25%"
+          ],
+          [
+            "SQL → Opportunity",
+            "50%",
+            "55-62%"
+          ],
+          [
+            "Opportunity → Customer",
+            "25%",
+            "30-40%"
+          ]
+        ]
+      }
+    },
+    {
+      "heading": "How to Improve Lead-to-Customer Rate",
+      "bullets": [
+        {
+          "label": "Speed to Lead",
+          "text": "1. Responding within 5 minutes is 21x more likely to qualify a lead than waiting 30 minutes"
+        },
+        {
+          "label": "Improve Lead Scoring",
+          "text": "2. Tighten MQL definitions and align with sales. The MQL→SQL gap causes most losses"
+        },
+        {
+          "label": "Focus on SEO",
+          "text": "3. SEO leads have 51% MQL→SQL conversion vs 26% for PPC"
+        },
+        {
+          "label": "Optimize Landing Pages",
+          "text": "4. CRO sprints can lift visitor→lead by 1-2 percentage points"
+        },
+        {
+          "label": "Use AI Scoring",
+          "text": "5. Predictive models identify high-intent leads 20-30% faster"
+        },
+        {
+          "label": "Sales-Marketing Alignment",
+          "text": "6. Regular feedback loops on lead quality improve conversion throughout funnel"
+        }
+      ]
+    }
+  ]
+}

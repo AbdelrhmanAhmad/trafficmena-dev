@@ -1,0 +1,97 @@
+{
+  "sections": [
+    {
+      "heading": "What is CPC?: Cost Per Click",
+      "paragraphs": [
+        "CPC, or Cost Per Click, is a digital advertising metric that measures how much you pay each time someone clicks on your ad .",
+        "Unlike CPM (Cost Per Mille) which charges per impression, CPC ensures you only pay when users take action by clicking. This makes CPC ideal for performance-based campaigns focused on driving traffic, leads, or conversions."
+      ]
+    },
+    {
+      "heading": "Why is CPC Important?",
+      "bullets": [
+        {
+          "label": "Pay for Performance",
+          "text": "You only pay when users engage with your ad by clicking"
+        },
+        {
+          "label": "Budget Control",
+          "text": "Set maximum bids to control how much you spend per click"
+        },
+        {
+          "label": "Measure Efficiency",
+          "text": "Lower CPC means more traffic for your budget"
+        },
+        {
+          "label": "Optimize Campaigns",
+          "text": "Compare CPC across ads, audiences, and platforms to find what works"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate CPC: The Formula",
+      "paragraphs": [
+        "The CPC formula is:",
+        "For example, if you spent $500 on ads and received 250 clicks , your CPC is $500 / 250 = $2.00",
+        "This means you paid $2.00 for each click on your ad."
+      ],
+      "formula": "CPC = Total Ad Spend / Number of Clicks"
+    },
+    {
+      "heading": "Factors That Affect CPC",
+      "bullets": [
+        {
+          "label": "Industry Competition",
+          "text": "Highly competitive industries (legal, insurance, finance) have higher CPCs"
+        },
+        {
+          "label": "Quality Score",
+          "text": "Higher quality ads with relevant landing pages get lower CPCs"
+        },
+        {
+          "label": "Targeting",
+          "text": "Broader audiences typically have lower CPCs than niche targeting"
+        },
+        {
+          "label": "Ad Placement",
+          "text": "Premium placements (top of page, feed) cost more per click"
+        }
+      ]
+    },
+    {
+      "heading": "Average CPC Rates by Platform (2025)",
+      "paragraphs": [
+        "CPC varies significantly by platform and industry:",
+        "Note: Legal, insurance, and finance industries often see CPCs of $10-$50+ due to high customer lifetime value."
+      ],
+      "bullets": [
+        {
+          "label": "Google Ads (Search)",
+          "text": "$1-$2 average, up to $50+ for competitive keywords",
+          "tier": "breakeven"
+        },
+        {
+          "label": "Google Ads (Display)",
+          "text": "$0.50-$1.00 average",
+          "tier": "good"
+        },
+        {
+          "label": "Meta (Facebook/Instagram)",
+          "text": "$0.50-$2.00 average",
+          "tier": "good"
+        },
+        {
+          "label": "LinkedIn",
+          "text": "$5-$6 average (B2B premium)",
+          "tier": "loss"
+        },
+        {
+          "label": "TikTok",
+          "text": "$0.20-$1.00 average",
+          "tier": "excellent"
+        }
+      ],
+      "note": "Note: Legal, insurance, and finance industries often see CPCs of $10-$50+ due to high customer lifetime value."
+    }
+  ]
+}

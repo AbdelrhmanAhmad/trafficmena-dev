@@ -40,7 +40,7 @@ assertFixedAuthOtpNotEnabledInProduction();
 
 export const auth = betterAuth({
   secret: authSecret,
-  url: env.BETTER_AUTH_ISSUER ?? 'http://localhost:3001',
+  baseURL: env.BETTER_AUTH_ISSUER ?? 'http://localhost:3001',
   trustedOrigins: env.CORS_ALLOWLIST.length > 0 ? env.CORS_ALLOWLIST : undefined,
   logger: {
     disabled: isProduction,

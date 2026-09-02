@@ -1,0 +1,128 @@
+{
+  "sections": [
+    {
+      "heading": "What is Net Revenue Retention (NRR)?",
+      "paragraphs": [
+        "Net Revenue Retention (NRR), also called Net Dollar Retention (NDR), measures how much recurring revenue you retain and grow from existing customers over a specific period.",
+        "The simplest way to think about NRR: How much would your revenue grow or shrink if you acquired zero new customers? According to research, SaaS companies with high NRR grow 2.5x faster than low-NRR counterparts."
+      ]
+    },
+    {
+      "heading": "Why is NRR Important?",
+      "bullets": [
+        {
+          "label": "Predicts Sustainable Growth",
+          "text": "Companies with NRR above 110% can grow significantly without new acquisition"
+        },
+        {
+          "label": "Investor Priority",
+          "text": "Often the single most important metric after revenue growth for VCs"
+        },
+        {
+          "label": "Cost Efficiency",
+          "text": "Expanding existing customers costs 5x less than acquiring new ones"
+        },
+        {
+          "label": "Product-Market Fit",
+          "text": "NRR above 100% indicates customers see enough value to invest more"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate NRR: The Formula",
+      "paragraphs": [
+        "The standard NRR formula is:",
+        "For example, with $100 starting MRR , $100 expansion , $100 contraction , and $100 churn :"
+      ],
+      "formula": "NRR = (Starting MRR + Expansion - Contraction - Churn) / Starting MRR × 100"
+    },
+    {
+      "heading": "NRR Benchmarks (2025)",
+      "paragraphs": [
+        "Industry benchmarks from SaaS Capital and Fullview:",
+        "Source: SaaS Capital 2025 Retention Benchmarks, Fullview (2025)"
+      ],
+      "bullets": [
+        {
+          "label": "Below 100%",
+          "text": "Poor. Revenue shrinking from existing customers",
+          "tier": "loss"
+        },
+        {
+          "label": "100-105%",
+          "text": "Fair. Maintaining revenue with limited expansion",
+          "tier": "breakeven"
+        },
+        {
+          "label": "106-115%",
+          "text": "Good. Solid expansion offsetting churn",
+          "tier": "good"
+        },
+        {
+          "label": "116-120%+",
+          "text": "Excellent. Best-in-class expansion engine",
+          "tier": "excellent"
+        }
+      ],
+      "note": "Source: SaaS Capital 2025 Retention Benchmarks, Fullview (2025)"
+    },
+    {
+      "heading": "NRR by Average Contract Value (ACV)",
+      "paragraphs": [
+        "Higher ACV correlates with higher NRR due to stickier enterprise customers."
+      ],
+      "bullets": [
+        {
+          "text": "$0-$5K ACV (SMB) Median: 95-100%"
+        },
+        {
+          "text": "$5K-$25K ACV (Mid-Market) Median: 100-106%"
+        },
+        {
+          "text": "$25K-$100K ACV Median: 102-110%"
+        },
+        {
+          "text": "$100K+ ACV (Enterprise) Median: 110-115%"
+        }
+      ]
+    },
+    {
+      "heading": "NRR vs GRR",
+      "paragraphs": [
+        "Both metrics matter but measure different things:",
+        "Why track both: A strong upsell motion can mask underlying retention problems. If NRR is 110% but GRR is 70%, you have a serious churn problem that expansion is covering up."
+      ],
+      "bullets": [
+        {
+          "label": "NRR",
+          "text": "Includes expansion. Shows total growth potential from existing customers"
+        },
+        {
+          "label": "GRR (Gross Revenue Retention)",
+          "text": "Excludes expansion. Reveals core retention without upsells masking churn"
+        }
+      ]
+    },
+    {
+      "heading": "How to Improve NRR",
+      "bullets": [
+        {
+          "label": "Reduce Churn",
+          "text": "Improve onboarding, proactive customer success, and cancel flow optimization"
+        },
+        {
+          "label": "Drive Expansion",
+          "text": "Upsell higher tiers, add seats, cross-sell new products, usage-based pricing"
+        },
+        {
+          "label": "Reduce Contraction",
+          "text": "Monitor usage drops, intervene before downgrades, demonstrate value continuously"
+        },
+        {
+          "label": "Target Enterprise",
+          "text": "Higher ACV customers have stickier contracts and more expansion potential"
+        }
+      ]
+    }
+  ]
+}

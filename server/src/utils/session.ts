@@ -21,8 +21,10 @@ export type AuthSessionResult = {
 
 export async function getSessionFromRequest(c: Context): Promise<AuthSessionResult | null> {
   try {
+    // Pass headers only — Better Auth 1.6 fails to resolve signed session cookies when
+    // `request` is also supplied (Hono's Request + duplicate headers). /auth/session
+    // uses asResponse mode and is unaffected; this helper powers all protected API routes.
     const result = await auth.api.getSession({
-      request: c.req.raw,
       headers: c.req.raw.headers,
     });
 

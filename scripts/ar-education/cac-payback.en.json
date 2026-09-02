@@ -1,0 +1,127 @@
+{
+  "sections": [
+    {
+      "heading": "What is CAC Payback Period?",
+      "paragraphs": [
+        "CAC Payback Period measures how many months it takes to recover the cost of acquiring a customer . It's a critical cash flow metric that shows how quickly your acquisition investment turns profitable.",
+        "Unlike LTV:CAC ratio which shows total value, payback period focuses on time to breakeven. A shorter payback means faster reinvestment in growth. According to Bessemer Venture Partners, the benchmark is 12 months or less for healthy SaaS companies."
+      ]
+    },
+    {
+      "heading": "Why is CAC Payback Important?",
+      "bullets": [
+        {
+          "label": "Cash Flow Management",
+          "text": "Shows how long capital is tied up before generating profit"
+        },
+        {
+          "label": "Growth Sustainability",
+          "text": "Shorter payback means faster reinvestment cycles"
+        },
+        {
+          "label": "Runway Planning",
+          "text": "Critical for startups to understand burn rate implications"
+        },
+        {
+          "label": "Investor Metric",
+          "text": "VCs closely monitor this alongside LTV:CAC for funding decisions"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate CAC Payback Period",
+      "paragraphs": [
+        "The formula is:",
+        "For example, if your CAC is $100 , with $100/month revenue and 80% gross margin , your payback is $100 / ($100 × 0.80) = 7.5 months"
+      ],
+      "formula": "CAC Payback = CAC / (Monthly Revenue × Gross Margin %)"
+    },
+    {
+      "heading": "CAC Payback Benchmarks",
+      "paragraphs": [
+        "Industry benchmarks from Bessemer, OpenView, and SaaS Capital (2024-2025):",
+        "Source: Bessemer Venture Partners, OpenView Partners, SaaS Capital benchmarks"
+      ],
+      "bullets": [
+        {
+          "label": "<6 months",
+          "text": "Excellent. Very efficient acquisition, consider scaling faster",
+          "tier": "excellent"
+        },
+        {
+          "label": "6-12 months",
+          "text": "Good. Healthy for most SaaS companies",
+          "tier": "good"
+        },
+        {
+          "label": "12-18 months",
+          "text": "Acceptable for enterprise. Needs optimization for SMB",
+          "tier": "breakeven"
+        },
+        {
+          "label": ">18 months",
+          "text": "Warning. High churn risk before payback; reduce CAC or increase ARPU",
+          "tier": "loss"
+        }
+      ],
+      "note": "Source: Bessemer Venture Partners, OpenView Partners, SaaS Capital benchmarks"
+    },
+    {
+      "heading": "Payback by Business Model",
+      "paragraphs": [
+        "Enterprise deals can have longer payback due to higher ACVs and lower churn."
+      ],
+      "bullets": [
+        {
+          "text": "SMB SaaS (self-serve) <6 months ideal"
+        },
+        {
+          "text": "Mid-Market SaaS 6-12 months"
+        },
+        {
+          "text": "Enterprise SaaS 12-18 months acceptable"
+        },
+        {
+          "text": "eCommerce / D2C <3 months ideal"
+        }
+      ]
+    },
+    {
+      "heading": "How to Reduce CAC Payback Period",
+      "bullets": [
+        {
+          "label": "Reduce CAC",
+          "text": "Improve conversion rates, focus on organic channels, optimize ad spend"
+        },
+        {
+          "label": "Increase ARPU",
+          "text": "Upsell to higher tiers, add premium features, usage-based pricing"
+        },
+        {
+          "label": "Improve Margins",
+          "text": "Reduce hosting costs, automate support, optimize infrastructure"
+        },
+        {
+          "label": "Faster Onboarding",
+          "text": "Get customers to value faster to reduce early churn"
+        }
+      ]
+    },
+    {
+      "heading": "CAC Payback vs LTV:CAC",
+      "paragraphs": [
+        "Both metrics matter but measure different things:",
+        "A company with great LTV:CAC (5:1) but long payback (24 months) needs significant capital to grow. A company with shorter payback can reinvest faster."
+      ],
+      "bullets": [
+        {
+          "label": "CAC Payback",
+          "text": "Time-focused. How quickly you recover investment"
+        },
+        {
+          "text": "LTV:CAC: Value-focused. Total return on acquisition investment"
+        }
+      ]
+    }
+  ]
+}

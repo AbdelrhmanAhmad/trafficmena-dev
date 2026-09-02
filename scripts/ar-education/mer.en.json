@@ -1,0 +1,91 @@
+{
+  "sections": [
+    {
+      "heading": "What is MER?: Marketing Efficiency Ratio",
+      "paragraphs": [
+        "Marketing Efficiency Ratio (MER), also known as Blended ROAS or Ecosystem ROAS, measures how many dollars in revenue your business generates for every $1 spent on marketing , regardless of which platform or channel drove the conversion.",
+        "Unlike channel-specific ROAS, MER gives you a holistic, big-picture view of your entire marketing performance across all channels combined."
+      ]
+    },
+    {
+      "heading": "MER vs ROAS: What's the Difference?",
+      "bullets": [
+        {
+          "label": "ROAS",
+          "text": "is channel-specific and attribution-dependent (e.g., Facebook ROAS, Google ROAS)"
+        },
+        {
+          "label": "MER",
+          "text": "includes ALL revenue regardless of attribution and ALL marketing costs"
+        },
+        {
+          "text": "MER accounts for the full marketing ecosystem including team salaries, software, agencies, and creative costs"
+        }
+      ]
+    },
+    {
+      "heading": "How to Calculate MER: The Formula",
+      "paragraphs": [
+        "The MER formula is:",
+        "For example, if your business generated $100 in revenue and spent $100 on all marketing efforts, your MER is $100 / $100 = 3.0x (or 300%)",
+        "This means you generate $3 in revenue for every $1 spent on marketing ."
+      ],
+      "formula": "MER = Total Revenue / Total Marketing Spend"
+    },
+    {
+      "heading": "What's Included in Total Marketing Spend?",
+      "paragraphs": [
+        "For accurate MER calculation, include all marketing-related costs:"
+      ],
+      "bullets": [
+        {
+          "text": "Ad spend across all platforms"
+        },
+        {
+          "text": "Marketing team salaries"
+        },
+        {
+          "text": "Agency fees"
+        },
+        {
+          "text": "Creative production costs"
+        },
+        {
+          "text": "Software & tool subscriptions"
+        },
+        {
+          "text": "Market research"
+        }
+      ]
+    },
+    {
+      "heading": "What is a Good MER?",
+      "paragraphs": [
+        "A \"good\" MER varies by industry, but as a rule of thumb:",
+        "Industry benchmarks (2025): Apparel 2.8x, Health & Wellness 2.0x, Food & Beverage 2.1x, Electronics 2.4x, Pets 1.9x"
+      ],
+      "bullets": [
+        {
+          "label": "Below 2x",
+          "text": "Difficult to be profitable (spending 50%+ of revenue)",
+          "tier": "loss"
+        },
+        {
+          "label": "2x - 3x",
+          "text": "Acceptable, room for improvement",
+          "tier": "breakeven"
+        },
+        {
+          "label": "3x - 5x",
+          "text": "Good efficiency (spending 20-33% of revenue)",
+          "tier": "good"
+        },
+        {
+          "label": "5x+",
+          "text": "Excellent efficiency",
+          "tier": "excellent"
+        }
+      ]
+    }
+  ]
+}
