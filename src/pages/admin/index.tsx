@@ -6,6 +6,7 @@ import {
   Clock,
   CreditCard,
   Mail,
+  Ticket,
   TrendingUp,
   UserCheck,
   Users,
@@ -129,6 +130,12 @@ const AdminDashboard: React.FC = () => {
       description: 'Invite new members to the platform.',
       href: '/admin/invitations',
       icon: Mail,
+    },
+    {
+      label: 'ECD Registrations',
+      description: 'ECommerce Day 2026 HTML checkout bookings.',
+      href: '/admin/ecd-registrations',
+      icon: Ticket,
     },
   ];
 

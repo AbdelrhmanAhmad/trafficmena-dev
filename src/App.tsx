@@ -70,6 +70,7 @@ const AdminSettingsPage = lazy(() => import('./pages/admin/settings'));
 const UserManagement = lazy(() => import('./pages/admin/users'));
 const AdminInvitations = lazy(() => import('./pages/admin/invitations'));
 const AdminPromoCodes = lazy(() => import('./pages/admin/promo-codes'));
+const AdminEcdRegistrations = lazy(() => import('./pages/admin/ecd-registrations'));
 const LibraryManagement = lazy(() => import('./pages/admin/library'));
 const AdminLibraryItemDetail = lazy(() => import('./pages/admin/library/[id]'));
 const NewLibraryItem = lazy(() => import('./pages/admin/library/new-item'));
@@ -554,6 +555,16 @@ const App = () => {
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminPromoCodes />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ecd-registrations"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <AdminEcdRegistrations />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }

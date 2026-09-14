@@ -155,6 +155,13 @@
       "when": 1783035004425,
       "tag": "0021_brief_ezekiel_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1784370000000,
+      "tag": "0022_ecd_html_checkout",
+      "breakpoints": true
     }
   ]
 }

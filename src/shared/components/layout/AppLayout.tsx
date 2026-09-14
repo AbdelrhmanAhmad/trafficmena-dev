@@ -12,6 +12,7 @@ import {
   Shield,
   Sparkles,
   Tag,
+  Ticket,
   Users,
 } from 'lucide-react';
 import type React from 'react';
@@ -106,6 +107,12 @@ const adminMenuItems = [
     title: 'Events & Tracks',
     url: '/admin/meetups',
     icon: Calendar,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'ECD Registrations',
+    url: '/admin/ecd-registrations',
+    icon: Ticket,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {

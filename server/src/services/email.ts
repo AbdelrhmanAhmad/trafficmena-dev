@@ -83,13 +83,27 @@ async function subscribeContact(email: string) {
   }
 }
 
-type TransactionalEmail = { to: string; subject: string; html: string; text: string };
+type EmailAttachment = {
+  filename: string;
+  /** Raw bytes or base64 string (no data: prefix). */
+  content: Buffer | string;
+  contentId?: string;
+  contentType?: string;
+};
+
+type TransactionalEmail = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  attachments?: EmailAttachment[];
+};
 
 // Single transport for all three senders. Throws EmailDeliveryError on failure — callers (Better
 // Auth's sendVerificationOTP) rely on the throw to surface a failed delivery to the user. On
 // success, fires the contact upsert off the critical path so list-building never adds a Resend
 // round-trip to OTP-login latency and can never fail a send.
-async function sendTransactionalEmail({ to, subject, html, text }: TransactionalEmail) {
+async function sendTransactionalEmail({ to, subject, html, text, attachments }: TransactionalEmail) {
   if (!hasValidKey()) {
     console.warn('[resend] Valid RESEND_API_KEY missing; email simulated (details redacted)');
     return;
@@ -101,6 +115,17 @@ async function sendTransactionalEmail({ to, subject, html, text }: Transactional
     subject,
     html,
     text,
+    ...(attachments?.length
+      ? {
+          attachments: attachments.map((a) => ({
+            filename: a.filename,
+            content: a.content,
+            contentType: a.contentType,
+            // Inline CID images (Gmail strips data: URLs — must use cid: attachments).
+            contentId: a.contentId,
+          })),
+        }
+      : {}),
   });
 
   if (error) {
@@ -248,4 +273,116 @@ export async function sendInvitationEmail({
 </html>`;
 
   await sendTransactionalEmail({ to: email, subject, html: htmlBody, text: textBody });
+}
+
+type SendEcdTicketEmailArgs = {
+  email: string;
+  attendeeName: string;
+  serial: string;
+  orderCode: string;
+  ticketName: string;
+  eventTitle: string;
+  eventStartIso: string;
+  eventLocation: string;
+  qrDataUrl: string;
+  confirmationUrl: string;
+};
+
+export async function sendEcdTicketEmail({
+  email,
+  attendeeName,
+  serial,
+  orderCode,
+  ticketName,
+  eventTitle,
+  eventStartIso,
+  eventLocation,
+  qrDataUrl,
+  confirmationUrl,
+}: SendEcdTicketEmailArgs) {
+  const safeName = escapeHtml(attendeeName);
+  const safeSerial = escapeHtml(serial);
+  const safeOrder = escapeHtml(orderCode);
+  const safeTicket = escapeHtml(ticketName);
+  const safeEvent = escapeHtml(eventTitle);
+  const safeLocation = escapeHtml(eventLocation);
+  const when = (() => {
+    try {
+      return new Date(eventStartIso).toLocaleString('en-GB', {
+        timeZone: 'Africa/Cairo',
+        dateStyle: 'full',
+        timeStyle: 'short',
+      });
+    } catch {
+      return eventStartIso;
+    }
+  })();
+
+  const sameId = orderCode === serial;
+  const subject = `Your ticket ${serial} — ${eventTitle}`;
+  const textBody = `Hi ${attendeeName},
+
+Your ticket for ${eventTitle} is confirmed.
+
+Ticket ID: ${serial}
+${sameId ? '' : `Booking: ${orderCode}\n`}Pass: ${ticketName}
+When: ${when}
+Where: ${eventLocation}
+
+Show the QR image in this email at entry (or present this ticket ID).
+If images are blocked, open attachments or use the ticket ID above.
+
+View booking: ${confirmationUrl}
+
+— TrafficMENA`;
+
+  // Gmail/Outlook strip data: URLs — embed QR as inline CID attachment.
+  const qrCid = 'ecd-ticket-qr';
+  const base64Match = /^data:image\/png;base64,(.+)$/i.exec(qrDataUrl || '');
+  const qrBase64 = base64Match?.[1] || '';
+  if (!qrBase64) {
+    throw new EmailDeliveryError('missing_qr_image', null);
+  }
+
+  const htmlBody = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0;padding:24px;background-color:#f4f6f8;color:#1f2630;font-family:Arial,sans-serif;">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;border:1px solid #d5dae0;">
+      <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#04c44e;font-weight:700;">ECommerce Day 2026</div>
+      <h1 style="font-size:22px;margin:8px 0 16px;color:#101010;">Your ticket is ready</h1>
+      <p style="color:#4a5563;line-height:1.6;margin:0 0 8px;">Hi ${safeName},</p>
+      <p style="color:#4a5563;line-height:1.6;margin:0 0 8px;">Show this QR at entry. Keep this email handy.</p>
+      <p style="color:#4a5563;line-height:1.6;margin:0 0 8px;"><strong>Ticket ID:</strong> ${safeSerial}<br/>
+      ${sameId ? '' : `<strong>Booking:</strong> ${safeOrder}<br/>`}
+      <strong>Pass:</strong> ${safeTicket}<br/>
+      <strong>When:</strong> ${escapeHtml(when)}<br/>
+      <strong>Where:</strong> ${safeLocation}</p>
+      <p style="font-family:Consolas,Monaco,monospace;font-size:14px;background:#f4f6f8;border:1px solid #e6eaee;border-radius:8px;padding:10px 12px;word-break:break-all;">${safeSerial}</p>
+      <div style="text-align:center;margin:24px 0;">
+        <img src="cid:${qrCid}" alt="Ticket QR for ${safeSerial}" width="220" height="220" style="display:block;margin:0 auto;width:220px;height:220px;border:1px solid #e6eaee;border-radius:12px;" />
+      </div>
+      <p style="text-align:center;"><a href="${escapeHtml(confirmationUrl)}" style="display:inline-block;margin-top:8px;padding:12px 18px;background:#05ef62;color:#101010;text-decoration:none;border-radius:10px;font-weight:600;">Open booking page</a></p>
+      <p style="margin-top:28px;font-size:13px;color:#6b747e;">Questions: info@trafficmena.com · ${safeEvent}</p>
+    </div>
+  </body>
+</html>`;
+
+  await sendTransactionalEmail({
+    to: email,
+    subject,
+    html: htmlBody,
+    text: textBody,
+    attachments: [
+      {
+        filename: `ecd-ticket-${serial.replace(/[^a-zA-Z0-9_-]/g, '_')}.png`,
+        content: qrBase64,
+        contentType: 'image/png',
+        contentId: qrCid,
+      },
+    ],
+  });
 }
