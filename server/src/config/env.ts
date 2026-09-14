@@ -48,6 +48,24 @@ const envSchema = z.object({
   TURNSTILE_SECRET_KEY: z.string().optional(),
   // Invitation daily limit per admin (default: 1000 for launch)
   INVITATION_DAILY_LIMIT: z.coerce.number().int().min(1).max(10000).default(1000),
+  // --- Removable ECD HTML checkout module (ECommerce Day 2026) ---
+  ECD_ENABLED: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value !== 'false'),
+  ECD_CORS_ORIGINS: z.string().optional(),
+  ECD_PRICE_CT_CENTS: z.coerce.number().int().positive().default(250_000),
+  ECD_PRICE_FJ_CENTS: z.coerce.number().int().positive().default(450_000),
+  ECD_LAUNCH_DISCOUNT_RATE: z.coerce.number().min(0).max(1).default(0.1),
+  ECD_TOKEN_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(72),
+  ECD_EVENT_TITLE: z.string().optional().default('ECommerce Day 2026'),
+  ECD_EVENT_START_ISO: z.string().optional().default('2026-10-22T09:00:00+03:00'),
+  ECD_EVENT_END_ISO: z.string().optional().default('2026-10-22T18:00:00+03:00'),
+  ECD_EVENT_LOCATION: z.string().optional().default('Venue details will be announced soon.'),
+  ECD_CONFIRM_BASE_URL: z.string().url().optional(),
+  // ECD-only test mode: verify/Check Status marks bookings paid without gateway confirmation.
+  // Defaults ON outside production; set ECD_SIMULATE_PAYMENTS=false to hit real Fawaterk in staging.
+  ECD_SIMULATE_PAYMENTS: z.enum(['true', 'false']).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -68,6 +86,16 @@ const corsAllowlist = (data.CORS_ORIGIN ?? '')
 
 if (corsAllowlist.length === 0) {
   corsAllowlist.push('http://localhost:5173');
+}
+
+const ecdCorsAllowlist = (data.ECD_CORS_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
+
+// Static HTML event site origins (dev defaults). Production: set ECD_CORS_ORIGINS explicitly.
+if (ecdCorsAllowlist.length === 0) {
+  ecdCorsAllowlist.push('http://localhost:5500', 'http://127.0.0.1:5500', 'null');
 }
 
 if (corsAllowlist.includes('*')) {
@@ -126,6 +154,7 @@ data.CORS_ORIGIN = corsAllowlist[0];
 export const env = {
   ...data,
   CORS_ALLOWLIST: corsAllowlist,
+  ECD_CORS_ALLOWLIST: ecdCorsAllowlist,
 };
 
 export const isProduction = env.NODE_ENV === 'production';

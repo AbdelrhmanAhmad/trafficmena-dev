@@ -232,6 +232,13 @@
       "when": 1786525000000,
       "tag": "0032_library_store_enabled",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1784370000000,
+      "tag": "0033_ecd_html_checkout",
+      "breakpoints": true
     }
   ]
 }

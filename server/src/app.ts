@@ -6,6 +6,7 @@ import { timing } from 'hono/timing';
 import { env, isProduction } from './config/env.js';
 import { MAX_JSON_PAYLOAD_BYTES } from './config/requestLimits.js';
 import { registerApiRoutes } from './routes/api/index.js';
+import { createEcdApp } from './routes/api/ecd/index.js';
 import { registerHealthRoutes } from './routes/health.js';
 
 export function createApp() {
@@ -215,6 +216,8 @@ export function createApp() {
   });
 
   registerHealthRoutes(app);
+  // ECD HTML checkout — separate mount, no shared CSRF middleware (Bearer token + origin allowlist).
+  app.route('/api/ecd', createEcdApp());
   registerApiRoutes(app);
 
   return app;

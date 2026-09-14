@@ -1108,3 +1108,14 @@ export const subscriptions = pgTable(
       .where(sql`subscription_status = 'active' and revoked_at is null`),
   }),
 );
+
+// Removable ECommerce Day 2026 HTML-checkout module (drop tables + this export to uninstall).
+export {
+  ecdBookings,
+  ecdCheckoutTokens,
+  ecdHtmlForms,
+  ecdPaymentStatusEnum,
+  ecdTickets,
+  ecdTicketStatusEnum,
+  ecdTicketTypeEnum,
+} from './ecd.js';
