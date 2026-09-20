@@ -6,12 +6,69 @@ import { db } from '../../../db/client.js';
 import {
   ecdBookings,
   ecdCheckoutTokens,
+  ecdTicketPackages,
 } from '../../../db/schema/ecd.js';
 import { InMemoryRateLimiter } from '../../../services/rateLimiter.js';
 
 export const ecdRateLimiter = new InMemoryRateLimiter();
 
 export type EcdTicketType = 'ct' | 'fj';
+
+const FALLBACK_PACKAGE_NAMES: Record<EcdTicketType, string> = {
+  ct: 'Conference Pass',
+  fj: 'All Access Pass',
+};
+
+/** Short in-process cache so session/pay don't hit DB on every field read. */
+let packageCache: {
+  at: number;
+  byType: Map<EcdTicketType, { priceCents: number; displayName: string }>;
+} | null = null;
+const PACKAGE_CACHE_MS = 15_000;
+
+export function invalidateEcdPackageCache() {
+  packageCache = null;
+}
+
+export async function getPackageMeta(ticketType: EcdTicketType) {
+  const now = Date.now();
+  if (packageCache && now - packageCache.at < PACKAGE_CACHE_MS) {
+    const hit = packageCache.byType.get(ticketType);
+    if (hit) return hit;
+  }
+
+  const rows = await db
+    .select({
+      ticketType: ecdTicketPackages.ticketType,
+      priceCents: ecdTicketPackages.priceCents,
+      displayName: ecdTicketPackages.displayName,
+    })
+    .from(ecdTicketPackages);
+
+  const byType = new Map<EcdTicketType, { priceCents: number; displayName: string }>();
+  for (const row of rows) {
+    byType.set(row.ticketType as EcdTicketType, {
+      priceCents: row.priceCents,
+      displayName: row.displayName,
+    });
+  }
+  packageCache = { at: now, byType };
+
+  const hit = byType.get(ticketType);
+  if (hit) return hit;
+
+  // Emergency fallback when packages table not seeded yet
+  return {
+    priceCents: ticketType === 'ct' ? env.ECD_PRICE_CT_CENTS : env.ECD_PRICE_FJ_CENTS,
+    displayName: FALLBACK_PACKAGE_NAMES[ticketType],
+  };
+}
+
+export async function ticketDisplayName(ticketType: string) {
+  const type: EcdTicketType = ticketType === 'ct' ? 'ct' : 'fj';
+  const meta = await getPackageMeta(type);
+  return meta.displayName;
+}
 
 export type EcdTokenContext = {
   tokenId: string;
@@ -38,6 +95,36 @@ export function isEcdSimulatePayments() {
   return env.NODE_ENV !== 'production';
 }
 
+/**
+ * Public HTML site base for Fawaterk redirects + ticket email links.
+ * Prefer ECD_CONFIRM_BASE_URL. Never silently pick localhost in staging/production.
+ */
+export function ecdConfirmBaseUrl() {
+  if (env.ECD_CONFIRM_BASE_URL) {
+    return env.ECD_CONFIRM_BASE_URL.replace(/\/+$/, '');
+  }
+
+  const httpOrigins = env.ECD_CORS_ALLOWLIST.filter((o) => o.startsWith('http'));
+  const publicOrigin = httpOrigins.find((o) => {
+    try {
+      const host = new URL(o).hostname;
+      return host !== 'localhost' && host !== '127.0.0.1';
+    } catch {
+      return false;
+    }
+  });
+  if (publicOrigin) return publicOrigin.replace(/\/+$/, '');
+
+  if (env.NODE_ENV === 'production' || env.NODE_ENV === 'test') {
+    console.warn(
+      '[ecd] ECD_CONFIRM_BASE_URL is unset — Fawaterk may redirect to localhost. Set ECD_CONFIRM_BASE_URL to the live HTML site origin.',
+    );
+  }
+
+  const local = httpOrigins.find((o) => o.startsWith('http')) || 'http://127.0.0.1:5500';
+  return local.replace(/\/+$/, '');
+}
+
 export function hashToken(raw: string) {
   return createHash('sha256').update(raw).digest('hex');
 }
@@ -57,17 +144,19 @@ export function safeEqualHex(a: string, b: string) {
   }
 }
 
-export function ticketUnitPriceCents(ticketType: EcdTicketType) {
-  return ticketType === 'ct' ? env.ECD_PRICE_CT_CENTS : env.ECD_PRICE_FJ_CENTS;
+export async function ticketUnitPriceCents(ticketType: EcdTicketType) {
+  const meta = await getPackageMeta(ticketType);
+  return meta.priceCents;
 }
 
-export function calcEcdTotals(params: {
+export async function calcEcdTotals(params: {
   ticketType: EcdTicketType;
   qty: number;
   promoCode?: string | null;
 }) {
   const qty = Math.max(1, Math.min(20, Math.floor(params.qty) || 1));
-  const unitPriceCents = ticketUnitPriceCents(params.ticketType);
+  const meta = await getPackageMeta(params.ticketType);
+  const unitPriceCents = meta.priceCents;
   const promo = (params.promoCode || '').trim().toUpperCase();
   let discountCents = 0;
   if (promo === 'LAUNCH' && env.ECD_LAUNCH_DISCOUNT_RATE > 0) {
@@ -82,7 +171,7 @@ export function calcEcdTotals(params: {
     subtotalCents,
     totalCents,
     promoCode: promo || null,
-    ticketName: params.ticketType === 'ct' ? 'Control Tower Pass' : 'Full Journey Pass',
+    ticketName: meta.displayName,
   };
 }
 

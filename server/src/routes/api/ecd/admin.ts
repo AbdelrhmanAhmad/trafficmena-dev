@@ -6,7 +6,7 @@ import { ecdBookings, ecdHtmlForms, ecdTickets } from '../../../db/schema/ecd.js
 import { users } from '../../../db/schema/index.js';
 import { EmailDeliveryError } from '../../../services/email.js';
 import { escapeLikePattern, normalizeEmail, requireManager } from '../utils.js';
-import { formatMoneyEgp } from './helpers.js';
+import { formatMoneyEgp, ticketDisplayName } from './helpers.js';
 import { sendSingleEcdTicketEmail } from './ticketEmail.js';
 
 const listSchema = z.object({
@@ -119,40 +119,51 @@ export function registerEcdAdminRoutes(app: Hono) {
       ticketsByBooking.set(t.bookingId, list);
     }
 
-    const items = rows.map((row) => {
-      const form = row.htmlFormId ? formById.get(row.htmlFormId) : null;
-      const tickets = ticketsByBooking.get(row.id) || [];
-      return {
-        id: row.id,
-        orderCode: row.orderCode,
-        ticketType: row.ticketType,
-        ticketName: row.ticketType === 'ct' ? 'Control Tower Pass' : 'Full Journey Pass',
-        qty: row.qty,
-        totalCents: row.totalCents,
-        amountFormatted: formatMoneyEgp(row.totalCents),
-        paymentStatus: row.paymentStatus,
-        buyerName: row.buyerName,
-        buyerEmail: row.buyerEmail,
-        buyerMobile: row.buyerMobile,
-        promoCode: row.promoCode,
-        paidAt: row.paidAt?.toISOString() ?? null,
-        createdAt: row.createdAt.toISOString(),
-        userId: row.userId,
-        serials: tickets.map((t) => t.serial),
-        tickets,
-        form: form
-          ? {
-              company: form.company,
-              jobTitle: form.jobTitle,
-              country: form.country,
-              needInvoice: form.needInvoice === 1,
-              invoiceCompany: form.invoiceCompany,
-              taxId: form.taxId,
-              billingAddress: form.billingAddress,
-            }
-          : null,
-      };
-    });
+    const nameCache = new Map<string, string>();
+    async function nameFor(type: string) {
+      const cached = nameCache.get(type);
+      if (cached) return cached;
+      const n = await ticketDisplayName(type);
+      nameCache.set(type, n);
+      return n;
+    }
+
+    const items = await Promise.all(
+      rows.map(async (row) => {
+        const form = row.htmlFormId ? formById.get(row.htmlFormId) : null;
+        const tickets = ticketsByBooking.get(row.id) || [];
+        return {
+          id: row.id,
+          orderCode: row.orderCode,
+          ticketType: row.ticketType,
+          ticketName: await nameFor(row.ticketType),
+          qty: row.qty,
+          totalCents: row.totalCents,
+          amountFormatted: formatMoneyEgp(row.totalCents),
+          paymentStatus: row.paymentStatus,
+          buyerName: row.buyerName,
+          buyerEmail: row.buyerEmail,
+          buyerMobile: row.buyerMobile,
+          promoCode: row.promoCode,
+          paidAt: row.paidAt?.toISOString() ?? null,
+          createdAt: row.createdAt.toISOString(),
+          userId: row.userId,
+          serials: tickets.map((t) => t.serial),
+          tickets,
+          form: form
+            ? {
+                company: form.company,
+                jobTitle: form.jobTitle,
+                country: form.country,
+                needInvoice: form.needInvoice === 1,
+                invoiceCompany: form.invoiceCompany,
+                taxId: form.taxId,
+                billingAddress: form.billingAddress,
+              }
+            : null,
+        };
+      }),
+    );
 
     return c.json({
       data: {

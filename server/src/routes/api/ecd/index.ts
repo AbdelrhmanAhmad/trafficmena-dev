@@ -2,7 +2,9 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { env } from '../../../config/env.js';
 import { registerEcdAdminRoutes } from './admin.js';
+import { registerEcdAdminContentRoutes } from './adminContent.js';
 import { registerEcdBookingRoutes } from './bookings.js';
+import { registerEcdContentRoutes } from './content.js';
 import { ecdOriginGuard, isEcdEnabled } from './helpers.js';
 import { registerEcdPaymentRoutes } from './payments.js';
 import { registerEcdSessionRoutes } from './session.js';
@@ -43,7 +45,7 @@ export function createEcdApp() {
         }
         return '';
       },
-      allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
       // Admin calls send session cookies; HTML checkout uses Bearer + credentials:omit.
       credentials: true,
@@ -65,10 +67,12 @@ export function createEcdApp() {
 
   app.get('/health', (c) => c.json({ data: { ok: true, module: 'ecd' } }));
 
+  registerEcdContentRoutes(app);
   registerEcdSessionRoutes(app);
   registerEcdPaymentRoutes(app);
   registerEcdBookingRoutes(app);
   registerEcdAdminRoutes(app);
+  registerEcdAdminContentRoutes(app);
 
   return app;
 }

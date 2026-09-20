@@ -92,6 +92,9 @@ const AdminInvitations = lazy(() => import('./pages/admin/invitations'));
 const AdminPromoCodes = lazy(() => import('./pages/admin/promo-codes'));
 const AdminOrdersPage = lazy(() => import('./pages/admin/orders'));
 const AdminEcdRegistrations = lazy(() => import('./pages/admin/ecd-registrations'));
+const AdminEcdPartners = lazy(() => import('./pages/admin/ecd-partners'));
+const AdminEcdSpeakers = lazy(() => import('./pages/admin/ecd-speakers'));
+const AdminEcdPackages = lazy(() => import('./pages/admin/ecd-packages'));
 const LibraryManagement = lazy(() => import('./pages/admin/library'));
 const AdminLibraryItemDetail = lazy(() => import('./pages/admin/library/[id]'));
 const NewLibraryItem = lazy(() => import('./pages/admin/library/new-item'));
@@ -850,6 +853,36 @@ const App = () => {
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminEcdRegistrations />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ecd-partners"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <AdminEcdPartners />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ecd-speakers"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <AdminEcdSpeakers />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ecd-packages"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <AdminEcdPackages />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }

@@ -5,7 +5,10 @@ import {
   Calendar,
   Clock,
   CreditCard,
+  Handshake,
   Mail,
+  Mic2,
+  Package,
   Ticket,
   TrendingUp,
   UserCheck,
@@ -136,6 +139,24 @@ const AdminDashboard: React.FC = () => {
       description: 'ECommerce Day 2026 HTML checkout bookings.',
       href: '/admin/ecd-registrations',
       icon: Ticket,
+    },
+    {
+      label: 'ECD Partners',
+      description: 'Homepage partner logos marquee.',
+      href: '/admin/ecd-partners',
+      icon: Handshake,
+    },
+    {
+      label: 'ECD Speakers',
+      description: 'Homepage speaker carousel.',
+      href: '/admin/ecd-speakers',
+      icon: Mic2,
+    },
+    {
+      label: 'ECD Packages',
+      description: 'ct / fj names, prices, and features.',
+      href: '/admin/ecd-packages',
+      icon: Package,
     },
   ];
 

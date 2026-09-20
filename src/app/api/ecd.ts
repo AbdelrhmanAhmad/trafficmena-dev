@@ -85,3 +85,155 @@ export async function sendEcdTicketEmail(ticketId: string, attendeeEmail?: strin
   );
   return response.data;
 }
+
+// ——— Content CMS ———
+
+export type EcdPartner = {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  sortOrder: number;
+  published: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EcdSpeaker = {
+  id: string;
+  name: string;
+  role: string | null;
+  company: string | null;
+  photoUrl: string | null;
+  sortOrder: number;
+  published: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EcdPackageFeature = {
+  id?: string;
+  kind: 'included' | 'excluded';
+  label: string;
+  emphasis: boolean;
+  sortOrder: number;
+};
+
+export type EcdTicketPackage = {
+  ticketType: 'ct' | 'fj';
+  displayName: string;
+  eyebrow: string;
+  title: string;
+  tagline: string;
+  description: string;
+  badge: string | null;
+  ctaLabel: string;
+  priceCents: number;
+  priceEgp: number;
+  features: EcdPackageFeature[];
+};
+
+export type EcdPartnerInput = {
+  name: string;
+  logoUrl?: string | null;
+  websiteUrl?: string | null;
+  sortOrder?: number;
+  published?: boolean;
+};
+
+export type EcdSpeakerInput = {
+  name: string;
+  role?: string | null;
+  company?: string | null;
+  photoUrl?: string | null;
+  sortOrder?: number;
+  published?: boolean;
+};
+
+export type EcdPackageUpdateInput = {
+  displayName: string;
+  eyebrow: string;
+  title: string;
+  tagline: string;
+  description: string;
+  badge?: string | null;
+  ctaLabel: string;
+  priceEgp: number;
+  features: Array<{
+    kind: 'included' | 'excluded';
+    label: string;
+    emphasis?: boolean;
+    sortOrder?: number;
+  }>;
+};
+
+export async function fetchEcdPartners() {
+  const response = await fetchJson<{ data: { items: EcdPartner[] } }>(
+    `${API_BASE}/ecd/admin/partners`,
+    { method: 'GET' },
+  );
+  return response.data.items;
+}
+
+export async function createEcdPartner(input: EcdPartnerInput) {
+  const response = await fetchJson<{ data: { partner: EcdPartner } }>(
+    `${API_BASE}/ecd/admin/partners`,
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+  return response.data.partner;
+}
+
+export async function updateEcdPartner(id: string, input: EcdPartnerInput) {
+  const response = await fetchJson<{ data: { partner: EcdPartner } }>(
+    `${API_BASE}/ecd/admin/partners/${id}`,
+    { method: 'PUT', body: JSON.stringify(input) },
+  );
+  return response.data.partner;
+}
+
+export async function deleteEcdPartner(id: string) {
+  await fetchJson(`${API_BASE}/ecd/admin/partners/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchEcdSpeakers() {
+  const response = await fetchJson<{ data: { items: EcdSpeaker[] } }>(
+    `${API_BASE}/ecd/admin/speakers`,
+    { method: 'GET' },
+  );
+  return response.data.items;
+}
+
+export async function createEcdSpeaker(input: EcdSpeakerInput) {
+  const response = await fetchJson<{ data: { speaker: EcdSpeaker } }>(
+    `${API_BASE}/ecd/admin/speakers`,
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+  return response.data.speaker;
+}
+
+export async function updateEcdSpeaker(id: string, input: EcdSpeakerInput) {
+  const response = await fetchJson<{ data: { speaker: EcdSpeaker } }>(
+    `${API_BASE}/ecd/admin/speakers/${id}`,
+    { method: 'PUT', body: JSON.stringify(input) },
+  );
+  return response.data.speaker;
+}
+
+export async function deleteEcdSpeaker(id: string) {
+  await fetchJson(`${API_BASE}/ecd/admin/speakers/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchEcdPackages() {
+  const response = await fetchJson<{
+    data: { packages: { ct: EcdTicketPackage | null; fj: EcdTicketPackage | null } };
+  }>(`${API_BASE}/ecd/admin/packages`, { method: 'GET' });
+  return response.data.packages;
+}
+
+export async function updateEcdPackage(ticketType: 'ct' | 'fj', input: EcdPackageUpdateInput) {
+  const response = await fetchJson<{ data: { package: EcdTicketPackage } }>(
+    `${API_BASE}/ecd/admin/packages/${ticketType}`,
+    { method: 'PUT', body: JSON.stringify(input) },
+  );
+  return response.data.package;
+}
