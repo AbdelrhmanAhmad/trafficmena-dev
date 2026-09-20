@@ -138,3 +138,77 @@ export const ecdTickets = pgTable(
     userIdx: index('ecd_tickets_user_idx').on(table.userId),
   }),
 );
+
+/** Homepage partner/sponsor logos (marquee). Removable with ECD module. */
+export const ecdPartners = pgTable(
+  'ecd_partners',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    logoUrl: text('logo_url'),
+    websiteUrl: text('website_url'),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    published: integer('published').default(1).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    sortIdx: index('ecd_partners_sort_idx').on(table.sortOrder),
+    publishedIdx: index('ecd_partners_published_idx').on(table.published),
+  }),
+);
+
+/** Homepage speaker carousel cards. Removable with ECD module. */
+export const ecdSpeakers = pgTable(
+  'ecd_speakers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    role: text('role'),
+    company: text('company'),
+    photoUrl: text('photo_url'),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    published: integer('published').default(1).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    sortIdx: index('ecd_speakers_sort_idx').on(table.sortOrder),
+    publishedIdx: index('ecd_speakers_published_idx').on(table.published),
+  }),
+);
+
+/**
+ * Exactly two rows (ct / fj). Admin edits only — no insert/delete of package keys.
+ * Price + display copy for home, checkout, emails.
+ */
+export const ecdTicketPackages = pgTable('ecd_ticket_packages', {
+  ticketType: ecdTicketTypeEnum('ticket_type').primaryKey(),
+  displayName: text('display_name').notNull(),
+  eyebrow: text('eyebrow').notNull(),
+  title: text('title').notNull(),
+  tagline: text('tagline').notNull(),
+  description: text('description').notNull(),
+  badge: text('badge'),
+  ctaLabel: text('cta_label').notNull(),
+  priceCents: integer('price_cents').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const ecdFeatureKindEnum = pgEnum('ecd_feature_kind', ['included', 'excluded']);
+
+export const ecdTicketFeatures = pgTable(
+  'ecd_ticket_features',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ticketType: ecdTicketTypeEnum('ticket_type').notNull(),
+    kind: ecdFeatureKindEnum('kind').notNull(),
+    label: text('label').notNull(),
+    emphasis: integer('emphasis').default(0).notNull(),
+    sortOrder: integer('sort_order').default(0).notNull(),
+  },
+  (table) => ({
+    ticketIdx: index('ecd_ticket_features_ticket_idx').on(table.ticketType),
+    sortIdx: index('ecd_ticket_features_sort_idx').on(table.ticketType, table.sortOrder),
+  }),
+);

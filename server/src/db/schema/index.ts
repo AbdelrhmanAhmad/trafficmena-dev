@@ -726,8 +726,13 @@ export const subscriptions = pgTable(
 export {
   ecdBookings,
   ecdCheckoutTokens,
+  ecdFeatureKindEnum,
   ecdHtmlForms,
+  ecdPartners,
   ecdPaymentStatusEnum,
+  ecdSpeakers,
+  ecdTicketFeatures,
+  ecdTicketPackages,
   ecdTickets,
   ecdTicketStatusEnum,
   ecdTicketTypeEnum,

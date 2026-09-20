@@ -7,7 +7,7 @@ import { requireManager } from './utils.js';
 
 const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB cap for MVP
 
-type UploadScope = 'events' | 'library' | 'editor' | 'general';
+type UploadScope = 'events' | 'library' | 'editor' | 'general' | 'ecd';
 
 type ScopeConfig = {
   directory: string;
@@ -51,6 +51,11 @@ const scopeConfig: Record<UploadScope, ScopeConfig> = {
       'image/avif',
     ],
     allowedExtensions: ['pdf', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'webp', 'avif'],
+  },
+  ecd: {
+    directory: 'ecd',
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/svg+xml'],
+    allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'svg'],
   },
 };
 

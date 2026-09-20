@@ -11,12 +11,9 @@ import {
   requireEcdToken,
   resolveEcdToken,
   splitBuyerName,
+  ticketDisplayName,
   verifyBookingAccessToken,
 } from './helpers.js';
-
-function ticketName(type: string) {
-  return type === 'ct' ? 'Control Tower Pass' : 'Full Journey Pass';
-}
 
 async function serializeBooking(bookingId: string) {
   const [booking] = await db.select().from(ecdBookings).where(eq(ecdBookings.id, bookingId)).limit(1);
@@ -39,13 +36,14 @@ async function serializeBooking(bookingId: string) {
   }
 
   const { firstName } = splitBuyerName(booking.buyerName);
+  const name = await ticketDisplayName(booking.ticketType);
 
   return {
     bookingId: booking.id,
     orderCode: booking.orderCode,
     paymentStatus: booking.paymentStatus,
     ticketType: booking.ticketType,
-    ticketName: ticketName(booking.ticketType),
+    ticketName: name,
     qty: booking.qty,
     unitPriceCents: booking.unitPriceCents,
     discountCents: booking.discountCents,
@@ -89,7 +87,7 @@ async function serializeBooking(bookingId: string) {
       attendeeCompany: t.attendeeCompany,
       attendeeTitle: t.attendeeTitle,
       interests: t.interests ?? [],
-      ticketName: ticketName(booking.ticketType),
+      ticketName: name,
     })),
   };
 }

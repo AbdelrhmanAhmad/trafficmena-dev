@@ -80,7 +80,7 @@ export function registerEcdSessionRoutes(app: Hono) {
       );
     }
 
-    const totals = calcEcdTotals({
+    const totals = await calcEcdTotals({
       ticketType: data.ticketType as EcdTicketType,
       qty: data.qty,
       promoCode: data.promoCode,

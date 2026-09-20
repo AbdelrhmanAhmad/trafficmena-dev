@@ -15,12 +15,14 @@ import { isEgyptianMobileE164, toFawaterkLocalPhone } from '../users-phone.js';
 import { getRequestIp } from '../utils.js';
 import {
   ecdRateLimiter,
+  ecdConfirmBaseUrl,
   formatMoneyEgp,
   isEcdSimulatePayments,
   loadBookingForToken,
   makeBookingAccessToken,
   requireEcdToken,
   splitBuyerName,
+  ticketDisplayName,
 } from './helpers.js';
 
 const paySchema = z.object({
@@ -90,14 +92,6 @@ async function markBookingPaid(params: {
     .catch((error) => console.error('[ecd] ticket email batch failed', error));
 
   return { booking: updated, alreadyProcessed: false };
-}
-
-function confirmBaseUrl() {
-  return (
-    env.ECD_CONFIRM_BASE_URL ||
-    env.ECD_CORS_ALLOWLIST.find((o) => o.startsWith('http')) ||
-    'http://127.0.0.1:5500'
-  );
 }
 
 export function registerEcdPaymentRoutes(app: Hono) {
@@ -244,10 +238,9 @@ export function registerEcdPaymentRoutes(app: Hono) {
 
     const { firstName, lastName } = splitBuyerName(booking.buyerName);
     const contactPhone = walletPhone || booking.buyerMobile || user.phoneNumber || undefined;
-    const confirmBase = confirmBaseUrl().replace(/\/+$/, '');
+    const confirmBase = ecdConfirmBaseUrl();
     const apiBase = (env.API_BASE_URL || `http://localhost:${env.PORT || 3001}`).replace(/\/+$/, '');
-    const ticketName =
-      booking.ticketType === 'ct' ? 'Control Tower Pass' : 'Full Journey Pass';
+    const ticketName = await ticketDisplayName(booking.ticketType);
     const unitEgp = booking.unitPriceCents / 100;
     const dueDate = new Date(Date.now() + env.ECD_TOKEN_TTL_HOURS * 60 * 60 * 1000);
 

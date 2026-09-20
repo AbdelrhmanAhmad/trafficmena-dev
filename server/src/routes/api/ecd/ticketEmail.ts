@@ -4,18 +4,10 @@ import { env } from '../../../config/env.js';
 import { db } from '../../../db/client.js';
 import { ecdBookings, ecdTickets } from '../../../db/schema/ecd.js';
 import { sendEcdTicketEmail } from '../../../services/email.js';
-import { makeBookingAccessToken } from './helpers.js';
-
-function ticketPackageName(type: string) {
-  return type === 'ct' ? 'Control Tower Pass' : 'Full Journey Pass';
-}
+import { makeBookingAccessToken, ecdConfirmBaseUrl, ticketDisplayName } from './helpers.js';
 
 function confirmBaseUrl() {
-  return (
-    env.ECD_CONFIRM_BASE_URL ||
-    env.ECD_CORS_ALLOWLIST.find((o) => o.startsWith('http')) ||
-    'http://127.0.0.1:5500'
-  ).replace(/\/+$/, '');
+  return ecdConfirmBaseUrl();
 }
 
 export async function sendSingleEcdTicketEmail(params: {
@@ -62,7 +54,7 @@ export async function sendSingleEcdTicketEmail(params: {
     attendeeName: ticket.attendeeName,
     serial: ticket.serial,
     orderCode: booking.orderCode,
-    ticketName: ticketPackageName(booking.ticketType),
+    ticketName: await ticketDisplayName(booking.ticketType),
     eventTitle: env.ECD_EVENT_TITLE,
     eventStartIso: env.ECD_EVENT_START_ISO,
     eventLocation: env.ECD_EVENT_LOCATION,
