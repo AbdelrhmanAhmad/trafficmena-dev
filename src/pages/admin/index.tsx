@@ -141,8 +141,8 @@ const AdminDashboard: React.FC = () => {
       icon: Ticket,
     },
     {
-      label: 'ECD Partners',
-      description: 'Homepage partner logos marquee.',
+      label: 'ECD Sponsors',
+      description: 'Sponsors page tiers, featured band, homepage marquee.',
       href: '/admin/ecd-partners',
       icon: Handshake,
     },

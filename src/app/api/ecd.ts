@@ -98,6 +98,13 @@ export type EcdPartner = {
   name: string;
   logoUrl: string | null;
   websiteUrl: string | null;
+  tier: 'title' | 'strategic' | 'innovation' | 'empowerment' | 'community';
+  blurb: string | null;
+  supportedAsset: string | null;
+  experienceUrl: string | null;
+  featured: boolean;
+  featuredSortOrder: number;
+  showOnHome: boolean;
   sortOrder: number;
   published: boolean;
   createdAt?: string;
@@ -151,6 +158,13 @@ export type EcdPartnerInput = {
   name: string;
   logoUrl?: string | null;
   websiteUrl?: string | null;
+  tier?: 'title' | 'strategic' | 'innovation' | 'empowerment' | 'community';
+  blurb?: string | null;
+  supportedAsset?: string | null;
+  experienceUrl?: string | null;
+  featured?: boolean;
+  featuredSortOrder?: number;
+  showOnHome?: boolean;
   sortOrder?: number;
   published?: boolean;
 };

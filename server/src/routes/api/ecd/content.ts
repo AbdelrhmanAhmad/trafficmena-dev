@@ -66,8 +66,52 @@ export function registerEcdContentRoutes(app: Hono) {
           name: p.name,
           logoUrl: p.logoUrl,
           websiteUrl: p.websiteUrl,
+          tier: p.tier,
+          blurb: p.blurb,
+          supportedAsset: p.supportedAsset,
+          experienceUrl: p.experienceUrl,
+          featured: p.featured === 1,
+          featuredSortOrder: p.featuredSortOrder,
+          showOnHome: p.showOnHome === 1,
           sortOrder: p.sortOrder,
         })),
+        partnerTiers: [
+          {
+            id: 'title',
+            name: 'Top Player Partner',
+            color: '#101010',
+            focus:
+              'One brand only. Named across the event, on the Main Stage, and in the room where the audience gathers.',
+          },
+          {
+            id: 'strategic',
+            name: 'Strategic Partner',
+            color: '#04c44e',
+            focus:
+              'A brand tied to one part of the day, with a stand and a way to talk to the people who run stores.',
+          },
+          {
+            id: 'innovation',
+            name: 'Innovation Partner',
+            color: '#006681',
+            focus:
+              'For companies bringing a product or a platform that solves a specific problem in the order.',
+          },
+          {
+            id: 'empowerment',
+            name: 'Empowerment Partner',
+            color: '#8a5a00',
+            focus:
+              'For teams that support merchants and want to be in the room without owning a stage.',
+          },
+          {
+            id: 'community',
+            name: 'Community Partner',
+            color: '#4a5563',
+            focus:
+              'The entry level. Your brand listed, your team in the room, and a way to collect leads.',
+          },
+        ],
         speakers: speakers.map((s) => ({
           id: s.id,
           name: s.name,

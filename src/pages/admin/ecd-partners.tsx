@@ -23,13 +23,38 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
 import { Switch } from '@/shared/components/ui/switch';
+import { Textarea } from '@/shared/components/ui/textarea';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+
+const TIERS = [
+  { id: 'title', label: 'Top Player Partner' },
+  { id: 'strategic', label: 'Strategic Partner' },
+  { id: 'innovation', label: 'Innovation Partner' },
+  { id: 'empowerment', label: 'Empowerment Partner' },
+  { id: 'community', label: 'Community Partner' },
+] as const;
+
+type TierId = (typeof TIERS)[number]['id'];
 
 type FormState = {
   name: string;
   logoUrl: string;
   websiteUrl: string;
+  tier: TierId;
+  blurb: string;
+  supportedAsset: string;
+  experienceUrl: string;
+  featured: boolean;
+  featuredSortOrder: number;
+  showOnHome: boolean;
   sortOrder: number;
   published: boolean;
 };
@@ -38,9 +63,20 @@ const emptyForm = (): FormState => ({
   name: '',
   logoUrl: '',
   websiteUrl: '',
+  tier: 'community',
+  blurb: '',
+  supportedAsset: '',
+  experienceUrl: '',
+  featured: false,
+  featuredSortOrder: 0,
+  showOnHome: true,
   sortOrder: 0,
   published: true,
 });
+
+function tierLabel(id: string) {
+  return TIERS.find((t) => t.id === id)?.label ?? id;
+}
 
 function PartnerFormDialog({
   open,
@@ -65,6 +101,13 @@ function PartnerFormDialog({
         name: form.name.trim(),
         logoUrl: form.logoUrl.trim() || null,
         websiteUrl: form.websiteUrl.trim() || null,
+        tier: form.tier,
+        blurb: form.blurb.trim() || null,
+        supportedAsset: form.supportedAsset.trim() || null,
+        experienceUrl: form.experienceUrl.trim() || null,
+        featured: form.featured,
+        featuredSortOrder: form.featuredSortOrder,
+        showOnHome: form.showOnHome,
         sortOrder: form.sortOrder,
         published: form.published,
       };
@@ -73,7 +116,7 @@ function PartnerFormDialog({
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'ecd-partners'] });
-      toast({ title: partnerId ? 'Partner updated' : 'Partner created' });
+      toast({ title: partnerId ? 'Sponsor updated' : 'Sponsor created' });
       onOpenChange(false);
     },
     onError: () => {
@@ -95,9 +138,9 @@ function PartnerFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{partnerId ? 'Edit partner' : 'Add partner'}</DialogTitle>
+          <DialogTitle>{partnerId ? 'Edit sponsor' : 'Add sponsor'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
@@ -107,6 +150,24 @@ function PartnerFormDialog({
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
+          </div>
+          <div className="space-y-1">
+            <Label>Tier</Label>
+            <Select
+              value={form.tier}
+              onValueChange={(v) => setForm((f) => ({ ...f, tier: v as TierId }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIERS.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <Label htmlFor="ecd-partner-logo">Logo URL</Label>
@@ -151,7 +212,67 @@ function PartnerFormDialog({
             />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ecd-partner-sort">Sort order</Label>
+            <Label htmlFor="ecd-partner-blurb">Featured blurb</Label>
+            <Textarea
+              id="ecd-partner-blurb"
+              rows={2}
+              value={form.blurb}
+              onChange={(e) => setForm((f) => ({ ...f, blurb: e.target.value }))}
+              placeholder="One sentence on what this partner contributes"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="ecd-partner-asset">Supported asset</Label>
+            <Input
+              id="ecd-partner-asset"
+              value={form.supportedAsset}
+              onChange={(e) => setForm((f) => ({ ...f, supportedAsset: e.target.value }))}
+              placeholder="Main Stage, Presented by …"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="ecd-partner-exp">Experience URL</Label>
+            <Input
+              id="ecd-partner-exp"
+              value={form.experienceUrl}
+              onChange={(e) => setForm((f) => ({ ...f, experienceUrl: e.target.value }))}
+              placeholder="Link for Explore the Supported Experience"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="ecd-partner-featured">Featured on sponsors page</Label>
+            <Switch
+              id="ecd-partner-featured"
+              checked={form.featured}
+              onCheckedChange={(v) => setForm((f) => ({ ...f, featured: v }))}
+            />
+          </div>
+          {form.featured ? (
+            <div className="space-y-1">
+              <Label htmlFor="ecd-partner-fsort">Featured sort</Label>
+              <Input
+                id="ecd-partner-fsort"
+                type="number"
+                value={form.featuredSortOrder}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    featuredSortOrder: Number.parseInt(e.target.value, 10) || 0,
+                  }))
+                }
+              />
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between">
+            <Label htmlFor="ecd-partner-home">Show on homepage marquee</Label>
+            <Switch
+              id="ecd-partner-home"
+              checked={form.showOnHome}
+              onCheckedChange={(v) => setForm((f) => ({ ...f, showOnHome: v }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="ecd-partner-sort">Sort order (tier grid)</Label>
             <Input
               id="ecd-partner-sort"
               type="number"
@@ -198,7 +319,7 @@ const EcdPartnersPage: React.FC = () => {
     mutationFn: deleteEcdPartner,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'ecd-partners'] });
-      toast({ title: 'Partner deleted' });
+      toast({ title: 'Sponsor deleted' });
     },
     onError: () => toast({ title: 'Delete failed', variant: 'destructive' }),
   });
@@ -211,10 +332,10 @@ const EcdPartnersPage: React.FC = () => {
             <div>
               <h1 className="flex items-center gap-2 text-2xl font-semibold text-neutral-900">
                 <Handshake className="h-6 w-6" />
-                ECD Partners
+                ECD Sponsors
               </h1>
               <p className="text-sm text-neutral-600">
-                Homepage partner marquee logos for ECommerce Day.
+                Sponsors page tiers + featured band, and homepage partner marquee.
               </p>
             </div>
             <Button
@@ -225,7 +346,7 @@ const EcdPartnersPage: React.FC = () => {
               }}
             >
               <Plus className="mr-1 h-4 w-4" />
-              Add partner
+              Add sponsor
             </Button>
           </div>
 
@@ -234,7 +355,8 @@ const EcdPartnersPage: React.FC = () => {
           ) : items.length === 0 ? (
             <Card>
               <CardContent className="py-10 text-center text-sm text-neutral-500">
-                No partners yet. Add logos to populate the homepage marquee.
+                No sponsors yet. Add published sponsors to fill sponsors.html and the homepage
+                marquee.
               </CardContent>
             </Card>
           ) : (
@@ -243,9 +365,12 @@ const EcdPartnersPage: React.FC = () => {
                 <Card key={p.id}>
                   <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                     <CardTitle className="text-base">{p.name}</CardTitle>
-                    <Badge variant={p.published ? 'default' : 'secondary'}>
-                      {p.published ? 'Published' : 'Draft'}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1">
+                      {p.featured ? <Badge>Featured</Badge> : null}
+                      <Badge variant={p.published ? 'default' : 'secondary'}>
+                        {p.published ? 'Published' : 'Draft'}
+                      </Badge>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {p.logoUrl ? (
@@ -259,7 +384,10 @@ const EcdPartnersPage: React.FC = () => {
                         No logo
                       </div>
                     )}
-                    <div className="text-xs text-neutral-500">Sort: {p.sortOrder}</div>
+                    <div className="text-xs text-neutral-500">
+                      {tierLabel(p.tier)} · Sort {p.sortOrder}
+                      {p.showOnHome ? ' · Home' : ''}
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         type="button"
@@ -305,6 +433,15 @@ const EcdPartnersPage: React.FC = () => {
                     name: editing.name,
                     logoUrl: editing.logoUrl || '',
                     websiteUrl: editing.websiteUrl || '',
+                    tier: (TIERS.some((t) => t.id === editing.tier)
+                      ? editing.tier
+                      : 'community') as TierId,
+                    blurb: editing.blurb || '',
+                    supportedAsset: editing.supportedAsset || '',
+                    experienceUrl: editing.experienceUrl || '',
+                    featured: editing.featured,
+                    featuredSortOrder: editing.featuredSortOrder ?? 0,
+                    showOnHome: editing.showOnHome !== false,
                     sortOrder: editing.sortOrder,
                     published: editing.published,
                   }

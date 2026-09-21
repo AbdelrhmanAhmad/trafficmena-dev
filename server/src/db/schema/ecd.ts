@@ -145,7 +145,10 @@ export const ecdTickets = pgTable(
   }),
 );
 
-/** Homepage partner/sponsor logos (marquee). Removable with ECD module. */
+/**
+ * Sponsors / partners for homepage marquee + sponsors.html
+ * (featured band + five ecosystem tiers). Removable with ECD module.
+ */
 export const ecdPartners = pgTable(
   'ecd_partners',
   {
@@ -153,6 +156,15 @@ export const ecdPartners = pgTable(
     name: text('name').notNull(),
     logoUrl: text('logo_url'),
     websiteUrl: text('website_url'),
+    /** title | strategic | innovation | empowerment | community */
+    tier: text('tier').default('community').notNull(),
+    blurb: text('blurb'),
+    supportedAsset: text('supported_asset'),
+    experienceUrl: text('experience_url'),
+    featured: integer('featured').default(0).notNull(),
+    featuredSortOrder: integer('featured_sort_order').default(0).notNull(),
+    /** Show in homepage partners marquee */
+    showOnHome: integer('show_on_home').default(1).notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
     published: integer('published').default(1).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -161,6 +173,8 @@ export const ecdPartners = pgTable(
   (table) => ({
     sortIdx: index('ecd_partners_sort_idx').on(table.sortOrder),
     publishedIdx: index('ecd_partners_published_idx').on(table.published),
+    tierIdx: index('ecd_partners_tier_idx').on(table.tier),
+    featuredIdx: index('ecd_partners_featured_idx').on(table.featured),
   }),
 );
 
