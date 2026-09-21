@@ -161,7 +161,7 @@ const adminMenuItems = [
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
-    title: 'ECD Partners',
+    title: 'ECD Sponsors',
     url: '/admin/ecd-partners',
     icon: Handshake,
     roles: ['owner', 'admin', 'manager'] as UserRole[],

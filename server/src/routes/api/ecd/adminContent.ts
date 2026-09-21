@@ -19,13 +19,45 @@ const optionalUrl = z
   .optional()
   .transform((v) => (v && v.trim() ? v.trim() : null));
 
+const partnerTiers = [
+  'title',
+  'strategic',
+  'innovation',
+  'empowerment',
+  'community',
+] as const;
+
 const partnerSchema = z.object({
   name: z.string().trim().min(1).max(120),
   logoUrl: optionalUrl,
   websiteUrl: optionalUrl,
+  tier: z.enum(partnerTiers).optional(),
+  blurb: z.string().trim().max(400).nullable().optional(),
+  supportedAsset: z.string().trim().max(200).nullable().optional(),
+  experienceUrl: optionalUrl,
+  featured: z.boolean().optional(),
+  featuredSortOrder: z.number().int().min(0).max(9999).optional(),
+  showOnHome: z.boolean().optional(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
   published: z.boolean().optional(),
 });
+
+function partnerValues(data: z.infer<typeof partnerSchema>) {
+  return {
+    name: data.name,
+    logoUrl: data.logoUrl ?? null,
+    websiteUrl: data.websiteUrl ?? null,
+    tier: data.tier ?? 'community',
+    blurb: data.blurb ?? null,
+    supportedAsset: data.supportedAsset ?? null,
+    experienceUrl: data.experienceUrl ?? null,
+    featured: boolToInt(data.featured, 0),
+    featuredSortOrder: data.featuredSortOrder ?? 0,
+    showOnHome: boolToInt(data.showOnHome, 1),
+    sortOrder: data.sortOrder ?? 0,
+    published: boolToInt(data.published, 1),
+  };
+}
 
 const speakerSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -106,16 +138,7 @@ export function registerEcdAdminContentRoutes(app: Hono) {
 
     return c.json({
       data: {
-        items: rows.map((p) => ({
-          id: p.id,
-          name: p.name,
-          logoUrl: p.logoUrl,
-          websiteUrl: p.websiteUrl,
-          sortOrder: p.sortOrder,
-          published: p.published === 1,
-          createdAt: p.createdAt.toISOString(),
-          updatedAt: p.updatedAt.toISOString(),
-        })),
+        items: rows.map(serializePartner),
       },
     });
   });
@@ -131,13 +154,7 @@ export function registerEcdAdminContentRoutes(app: Hono) {
 
     const [row] = await db
       .insert(ecdPartners)
-      .values({
-        name: body.data.name,
-        logoUrl: body.data.logoUrl ?? null,
-        websiteUrl: body.data.websiteUrl ?? null,
-        sortOrder: body.data.sortOrder ?? 0,
-        published: boolToInt(body.data.published, 1),
-      })
+      .values(partnerValues(body.data))
       .returning();
 
     return c.json({ data: { partner: serializePartner(row) } }, 201);
@@ -155,11 +172,7 @@ export function registerEcdAdminContentRoutes(app: Hono) {
     const [row] = await db
       .update(ecdPartners)
       .set({
-        name: body.data.name,
-        logoUrl: body.data.logoUrl ?? null,
-        websiteUrl: body.data.websiteUrl ?? null,
-        sortOrder: body.data.sortOrder ?? 0,
-        published: boolToInt(body.data.published, 1),
+        ...partnerValues(body.data),
         updatedAt: new Date(),
       })
       .where(eq(ecdPartners.id, c.req.param('id')))
@@ -372,6 +385,13 @@ function serializePartner(p: typeof ecdPartners.$inferSelect) {
     name: p.name,
     logoUrl: p.logoUrl,
     websiteUrl: p.websiteUrl,
+    tier: p.tier,
+    blurb: p.blurb,
+    supportedAsset: p.supportedAsset,
+    experienceUrl: p.experienceUrl,
+    featured: p.featured === 1,
+    featuredSortOrder: p.featuredSortOrder,
+    showOnHome: p.showOnHome === 1,
     sortOrder: p.sortOrder,
     published: p.published === 1,
     createdAt: p.createdAt.toISOString(),
