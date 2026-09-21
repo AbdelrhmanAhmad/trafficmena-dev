@@ -43,6 +43,12 @@ export const ecdHtmlForms = pgTable(
     billingAddress: text('billing_address'),
     buyerMobile: text('buyer_mobile'),
     buyerCountryCode: text('buyer_country_code'),
+    /** Ecommerce store URL or "none" (checkout-from-client). */
+    store: text('store'),
+    linkedinUrl: text('linkedin_url'),
+    facebookUrl: text('facebook_url'),
+    accessibilityNeeds: text('accessibility_needs'),
+    newsOptIn: integer('news_opt_in').default(0).notNull(),
     rawPayload: jsonb('raw_payload'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -158,7 +164,7 @@ export const ecdPartners = pgTable(
   }),
 );
 
-/** Homepage speaker carousel cards. Removable with ECD module. */
+/** Speakers for home carousel + speakers.html (featured / room / type filters). */
 export const ecdSpeakers = pgTable(
   'ecd_speakers',
   {
@@ -167,6 +173,16 @@ export const ecdSpeakers = pgTable(
     role: text('role'),
     company: text('company'),
     photoUrl: text('photo_url'),
+    /** 0 Main Stage · 1 Second Stage · 2 Acquisition · 3 CRO/Retention · 4 Ops/Logistics */
+    roomIndex: integer('room_index').default(0).notNull(),
+    speakerType: text('speaker_type'),
+    statusTag: text('status_tag').default('Confirmed'),
+    expertise: jsonb('expertise').$type<string[]>(),
+    sessionTitle: text('session_title'),
+    sessionLabel: text('session_label'),
+    proof: text('proof'),
+    featured: integer('featured').default(0).notNull(),
+    featuredSortOrder: integer('featured_sort_order').default(0).notNull(),
     sortOrder: integer('sort_order').default(0).notNull(),
     published: integer('published').default(1).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -175,6 +191,8 @@ export const ecdSpeakers = pgTable(
   (table) => ({
     sortIdx: index('ecd_speakers_sort_idx').on(table.sortOrder),
     publishedIdx: index('ecd_speakers_published_idx').on(table.published),
+    featuredIdx: index('ecd_speakers_featured_idx').on(table.featured),
+    roomIdx: index('ecd_speakers_room_idx').on(table.roomIndex),
   }),
 );
 

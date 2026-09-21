@@ -34,7 +34,7 @@ const attendeeSchema = z.object({
 
 const sessionSchema = z.object({
   ticketType: z.enum(['ct', 'fj']),
-  qty: z.number().int().min(1).max(20),
+  qty: z.number().int().min(1).max(20).default(1),
   promoCode: z.string().trim().max(40).optional().nullable(),
   clientTotalCents: z.number().int().nonnegative().optional(),
   buyer: z.object({
@@ -43,14 +43,27 @@ const sessionSchema = z.object({
     mobile: z.string().trim().min(5).max(40),
     countryCode: z.string().trim().max(10).optional().nullable(),
     country: z.string().trim().min(2).max(80),
-    company: z.string().trim().max(160).optional().nullable(),
-    title: z.string().trim().max(160).optional().nullable(),
+    company: z.string().trim().min(1).max(160),
+    title: z.string().trim().min(1).max(160),
+    store: z.string().trim().min(1).max(200),
+    linkedin: z.string().trim().max(300).optional().nullable(),
+    facebook: z.string().trim().max(300).optional().nullable(),
+    access: z.string().trim().max(400).optional().nullable(),
+    newsOptIn: z.boolean().optional(),
     needInvoice: z.boolean().optional(),
     invoiceCompany: z.string().trim().max(160).optional().nullable(),
     taxId: z.string().trim().max(80).optional().nullable(),
     billingAddress: z.string().trim().max(400).optional().nullable(),
+  }).superRefine((buyer, ctx) => {
+    if (!(buyer.linkedin || '').trim() && !(buyer.facebook || '').trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Add a LinkedIn or a Facebook profile.',
+        path: ['linkedin'],
+      });
+    }
   }),
-  attendees: z.array(attendeeSchema).min(1).max(20),
+  attendees: z.array(attendeeSchema).max(20).optional().nullable(),
 });
 
 export function registerEcdSessionRoutes(app: Hono) {
@@ -73,7 +86,21 @@ export function registerEcdSessionRoutes(app: Hono) {
     }
 
     const data = body.data;
-    if (data.attendees.length !== data.qty) {
+    // New checkout is single-ticket; auto-build attendee from buyer when omitted.
+    const attendees =
+      data.attendees && data.attendees.length > 0
+        ? data.attendees
+        : [
+            {
+              name: data.buyer.name,
+              email: data.buyer.email,
+              mobile: data.buyer.mobile,
+              company: data.buyer.company,
+              title: data.buyer.title,
+              interests: null,
+            },
+          ];
+    if (attendees.length !== data.qty) {
       return c.json(
         { error: { code: 'QTY_MISMATCH', message: 'Attendee count must match ticket quantity.' } },
         400,
@@ -159,6 +186,11 @@ export function registerEcdSessionRoutes(app: Hono) {
           billingAddress: data.buyer.billingAddress || null,
           buyerMobile: data.buyer.mobile,
           buyerCountryCode: data.buyer.countryCode || null,
+          store: data.buyer.store || null,
+          linkedinUrl: data.buyer.linkedin || null,
+          facebookUrl: data.buyer.facebook || null,
+          accessibilityNeeds: data.buyer.access || null,
+          newsOptIn: data.buyer.newsOptIn ? 1 : 0,
           rawPayload: data,
         })
         .returning({ id: ecdHtmlForms.id });
@@ -203,8 +235,8 @@ export function registerEcdSessionRoutes(app: Hono) {
         .returning();
 
       const ticketRows = [];
-      for (let i = 0; i < data.attendees.length; i++) {
-        const att = data.attendees[i];
+      for (let i = 0; i < attendees.length; i++) {
+        const att = attendees[i];
         const ticketId = randomUUID();
         // Unify public IDs: ticket #1 serial === orderCode; extras get sibling codes.
         let serial = i === 0 ? orderCode : makeTicketSerial({ bookedAt });

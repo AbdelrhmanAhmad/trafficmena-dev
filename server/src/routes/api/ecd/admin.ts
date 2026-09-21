@@ -159,6 +159,11 @@ export function registerEcdAdminRoutes(app: Hono) {
                 invoiceCompany: form.invoiceCompany,
                 taxId: form.taxId,
                 billingAddress: form.billingAddress,
+                store: form.store,
+                linkedinUrl: form.linkedinUrl,
+                facebookUrl: form.facebookUrl,
+                accessibilityNeeds: form.accessibilityNeeds,
+                newsOptIn: form.newsOptIn === 1,
               }
             : null,
         };

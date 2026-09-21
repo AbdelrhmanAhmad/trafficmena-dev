@@ -418,6 +418,11 @@ const EcdRegistrationsPage: React.FC = () => {
                     <div>Company: {selected.form.company || '—'}</div>
                     <div>Title: {selected.form.jobTitle || '—'}</div>
                     <div>Country: {selected.form.country || '—'}</div>
+                    <div>Store: {selected.form.store || '—'}</div>
+                    <div>LinkedIn: {selected.form.linkedinUrl || '—'}</div>
+                    <div>Facebook: {selected.form.facebookUrl || '—'}</div>
+                    <div>Accessibility: {selected.form.accessibilityNeeds || '—'}</div>
+                    <div>News opt-in: {selected.form.newsOptIn ? 'Yes' : 'No'}</div>
                     {selected.form.needInvoice && (
                       <>
                         <div>Invoice co: {selected.form.invoiceCompany || '—'}</div>

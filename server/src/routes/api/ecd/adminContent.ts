@@ -32,9 +32,41 @@ const speakerSchema = z.object({
   role: z.string().trim().max(160).nullable().optional(),
   company: z.string().trim().max(160).nullable().optional(),
   photoUrl: optionalUrl,
+  roomIndex: z.number().int().min(0).max(4).optional(),
+  speakerType: z
+    .enum(['Founder', 'Operator', 'Executive', 'Specialist'])
+    .nullable()
+    .optional(),
+  statusTag: z.string().trim().max(40).nullable().optional(),
+  expertise: z.array(z.string().trim().max(40)).max(12).optional(),
+  sessionTitle: z.string().trim().max(300).nullable().optional(),
+  sessionLabel: z.string().trim().max(120).nullable().optional(),
+  proof: z.string().trim().max(400).nullable().optional(),
+  featured: z.boolean().optional(),
+  featuredSortOrder: z.number().int().min(0).max(9999).optional(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
   published: z.boolean().optional(),
 });
+
+function speakerValues(data: z.infer<typeof speakerSchema>) {
+  return {
+    name: data.name,
+    role: data.role ?? null,
+    company: data.company ?? null,
+    photoUrl: data.photoUrl ?? null,
+    roomIndex: data.roomIndex ?? 0,
+    speakerType: data.speakerType ?? null,
+    statusTag: data.statusTag ?? 'Confirmed',
+    expertise: data.expertise ?? [],
+    sessionTitle: data.sessionTitle ?? null,
+    sessionLabel: data.sessionLabel ?? null,
+    proof: data.proof ?? null,
+    featured: boolToInt(data.featured, 0),
+    featuredSortOrder: data.featuredSortOrder ?? 0,
+    sortOrder: data.sortOrder ?? 0,
+    published: boolToInt(data.published, 1),
+  };
+}
 
 const featureSchema = z.object({
   kind: z.enum(['included', 'excluded']),
@@ -166,17 +198,7 @@ export function registerEcdAdminContentRoutes(app: Hono) {
 
     return c.json({
       data: {
-        items: rows.map((s) => ({
-          id: s.id,
-          name: s.name,
-          role: s.role,
-          company: s.company,
-          photoUrl: s.photoUrl,
-          sortOrder: s.sortOrder,
-          published: s.published === 1,
-          createdAt: s.createdAt.toISOString(),
-          updatedAt: s.updatedAt.toISOString(),
-        })),
+        items: rows.map((s) => serializeSpeaker(s)),
       },
     });
   });
@@ -192,14 +214,7 @@ export function registerEcdAdminContentRoutes(app: Hono) {
 
     const [row] = await db
       .insert(ecdSpeakers)
-      .values({
-        name: body.data.name,
-        role: body.data.role ?? null,
-        company: body.data.company ?? null,
-        photoUrl: body.data.photoUrl ?? null,
-        sortOrder: body.data.sortOrder ?? 0,
-        published: boolToInt(body.data.published, 1),
-      })
+      .values(speakerValues(body.data))
       .returning();
 
     return c.json({ data: { speaker: serializeSpeaker(row) } }, 201);
@@ -217,12 +232,7 @@ export function registerEcdAdminContentRoutes(app: Hono) {
     const [row] = await db
       .update(ecdSpeakers)
       .set({
-        name: body.data.name,
-        role: body.data.role ?? null,
-        company: body.data.company ?? null,
-        photoUrl: body.data.photoUrl ?? null,
-        sortOrder: body.data.sortOrder ?? 0,
-        published: boolToInt(body.data.published, 1),
+        ...speakerValues(body.data),
         updatedAt: new Date(),
       })
       .where(eq(ecdSpeakers.id, c.req.param('id')))
@@ -376,6 +386,15 @@ function serializeSpeaker(s: typeof ecdSpeakers.$inferSelect) {
     role: s.role,
     company: s.company,
     photoUrl: s.photoUrl,
+    roomIndex: s.roomIndex,
+    speakerType: s.speakerType,
+    statusTag: s.statusTag,
+    expertise: s.expertise ?? [],
+    sessionTitle: s.sessionTitle,
+    sessionLabel: s.sessionLabel,
+    proof: s.proof,
+    featured: s.featured === 1,
+    featuredSortOrder: s.featuredSortOrder,
     sortOrder: s.sortOrder,
     published: s.published === 1,
     createdAt: s.createdAt.toISOString(),
