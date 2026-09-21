@@ -23,14 +23,41 @@ import {
 } from '@/shared/components/ui/dialog';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/shared/components/ui/select';
 import { Switch } from '@/shared/components/ui/switch';
+import { Textarea } from '@/shared/components/ui/textarea';
 import { useToast } from '@/shared/hooks/custom/use-toast';
+
+const ROOMS = [
+  { index: 0, name: 'Main Stage' },
+  { index: 1, name: 'Second Stage' },
+  { index: 2, name: 'Acquisition workshops' },
+  { index: 3, name: 'CRO & Retention workshops' },
+  { index: 4, name: 'Operations & Logistics workshops' },
+];
+
+const TYPES = ['Founder', 'Operator', 'Executive', 'Specialist'] as const;
 
 type FormState = {
   name: string;
   role: string;
   company: string;
   photoUrl: string;
+  roomIndex: number;
+  speakerType: string;
+  statusTag: string;
+  expertise: string;
+  sessionTitle: string;
+  sessionLabel: string;
+  proof: string;
+  featured: boolean;
+  featuredSortOrder: number;
   sortOrder: number;
   published: boolean;
 };
@@ -40,9 +67,43 @@ const emptyForm = (): FormState => ({
   role: '',
   company: '',
   photoUrl: '',
+  roomIndex: 0,
+  speakerType: 'Specialist',
+  statusTag: 'Confirmed',
+  expertise: '',
+  sessionTitle: '',
+  sessionLabel: '',
+  proof: '',
+  featured: false,
+  featuredSortOrder: 0,
   sortOrder: 0,
   published: true,
 });
+
+function toPayload(form: FormState) {
+  return {
+    name: form.name.trim(),
+    role: form.role.trim() || null,
+    company: form.company.trim() || null,
+    photoUrl: form.photoUrl.trim() || null,
+    roomIndex: form.roomIndex,
+    speakerType: (TYPES as readonly string[]).includes(form.speakerType)
+      ? (form.speakerType as 'Founder' | 'Operator' | 'Executive' | 'Specialist')
+      : null,
+    statusTag: form.statusTag.trim() || 'Confirmed',
+    expertise: form.expertise
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+    sessionTitle: form.sessionTitle.trim() || null,
+    sessionLabel: form.sessionLabel.trim() || null,
+    proof: form.proof.trim() || null,
+    featured: form.featured,
+    featuredSortOrder: form.featuredSortOrder,
+    sortOrder: form.sortOrder,
+    published: form.published,
+  };
+}
 
 function SpeakerFormDialog({
   open,
@@ -63,14 +124,7 @@ function SpeakerFormDialog({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = {
-        name: form.name.trim(),
-        role: form.role.trim() || null,
-        company: form.company.trim() || null,
-        photoUrl: form.photoUrl.trim() || null,
-        sortOrder: form.sortOrder,
-        published: form.published,
-      };
+      const payload = toPayload(form);
       if (speakerId) return updateEcdSpeaker(speakerId, payload);
       return createEcdSpeaker(payload);
     },
@@ -79,9 +133,7 @@ function SpeakerFormDialog({
       toast({ title: speakerId ? 'Speaker updated' : 'Speaker created' });
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: 'Save failed', variant: 'destructive' });
-    },
+    onError: () => toast({ title: 'Save failed', variant: 'destructive' }),
   });
 
   const handleUpload = async (file: File) => {
@@ -98,40 +150,38 @@ function SpeakerFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{speakerId ? 'Edit speaker' : 'Add speaker'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label htmlFor="ecd-speaker-name">Name</Label>
+            <Label>Name</Label>
             <Input
-              id="ecd-speaker-name"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="ecd-speaker-role">Job title</Label>
-            <Input
-              id="ecd-speaker-role"
-              value={form.role}
-              onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-            />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Job title</Label>
+              <Input
+                value={form.role}
+                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Company</Label>
+              <Input
+                value={form.company}
+                onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+              />
+            </div>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ecd-speaker-company">Company</Label>
-            <Input
-              id="ecd-speaker-company"
-              value={form.company}
-              onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="ecd-speaker-photo">Photo URL</Label>
+            <Label>Photo URL</Label>
             <div className="flex gap-2">
               <Input
-                id="ecd-speaker-photo"
                 value={form.photoUrl}
                 onChange={(e) => setForm((f) => ({ ...f, photoUrl: e.target.value }))}
               />
@@ -157,32 +207,131 @@ function SpeakerFormDialog({
                 }}
               />
             </div>
-            {form.photoUrl ? (
-              <img
-                src={form.photoUrl}
-                alt=""
-                className="mt-2 h-16 w-16 rounded-full object-cover"
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Room</Label>
+              <Select
+                value={String(form.roomIndex)}
+                onValueChange={(v) => setForm((f) => ({ ...f, roomIndex: Number(v) }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROOMS.map((r) => (
+                    <SelectItem key={r.index} value={String(r.index)}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Type</Label>
+              <Select
+                value={form.speakerType}
+                onValueChange={(v) => setForm((f) => ({ ...f, speakerType: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TYPES.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Status tag</Label>
+              <Input
+                value={form.statusTag}
+                onChange={(e) => setForm((f) => ({ ...f, statusTag: e.target.value }))}
+                placeholder="Confirmed / Proposed"
               />
-            ) : null}
+            </div>
+            <div className="space-y-1">
+              <Label>Expertise (comma-separated)</Label>
+              <Input
+                value={form.expertise}
+                onChange={(e) => setForm((f) => ({ ...f, expertise: e.target.value }))}
+                placeholder="SEO, AI, Acquisition"
+              />
+            </div>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="ecd-speaker-sort">Sort order</Label>
+            <Label>Session title</Label>
             <Input
-              id="ecd-speaker-sort"
-              type="number"
-              value={form.sortOrder}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, sortOrder: Number.parseInt(e.target.value, 10) || 0 }))
-              }
+              value={form.sessionTitle}
+              onChange={(e) => setForm((f) => ({ ...f, sessionTitle: e.target.value }))}
             />
           </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="ecd-speaker-pub">Published</Label>
-            <Switch
-              id="ecd-speaker-pub"
-              checked={form.published}
-              onCheckedChange={(v) => setForm((f) => ({ ...f, published: v }))}
+          <div className="space-y-1">
+            <Label>Session label</Label>
+            <Input
+              value={form.sessionLabel}
+              onChange={(e) => setForm((f) => ({ ...f, sessionLabel: e.target.value }))}
+              placeholder="Workshop — Acquisition Room"
             />
+          </div>
+          <div className="space-y-1">
+            <Label>Proof (featured)</Label>
+            <Textarea
+              value={form.proof}
+              onChange={(e) => setForm((f) => ({ ...f, proof: e.target.value }))}
+              rows={2}
+            />
+          </div>
+          <div className="flex flex-wrap gap-6">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="ecd-spk-feat"
+                checked={form.featured}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, featured: v }))}
+              />
+              <Label htmlFor="ecd-spk-feat">Featured</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="ecd-spk-pub"
+                checked={form.published}
+                onCheckedChange={(v) => setForm((f) => ({ ...f, published: v }))}
+              />
+              <Label htmlFor="ecd-spk-pub">Published</Label>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Featured sort</Label>
+              <Input
+                type="number"
+                value={form.featuredSortOrder}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    featuredSortOrder: Number.parseInt(e.target.value, 10) || 0,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Grid sort</Label>
+              <Input
+                type="number"
+                value={form.sortOrder}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    sortOrder: Number.parseInt(e.target.value, 10) || 0,
+                  }))
+                }
+              />
+            </div>
           </div>
           <Button
             type="button"
@@ -229,7 +378,7 @@ const EcdSpeakersPage: React.FC = () => {
                 ECD Speakers
               </h1>
               <p className="text-sm text-neutral-600">
-                Homepage speaker carousel for ECommerce Day.
+                Featured band + Room/Type filters on speakers.html and home carousel.
               </p>
             </div>
             <Button
@@ -249,7 +398,7 @@ const EcdSpeakersPage: React.FC = () => {
           ) : items.length === 0 ? (
             <Card>
               <CardContent className="py-10 text-center text-sm text-neutral-500">
-                No speakers yet. Add confirmed speakers to populate the homepage carousel.
+                No speakers yet.
               </CardContent>
             </Card>
           ) : (
@@ -258,29 +407,24 @@ const EcdSpeakersPage: React.FC = () => {
                 <Card key={s.id}>
                   <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                     <CardTitle className="text-base">{s.name}</CardTitle>
-                    <Badge variant={s.published ? 'default' : 'secondary'}>
-                      {s.published ? 'Published' : 'Draft'}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      {s.photoUrl ? (
-                        <img
-                          src={s.photoUrl}
-                          alt=""
-                          className="h-14 w-14 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-neutral-100 text-xs text-neutral-400">
-                          —
-                        </div>
-                      )}
-                      <div className="min-w-0 text-sm text-neutral-600">
-                        {[s.role, s.company].filter(Boolean).join(', ') || '—'}
-                      </div>
+                    <div className="flex flex-wrap gap-1">
+                      {s.featured ? <Badge>Featured</Badge> : null}
+                      <Badge variant={s.published ? 'default' : 'secondary'}>
+                        {s.published ? 'Published' : 'Draft'}
+                      </Badge>
                     </div>
-                    <div className="text-xs text-neutral-500">Sort: {s.sortOrder}</div>
-                    <div className="flex gap-2">
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-neutral-600">
+                    <div>{[s.role, s.company].filter(Boolean).join(' · ') || '—'}</div>
+                    <div className="text-xs">
+                      Room: {ROOMS.find((r) => r.index === s.roomIndex)?.name ?? s.roomIndex}
+                      {s.speakerType ? ` · ${s.speakerType}` : ''}
+                      {s.statusTag ? ` · ${s.statusTag}` : ''}
+                    </div>
+                    {s.sessionTitle ? (
+                      <div className="text-xs text-neutral-500">{s.sessionTitle}</div>
+                    ) : null}
+                    <div className="flex gap-2 pt-1">
                       <Button
                         type="button"
                         size="sm"
@@ -326,6 +470,15 @@ const EcdSpeakersPage: React.FC = () => {
                     role: editing.role || '',
                     company: editing.company || '',
                     photoUrl: editing.photoUrl || '',
+                    roomIndex: editing.roomIndex ?? 0,
+                    speakerType: editing.speakerType || 'Specialist',
+                    statusTag: editing.statusTag || 'Confirmed',
+                    expertise: (editing.expertise || []).join(', '),
+                    sessionTitle: editing.sessionTitle || '',
+                    sessionLabel: editing.sessionLabel || '',
+                    proof: editing.proof || '',
+                    featured: editing.featured,
+                    featuredSortOrder: editing.featuredSortOrder ?? 0,
                     sortOrder: editing.sortOrder,
                     published: editing.published,
                   }

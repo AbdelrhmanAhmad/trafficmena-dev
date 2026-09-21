@@ -35,6 +35,11 @@ export type EcdRegistrationListItem = {
     invoiceCompany: string | null;
     taxId: string | null;
     billingAddress: string | null;
+    store: string | null;
+    linkedinUrl: string | null;
+    facebookUrl: string | null;
+    accessibilityNeeds: string | null;
+    newsOptIn: boolean;
   } | null;
 };
 
@@ -105,6 +110,15 @@ export type EcdSpeaker = {
   role: string | null;
   company: string | null;
   photoUrl: string | null;
+  roomIndex: number;
+  speakerType: string | null;
+  statusTag: string | null;
+  expertise: string[];
+  sessionTitle: string | null;
+  sessionLabel: string | null;
+  proof: string | null;
+  featured: boolean;
+  featuredSortOrder: number;
   sortOrder: number;
   published: boolean;
   createdAt?: string;
@@ -146,6 +160,15 @@ export type EcdSpeakerInput = {
   role?: string | null;
   company?: string | null;
   photoUrl?: string | null;
+  roomIndex?: number;
+  speakerType?: 'Founder' | 'Operator' | 'Executive' | 'Specialist' | null;
+  statusTag?: string | null;
+  expertise?: string[];
+  sessionTitle?: string | null;
+  sessionLabel?: string | null;
+  proof?: string | null;
+  featured?: boolean;
+  featuredSortOrder?: number;
   sortOrder?: number;
   published?: boolean;
 };

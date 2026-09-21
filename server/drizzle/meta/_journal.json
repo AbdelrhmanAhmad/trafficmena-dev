@@ -246,6 +246,13 @@
       "when": 1784900000000,
       "tag": "0034_ecd_content_cms",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1785000000000,
+      "tag": "0024_ecd_speakers_checkout_fields",
+      "breakpoints": true
     }
   ]
 }
