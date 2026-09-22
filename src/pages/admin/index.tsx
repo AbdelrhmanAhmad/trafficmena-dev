@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   BookOpen,
   Calendar,
+  ClipboardList,
   Clock,
   CreditCard,
   Handshake,
@@ -13,6 +14,7 @@ import {
   TrendingUp,
   UserCheck,
   Users,
+  CalendarDays,
 } from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
@@ -147,6 +149,12 @@ const AdminDashboard: React.FC = () => {
       icon: Handshake,
     },
     {
+      label: 'ECD Partner Inquiries',
+      description: 'Become-a-sponsor form submissions + review status.',
+      href: '/admin/ecd-sponsor-inquiries',
+      icon: ClipboardList,
+    },
+    {
       label: 'ECD Speakers',
       description: 'Homepage speaker carousel.',
       href: '/admin/ecd-speakers',
@@ -157,6 +165,12 @@ const AdminDashboard: React.FC = () => {
       description: 'ct / fj names, prices, and features.',
       href: '/admin/ecd-packages',
       icon: Package,
+    },
+    {
+      label: 'ECD Sessions',
+      description: 'Agenda sessions + Full Journey workshops.',
+      href: '/admin/ecd-sessions',
+      icon: CalendarDays,
     },
   ];
 

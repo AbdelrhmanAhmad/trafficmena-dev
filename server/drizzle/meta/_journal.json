@@ -183,6 +183,34 @@
       "when": 1785100000000,
       "tag": "0025_ecd_sponsors_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1785200000000,
+      "tag": "0026_ecd_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1785300000000,
+      "tag": "0027_ecd_workshop_reservations",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1785400000000,
+      "tag": "0028_ecd_sponsor_inquiries",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1785500000000,
+      "tag": "0029_ecd_sponsor_inquiry_accepted",
+      "breakpoints": true
     }
   ]
 }

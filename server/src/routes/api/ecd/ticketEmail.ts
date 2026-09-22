@@ -4,7 +4,7 @@ import { env } from '../../../config/env.js';
 import { db } from '../../../db/client.js';
 import { ecdBookings, ecdTickets } from '../../../db/schema/ecd.js';
 import { sendEcdTicketEmail } from '../../../services/email.js';
-import { makeBookingAccessToken, ecdConfirmBaseUrl, ticketDisplayName } from './helpers.js';
+import { makeBookingAccessToken, ecdBookingPageUrl, ecdConfirmBaseUrl, ticketDisplayName } from './helpers.js';
 
 function confirmBaseUrl() {
   return ecdConfirmBaseUrl();
@@ -37,7 +37,8 @@ export async function sendSingleEcdTicketEmail(params: {
     return { ok: false as const, code: 'INVALID_EMAIL' as const };
   }
 
-  const qrDataUrl = await QRCode.toDataURL(ticket.serial, {
+  const bookingPageUrl = ecdBookingPageUrl(booking.orderCode);
+  const qrDataUrl = await QRCode.toDataURL(bookingPageUrl, {
     errorCorrectionLevel: 'M',
     margin: 2,
     width: 280,
@@ -60,6 +61,7 @@ export async function sendSingleEcdTicketEmail(params: {
     eventLocation: env.ECD_EVENT_LOCATION,
     qrDataUrl,
     confirmationUrl,
+    bookingPageUrl,
   });
 
   return { ok: true as const, email: to, ticketId: ticket.id, serial: ticket.serial };

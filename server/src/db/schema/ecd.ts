@@ -87,6 +87,8 @@ export const ecdBookings = pgTable(
     buyerEmail: text('buyer_email').notNull(),
     buyerMobile: text('buyer_mobile'),
     paidAt: timestamp('paid_at', { withTimezone: true }),
+    /** Venue gate / bracelet issue after QR scan (day-of entry). */
+    venueCheckedInAt: timestamp('venue_checked_in_at', { withTimezone: true }),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
@@ -242,5 +244,127 @@ export const ecdTicketFeatures = pgTable(
   (table) => ({
     ticketIdx: index('ecd_ticket_features_ticket_idx').on(table.ticketType),
     sortIdx: index('ecd_ticket_features_sort_idx').on(table.ticketType, table.sortOrder),
+  }),
+);
+
+/**
+ * Agenda sessions (Main Stage, Second Stage, + 3 FJ workshop tracks).
+ * Slug matches agenda.html data-session ids (m1, s1, w1a, …).
+ * Tracks 2–4 are Full Journey only (booking-confirmation reservation).
+ */
+export const ecdSessions = pgTable(
+  'ecd_sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    slug: text('slug').notNull(),
+    /** 0 Main Stage · 1 Second Stage · 2 Acquisition · 3 CRO/Retention · 4 Ops/Logistics */
+    trackIndex: integer('track_index').notNull(),
+    timeLabel: text('time_label').notNull(),
+    format: text('format'),
+    category: text('category'),
+    title: text('title').notNull(),
+    speakerLabel: text('speaker_label').default('Speaker will be announced'),
+    topics: jsonb('topics').$type<string[]>(),
+    description: text('description'),
+    learn: jsonb('learn').$type<string[]>(),
+    output: text('output'),
+    tools: text('tools'),
+    level: text('level'),
+    /** 1 = Full Journey Only (tracks 2–4) */
+    fullJourneyOnly: integer('full_journey_only').default(0).notNull(),
+    /** Draft / subject to venue — not live seat counts */
+    capacity: integer('capacity'),
+    sortOrder: integer('sort_order').default(0).notNull(),
+    published: integer('published').default(1).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    slugIdx: uniqueIndex('ecd_sessions_slug_idx').on(table.slug),
+    trackIdx: index('ecd_sessions_track_idx').on(table.trackIndex),
+    publishedIdx: index('ecd_sessions_published_idx').on(table.published),
+    sortIdx: index('ecd_sessions_sort_idx').on(table.trackIndex, table.sortOrder),
+    fjIdx: index('ecd_sessions_fj_idx').on(table.fullJourneyOnly),
+  }),
+);
+
+/**
+ * Full Journey workshop seat holds — one session per time slot per booking.
+ * Session room entry is separate from venue bracelet check-in on the booking.
+ */
+export const ecdWorkshopReservations = pgTable(
+  'ecd_workshop_reservations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    bookingId: uuid('booking_id').notNull(),
+    sessionId: uuid('session_id').notNull(),
+    /** Denormalized from session for unique(booking, time_slot) enforcement */
+    timeLabel: text('time_label').notNull(),
+    /** Room / workshop entry after venue access */
+    sessionCheckedInAt: timestamp('session_checked_in_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    bookingIdx: index('ecd_workshop_res_booking_idx').on(table.bookingId),
+    sessionIdx: index('ecd_workshop_res_session_idx').on(table.sessionId),
+    bookingSessionUnique: uniqueIndex('ecd_workshop_res_booking_session_uidx').on(
+      table.bookingId,
+      table.sessionId,
+    ),
+    bookingTimeUnique: uniqueIndex('ecd_workshop_res_booking_time_uidx').on(
+      table.bookingId,
+      table.timeLabel,
+    ),
+  }),
+);
+
+/**
+ * Partnership inquiries from become-a-sponsor.html.
+ * Duplicate prevention: one open inquiry per email (new / reviewed / in_progress / accepted).
+ */
+export const ecdSponsorInquiryStatusEnum = pgEnum('ecd_sponsor_inquiry_status', [
+  'new',
+  'reviewed',
+  'in_progress',
+  'accepted',
+  'rejected',
+]);
+
+export const ecdSponsorInquiries = pgTable(
+  'ecd_sponsor_inquiries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requestCode: text('request_code').notNull(),
+    status: ecdSponsorInquiryStatusEnum('status').default('new').notNull(),
+    company: text('company').notNull(),
+    website: text('website'),
+    sector: text('sector').notNull(),
+    country: text('country').notNull(),
+    companySize: text('company_size').notNull(),
+    contactName: text('contact_name').notNull(),
+    contactTitle: text('contact_title').notNull(),
+    contactEmail: text('contact_email').notNull(),
+    contactPhone: text('contact_phone'),
+    preferredContact: text('preferred_contact').default('Email').notNull(),
+    objectives: jsonb('objectives').$type<string[]>().default([]).notNull(),
+    interestedLevel: text('interested_level').notNull(),
+    interestedProperties: jsonb('interested_properties').$type<string[]>().default([]).notNull(),
+    targetAudience: text('target_audience'),
+    timing: text('timing'),
+    notes: text('notes'),
+    budgetBand: text('budget_band'),
+    consent: integer('consent').default(1).notNull(),
+    adminNotes: text('admin_notes'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    reviewedByUserId: uuid('reviewed_by_user_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    requestCodeIdx: uniqueIndex('ecd_sponsor_inq_request_code_idx').on(table.requestCode),
+    emailIdx: index('ecd_sponsor_inq_email_idx').on(table.contactEmail),
+    statusIdx: index('ecd_sponsor_inq_status_idx').on(table.status),
+    createdIdx: index('ecd_sponsor_inq_created_idx').on(table.createdAt),
   }),
 );

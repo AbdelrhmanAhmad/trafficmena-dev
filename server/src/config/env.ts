@@ -63,6 +63,8 @@ const envSchema = z.object({
   ECD_EVENT_END_ISO: z.string().optional().default('2026-10-22T18:00:00+03:00'),
   ECD_EVENT_LOCATION: z.string().optional().default('Venue details will be announced soon.'),
   ECD_CONFIRM_BASE_URL: z.string().url().optional(),
+  /** SPA origin for invite QR codes (portal `/ecd/booking/:orderCode`). Defaults to APP_BASE_URL. */
+  ECD_BOOKING_APP_BASE_URL: z.string().url().optional(),
   // ECD-only test mode: verify/Check Status marks bookings paid without gateway confirmation.
   // Defaults ON outside production; set ECD_SIMULATE_PAYMENTS=false to hit real Fawaterk in staging.
   ECD_SIMULATE_PAYMENTS: z.enum(['true', 'false']).optional(),

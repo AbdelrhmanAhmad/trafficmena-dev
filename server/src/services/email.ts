@@ -286,6 +286,8 @@ type SendEcdTicketEmailArgs = {
   eventLocation: string;
   qrDataUrl: string;
   confirmationUrl: string;
+  /** SPA portal URL encoded in QR — preferred CTA */
+  bookingPageUrl?: string;
 };
 
 export async function sendEcdTicketEmail({
@@ -299,6 +301,7 @@ export async function sendEcdTicketEmail({
   eventLocation,
   qrDataUrl,
   confirmationUrl,
+  bookingPageUrl,
 }: SendEcdTicketEmailArgs) {
   const safeName = escapeHtml(attendeeName);
   const safeSerial = escapeHtml(serial);
@@ -306,6 +309,7 @@ export async function sendEcdTicketEmail({
   const safeTicket = escapeHtml(ticketName);
   const safeEvent = escapeHtml(eventTitle);
   const safeLocation = escapeHtml(eventLocation);
+  const portalUrl = bookingPageUrl || confirmationUrl;
   const when = (() => {
     try {
       return new Date(eventStartIso).toLocaleString('en-GB', {
@@ -329,10 +333,8 @@ ${sameId ? '' : `Booking: ${orderCode}\n`}Pass: ${ticketName}
 When: ${when}
 Where: ${eventLocation}
 
-Show the QR image in this email at entry (or present this ticket ID).
-If images are blocked, open attachments or use the ticket ID above.
-
-View booking: ${confirmationUrl}
+Show the QR at entry — it opens your booking page.
+Booking page: ${portalUrl}
 
 — TrafficMENA`;
 
@@ -355,7 +357,7 @@ View booking: ${confirmationUrl}
       <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#04c44e;font-weight:700;">ECommerce Day 2026</div>
       <h1 style="font-size:22px;margin:8px 0 16px;color:#101010;">Your ticket is ready</h1>
       <p style="color:#4a5563;line-height:1.6;margin:0 0 8px;">Hi ${safeName},</p>
-      <p style="color:#4a5563;line-height:1.6;margin:0 0 8px;">Show this QR at entry. Keep this email handy.</p>
+      <p style="color:#4a5563;line-height:1.6;margin:0 0 8px;">Show this QR at entry. It opens your booking page on TrafficMENA.</p>
       <p style="color:#4a5563;line-height:1.6;margin:0 0 8px;"><strong>Ticket ID:</strong> ${safeSerial}<br/>
       ${sameId ? '' : `<strong>Booking:</strong> ${safeOrder}<br/>`}
       <strong>Pass:</strong> ${safeTicket}<br/>
@@ -365,7 +367,7 @@ View booking: ${confirmationUrl}
       <div style="text-align:center;margin:24px 0;">
         <img src="cid:${qrCid}" alt="Ticket QR for ${safeSerial}" width="220" height="220" style="display:block;margin:0 auto;width:220px;height:220px;border:1px solid #e6eaee;border-radius:12px;" />
       </div>
-      <p style="text-align:center;"><a href="${escapeHtml(confirmationUrl)}" style="display:inline-block;margin-top:8px;padding:12px 18px;background:#05ef62;color:#101010;text-decoration:none;border-radius:10px;font-weight:600;">Open booking page</a></p>
+      <p style="text-align:center;"><a href="${escapeHtml(portalUrl)}" style="display:inline-block;margin-top:8px;padding:12px 18px;background:#05ef62;color:#101010;text-decoration:none;border-radius:10px;font-weight:600;">Open booking page</a></p>
       <p style="margin-top:28px;font-size:13px;color:#6b747e;">Questions: info@trafficmena.com · ${safeEvent}</p>
     </div>
   </body>
