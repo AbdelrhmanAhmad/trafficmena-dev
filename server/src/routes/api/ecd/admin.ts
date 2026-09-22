@@ -2,11 +2,17 @@ import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../../db/client.js';
-import { ecdBookings, ecdHtmlForms, ecdTickets } from '../../../db/schema/ecd.js';
+import {
+  ecdBookings,
+  ecdHtmlForms,
+  ecdSessions,
+  ecdTickets,
+  ecdWorkshopReservations,
+} from '../../../db/schema/ecd.js';
 import { users } from '../../../db/schema/index.js';
 import { EmailDeliveryError } from '../../../services/email.js';
 import { escapeLikePattern, normalizeEmail, requireManager } from '../utils.js';
-import { formatMoneyEgp, ticketDisplayName } from './helpers.js';
+import { formatMoneyEgp, ticketDisplayName, ecdBookingPageUrl } from './helpers.js';
 import { sendSingleEcdTicketEmail } from './ticketEmail.js';
 
 const listSchema = z.object({
@@ -20,6 +26,40 @@ const listSchema = z.object({
 const updateTicketEmailSchema = z.object({
   attendeeEmail: z.string().email().max(255),
 });
+
+async function workshopsForBookings(bookingIds: string[]) {
+  if (bookingIds.length === 0) return new Map<string, any[]>();
+  const rows = await db
+    .select({
+      id: ecdWorkshopReservations.id,
+      bookingId: ecdWorkshopReservations.bookingId,
+      sessionId: ecdWorkshopReservations.sessionId,
+      timeLabel: ecdWorkshopReservations.timeLabel,
+      sessionCheckedInAt: ecdWorkshopReservations.sessionCheckedInAt,
+      slug: ecdSessions.slug,
+      title: ecdSessions.title,
+      trackIndex: ecdSessions.trackIndex,
+    })
+    .from(ecdWorkshopReservations)
+    .innerJoin(ecdSessions, eq(ecdWorkshopReservations.sessionId, ecdSessions.id))
+    .where(inArray(ecdWorkshopReservations.bookingId, bookingIds));
+
+  const map = new Map<string, any[]>();
+  for (const r of rows) {
+    const list = map.get(r.bookingId) || [];
+    list.push({
+      id: r.id,
+      sessionId: r.sessionId,
+      slug: r.slug,
+      title: r.title,
+      trackIndex: r.trackIndex,
+      timeLabel: r.timeLabel,
+      sessionCheckedInAt: r.sessionCheckedInAt?.toISOString() ?? null,
+    });
+    map.set(r.bookingId, list);
+  }
+  return map;
+}
 
 export function registerEcdAdminRoutes(app: Hono) {
   app.get('/admin/registrations', async (c) => {
@@ -79,6 +119,7 @@ export function registerEcdAdminRoutes(app: Hono) {
         buyerMobile: ecdBookings.buyerMobile,
         promoCode: ecdBookings.promoCode,
         paidAt: ecdBookings.paidAt,
+        venueCheckedInAt: ecdBookings.venueCheckedInAt,
         createdAt: ecdBookings.createdAt,
         htmlFormId: ecdBookings.htmlFormId,
         userId: ecdBookings.userId,
@@ -119,6 +160,8 @@ export function registerEcdAdminRoutes(app: Hono) {
       ticketsByBooking.set(t.bookingId, list);
     }
 
+    const workshopsByBooking = await workshopsForBookings(bookingIds);
+
     const nameCache = new Map<string, string>();
     async function nameFor(type: string) {
       const cached = nameCache.get(type);
@@ -146,10 +189,13 @@ export function registerEcdAdminRoutes(app: Hono) {
           buyerMobile: row.buyerMobile,
           promoCode: row.promoCode,
           paidAt: row.paidAt?.toISOString() ?? null,
+          venueCheckedInAt: row.venueCheckedInAt?.toISOString() ?? null,
+          bookingPageUrl: ecdBookingPageUrl(row.orderCode),
           createdAt: row.createdAt.toISOString(),
           userId: row.userId,
           serials: tickets.map((t) => t.serial),
           tickets,
+          workshops: workshopsByBooking.get(row.id) || [],
           form: form
             ? {
                 company: form.company,
@@ -202,13 +248,125 @@ export function registerEcdAdminRoutes(app: Hono) {
       .where(eq(users.id, booking.userId))
       .limit(1);
 
+    const workshopsMap = await workshopsForBookings([id]);
+
     return c.json({
       data: {
-        booking,
+        booking: {
+          ...booking,
+          venueCheckedInAt: booking.venueCheckedInAt?.toISOString() ?? null,
+          paidAt: booking.paidAt?.toISOString() ?? null,
+          createdAt: booking.createdAt.toISOString(),
+          updatedAt: booking.updatedAt.toISOString(),
+          expiresAt: booking.expiresAt.toISOString(),
+        },
         tickets,
         form: form ?? null,
         user: user ?? null,
+        workshops: workshopsMap.get(id) || [],
         amountFormatted: formatMoneyEgp(booking.totalCents),
+      },
+    });
+  });
+
+  /** Venue / bracelet check-in (QR at gate). Idempotent. */
+  app.post('/admin/registrations/:id/venue-check-in', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const id = c.req.param('id');
+    const [booking] = await db.select().from(ecdBookings).where(eq(ecdBookings.id, id)).limit(1);
+    if (!booking) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Registration not found.' } }, 404);
+    }
+    if (booking.paymentStatus !== 'paid') {
+      return c.json(
+        { error: { code: 'NOT_PAID', message: 'Only paid bookings can check in.' } },
+        400,
+      );
+    }
+    if (booking.venueCheckedInAt) {
+      return c.json({
+        data: {
+          alreadyCheckedIn: true,
+          venueCheckedInAt: booking.venueCheckedInAt.toISOString(),
+        },
+      });
+    }
+
+    const [updated] = await db
+      .update(ecdBookings)
+      .set({ venueCheckedInAt: new Date(), updatedAt: new Date() })
+      .where(eq(ecdBookings.id, id))
+      .returning({ venueCheckedInAt: ecdBookings.venueCheckedInAt });
+
+    return c.json({
+      data: {
+        alreadyCheckedIn: false,
+        venueCheckedInAt: updated.venueCheckedInAt?.toISOString() ?? null,
+      },
+    });
+  });
+
+  /** Workshop / room entry check-in. */
+  app.post('/admin/workshop-reservations/:id/session-check-in', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const id = c.req.param('id');
+    const [row] = await db
+      .select({
+        id: ecdWorkshopReservations.id,
+        bookingId: ecdWorkshopReservations.bookingId,
+        sessionCheckedInAt: ecdWorkshopReservations.sessionCheckedInAt,
+        paymentStatus: ecdBookings.paymentStatus,
+        venueCheckedInAt: ecdBookings.venueCheckedInAt,
+      })
+      .from(ecdWorkshopReservations)
+      .innerJoin(ecdBookings, eq(ecdWorkshopReservations.bookingId, ecdBookings.id))
+      .where(eq(ecdWorkshopReservations.id, id))
+      .limit(1);
+
+    if (!row) {
+      return c.json(
+        { error: { code: 'NOT_FOUND', message: 'Workshop reservation not found.' } },
+        404,
+      );
+    }
+    if (row.paymentStatus !== 'paid') {
+      return c.json({ error: { code: 'NOT_PAID', message: 'Booking is not paid.' } }, 400);
+    }
+    if (!row.venueCheckedInAt) {
+      return c.json(
+        {
+          error: {
+            code: 'VENUE_REQUIRED',
+            message: 'Venue check-in (bracelet) required before session entry.',
+          },
+        },
+        400,
+      );
+    }
+    if (row.sessionCheckedInAt) {
+      return c.json({
+        data: {
+          alreadyCheckedIn: true,
+          sessionCheckedInAt: row.sessionCheckedInAt.toISOString(),
+        },
+      });
+    }
+
+    const [updated] = await db
+      .update(ecdWorkshopReservations)
+      .set({ sessionCheckedInAt: new Date(), updatedAt: new Date() })
+      .where(eq(ecdWorkshopReservations.id, id))
+      .returning({ sessionCheckedInAt: ecdWorkshopReservations.sessionCheckedInAt });
+
+    return c.json({
+      data: {
+        alreadyCheckedIn: false,
+        sessionCheckedInAt: updated.sessionCheckedInAt?.toISOString() ?? null,
+        venueCheckedInAt: row.venueCheckedInAt?.toISOString() ?? null,
       },
     });
   });

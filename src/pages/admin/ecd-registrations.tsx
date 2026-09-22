@@ -1,4 +1,4 @@
-import { Mail, Search, Ticket } from 'lucide-react';
+import { CheckCircle2, DoorOpen, Mail, Search, Ticket, UserCheck } from 'lucide-react';
 import * as QRCode from 'qrcode';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -6,9 +6,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   fetchEcdRegistrations,
   sendEcdTicketEmail,
+  sessionCheckInEcdWorkshop,
   updateEcdTicketEmail,
+  venueCheckInEcdRegistration,
   type EcdRegistrationListItem,
   type EcdTicketRow,
+  type EcdWorkshopReservation,
 } from '@/app/api/ecd';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
@@ -32,6 +35,14 @@ import {
 } from '@/shared/components/ui/dialog';
 import { useToast } from '@/shared/hooks/custom/use-toast';
 
+const TRACK_LABELS: Record<number, string> = {
+  0: 'Control Tower',
+  1: 'Second Stage',
+  2: 'CLICKED',
+  3: 'CONFIRMED',
+  4: 'DELIVERED',
+};
+
 function StatusBadge({ status }: { status: string }) {
   let className = 'bg-neutral-100 text-neutral-700';
   if (status === 'paid') className = 'bg-emerald-100 text-emerald-800';
@@ -42,12 +53,25 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge className={className}>{status}</Badge>;
 }
 
-function TicketQr({ serial }: { serial: string }) {
+function formatWhen(iso: string | null | undefined) {
+  if (!iso) return null;
+  try {
+    return new Date(iso).toLocaleString('en-GB', {
+      timeZone: 'Africa/Cairo',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function TicketQr({ payload }: { payload: string }) {
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    QRCode.toDataURL(serial, {
+    QRCode.toDataURL(payload, {
       errorCorrectionLevel: 'M',
       margin: 2,
       width: 160,
@@ -58,7 +82,7 @@ function TicketQr({ serial }: { serial: string }) {
     return () => {
       cancelled = true;
     };
-  }, [serial]);
+  }, [payload]);
 
   if (!src) {
     return <div className="h-40 w-40 animate-pulse rounded-lg bg-neutral-100" />;
@@ -67,7 +91,7 @@ function TicketQr({ serial }: { serial: string }) {
   return (
     <img
       src={src}
-      alt={`QR ${serial}`}
+      alt="Booking QR"
       className="h-40 w-40 rounded-lg border border-neutral-200 bg-white p-1"
     />
   );
@@ -75,9 +99,11 @@ function TicketQr({ serial }: { serial: string }) {
 
 function TicketAdminCard({
   ticket,
+  bookingPageUrl,
   onUpdated,
 }: {
   ticket: EcdTicketRow;
+  bookingPageUrl: string;
   onUpdated: (ticket: EcdTicketRow) => void;
 }) {
   const { toast } = useToast();
@@ -122,10 +148,11 @@ function TicketAdminCard({
   return (
     <li className="rounded-lg border border-neutral-200 p-3">
       <div className="flex flex-col gap-3 sm:flex-row">
-        <TicketQr serial={ticket.serial} />
+        <TicketQr payload={bookingPageUrl} />
         <div className="min-w-0 flex-1 space-y-2">
           <div className="font-medium text-neutral-900">{ticket.attendeeName}</div>
           <div className="font-mono text-[11px] break-all text-neutral-600">{ticket.serial}</div>
+          <div className="font-mono text-[10px] break-all text-neutral-400">{bookingPageUrl}</div>
           <div className="text-xs text-neutral-500">Status: {ticket.status}</div>
           <div className="space-y-1.5">
             <Label htmlFor={`ecd-email-${ticket.id}`} className="text-xs">
@@ -165,6 +192,131 @@ function TicketAdminCard({
   );
 }
 
+function VenueCheckInButton({
+  row,
+  onDone,
+}: {
+  row: EcdRegistrationListItem;
+  onDone: (at: string) => void;
+}) {
+  const { toast } = useToast();
+  const mutation = useMutation({
+    mutationFn: () => venueCheckInEcdRegistration(row.id),
+    onSuccess: (data) => {
+      if (data.venueCheckedInAt) onDone(data.venueCheckedInAt);
+      toast({
+        title: data.alreadyCheckedIn ? 'Already checked in' : 'Venue check-in recorded',
+        description: data.venueCheckedInAt
+          ? formatWhen(data.venueCheckedInAt) || undefined
+          : undefined,
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Check-in failed',
+        description: 'Could not record venue attendance.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  if (row.paymentStatus !== 'paid') {
+    return (
+      <Button type="button" size="sm" variant="outline" disabled>
+        Pay first
+      </Button>
+    );
+  }
+
+  if (row.venueCheckedInAt) {
+    return (
+      <Badge className="gap-1 bg-emerald-100 text-emerald-800">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        In · {formatWhen(row.venueCheckedInAt)}
+      </Badge>
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate()}
+    >
+      <UserCheck className="mr-1.5 h-3.5 w-3.5" />
+      {mutation.isPending ? '…' : 'Mark present'}
+    </Button>
+  );
+}
+
+function WorkshopSessionRow({
+  workshop,
+  venueCheckedInAt,
+  onCheckedIn,
+}: {
+  workshop: EcdWorkshopReservation;
+  venueCheckedInAt: string | null;
+  onCheckedIn: (id: string, at: string) => void;
+}) {
+  const { toast } = useToast();
+  const mutation = useMutation({
+    mutationFn: () => sessionCheckInEcdWorkshop(workshop.id),
+    onSuccess: (data) => {
+      if (data.sessionCheckedInAt) onCheckedIn(workshop.id, data.sessionCheckedInAt);
+      toast({
+        title: data.alreadyCheckedIn ? 'Already in session' : 'Session entry recorded',
+        description: workshop.title,
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Session check-in failed',
+        description: 'Could not record room entry.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return (
+    <li className="rounded-lg border border-neutral-200 bg-white p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+            {TRACK_LABELS[workshop.trackIndex] || `Track ${workshop.trackIndex}`} ·{' '}
+            {workshop.timeLabel}
+          </div>
+          <div className="font-medium text-neutral-900">{workshop.title}</div>
+          <div className="font-mono text-[11px] text-neutral-500">{workshop.slug}</div>
+          {workshop.sessionCheckedInAt ? (
+            <Badge className="mt-1 gap-1 bg-emerald-100 text-emerald-800">
+              <DoorOpen className="h-3.5 w-3.5" />
+              Entered · {formatWhen(workshop.sessionCheckedInAt)}
+            </Badge>
+          ) : null}
+        </div>
+        {!workshop.sessionCheckedInAt ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={mutation.isPending || !venueCheckedInAt}
+            title={
+              venueCheckedInAt
+                ? 'Confirm room / workshop entry'
+                : 'Venue check-in required first (bracelet)'
+            }
+            onClick={() => mutation.mutate()}
+          >
+            <DoorOpen className="mr-1.5 h-3.5 w-3.5" />
+            {mutation.isPending ? '…' : 'Enter room'}
+          </Button>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 const EcdRegistrationsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [q, setQ] = useState('');
@@ -193,8 +345,23 @@ const EcdRegistrationsPage: React.FC = () => {
 
   const summary = useMemo(() => {
     const paid = items.filter((i) => i.paymentStatus === 'paid').length;
-    return { paid, shown: items.length, total };
+    const venueIn = items.filter((i) => i.venueCheckedInAt).length;
+    return { paid, venueIn, shown: items.length, total };
   }, [items, total]);
+
+  const patchRow = (id: string, patch: Partial<EcdRegistrationListItem>) => {
+    setSelected((prev) => (prev && prev.id === id ? { ...prev, ...patch } : prev));
+    void queryClient.setQueryData(
+      ['admin', 'ecd-registrations', search, ticketType, status, page],
+      (old: { items: EcdRegistrationListItem[]; pagination: unknown } | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+        };
+      },
+    );
+  };
 
   const handleTicketUpdated = (updated: EcdTicketRow) => {
     setSelected((prev) => {
@@ -218,12 +385,12 @@ const EcdRegistrationsPage: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-neutral-900">ECD Registrations</h1>
               <p className="mt-1 text-sm text-neutral-600">
-                ECommerce Day 2026 HTML checkout bookings (removable module).
+                Venue bracelet check-in (QR) vs workshop room entry — one day, one pass.
               </p>
             </div>
             <Badge variant="outline" className="gap-1">
               <Ticket className="h-3.5 w-3.5" />
-              {summary.total} total · {summary.paid} paid on this page
+              {summary.total} total · {summary.paid} paid · {summary.venueIn} on-site
             </Badge>
           </div>
 
@@ -297,7 +464,7 @@ const EcdRegistrationsPage: React.FC = () => {
 
           <Card>
             <CardContent className="overflow-x-auto p-0">
-              <table className="w-full min-w-[900px] text-left text-sm">
+              <table className="w-full min-w-[980px] text-left text-sm">
                 <thead className="border-b bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
                   <tr>
                     <th className="px-4 py-3 font-medium">Order</th>
@@ -306,6 +473,7 @@ const EcdRegistrationsPage: React.FC = () => {
                     <th className="px-4 py-3 font-medium">Qty</th>
                     <th className="px-4 py-3 font-medium">Amount</th>
                     <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Venue</th>
                     <th className="px-4 py-3 font-medium">Serials</th>
                     <th className="px-4 py-3 font-medium" />
                   </tr>
@@ -313,21 +481,21 @@ const EcdRegistrationsPage: React.FC = () => {
                 <tbody>
                   {query.isLoading && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-neutral-500">
+                      <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
                         Loading registrations…
                       </td>
                     </tr>
                   )}
                   {query.isError && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-red-600">
+                      <td colSpan={9} className="px-4 py-8 text-center text-red-600">
                         Failed to load ECD registrations.
                       </td>
                     </tr>
                   )}
                   {!query.isLoading && !query.isError && items.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-neutral-500">
+                      <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
                         No registrations found.
                       </td>
                     </tr>
@@ -344,6 +512,12 @@ const EcdRegistrationsPage: React.FC = () => {
                       <td className="px-4 py-3">{row.amountFormatted}</td>
                       <td className="px-4 py-3">
                         <StatusBadge status={row.paymentStatus} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <VenueCheckInButton
+                          row={row}
+                          onDone={(at) => patchRow(row.id, { venueCheckedInAt: at })}
+                        />
                       </td>
                       <td className="px-4 py-3 font-mono text-[11px] text-neutral-600">
                         {row.serials.slice(0, 2).join(', ')}
@@ -392,53 +566,130 @@ const EcdRegistrationsPage: React.FC = () => {
         </div>
 
         <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{selected?.orderCode}</DialogTitle>
+              <DialogTitle className="font-mono text-base">{selected?.orderCode}</DialogTitle>
             </DialogHeader>
             {selected && (
-              <div className="space-y-4 text-sm">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-neutral-500">Buyer</div>
-                  <div className="font-medium">{selected.buyerName}</div>
-                  <div>{selected.buyerEmail}</div>
-                  <div>{selected.buyerMobile}</div>
-                </div>
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-neutral-500">Package</div>
+              <div className="space-y-5 text-sm">
+                <div className="grid gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-4 sm:grid-cols-2">
                   <div>
-                    {selected.ticketName} × {selected.qty} — {selected.amountFormatted}
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+                      Buyer
+                    </div>
+                    <div className="mt-1 font-medium text-neutral-900">{selected.buyerName}</div>
+                    <div className="text-neutral-600">{selected.buyerEmail}</div>
+                    <div className="text-neutral-600">{selected.buyerMobile || '—'}</div>
                   </div>
-                  <div>Status: {selected.paymentStatus}</div>
-                  {selected.promoCode && <div>Promo: {selected.promoCode}</div>}
-                </div>
-                {selected.form && (
                   <div>
-                    <div className="text-xs uppercase tracking-wide text-neutral-500">HTML form</div>
-                    <div>Company: {selected.form.company || '—'}</div>
-                    <div>Title: {selected.form.jobTitle || '—'}</div>
-                    <div>Country: {selected.form.country || '—'}</div>
-                    <div>Store: {selected.form.store || '—'}</div>
-                    <div>LinkedIn: {selected.form.linkedinUrl || '—'}</div>
-                    <div>Facebook: {selected.form.facebookUrl || '—'}</div>
-                    <div>Accessibility: {selected.form.accessibilityNeeds || '—'}</div>
-                    <div>News opt-in: {selected.form.newsOptIn ? 'Yes' : 'No'}</div>
-                    {selected.form.needInvoice && (
-                      <>
-                        <div>Invoice co: {selected.form.invoiceCompany || '—'}</div>
-                        <div>Tax ID: {selected.form.taxId || '—'}</div>
-                        <div>Billing: {selected.form.billingAddress || '—'}</div>
-                      </>
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+                      Package
+                    </div>
+                    <div className="mt-1">
+                      {selected.ticketName} × {selected.qty}
+                    </div>
+                    <div className="font-medium">{selected.amountFormatted}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <StatusBadge status={selected.paymentStatus} />
+                      {selected.promoCode ? (
+                        <span className="text-xs text-neutral-500">Promo {selected.promoCode}</span>
+                      ) : null}
+                    </div>
+                    <div className="mt-1 text-xs text-neutral-500">
+                      Paid: {formatWhen(selected.paidAt) || '—'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-neutral-200 p-4">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+                      Venue access (QR → bracelet)
+                    </div>
+                    <VenueCheckInButton
+                      row={selected}
+                      onDone={(at) => patchRow(selected.id, { venueCheckedInAt: at })}
+                    />
+                  </div>
+                  <p className="text-xs text-neutral-600">
+                    One QR = one person on site. Bracelet allows venue presence; workshop rooms
+                    need a reserved session below.
+                  </p>
+                </div>
+
+                {selected.ticketType === 'fj' && (
+                  <div>
+                    <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+                      Workshop reservations
+                    </div>
+                    {(selected.workshops || []).length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-neutral-200 px-3 py-4 text-xs text-neutral-500">
+                        No workshops reserved yet (buyer confirms on booking-confirmation).
+                      </p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {(selected.workshops || []).map((w) => (
+                          <WorkshopSessionRow
+                            key={w.id}
+                            workshop={w}
+                            venueCheckedInAt={selected.venueCheckedInAt}
+                            onCheckedIn={(id, at) => {
+                              const workshops = (selected.workshops || []).map((ws) =>
+                                ws.id === id ? { ...ws, sessionCheckedInAt: at } : ws,
+                              );
+                              patchRow(selected.id, { workshops });
+                            }}
+                          />
+                        ))}
+                      </ul>
                     )}
                   </div>
                 )}
+
+                {selected.form && (
+                  <div className="rounded-lg border border-neutral-200 p-4">
+                    <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+                      Checkout form
+                    </div>
+                    <div className="grid gap-1 sm:grid-cols-2">
+                      <div>Company: {selected.form.company || '—'}</div>
+                      <div>Title: {selected.form.jobTitle || '—'}</div>
+                      <div>Country: {selected.form.country || '—'}</div>
+                      <div>Store: {selected.form.store || '—'}</div>
+                      <div className="break-all">LinkedIn: {selected.form.linkedinUrl || '—'}</div>
+                      <div className="break-all">Facebook: {selected.form.facebookUrl || '—'}</div>
+                      <div className="sm:col-span-2">
+                        Accessibility: {selected.form.accessibilityNeeds || '—'}
+                      </div>
+                      <div>News opt-in: {selected.form.newsOptIn ? 'Yes' : 'No'}</div>
+                      {selected.form.needInvoice && (
+                        <>
+                          <div>Invoice co: {selected.form.invoiceCompany || '—'}</div>
+                          <div>Tax ID: {selected.form.taxId || '—'}</div>
+                          <div className="sm:col-span-2">
+                            Billing: {selected.form.billingAddress || '—'}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <div className="mb-2 text-xs uppercase tracking-wide text-neutral-500">
+                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-neutral-500">
                     Tickets · QR · email
                   </div>
                   <ul className="space-y-3">
                     {selected.tickets.map((t) => (
-                      <TicketAdminCard key={t.id} ticket={t} onUpdated={handleTicketUpdated} />
+                      <TicketAdminCard
+                        key={t.id}
+                        ticket={t}
+                        bookingPageUrl={
+                          selected.bookingPageUrl ||
+                          `${window.location.origin}/ecd/booking/${encodeURIComponent(selected.orderCode)}`
+                        }
+                        onUpdated={handleTicketUpdated}
+                      />
                     ))}
                   </ul>
                 </div>

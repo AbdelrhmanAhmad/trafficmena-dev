@@ -5,6 +5,7 @@ import {
   Boxes,
   Calculator,
   Calendar,
+  ClipboardList,
   Crown,
   Edit,
   FileStack,
@@ -22,6 +23,7 @@ import {
   Tag,
   Ticket,
   Users,
+  CalendarDays,
 } from 'lucide-react';
 import type React from 'react';
 import { useMemo } from 'react';
@@ -167,6 +169,12 @@ const adminMenuItems = [
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
+    title: 'ECD Partner Inquiries',
+    url: '/admin/ecd-sponsor-inquiries',
+    icon: ClipboardList,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
     title: 'ECD Speakers',
     url: '/admin/ecd-speakers',
     icon: Mic2,
@@ -176,6 +184,12 @@ const adminMenuItems = [
     title: 'ECD Packages',
     url: '/admin/ecd-packages',
     icon: Package,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
+    title: 'ECD Sessions',
+    url: '/admin/ecd-sessions',
+    icon: CalendarDays,
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {

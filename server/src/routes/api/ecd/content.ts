@@ -1,12 +1,45 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { db } from '../../../db/client.js';
 import {
   ecdPartners,
+  ecdSessions,
   ecdSpeakers,
   ecdTicketFeatures,
   ecdTicketPackages,
+  ecdWorkshopReservations,
 } from '../../../db/schema/ecd.js';
+import { ecdBookingAppBaseUrl, workshopSeatStatus } from './helpers.js';
+
+function serializeSession(
+  s: typeof ecdSessions.$inferSelect,
+  reservedCount = 0,
+) {
+  const seats = workshopSeatStatus(s.capacity, reservedCount);
+  return {
+    id: s.id,
+    slug: s.slug,
+    trackIndex: s.trackIndex,
+    timeLabel: s.timeLabel,
+    format: s.format,
+    category: s.category,
+    title: s.title,
+    speakerLabel: s.speakerLabel,
+    topics: s.topics ?? [],
+    description: s.description,
+    learn: s.learn ?? [],
+    output: s.output,
+    tools: s.tools,
+    level: s.level,
+    fullJourneyOnly: s.fullJourneyOnly === 1,
+    capacity: seats.capacity,
+    reservedCount: seats.reservedCount,
+    remaining: seats.remaining,
+    available: seats.available,
+    seatStatus: seats.seatStatus,
+    sortOrder: s.sortOrder,
+  };
+}
 
 function serializePackage(
   pkg: typeof ecdTicketPackages.$inferSelect,
@@ -39,25 +72,46 @@ function serializePackage(
 /** Public marketing content for the static HTML home + checkout price hydrate. */
 export function registerEcdContentRoutes(app: Hono) {
   app.get('/content', async (c) => {
-    const [partners, speakers, packages, features] = await Promise.all([
-      db
-        .select()
-        .from(ecdPartners)
-        .where(eq(ecdPartners.published, 1))
-        .orderBy(asc(ecdPartners.sortOrder), asc(ecdPartners.name)),
-      db
-        .select()
-        .from(ecdSpeakers)
-        .where(eq(ecdSpeakers.published, 1))
-        .orderBy(asc(ecdSpeakers.sortOrder), asc(ecdSpeakers.name)),
-      db.select().from(ecdTicketPackages),
-      db.select().from(ecdTicketFeatures).orderBy(asc(ecdTicketFeatures.sortOrder)),
-    ]);
+    const [partners, speakers, sessions, packages, features, reservationCounts] =
+      await Promise.all([
+        db
+          .select()
+          .from(ecdPartners)
+          .where(eq(ecdPartners.published, 1))
+          .orderBy(asc(ecdPartners.sortOrder), asc(ecdPartners.name)),
+        db
+          .select()
+          .from(ecdSpeakers)
+          .where(eq(ecdSpeakers.published, 1))
+          .orderBy(asc(ecdSpeakers.sortOrder), asc(ecdSpeakers.name)),
+        db
+          .select()
+          .from(ecdSessions)
+          .where(eq(ecdSessions.published, 1))
+          .orderBy(asc(ecdSessions.trackIndex), asc(ecdSessions.sortOrder)),
+        db.select().from(ecdTicketPackages),
+        db.select().from(ecdTicketFeatures).orderBy(asc(ecdTicketFeatures.sortOrder)),
+        db
+          .select({
+            sessionId: ecdWorkshopReservations.sessionId,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(ecdWorkshopReservations)
+          .groupBy(ecdWorkshopReservations.sessionId),
+      ]);
+
+    const reservedBySession = new Map(
+      reservationCounts.map((r) => [r.sessionId, Number(r.count) || 0]),
+    );
 
     const byType: Record<string, ReturnType<typeof serializePackage>> = {};
     for (const pkg of packages) {
       byType[pkg.ticketType] = serializePackage(pkg, features);
     }
+
+    const serializedSessions = sessions.map((s) =>
+      serializeSession(s, reservedBySession.get(s.id) || 0),
+    );
 
     return c.json({
       data: {
@@ -152,6 +206,9 @@ export function registerEcdContentRoutes(app: Hono) {
           },
         ],
         speakerTypes: ['Founder', 'Operator', 'Executive', 'Specialist'],
+        sessions: serializedSessions,
+        workshops: serializedSessions.filter((s) => s.fullJourneyOnly),
+        bookingAppBaseUrl: ecdBookingAppBaseUrl(),
         packages: {
           ct: byType.ct ?? null,
           fj: byType.fj ?? null,
@@ -161,4 +218,4 @@ export function registerEcdContentRoutes(app: Hono) {
   });
 }
 
-export { serializePackage };
+export { serializePackage, serializeSession };

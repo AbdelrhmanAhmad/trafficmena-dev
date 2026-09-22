@@ -38,9 +38,9 @@ export async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Prom
   }
 
   const response = await fetch(input, {
+    ...init,
     credentials: 'include',
     headers,
-    ...init,
   });
 
   const contentType = response.headers.get('content-type') ?? '';

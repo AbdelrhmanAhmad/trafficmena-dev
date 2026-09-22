@@ -4,13 +4,14 @@ import { z } from 'zod';
 import { db } from '../../../db/client.js';
 import {
   ecdPartners,
+  ecdSessions,
   ecdSpeakers,
   ecdTicketFeatures,
   ecdTicketPackages,
 } from '../../../db/schema/ecd.js';
 import { requireManager } from '../utils.js';
 import { invalidateEcdPackageCache } from './helpers.js';
-import { serializePackage } from './content.js';
+import { serializePackage, serializeSession } from './content.js';
 
 const optionalUrl = z
   .string()
@@ -120,9 +121,72 @@ const packageUpdateSchema = z.object({
   features: z.array(featureSchema).max(40),
 });
 
+const sessionSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .regex(/^[a-z0-9][a-z0-9_-]*$/i, 'Invalid slug'),
+  trackIndex: z.number().int().min(0).max(4),
+  timeLabel: z.string().trim().min(1).max(20),
+  format: z.string().trim().max(60).nullable().optional(),
+  category: z.string().trim().max(60).nullable().optional(),
+  title: z.string().trim().min(1).max(300),
+  speakerLabel: z.string().trim().max(160).nullable().optional(),
+  topics: z.array(z.string().trim().max(40)).max(12).optional(),
+  description: z.string().trim().max(2000).nullable().optional(),
+  learn: z.array(z.string().trim().max(200)).max(12).optional(),
+  output: z.string().trim().max(300).nullable().optional(),
+  tools: z.string().trim().max(120).nullable().optional(),
+  level: z.string().trim().max(60).nullable().optional(),
+  fullJourneyOnly: z.boolean().optional(),
+  capacity: z.number().int().min(0).max(10000).nullable().optional(),
+  sortOrder: z.number().int().min(0).max(9999).optional(),
+  published: z.boolean().optional(),
+});
+
+function sessionValues(data: z.infer<typeof sessionSchema>) {
+  const trackIndex = data.trackIndex;
+  const fj =
+    data.fullJourneyOnly !== undefined
+      ? boolToInt(data.fullJourneyOnly, trackIndex >= 2 ? 1 : 0)
+      : trackIndex >= 2
+        ? 1
+        : 0;
+  return {
+    slug: data.slug.trim().toLowerCase(),
+    trackIndex,
+    timeLabel: data.timeLabel,
+    format: data.format ?? null,
+    category: data.category ?? null,
+    title: data.title,
+    speakerLabel: data.speakerLabel ?? 'Speaker will be announced',
+    topics: data.topics ?? [],
+    description: data.description ?? null,
+    learn: data.learn ?? [],
+    output: data.output ?? null,
+    tools: data.tools ?? null,
+    level: data.level ?? null,
+    fullJourneyOnly: fj,
+    capacity: data.capacity ?? null,
+    sortOrder: data.sortOrder ?? 0,
+    published: boolToInt(data.published, 1),
+  };
+}
+
 function boolToInt(v: boolean | undefined, fallback = 1) {
   if (v === undefined) return fallback;
   return v ? 1 : 0;
+}
+
+function serializeAdminSession(s: typeof ecdSessions.$inferSelect) {
+  return {
+    ...serializeSession(s),
+    published: s.published === 1,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+  };
 }
 
 export function registerEcdAdminContentRoutes(app: Hono) {
@@ -376,6 +440,91 @@ export function registerEcdAdminContentRoutes(app: Hono) {
 
     invalidateEcdPackageCache();
     return c.json({ data: { package: updated } });
+  });
+
+  // ——— Agenda sessions / FJ workshops ———
+  app.get('/admin/sessions', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const rows = await db
+      .select()
+      .from(ecdSessions)
+      .orderBy(asc(ecdSessions.trackIndex), asc(ecdSessions.sortOrder));
+
+    return c.json({ data: { items: rows.map(serializeAdminSession) } });
+  });
+
+  app.post('/admin/sessions', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const body = sessionSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) {
+      return c.json(
+        { error: { code: 'INVALID_REQUEST', message: 'Invalid session payload.' } },
+        400,
+      );
+    }
+
+    try {
+      const [row] = await db.insert(ecdSessions).values(sessionValues(body.data)).returning();
+      return c.json({ data: { session: serializeAdminSession(row) } }, 201);
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        return c.json(
+          { error: { code: 'SLUG_EXISTS', message: 'Session slug already exists.' } },
+          409,
+        );
+      }
+      throw err;
+    }
+  });
+
+  app.put('/admin/sessions/:id', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const id = c.req.param('id');
+    const body = sessionSchema.safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) {
+      return c.json(
+        { error: { code: 'INVALID_REQUEST', message: 'Invalid session payload.' } },
+        400,
+      );
+    }
+
+    try {
+      const [row] = await db
+        .update(ecdSessions)
+        .set({ ...sessionValues(body.data), updatedAt: new Date() })
+        .where(eq(ecdSessions.id, id))
+        .returning();
+      if (!row) {
+        return c.json({ error: { code: 'NOT_FOUND', message: 'Session not found.' } }, 404);
+      }
+      return c.json({ data: { session: serializeAdminSession(row) } });
+    } catch (err: any) {
+      if (err?.code === '23505') {
+        return c.json(
+          { error: { code: 'SLUG_EXISTS', message: 'Session slug already exists.' } },
+          409,
+        );
+      }
+      throw err;
+    }
+  });
+
+  app.delete('/admin/sessions/:id', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const id = c.req.param('id');
+    const [row] = await db.delete(ecdSessions).where(eq(ecdSessions.id, id)).returning();
+    if (!row) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Session not found.' } }, 404);
+    }
+    return c.json({ data: { deleted: true, id: row.id } });
   });
 }
 

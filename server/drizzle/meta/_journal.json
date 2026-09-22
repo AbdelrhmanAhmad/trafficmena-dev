@@ -260,6 +260,34 @@
       "when": 1785100000000,
       "tag": "0036_ecd_sponsors_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1785200000000,
+      "tag": "0037_ecd_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1785300000000,
+      "tag": "0038_ecd_workshop_reservations",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1785400000000,
+      "tag": "0039_ecd_sponsor_inquiries",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1785500000000,
+      "tag": "0040_ecd_sponsor_inquiry_accepted",
+      "breakpoints": true
     }
   ]
 }

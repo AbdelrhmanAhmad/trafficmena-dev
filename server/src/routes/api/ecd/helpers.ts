@@ -125,6 +125,20 @@ export function ecdConfirmBaseUrl() {
   return local.replace(/\/+$/, '');
 }
 
+/**
+ * TrafficMENA SPA base for invite QR → `/ecd/booking/:orderCode`.
+ * Prefer ECD_BOOKING_APP_BASE_URL; falls back to APP_BASE_URL.
+ */
+export function ecdBookingAppBaseUrl() {
+  const raw = env.ECD_BOOKING_APP_BASE_URL || env.APP_BASE_URL || 'http://localhost:8080';
+  return raw.replace(/\/+$/, '');
+}
+
+/** Absolute portal URL encoded in ticket QR (order code = public booking id). */
+export function ecdBookingPageUrl(orderCode: string) {
+  return `${ecdBookingAppBaseUrl()}/ecd/booking/${encodeURIComponent(orderCode)}`;
+}
+
 export function hashToken(raw: string) {
   return createHash('sha256').update(raw).digest('hex');
 }
@@ -361,4 +375,44 @@ export async function loadBookingForToken(bookingId: string) {
 
 export function formatMoneyEgp(cents: number) {
   return `${(cents / 100).toLocaleString('en-EG')} EGP`;
+}
+
+/** Live seat badge from capacity + reserved count (admin-managed capacity). */
+export function workshopSeatStatus(capacity: number | null | undefined, reservedCount: number) {
+  if (capacity == null || capacity <= 0) {
+    return {
+      capacity: null as number | null,
+      reservedCount,
+      remaining: null as number | null,
+      available: true,
+      seatStatus: 'Available' as const,
+    };
+  }
+  const remaining = Math.max(0, capacity - reservedCount);
+  if (remaining <= 0) {
+    return {
+      capacity,
+      reservedCount,
+      remaining: 0,
+      available: false,
+      seatStatus: 'Fully Booked' as const,
+    };
+  }
+  const fewThreshold = Math.max(3, Math.ceil(capacity * 0.1));
+  if (remaining <= fewThreshold) {
+    return {
+      capacity,
+      reservedCount,
+      remaining,
+      available: true,
+      seatStatus: 'Few Seats' as const,
+    };
+  }
+  return {
+    capacity,
+    reservedCount,
+    remaining,
+    available: true,
+    seatStatus: 'Available' as const,
+  };
 }

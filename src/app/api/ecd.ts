@@ -9,6 +9,16 @@ export type EcdTicketRow = {
   status: string;
 };
 
+export type EcdWorkshopReservation = {
+  id: string;
+  sessionId: string;
+  slug: string;
+  title: string;
+  trackIndex: number;
+  timeLabel: string;
+  sessionCheckedInAt: string | null;
+};
+
 export type EcdRegistrationListItem = {
   id: string;
   orderCode: string;
@@ -23,10 +33,13 @@ export type EcdRegistrationListItem = {
   buyerMobile: string | null;
   promoCode: string | null;
   paidAt: string | null;
+  venueCheckedInAt: string | null;
+  bookingPageUrl?: string;
   createdAt: string;
   userId: string;
   serials: string[];
   tickets: EcdTicketRow[];
+  workshops: EcdWorkshopReservation[];
   form: {
     company: string | null;
     jobTitle: string | null;
@@ -88,6 +101,28 @@ export async function sendEcdTicketEmail(ticketId: string, attendeeEmail?: strin
       body: JSON.stringify(attendeeEmail ? { attendeeEmail } : {}),
     },
   );
+  return response.data;
+}
+
+export async function venueCheckInEcdRegistration(bookingId: string) {
+  const response = await fetchJson<{
+    data: { alreadyCheckedIn: boolean; venueCheckedInAt: string | null };
+  }>(`${API_BASE}/ecd/admin/registrations/${bookingId}/venue-check-in`, {
+    method: 'POST',
+  });
+  return response.data;
+}
+
+export async function sessionCheckInEcdWorkshop(reservationId: string) {
+  const response = await fetchJson<{
+    data: {
+      alreadyCheckedIn: boolean;
+      sessionCheckedInAt: string | null;
+      venueCheckedInAt?: string | null;
+    };
+  }>(`${API_BASE}/ecd/admin/workshop-reservations/${reservationId}/session-check-in`, {
+    method: 'POST',
+  });
   return response.data;
 }
 
@@ -273,4 +308,260 @@ export async function updateEcdPackage(ticketType: 'ct' | 'fj', input: EcdPackag
     { method: 'PUT', body: JSON.stringify(input) },
   );
   return response.data.package;
+}
+
+export type EcdSession = {
+  id: string;
+  slug: string;
+  trackIndex: number;
+  timeLabel: string;
+  format: string | null;
+  category: string | null;
+  title: string;
+  speakerLabel: string | null;
+  topics: string[];
+  description: string | null;
+  learn: string[];
+  output: string | null;
+  tools: string | null;
+  level: string | null;
+  fullJourneyOnly: boolean;
+  capacity: number | null;
+  sortOrder: number;
+  published: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EcdSessionInput = {
+  slug: string;
+  trackIndex: number;
+  timeLabel: string;
+  format?: string | null;
+  category?: string | null;
+  title: string;
+  speakerLabel?: string | null;
+  topics?: string[];
+  description?: string | null;
+  learn?: string[];
+  output?: string | null;
+  tools?: string | null;
+  level?: string | null;
+  fullJourneyOnly?: boolean;
+  capacity?: number | null;
+  sortOrder?: number;
+  published?: boolean;
+};
+
+export async function fetchEcdSessions() {
+  const response = await fetchJson<{ data: { items: EcdSession[] } }>(
+    `${API_BASE}/ecd/admin/sessions`,
+    { method: 'GET' },
+  );
+  return response.data.items;
+}
+
+export async function createEcdSession(input: EcdSessionInput) {
+  const response = await fetchJson<{ data: { session: EcdSession } }>(
+    `${API_BASE}/ecd/admin/sessions`,
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+  return response.data.session;
+}
+
+export async function updateEcdSession(id: string, input: EcdSessionInput) {
+  const response = await fetchJson<{ data: { session: EcdSession } }>(
+    `${API_BASE}/ecd/admin/sessions/${id}`,
+    { method: 'PUT', body: JSON.stringify(input) },
+  );
+  return response.data.session;
+}
+
+export async function deleteEcdSession(id: string) {
+  await fetchJson(`${API_BASE}/ecd/admin/sessions/${id}`, { method: 'DELETE' });
+}
+
+// ——— Public booking portal (invite QR) ———
+
+export type EcdPortalWorkshopOption = {
+  slug: string;
+  title: string;
+  trackIndex: number;
+  timeLabel: string;
+  fullJourneyOnly: boolean;
+  capacity: number | null;
+  reservedCount: number;
+  remaining: number | null;
+  available: boolean;
+  seatStatus: 'Available' | 'Few Seats' | 'Fully Booked';
+};
+
+export type EcdPortalBooking = {
+  bookingId: string;
+  orderCode: string;
+  bookingPageUrl: string;
+  paymentStatus: string;
+  ticketType: 'ct' | 'fj';
+  ticketName: string;
+  qty: number;
+  amountFormatted: string;
+  buyerName: string;
+  buyerEmail: string;
+  maskedEmail: string;
+  buyerMobile: string | null;
+  paidAt: string | null;
+  venueCheckedInAt: string | null;
+  event: {
+    title: string;
+    startIso: string;
+    endIso: string;
+    location: string;
+  };
+  tickets: Array<{
+    id: string;
+    serial: string;
+    status: string;
+    attendeeName: string;
+    attendeeEmail: string;
+    qrPayload?: string;
+  }>;
+  workshops: EcdWorkshopReservation[];
+  form: EcdRegistrationListItem['form'];
+  viewer: 'anonymous' | 'buyer' | 'staff';
+  buyerEmailLocked: string;
+  canEdit: boolean;
+  canCheckIn: boolean;
+};
+
+export async function fetchEcdPortalBooking(orderCode: string, editToken?: string | null) {
+  const headers: Record<string, string> = {};
+  if (editToken) headers.Authorization = `Bearer ${editToken}`;
+  const response = await fetchJson<{ data: EcdPortalBooking }>(
+    `${API_BASE}/ecd/portal/${encodeURIComponent(orderCode)}`,
+    { method: 'GET', headers },
+  );
+  return response.data;
+}
+
+export async function requestEcdPortalOtp(orderCode: string) {
+  const response = await fetchJson<{
+    data: { sent: boolean; maskedEmail: string; ttlMinutes: number };
+  }>(`${API_BASE}/ecd/portal/${encodeURIComponent(orderCode)}/otp/request`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+  return response.data;
+}
+
+export async function verifyEcdPortalOtp(orderCode: string, otp: string) {
+  const response = await fetchJson<{
+    data: { verified: boolean; editToken: string; expiresInSeconds: number };
+  }>(`${API_BASE}/ecd/portal/${encodeURIComponent(orderCode)}/otp/verify`, {
+    method: 'POST',
+    body: JSON.stringify({ otp }),
+  });
+  return response.data;
+}
+
+export async function saveEcdPortalWorkshops(
+  orderCode: string,
+  sessionSlugs: string[],
+  editToken?: string | null,
+) {
+  const headers: Record<string, string> = {};
+  if (editToken) headers.Authorization = `Bearer ${editToken}`;
+  const response = await fetchJson<{
+    data: { workshops: EcdWorkshopReservation[]; cleared?: boolean };
+  }>(`${API_BASE}/ecd/portal/${encodeURIComponent(orderCode)}/workshops`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ sessionSlugs }),
+  });
+  return response.data;
+}
+
+export async function venueCheckInEcdPortal(orderCode: string) {
+  const response = await fetchJson<{
+    data: { alreadyCheckedIn: boolean; venueCheckedInAt: string | null };
+  }>(`${API_BASE}/ecd/portal/${encodeURIComponent(orderCode)}/venue-check-in`, {
+    method: 'POST',
+  });
+  return response.data;
+}
+
+export async function fetchEcdPublicWorkshops() {
+  const response = await fetchJson<{
+    data: { workshops: EcdPortalWorkshopOption[]; bookingAppBaseUrl?: string };
+  }>(`${API_BASE}/ecd/content`, { method: 'GET' });
+  return response.data.workshops ?? [];
+}
+
+// ——— Sponsor partnership inquiries ———
+
+export type EcdSponsorInquiryStatus =
+  | 'new'
+  | 'reviewed'
+  | 'in_progress'
+  | 'accepted'
+  | 'rejected';
+
+export type EcdSponsorInquiry = {
+  id: string;
+  requestCode: string;
+  status: EcdSponsorInquiryStatus;
+  company: string;
+  website: string | null;
+  sector: string;
+  country: string;
+  companySize: string;
+  contactName: string;
+  contactTitle: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  preferredContact: string;
+  objectives: string[];
+  interestedLevel: string;
+  interestedProperties: string[];
+  targetAudience: string | null;
+  timing: string | null;
+  notes: string | null;
+  budgetBand: string | null;
+  consent: boolean;
+  adminNotes: string | null;
+  reviewedAt: string | null;
+  reviewedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function fetchEcdSponsorInquiries(params: {
+  q?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const search = new URLSearchParams();
+  if (params.q) search.set('q', params.q);
+  if (params.status) search.set('status', params.status);
+  if (params.page) search.set('page', String(params.page));
+  if (params.pageSize) search.set('pageSize', String(params.pageSize));
+  const qs = search.toString();
+  const response = await fetchJson<{
+    data: {
+      items: EcdSponsorInquiry[];
+      pagination: { page: number; pageSize: number; total: number };
+    };
+  }>(`${API_BASE}/ecd/admin/sponsor-inquiries${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  return response.data;
+}
+
+export async function updateEcdSponsorInquiry(
+  id: string,
+  input: { status: EcdSponsorInquiryStatus; adminNotes?: string | null },
+) {
+  const response = await fetchJson<{ data: { inquiry: EcdSponsorInquiry } }>(
+    `${API_BASE}/ecd/admin/sponsor-inquiries/${id}`,
+    { method: 'PATCH', body: JSON.stringify(input) },
+  );
+  return response.data.inquiry;
 }
