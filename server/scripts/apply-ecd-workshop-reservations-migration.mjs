@@ -28,7 +28,7 @@ const statements = sql
   .map((s) => s.trim())
   .filter(Boolean);
 
-console.log(`applying ${statements.length} statements from 0027`);
+console.log(`applying ${statements.length} statements from 0038`);
 for (const statement of statements) {
   console.log('running', statement.slice(0, 80).replace(/\s+/g, ' '), '...');
   await client.query(statement);

@@ -23,7 +23,7 @@ await client.connect();
 
 const sqlPath = path.join(serverRoot, 'drizzle', '0040_ecd_sponsor_inquiry_accepted.sql');
 const sql = fs.readFileSync(sqlPath, 'utf8').trim();
-console.log('applying 0029 ecd_sponsor_inquiry_accepted');
+console.log('applying 0040 ecd_sponsor_inquiry_accepted');
 await client.query(sql);
 await client.end();
 console.log('OK');
