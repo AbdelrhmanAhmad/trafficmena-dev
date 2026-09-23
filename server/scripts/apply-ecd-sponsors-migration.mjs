@@ -1,5 +1,5 @@
 /**
- * Apply 0025 ECD sponsors fields on ecd_partners.
+ * Apply 0036 ECD sponsors fields on ecd_partners.
  *   cd server && node scripts/apply-ecd-sponsors-migration.mjs
  */
 import { config } from 'dotenv';
@@ -21,14 +21,14 @@ if (!connectionString) {
 const client = new pg.Client({ connectionString });
 await client.connect();
 
-const sqlPath = path.join(serverRoot, 'drizzle', '0025_ecd_sponsors_fields.sql');
+const sqlPath = path.join(serverRoot, 'drizzle', '0036_ecd_sponsors_fields.sql');
 const sql = fs.readFileSync(sqlPath, 'utf8');
 const statements = sql
   .split('--> statement-breakpoint')
   .map((s) => s.trim())
   .filter(Boolean);
 
-console.log(`applying ${statements.length} statements from 0025`);
+console.log(`applying ${statements.length} statements from 0036`);
 for (const statement of statements) {
   console.log('running', statement.slice(0, 80).replace(/\s+/g, ' '), '...');
   await client.query(statement);
