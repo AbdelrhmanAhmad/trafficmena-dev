@@ -1,5 +1,5 @@
 /**
- * Apply 0024 ECD speakers + checkout form columns.
+ * Apply 0035 ECD speakers + checkout form columns.
  *   cd server && node scripts/apply-ecd-speakers-checkout-migration.mjs
  */
 import { config } from 'dotenv';
@@ -21,14 +21,14 @@ if (!connectionString) {
 const client = new pg.Client({ connectionString });
 await client.connect();
 
-const sqlPath = path.join(serverRoot, 'drizzle', '0024_ecd_speakers_checkout_fields.sql');
+const sqlPath = path.join(serverRoot, 'drizzle', '0035_ecd_speakers_checkout_fields.sql');
 const sql = fs.readFileSync(sqlPath, 'utf8');
 const statements = sql
   .split('--> statement-breakpoint')
   .map((s) => s.trim())
   .filter(Boolean);
 
-console.log(`applying ${statements.length} statements from 0024`);
+console.log(`applying ${statements.length} statements from 0035`);
 for (const statement of statements) {
   console.log('running', statement.slice(0, 80).replace(/\s+/g, ' '), '...');
   await client.query(statement);
