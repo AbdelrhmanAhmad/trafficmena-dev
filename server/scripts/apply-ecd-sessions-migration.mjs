@@ -1,5 +1,5 @@
 /**
- * Apply 0026 ECD agenda sessions table.
+ * Apply 0037 ECD agenda sessions table.
  *   cd server && node scripts/apply-ecd-sessions-migration.mjs
  * Then: node scripts/seed-ecd-sessions.mjs
  */

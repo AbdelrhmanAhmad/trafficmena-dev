@@ -1,5 +1,5 @@
 /**
- * Apply 0028 ECD sponsor inquiries.
+ * Apply 0039 ECD sponsor inquiries.
  *   cd server && node scripts/apply-ecd-sponsor-inquiries-migration.mjs
  */
 import { config } from 'dotenv';

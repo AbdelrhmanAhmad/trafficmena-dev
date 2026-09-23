@@ -1,5 +1,5 @@
 /**
- * Apply 0027 ECD workshop reservations + venue check-in.
+ * Apply 0038 ECD workshop reservations + venue check-in.
  *   cd server && node scripts/apply-ecd-workshop-reservations-migration.mjs
  */
 import { config } from 'dotenv';

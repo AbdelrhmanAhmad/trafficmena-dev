@@ -1,5 +1,5 @@
 /**
- * Apply 0029 — add accepted status to ecd_sponsor_inquiry_status.
+ * Apply 0040 — add accepted status to ecd_sponsor_inquiry_status.
  *   cd server && node scripts/apply-ecd-sponsor-inquiry-accepted-migration.mjs
  */
 import { config } from 'dotenv';
