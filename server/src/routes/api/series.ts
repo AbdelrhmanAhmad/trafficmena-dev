@@ -1,5 +1,5 @@
 import type { SQL } from 'drizzle-orm';
-import { and, count, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { z } from 'zod';
 import { db } from '../../db/client.js';
@@ -129,13 +129,6 @@ export function registerSeriesRoutes(app: Hono) {
     const filters: SQL<unknown>[] = [];
     if (!isStaff) {
       filters.push(eq(series.isPublished, true));
-      // Track-linked auto Series stay hidden until Publish for sale
-      filters.push(
-        or(
-          and(isNull(series.trackId), isNull(series.eventId)),
-          eq(series.salesEnabled, true),
-        )!,
-      );
     }
     if (search) {
       filters.push(ilike(series.title, `%${escapeLikePattern(search)}%`));
@@ -359,16 +352,8 @@ export function registerSeriesRoutes(app: Hono) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
     }
 
-    // Non-staff: published standalone, or track-linked only after Publish for sale
-    if (
-      !isStaff &&
-      !isSeriesVisibleInMemberLibrary({
-        isPublished: seriesRecord.isPublished,
-        salesEnabled: seriesRecord.salesEnabled,
-        trackId: seriesRecord.trackId,
-        eventId: seriesRecord.eventId,
-      })
-    ) {
+    // Non-staff can only see published series
+    if (!isStaff && !isSeriesVisibleInMemberLibrary({ isPublished: seriesRecord.isPublished })) {
       return c.json({ error: { code: 'SERIES_NOT_FOUND', message: 'Series not found.' } }, 404);
     }
 

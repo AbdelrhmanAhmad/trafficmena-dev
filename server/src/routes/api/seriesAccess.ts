@@ -136,19 +136,11 @@ export function normalizeRecordingsAccessPolicy(value: unknown): RecordingsAcces
 
 /**
  * Member /dashboard/library Series tab visibility.
- * Track-linked auto Series stay hidden until "Publish for sale";
- * standalone series appear when published by admin.
+ * A series is visible to members once an admin publishes it. Auto-created
+ * track/event series are inserted unpublished, so they stay hidden until then.
+ * "Publish for sale" only controls the store and purchase actions; it does not
+ * gate visibility, so legacy track series remain visible to prior buyers.
  */
-export function isSeriesVisibleInMemberLibrary(series: {
-  isPublished: boolean;
-  salesEnabled: boolean;
-  trackId: string | null;
-  eventId?: string | null;
-}): boolean {
-  if (!series.isPublished) return false;
-  // Auto-created track or standalone event recordings: hide until Publish for sale
-  if (series.trackId != null || series.eventId != null) {
-    return series.salesEnabled;
-  }
-  return true;
+export function isSeriesVisibleInMemberLibrary(series: { isPublished: boolean }): boolean {
+  return series.isPublished;
 }

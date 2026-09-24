@@ -296,74 +296,16 @@ describe('series access', () => {
     assert.equal(hasAccess, true);
   });
 
-  it('hides track-linked series from member library until Publish for sale', () => {
-    assert.equal(
-      isSeriesVisibleInMemberLibrary({
-        isPublished: true,
-        salesEnabled: false,
-        trackId: 'track-1',
-      }),
-      false,
-    );
+  it('shows published track-linked series even before Publish for sale', () => {
+    assert.equal(isSeriesVisibleInMemberLibrary({ isPublished: true }), true);
   });
 
-  it('shows track-linked series after Publish for sale', () => {
-    assert.equal(
-      isSeriesVisibleInMemberLibrary({
-        isPublished: true,
-        salesEnabled: true,
-        trackId: 'track-1',
-      }),
-      true,
-    );
+  it('shows published manual library series', () => {
+    assert.equal(isSeriesVisibleInMemberLibrary({ isPublished: true }), true);
   });
 
-  it('shows manual library series without salesEnabled', () => {
-    assert.equal(
-      isSeriesVisibleInMemberLibrary({
-        isPublished: true,
-        salesEnabled: false,
-        trackId: null,
-        eventId: null,
-      }),
-      true,
-    );
-  });
-
-  it('hides standalone event-linked series until Publish for sale', () => {
-    assert.equal(
-      isSeriesVisibleInMemberLibrary({
-        isPublished: true,
-        salesEnabled: false,
-        trackId: null,
-        eventId: 'event-1',
-      }),
-      false,
-    );
-  });
-
-  it('shows standalone event-linked series after Publish for sale', () => {
-    assert.equal(
-      isSeriesVisibleInMemberLibrary({
-        isPublished: true,
-        salesEnabled: true,
-        trackId: null,
-        eventId: 'event-1',
-      }),
-      true,
-    );
-  });
-
-  it('hides unpublished manual series from member library', () => {
-    assert.equal(
-      isSeriesVisibleInMemberLibrary({
-        isPublished: false,
-        salesEnabled: false,
-        trackId: null,
-        eventId: null,
-      }),
-      false,
-    );
+  it('hides unpublished series (including auto-created track/event series) from member library', () => {
+    assert.equal(isSeriesVisibleInMemberLibrary({ isPublished: false }), false);
   });
 });
 
