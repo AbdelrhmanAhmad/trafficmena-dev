@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { type EventRecord, fetchEvents } from '@/app/api/events';
 import { fetchPublicTracks, type PublicTrackRecord } from '@/app/api/tracks';
+import { EcdHero } from '@/features/ecd/components/EcdHero';
 import { EventCard } from '@/features/events/components/EventCard';
 import { PublicTrackCard } from '@/features/tracks/components/PublicTrackCard';
 import {
@@ -142,10 +143,8 @@ const Index: React.FC = () => {
   const { handleError } = useErrorHandler();
   const { canAccessSubscriptionPages } = useRolePermissions();
   const [visibleEvents, setVisibleEvents] = useState(6);
-  const [isLoaded, setIsLoaded] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const heroImage = '/uploads/82e73a70-07ff-410e-b9f5-906aa4d1b00c.png';
 
   const {
     data: meetups,
@@ -209,11 +208,6 @@ const Index: React.FC = () => {
     };
   }, [events.length]);
 
-  // Mark component as loaded for animations
-  useEffect(() => {
-    setIsLoaded(true);
-  }, []);
-
   const displayEvents = events.slice(0, visibleEvents);
   const eventListItems = useMemo(
     () => displayEvents.map((event, index) => buildEventDiscoveryItem(event, index)),
@@ -244,113 +238,7 @@ const Index: React.FC = () => {
         <div className="pointer-events-none absolute -right-[50vw] top-[30vh] -z-10 h-[50vh] w-[80vw] rounded-full bg-gradient-to-tr from-[#00fdc2]/25 via-[#05ef62]/20 to-transparent blur-[90px]" />
 
         <div className="relative mx-auto flex w-full max-w-[1200px] flex-col gap-16 px-4 pb-20 pt-12 sm:px-6 lg:px-0">
-          <section
-            className={`relative mx-auto w-full overflow-hidden rounded-[28px] border border-neutral-200 bg-neutral-50 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] backdrop-blur ${isLoaded ? 'animate-fade-in' : ''}`}
-          >
-            <div className="relative grid grid-cols-1 gap-8 sm:p-10 lg:grid-cols-12 lg:gap-10 p-6">
-              {/* Left column - Exactly like reference */}
-              <div
-                className={`order-2 flex flex-col justify-between lg:order-1 lg:col-span-6 ${isLoaded ? 'animate-slide-in-left' : ''}`}
-              >
-                <div className="max-w-xl">
-                  {/* MVP Badge - Exactly like reference */}
-                  <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/70 px-3 py-1 text-xs font-medium text-neutral-700 backdrop-blur hover:bg-white/80 transition-all duration-300 hover:scale-105 hover:shadow-lg">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#05ef62] to-[#29cf9f] text-[#101010]">
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </span>
-                    MVP Live
-                    <span className="mx-1.5 h-1 w-1 rounded-full bg-neutral-400"></span>
-                    Early members onboarding now
-                  </div>
-
-                  {/* Headline - Exactly like reference */}
-                  <h1
-                    className={`text-5xl font-semibold tracking-tight text-neutral-900 sm:text-6xl lg:text-7xl ${isLoaded ? 'animate-fade-in-up' : ''}`}
-                  >
-                    Learn Digital Marketing From The Experts Who've Done It
-                  </h1>
-
-                  <p
-                    className={`mt-5 max-w-lg text-base leading-relaxed text-neutral-700 ${isLoaded ? 'animate-fade-in-up' : ''}`}
-                  >
-                    TrafficMENA connects you with practitioners, not professors, through expert-led
-                    meetups, structured learning tracks, and a community that actually helps you
-                    grow.
-                  </p>
-
-                  <div
-                    className={`mt-8 flex flex-wrap items-center justify-center gap-3 sm:justify-start ${isLoaded ? 'animate-fade-in-up' : ''}`}
-                  >
-                    {/* Primary CTA - Join Free */}
-                    <Button
-                      className="group flex gap-2 transform rounded-xl bg-gradient-to-r from-[#05ef62] to-[#29cf9f] px-6 py-3.5 text-sm font-medium text-[#101010] shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 hover:-translate-y-1 active:scale-95"
-                      asChild
-                    >
-                      <Link to="/signup">
-                        <Users2 className="h-4 w-4" />
-                        <span>Join Free</span>
-                      </Link>
-                    </Button>
-
-                    {canAccessSubscriptionPages && (
-                      <Button
-                        className="group flex gap-2 transform rounded-xl border-2 border-amber-300 bg-amber-50 px-6 py-3.5 text-sm font-medium text-amber-700 transition-all duration-300 hover:bg-amber-100 hover:shadow-lg hover:scale-105 hover:-translate-y-1 active:scale-95"
-                        asChild
-                      >
-                        <Link to="/subscribe">
-                          <Crown className="h-4 w-4" />
-                          <span>Go Premium / 50% Off</span>
-                        </Link>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Metrics strip - Exactly like reference */}
-                <div
-                  className={`mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 ${isLoaded ? 'animate-fade-in-up' : ''}`}
-                >
-                  <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 backdrop-blur hover:bg-white/90 hover:scale-105 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-                    <div className="text-sm font-medium text-neutral-600">Members</div>
-                    <div className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900 group-hover:text-[#006681] transition-colors duration-300">
-                      1.2k+
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 backdrop-blur hover:bg-white/90 hover:scale-105 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-                    <div className="text-sm font-medium text-neutral-600">Events</div>
-                    <div className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900 group-hover:text-[#05ef62] transition-colors duration-300">
-                      48
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 backdrop-blur hover:bg-white/90 hover:scale-105 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-                    <div className="text-sm font-medium text-neutral-600">Experts</div>
-                    <div className="mt-1 text-2xl font-semibold tracking-tight text-neutral-900 group-hover:text-[#29cf9f] transition-colors duration-300">
-                      36+
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right column - Exactly like reference */}
-              <div
-                className={`order-1 lg:order-2 lg:col-span-6 ${isLoaded ? 'animate-slide-in-right' : ''}`}
-              >
-                <div className="relative">
-                  <div className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-full border border-white/60 bg-white/80 shadow-lg backdrop-blur hover:scale-105 hover:shadow-2xl hover:border-[#29cf9f]/60 transition-all duration-500 group">
-                    <img
-                      src={heroImage}
-                      alt="Community meetup"
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      loading="eager"
-                      fetchpriority="high"
-                    />
-                    <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-white/60"></div>
-                    <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-tr from-[#05ef62]/25 via-[#29cf9f]/20 to-[#00fdc2]/20 mix-blend-overlay"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+          <EcdHero />
 
           {/* Upcoming Events Section */}
           <section className="relative w-full rounded-[28px] border border-neutral-200 bg-neutral-50 p-6 shadow-[0_10px_35px_-18px_rgba(16,16,16,0.45)] sm:p-8">
