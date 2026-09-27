@@ -344,7 +344,8 @@ export function registerEcdPaymentRoutes(app: Hono) {
     const confirmBase = ecdConfirmBaseUrl();
     const apiBase = (env.API_BASE_URL || `http://localhost:${env.PORT || 3001}`).replace(/\/+$/, '');
     const ticketName = await ticketDisplayName(booking.ticketType);
-    const unitEgp = booking.unitPriceCents / 100;
+    // Charged amount after promo. Fawaterk requires cartItems sum === cartTotal.
+    const chargedEgp = Number((booking.totalCents / 100).toFixed(2));
     const dueDate = new Date(Date.now() + env.ECD_TOKEN_TTL_HOURS * 60 * 60 * 1000);
 
     // ECD test mode: skip Mastercard/Fawaterk — stay on checkout and use Check Status.
@@ -381,7 +382,7 @@ export function registerEcdPaymentRoutes(app: Hono) {
     try {
       const txResult = await createTransaction({
         paymentMethodId: body.data.paymentMethodId,
-        cartTotal: booking.totalCents / 100,
+        cartTotal: chargedEgp,
         currency: booking.currency || 'EGP',
         customer: {
           first_name: user.firstName || firstName,
@@ -391,9 +392,10 @@ export function registerEcdPaymentRoutes(app: Hono) {
         },
         cartItems: [
           {
-            name: `ECommerce Day 2026 — ${ticketName}`,
-            price: unitEgp,
-            quantity: booking.qty,
+            // Single line at charged total (hub parity). Unit×qty would ignore promo discount.
+            name: `ECommerce Day 2026 · ${ticketName}`,
+            price: chargedEgp,
+            quantity: 1,
           },
         ],
         redirectionUrls: {
