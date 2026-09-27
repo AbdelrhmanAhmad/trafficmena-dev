@@ -36,6 +36,9 @@ export type EcdRegistrationListItem = {
   buyerEmail: string;
   buyerMobile: string | null;
   promoCode: string | null;
+  registrationSource?: 'website' | 'manual' | string;
+  grantReason?: string | null;
+  isComplimentary?: boolean;
   paidAt: string | null;
   venueCheckedInAt: string | null;
   bookingPageUrl?: string;
@@ -69,6 +72,8 @@ export async function fetchEcdRegistrations(params: {
   q?: string;
   ticketType?: string;
   status?: string;
+  source?: string;
+  grantReason?: string;
   page?: number;
   pageSize?: number;
 }): Promise<EcdRegistrationsResponse> {
@@ -76,12 +81,54 @@ export async function fetchEcdRegistrations(params: {
   if (params.q) search.set('q', params.q);
   if (params.ticketType) search.set('ticketType', params.ticketType);
   if (params.status) search.set('status', params.status);
+  if (params.source) search.set('source', params.source);
+  if (params.grantReason) search.set('grantReason', params.grantReason);
   if (params.page) search.set('page', String(params.page));
   if (params.pageSize) search.set('pageSize', String(params.pageSize));
   const qs = search.toString();
   const response = await fetchJson<{ data: EcdRegistrationsResponse }>(
     `${API_BASE}/ecd/admin/registrations${qs ? `?${qs}` : ''}`,
     { method: 'GET' },
+  );
+  return response.data;
+}
+
+export async function createEcdManualRegistration(payload: {
+  name: string;
+  email: string;
+  phone: string;
+  ticketType: 'ct' | 'fj';
+  isComplimentary: boolean;
+  grantReason: string;
+}) {
+  const response = await fetchJson<{ data: { bookingId: string } }>(
+    `${API_BASE}/ecd/admin/registrations`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  );
+  return response.data;
+}
+
+export async function bulkCreateEcdManualRegistrations(csv: string) {
+  const response = await fetchJson<{ data: { createdCount: number; bookingIds: string[] } }>(
+    `${API_BASE}/ecd/admin/registrations/bulk`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ csv }),
+    },
+  );
+  return response.data;
+}
+
+export async function deleteEcdRegistrations(ids: string[]) {
+  const response = await fetchJson<{ data: { deleted: number } }>(
+    `${API_BASE}/ecd/admin/registrations`,
+    {
+      method: 'DELETE',
+      body: JSON.stringify({ ids }),
+    },
   );
   return response.data;
 }

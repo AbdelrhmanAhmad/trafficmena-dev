@@ -38,6 +38,32 @@ export function normalizePhoneNumber(value: string) {
   return stripped.replace(/^\+200/, '+20');
 }
 
+/**
+ * Accept common Egyptian wallet input shapes and return canonical E.164 (+20XXXXXXXXXX),
+ * or '' when the value cannot be interpreted as an Egyptian mobile.
+ * Accepts: +201006960579 | 201006960579 | 01006960579 | 1006960579
+ */
+export function normalizeEgyptianWalletPhone(value: string): string {
+  const stripped = normalizePhoneNumber(value || '');
+  if (!stripped) return '';
+
+  let candidate = stripped;
+  if (candidate.startsWith('+20')) {
+    // already E.164-ish
+  } else if (/^20\d{10}$/.test(candidate)) {
+    candidate = `+${candidate}`;
+  } else if (/^0(1[0125]\d{8})$/.test(candidate)) {
+    candidate = `+20${candidate.slice(1)}`;
+  } else if (/^1[0125]\d{8}$/.test(candidate)) {
+    candidate = `+20${candidate}`;
+  } else {
+    return '';
+  }
+
+  candidate = normalizePhoneNumber(candidate);
+  return isEgyptianMobileE164(candidate) ? candidate : '';
+}
+
 export function isE164PhoneNumber(value: string) {
   return PHONE_E164_REGEX.test(value);
 }

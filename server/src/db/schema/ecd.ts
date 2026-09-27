@@ -86,6 +86,11 @@ export const ecdBookings = pgTable(
     buyerName: text('buyer_name').notNull(),
     buyerEmail: text('buyer_email').notNull(),
     buyerMobile: text('buyer_mobile'),
+    /** website = HTML checkout; manual = admin form/CSV. */
+    registrationSource: text('registration_source').default('website').notNull(),
+    grantReason: text('grant_reason'),
+    isComplimentary: integer('is_complimentary').default(0).notNull(),
+    createdByUserId: uuid('created_by_user_id'),
     paidAt: timestamp('paid_at', { withTimezone: true }),
     /** Venue gate / bracelet issue after QR scan (day-of entry). */
     venueCheckedInAt: timestamp('venue_checked_in_at', { withTimezone: true }),

@@ -11,7 +11,11 @@ import {
   getTransactionData,
   verifyTransactionWebhook,
 } from '../../../services/fawaterk.js';
-import { isEgyptianMobileE164, toFawaterkLocalPhone } from '../users-phone.js';
+import {
+  isEgyptianMobileE164,
+  normalizeEgyptianWalletPhone,
+  toFawaterkLocalPhone,
+} from '../users-phone.js';
 import { getRequestIp, requireManager } from '../utils.js';
 import {
   ecdRateLimiter,
@@ -312,8 +316,13 @@ export function registerEcdPaymentRoutes(app: Hono) {
     }
 
     const methodName = method.name_en || '';
-    const isWallet = /wallet/i.test(methodName);
-    let walletPhone = body.data.walletPhone?.trim();
+    const isWallet = methodName
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .includes('mobilewallet');
+    let walletPhone = body.data.walletPhone
+      ? normalizeEgyptianWalletPhone(body.data.walletPhone)
+      : '';
     if (isWallet) {
       if (!walletPhone || !isEgyptianMobileE164(walletPhone)) {
         return c.json(
@@ -326,6 +335,8 @@ export function registerEcdPaymentRoutes(app: Hono) {
           400,
         );
       }
+    } else {
+      walletPhone = '';
     }
 
     const { firstName, lastName } = splitBuyerName(booking.buyerName);

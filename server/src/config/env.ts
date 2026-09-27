@@ -59,8 +59,8 @@ const envSchema = z.object({
   ECD_LAUNCH_DISCOUNT_RATE: z.coerce.number().min(0).max(1).default(0.1),
   ECD_TOKEN_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(72),
   ECD_EVENT_TITLE: z.string().optional().default('ECommerce Day 2026'),
-  ECD_EVENT_START_ISO: z.string().optional().default('2026-10-22T09:00:00+03:00'),
-  ECD_EVENT_END_ISO: z.string().optional().default('2026-10-22T18:00:00+03:00'),
+  ECD_EVENT_START_ISO: z.string().optional().default('2026-11-05T09:00:00+03:00'),
+  ECD_EVENT_END_ISO: z.string().optional().default('2026-11-05T18:00:00+03:00'),
   ECD_EVENT_LOCATION: z.string().optional().default('Venue details will be announced soon.'),
   ECD_CONFIRM_BASE_URL: z.string().url().optional(),
   /** SPA origin for invite QR codes (portal `/ecd/booking/:orderCode`). Defaults to APP_BASE_URL. */

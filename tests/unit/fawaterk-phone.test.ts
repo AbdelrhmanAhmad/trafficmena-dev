@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   isEgyptianMobileE164,
+  normalizeEgyptianWalletPhone,
   toFawaterkLocalPhone,
 } from '../../server/src/routes/api/users-phone.ts';
 
@@ -39,5 +40,25 @@ describe('isEgyptianMobileE164 (mobile-wallet eligibility guard)', () => {
   it('rejects +20 numbers with a bad prefix or wrong length', () => {
     assert.equal(isEgyptianMobileE164('+201312345678'), false); // bad prefix 13
     assert.equal(isEgyptianMobileE164('+2010123456'), false); // local part too short
+  });
+});
+
+describe('normalizeEgyptianWalletPhone', () => {
+  it('accepts +20, 20, 01, and bare local forms', () => {
+    assert.equal(normalizeEgyptianWalletPhone('+201006960579'), '+201006960579');
+    assert.equal(normalizeEgyptianWalletPhone('201006960579'), '+201006960579');
+    assert.equal(normalizeEgyptianWalletPhone('01006960579'), '+201006960579');
+    assert.equal(normalizeEgyptianWalletPhone('1006960579'), '+201006960579');
+  });
+
+  it('strips spaces and dashes before validating', () => {
+    assert.equal(normalizeEgyptianWalletPhone('+20 100 696 0579'), '+201006960579');
+    assert.equal(normalizeEgyptianWalletPhone('0100-696-0579'), '+201006960579');
+  });
+
+  it('rejects invalid Egyptian mobiles', () => {
+    assert.equal(normalizeEgyptianWalletPhone('01312345678'), '');
+    assert.equal(normalizeEgyptianWalletPhone('+971501234567'), '');
+    assert.equal(normalizeEgyptianWalletPhone(''), '');
   });
 });
