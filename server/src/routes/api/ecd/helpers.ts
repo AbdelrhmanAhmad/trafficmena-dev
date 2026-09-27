@@ -1,11 +1,12 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Context, Next } from 'hono';
 import { env, isProduction } from '../../../config/env.js';
 import { db } from '../../../db/client.js';
 import {
   ecdBookings,
   ecdCheckoutTokens,
+  ecdPromoCodes,
   ecdTicketPackages,
 } from '../../../db/schema/ecd.js';
 import { InMemoryRateLimiter } from '../../../services/rateLimiter.js';
@@ -163,6 +164,96 @@ export async function ticketUnitPriceCents(ticketType: EcdTicketType) {
   return meta.priceCents;
 }
 
+export type EcdPromoResolveStatus = 'valid' | 'invalid' | 'expired' | 'limit' | 'na';
+
+export type EcdPromoResolveResult = {
+  status: EcdPromoResolveStatus;
+  promoCode: string | null;
+  discountPercent: number;
+  row?: {
+    id: string;
+    code: string;
+    discountPercent: number;
+    appliesTo: 'all' | 'ct' | 'fj';
+    maxRedemptions: number | null;
+  };
+};
+
+async function countPaidPromoRedemptions(code: string) {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(ecdBookings)
+    .where(and(eq(ecdBookings.promoCode, code), eq(ecdBookings.paymentStatus, 'paid')));
+  return Number(row?.total ?? 0);
+}
+
+/**
+ * Resolve an ECD promo for a ticket type.
+ * Falls back to env LAUNCH rate only when no DB row exists for that code.
+ */
+export async function resolveEcdPromo(params: {
+  promoCode?: string | null;
+  ticketType: EcdTicketType;
+}): Promise<EcdPromoResolveResult> {
+  const promo = (params.promoCode || '').trim().toUpperCase();
+  if (!promo) {
+    return { status: 'invalid', promoCode: null, discountPercent: 0 };
+  }
+
+  const [row] = await db
+    .select()
+    .from(ecdPromoCodes)
+    .where(and(eq(ecdPromoCodes.code, promo), eq(ecdPromoCodes.isDeleted, 0)))
+    .limit(1);
+
+  if (!row) {
+    // Legacy env fallback for LAUNCH until an admin row exists.
+    if (promo === 'LAUNCH' && env.ECD_LAUNCH_DISCOUNT_RATE > 0) {
+      return {
+        status: 'valid',
+        promoCode: promo,
+        discountPercent: Math.round(env.ECD_LAUNCH_DISCOUNT_RATE * 100),
+      };
+    }
+    return { status: 'invalid', promoCode: promo, discountPercent: 0 };
+  }
+
+  const now = Date.now();
+  if (row.startsAt && row.startsAt.getTime() > now) {
+    return { status: 'invalid', promoCode: promo, discountPercent: 0 };
+  }
+  if (row.endsAt && row.endsAt.getTime() < now) {
+    return { status: 'expired', promoCode: promo, discountPercent: 0 };
+  }
+  if (row.appliesTo !== 'all' && row.appliesTo !== params.ticketType) {
+    return { status: 'na', promoCode: promo, discountPercent: 0 };
+  }
+  if (row.maxRedemptions != null && row.maxRedemptions > 0) {
+    const used = await countPaidPromoRedemptions(promo);
+    if (used >= row.maxRedemptions) {
+      return { status: 'limit', promoCode: promo, discountPercent: 0 };
+    }
+  }
+
+  const discountPercent = Math.max(0, Math.min(100, Math.floor(row.discountPercent) || 0));
+  if (discountPercent <= 0) {
+    return { status: 'invalid', promoCode: promo, discountPercent: 0 };
+  }
+
+  return {
+    status: 'valid',
+    promoCode: promo,
+    discountPercent,
+    row: {
+      id: row.id,
+      code: row.code,
+      discountPercent,
+      appliesTo: row.appliesTo,
+      maxRedemptions: row.maxRedemptions,
+    },
+  };
+}
+
 export async function calcEcdTotals(params: {
   ticketType: EcdTicketType;
   qty: number;
@@ -171,11 +262,14 @@ export async function calcEcdTotals(params: {
   const qty = Math.max(1, Math.min(20, Math.floor(params.qty) || 1));
   const meta = await getPackageMeta(params.ticketType);
   const unitPriceCents = meta.priceCents;
-  const promo = (params.promoCode || '').trim().toUpperCase();
-  let discountCents = 0;
-  if (promo === 'LAUNCH' && env.ECD_LAUNCH_DISCOUNT_RATE > 0) {
-    discountCents = Math.round(unitPriceCents * qty * env.ECD_LAUNCH_DISCOUNT_RATE);
-  }
+  const resolved = await resolveEcdPromo({
+    promoCode: params.promoCode,
+    ticketType: params.ticketType,
+  });
+  const discountCents =
+    resolved.status === 'valid'
+      ? Math.round(unitPriceCents * qty * (resolved.discountPercent / 100))
+      : 0;
   const subtotalCents = unitPriceCents * qty;
   const totalCents = Math.max(0, subtotalCents - discountCents);
   return {
@@ -184,7 +278,9 @@ export async function calcEcdTotals(params: {
     discountCents,
     subtotalCents,
     totalCents,
-    promoCode: promo || null,
+    promoCode: resolved.status === 'valid' ? resolved.promoCode : null,
+    promoStatus: resolved.status,
+    discountPercent: resolved.status === 'valid' ? resolved.discountPercent : 0,
     ticketName: meta.displayName,
   };
 }

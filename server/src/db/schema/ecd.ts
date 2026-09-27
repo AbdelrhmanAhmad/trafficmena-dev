@@ -368,3 +368,26 @@ export const ecdSponsorInquiries = pgTable(
     createdIdx: index('ecd_sponsor_inq_created_idx').on(table.createdAt),
   }),
 );
+
+/** ECD HTML-checkout promo codes (separate from hub track/event promos). */
+export const ecdPromoAppliesToEnum = pgEnum('ecd_promo_applies_to', ['all', 'ct', 'fj']);
+
+export const ecdPromoCodes = pgTable(
+  'ecd_promo_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code').notNull(),
+    discountPercent: integer('discount_percent').notNull(),
+    appliesTo: ecdPromoAppliesToEnum('applies_to').default('all').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }),
+    endsAt: timestamp('ends_at', { withTimezone: true }),
+    maxRedemptions: integer('max_redemptions'),
+    isDeleted: integer('is_deleted').default(0).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    codeIdx: uniqueIndex('ecd_promo_codes_code_uidx').on(table.code),
+    activeIdx: index('ecd_promo_codes_active_idx').on(table.isDeleted),
+  }),
+);

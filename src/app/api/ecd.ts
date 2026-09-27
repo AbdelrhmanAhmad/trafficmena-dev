@@ -25,8 +25,12 @@ export type EcdRegistrationListItem = {
   ticketType: 'ct' | 'fj';
   ticketName: string;
   qty: number;
+  unitPriceCents: number;
+  discountCents: number;
   totalCents: number;
   amountFormatted: string;
+  unitPriceFormatted?: string;
+  discountFormatted?: string;
   paymentStatus: string;
   buyerName: string;
   buyerEmail: string;
@@ -121,6 +125,24 @@ export async function sessionCheckInEcdWorkshop(reservationId: string) {
       venueCheckedInAt?: string | null;
     };
   }>(`${API_BASE}/ecd/admin/workshop-reservations/${reservationId}/session-check-in`, {
+    method: 'POST',
+  });
+  return response.data;
+}
+
+export async function verifyEcdRegistrationPayment(bookingId: string) {
+  const response = await fetchJson<{
+    data: {
+      status: string;
+      paymentStatus?: string;
+      alreadyProcessed?: boolean;
+      bookingId: string;
+      orderCode: string;
+      paidAt?: string | null;
+      amountFormatted?: string;
+      simulated?: boolean;
+    };
+  }>(`${API_BASE}/ecd/admin/registrations/${bookingId}/verify-payment`, {
     method: 'POST',
   });
   return response.data;
@@ -564,4 +586,59 @@ export async function updateEcdSponsorInquiry(
     { method: 'PATCH', body: JSON.stringify(input) },
   );
   return response.data.inquiry;
+}
+
+export type EcdPromoAppliesTo = 'all' | 'ct' | 'fj';
+
+export type EcdPromoCode = {
+  id: string;
+  code: string;
+  discountPercent: number;
+  appliesTo: EcdPromoAppliesTo;
+  startsAt: string | null;
+  endsAt: string | null;
+  maxRedemptions: number | null;
+  redemptionCount: number;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EcdPromoCodeInput = {
+  code: string;
+  discountPercent: number;
+  appliesTo: EcdPromoAppliesTo;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  maxRedemptions?: number | null;
+};
+
+export async function fetchEcdPromoCodes() {
+  const response = await fetchJson<{ data: { items: EcdPromoCode[] } }>(
+    `${API_BASE}/ecd/admin/promo-codes`,
+    { method: 'GET' },
+  );
+  return response.data;
+}
+
+export async function createEcdPromoCode(input: EcdPromoCodeInput) {
+  const response = await fetchJson<{ data: { item: EcdPromoCode } }>(
+    `${API_BASE}/ecd/admin/promo-codes`,
+    { method: 'POST', body: JSON.stringify(input) },
+  );
+  return response.data.item;
+}
+
+export async function updateEcdPromoCode(id: string, input: EcdPromoCodeInput) {
+  const response = await fetchJson<{ data: { item: EcdPromoCode } }>(
+    `${API_BASE}/ecd/admin/promo-codes/${id}`,
+    { method: 'PUT', body: JSON.stringify(input) },
+  );
+  return response.data.item;
+}
+
+export async function deleteEcdPromoCode(id: string) {
+  await fetchJson<{ data: { ok: boolean } }>(`${API_BASE}/ecd/admin/promo-codes/${id}`, {
+    method: 'DELETE',
+  });
 }

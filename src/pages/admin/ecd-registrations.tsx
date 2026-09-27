@@ -1,4 +1,4 @@
-import { CheckCircle2, DoorOpen, Mail, Search, Ticket, UserCheck } from 'lucide-react';
+import { CheckCircle2, DoorOpen, Mail, RefreshCw, Search, Ticket, UserCheck } from 'lucide-react';
 import * as QRCode from 'qrcode';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -9,6 +9,7 @@ import {
   sessionCheckInEcdWorkshop,
   updateEcdTicketEmail,
   venueCheckInEcdRegistration,
+  verifyEcdRegistrationPayment,
   type EcdRegistrationListItem,
   type EcdTicketRow,
   type EcdWorkshopReservation,
@@ -246,6 +247,62 @@ function VenueCheckInButton({
     >
       <UserCheck className="mr-1.5 h-3.5 w-3.5" />
       {mutation.isPending ? '…' : 'Mark present'}
+    </Button>
+  );
+}
+
+function VerifyPaymentButton({
+  row,
+  onDone,
+}: {
+  row: EcdRegistrationListItem;
+  onDone: (patch: Partial<EcdRegistrationListItem>) => void;
+}) {
+  const { toast } = useToast();
+  const mutation = useMutation({
+    mutationFn: () => verifyEcdRegistrationPayment(row.id),
+    onSuccess: (data) => {
+      const status = data.paymentStatus || data.status;
+      onDone({
+        paymentStatus: status,
+        paidAt: data.paidAt ?? row.paidAt,
+        amountFormatted: data.amountFormatted || row.amountFormatted,
+      });
+      if (status === 'paid') {
+        toast({
+          title: data.alreadyProcessed ? 'Already paid' : 'Payment confirmed',
+          description: data.orderCode,
+        });
+        return;
+      }
+      toast({
+        title: 'Still pending',
+        description: `Gateway status: ${status}. Try again after the bank confirms.`,
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: 'Verify failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  if (row.paymentStatus === 'paid') {
+    return null;
+  }
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="secondary"
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate()}
+    >
+      <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${mutation.isPending ? 'animate-spin' : ''}`} />
+      {mutation.isPending ? 'Verifying…' : 'Verify payment'}
     </Button>
   );
 }
@@ -511,7 +568,13 @@ const EcdRegistrationsPage: React.FC = () => {
                       <td className="px-4 py-3">{row.qty}</td>
                       <td className="px-4 py-3">{row.amountFormatted}</td>
                       <td className="px-4 py-3">
-                        <StatusBadge status={row.paymentStatus} />
+                        <div className="flex flex-col items-start gap-1.5">
+                          <StatusBadge status={row.paymentStatus} />
+                          <VerifyPaymentButton
+                            row={row}
+                            onDone={(patch) => patchRow(row.id, patch)}
+                          />
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <VenueCheckInButton
@@ -588,12 +651,38 @@ const EcdRegistrationsPage: React.FC = () => {
                     <div className="mt-1">
                       {selected.ticketName} × {selected.qty}
                     </div>
-                    <div className="font-medium">{selected.amountFormatted}</div>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <StatusBadge status={selected.paymentStatus} />
-                      {selected.promoCode ? (
-                        <span className="text-xs text-neutral-500">Promo {selected.promoCode}</span>
+                    <div className="mt-2 space-y-1 text-sm">
+                      <div className="flex justify-between gap-4 text-neutral-600">
+                        <span>Subtotal</span>
+                        <span>
+                          {selected.unitPriceFormatted ||
+                            selected.amountFormatted}
+                        </span>
+                      </div>
+                      {selected.discountCents > 0 ? (
+                        <div className="flex justify-between gap-4 text-neutral-600">
+                          <span>
+                            Discount
+                            {selected.promoCode ? ` (${selected.promoCode})` : ''}
+                          </span>
+                          <span className="text-emerald-700">
+                            −{selected.discountFormatted || `${(selected.discountCents / 100).toFixed(0)} EGP`}
+                          </span>
+                        </div>
+                      ) : selected.promoCode ? (
+                        <div className="text-xs text-neutral-500">Promo {selected.promoCode}</div>
                       ) : null}
+                      <div className="flex justify-between gap-4 font-medium text-neutral-900">
+                        <span>Paid / due</span>
+                        <span>{selected.amountFormatted}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <StatusBadge status={selected.paymentStatus} />
+                      <VerifyPaymentButton
+                        row={selected}
+                        onDone={(patch) => patchRow(selected.id, patch)}
+                      />
                     </div>
                     <div className="mt-1 text-xs text-neutral-500">
                       Paid: {formatWhen(selected.paidAt) || '—'}

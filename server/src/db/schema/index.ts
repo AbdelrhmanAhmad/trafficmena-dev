@@ -1127,4 +1127,6 @@ export {
   ecdWorkshopReservations,
   ecdSponsorInquiries,
   ecdSponsorInquiryStatusEnum,
+  ecdPromoAppliesToEnum,
+  ecdPromoCodes,
 } from './ecd.js';

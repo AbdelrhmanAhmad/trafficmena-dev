@@ -187,6 +187,12 @@ const adminMenuItems = [
     roles: ['owner', 'admin', 'manager'] as UserRole[],
   },
   {
+    title: 'ECD Promo Codes',
+    url: '/admin/ecd-promo-codes',
+    icon: Tag,
+    roles: ['owner', 'admin', 'manager'] as UserRole[],
+  },
+  {
     title: 'ECD Sessions',
     url: '/admin/ecd-sessions',
     icon: CalendarDays,

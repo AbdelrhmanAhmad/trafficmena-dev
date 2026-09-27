@@ -7,6 +7,7 @@ import { registerEcdBookingRoutes } from './bookings.js';
 import { registerEcdContentRoutes } from './content.js';
 import { ecdOriginGuard, isEcdEnabled } from './helpers.js';
 import { registerEcdPortalRoutes } from './portal.js';
+import { registerEcdPromoRoutes } from './promo.js';
 import { registerEcdSponsorInquiryRoutes } from './sponsorInquiries.js';
 import { registerEcdPaymentRoutes } from './payments.js';
 import { registerEcdSessionRoutes } from './session.js';
@@ -75,6 +76,7 @@ export function createEcdApp() {
   registerEcdBookingRoutes(app);
   registerEcdPortalRoutes(app);
   registerEcdSponsorInquiryRoutes(app);
+  registerEcdPromoRoutes(app);
   registerEcdAdminRoutes(app);
   registerEcdAdminContentRoutes(app);
 

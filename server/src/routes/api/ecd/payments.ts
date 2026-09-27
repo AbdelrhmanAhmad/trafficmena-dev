@@ -12,7 +12,7 @@ import {
   verifyTransactionWebhook,
 } from '../../../services/fawaterk.js';
 import { isEgyptianMobileE164, toFawaterkLocalPhone } from '../users-phone.js';
-import { getRequestIp } from '../utils.js';
+import { getRequestIp, requireManager } from '../utils.js';
 import {
   ecdRateLimiter,
   ecdConfirmBaseUrl,
@@ -23,6 +23,7 @@ import {
   requireEcdToken,
   splitBuyerName,
   ticketDisplayName,
+  verifyBookingAccessToken,
 } from './helpers.js';
 
 const paySchema = z.object({
@@ -38,7 +39,7 @@ const verifySchema = z.object({
 async function markBookingPaid(params: {
   bookingId: string;
   transactionId?: number | null;
-  source: 'verify' | 'webhook' | 'simulate';
+  source: 'verify' | 'webhook' | 'simulate' | 'admin';
 }) {
   const now = new Date();
 
@@ -92,6 +93,97 @@ async function markBookingPaid(params: {
     .catch((error) => console.error('[ecd] ticket email batch failed', error));
 
   return { booking: updated, alreadyProcessed: false };
+}
+
+type EcdBookingRow = typeof ecdBookings.$inferSelect;
+
+/**
+ * Ask Fawaterk (or ECD simulate) whether this booking is paid and fulfill if so.
+ * Shared by buyer verify, access-token verify, and admin verify.
+ */
+export async function reconcileEcdBookingPayment(
+  booking: EcdBookingRow,
+  source: 'verify' | 'admin' | 'simulate' = 'verify',
+): Promise<{
+  status: string;
+  alreadyProcessed?: boolean;
+  bookingId: string;
+  orderCode: string;
+  access: string;
+  simulated?: boolean;
+}> {
+  const access = makeBookingAccessToken(booking.orderCode);
+
+  if (booking.paymentStatus === 'paid') {
+    return {
+      status: 'paid',
+      alreadyProcessed: true,
+      bookingId: booking.id,
+      orderCode: booking.orderCode,
+      access,
+    };
+  }
+
+  if (isEcdSimulatePayments()) {
+    const result = await markBookingPaid({
+      bookingId: booking.id,
+      transactionId: null,
+      source: 'simulate',
+    });
+    return {
+      status: 'paid',
+      simulated: true,
+      alreadyProcessed: result.alreadyProcessed,
+      bookingId: booking.id,
+      orderCode: booking.orderCode,
+      access,
+    };
+  }
+
+  if (!booking.fawaterkIntentKey) {
+    return {
+      status: booking.paymentStatus || 'pending',
+      bookingId: booking.id,
+      orderCode: booking.orderCode,
+      access,
+    };
+  }
+
+  const gateway = await getTransactionData(booking.fawaterkIntentKey);
+  if (gateway.expiredOrMissing) {
+    await db
+      .update(ecdBookings)
+      .set({ paymentStatus: 'expired', updatedAt: new Date() })
+      .where(eq(ecdBookings.id, booking.id));
+    return {
+      status: 'expired',
+      bookingId: booking.id,
+      orderCode: booking.orderCode,
+      access,
+    };
+  }
+
+  if (gateway.paid === 1) {
+    const result = await markBookingPaid({
+      bookingId: booking.id,
+      transactionId: gateway.transactionId ?? null,
+      source: source === 'admin' ? 'admin' : 'verify',
+    });
+    return {
+      status: 'paid',
+      alreadyProcessed: result.alreadyProcessed,
+      bookingId: booking.id,
+      orderCode: booking.orderCode,
+      access,
+    };
+  }
+
+  return {
+    status: booking.paymentStatus || 'pending',
+    bookingId: booking.id,
+    orderCode: booking.orderCode,
+    access,
+  };
 }
 
 export function registerEcdPaymentRoutes(app: Hono) {
@@ -296,7 +388,7 @@ export function registerEcdPaymentRoutes(app: Hono) {
         redirectionUrls: {
           successUrl: `${confirmBase}/booking-confirmation.html?order=${encodeURIComponent(booking.orderCode)}&access=${encodeURIComponent(makeBookingAccessToken(booking.orderCode))}&status=success`,
           failUrl: `${confirmBase}/checkout.html?order=${encodeURIComponent(booking.orderCode)}&status=failed`,
-          pendingUrl: `${confirmBase}/checkout.html?order=${encodeURIComponent(booking.orderCode)}&status=pending`,
+          pendingUrl: `${confirmBase}/booking-confirmation.html?order=${encodeURIComponent(booking.orderCode)}&access=${encodeURIComponent(makeBookingAccessToken(booking.orderCode))}&status=pending`,
           webhookUrl: `${apiBase}/api/ecd/payments/webhook`,
         },
         payload: {
@@ -378,79 +470,90 @@ export function registerEcdPaymentRoutes(app: Hono) {
       return c.json({ error: { code: 'BOOKING_NOT_FOUND', message: 'Booking not found.' } }, 404);
     }
 
-    if (booking.paymentStatus === 'paid') {
-      return c.json({
-        data: {
-          status: 'paid',
-          alreadyProcessed: true,
-          bookingId: booking.id,
-          orderCode: booking.orderCode,
-          access: makeBookingAccessToken(booking.orderCode),
-        },
-      });
-    }
-
-    // ECD test mode: Check Status completes payment without Mastercard/Fawaterk confirmation.
-    if (isEcdSimulatePayments()) {
-      const result = await markBookingPaid({
-        bookingId: booking.id,
-        transactionId: null,
-        source: 'simulate',
-      });
-      return c.json({
-        data: {
-          status: 'paid',
-          simulated: true,
-          alreadyProcessed: result.alreadyProcessed,
-          bookingId: booking.id,
-          orderCode: booking.orderCode,
-          access: makeBookingAccessToken(booking.orderCode),
-        },
-      });
-    }
-
-    if (!booking.fawaterkIntentKey) {
-      return c.json({
-        data: { status: 'pending', bookingId: booking.id, orderCode: booking.orderCode },
-      });
-    }
-
     try {
-      const gateway = await getTransactionData(booking.fawaterkIntentKey);
-      if (gateway.expiredOrMissing) {
-        await db
-          .update(ecdBookings)
-          .set({ paymentStatus: 'expired', updatedAt: new Date() })
-          .where(eq(ecdBookings.id, booking.id));
-        return c.json({
-          data: { status: 'expired', code: 'hold_expired', bookingId: booking.id, orderCode: booking.orderCode },
-        });
-      }
-
-      if (gateway.paid === 1) {
-        const result = await markBookingPaid({
-          bookingId: booking.id,
-          transactionId: gateway.transactionId ?? null,
-          source: 'verify',
-        });
-        return c.json({
-          data: {
-            status: 'paid',
-            alreadyProcessed: result.alreadyProcessed,
-            bookingId: booking.id,
-            orderCode: booking.orderCode,
-            access: makeBookingAccessToken(booking.orderCode),
-          },
-        });
-      }
-
-      return c.json({
-        data: { status: 'pending', bookingId: booking.id, orderCode: booking.orderCode },
-      });
+      const result = await reconcileEcdBookingPayment(booking, 'verify');
+      return c.json({ data: result });
     } catch (error) {
       console.error('[ecd] verify failed', error);
       return c.json(
         { error: { code: 'ECD_VERIFY_FAILED', message: 'Unable to verify payment right now.' } },
+        502,
+      );
+    }
+  });
+
+  /**
+   * Public verify after Fawaterk redirect (no checkout Bearer required).
+   * Auth: booking access token from success/pending URL.
+   */
+  app.post('/booking/:orderCode/verify-payment', async (c) => {
+    const ip = getRequestIp(c);
+    const limited = ecdRateLimiter.consume(`ecd:verify-access:${ip}`, {
+      limit: 40,
+      windowMs: 60_000,
+    });
+    if (!limited.allowed) {
+      return c.json({ error: { code: 'ECD_RATE_LIMITED', message: 'Too many verify attempts.' } }, 429);
+    }
+
+    const orderCode = c.req.param('orderCode');
+    const body = await c.req.json().catch(() => ({}));
+    const access =
+      (typeof body?.access === 'string' && body.access) ||
+      c.req.query('access') ||
+      '';
+
+    if (!verifyBookingAccessToken(orderCode, access)) {
+      return c.json({ error: { code: 'FORBIDDEN', message: 'Invalid booking access.' } }, 403);
+    }
+
+    const [booking] = await db
+      .select()
+      .from(ecdBookings)
+      .where(eq(ecdBookings.orderCode, orderCode))
+      .limit(1);
+    if (!booking) {
+      return c.json({ error: { code: 'BOOKING_NOT_FOUND', message: 'Booking not found.' } }, 404);
+    }
+
+    try {
+      const result = await reconcileEcdBookingPayment(booking, 'verify');
+      return c.json({ data: result });
+    } catch (error) {
+      console.error('[ecd] access verify failed', error);
+      return c.json(
+        { error: { code: 'ECD_VERIFY_FAILED', message: 'Unable to verify payment right now.' } },
+        502,
+      );
+    }
+  });
+
+  /** Admin: pull latest status from Fawaterk and mark paid if confirmed. */
+  app.post('/admin/registrations/:id/verify-payment', async (c) => {
+    const staff = await requireManager(c);
+    if ('response' in staff) return staff.response;
+
+    const id = c.req.param('id');
+    const [booking] = await db.select().from(ecdBookings).where(eq(ecdBookings.id, id)).limit(1);
+    if (!booking) {
+      return c.json({ error: { code: 'NOT_FOUND', message: 'Registration not found.' } }, 404);
+    }
+
+    try {
+      const result = await reconcileEcdBookingPayment(booking, 'admin');
+      const [fresh] = await db.select().from(ecdBookings).where(eq(ecdBookings.id, id)).limit(1);
+      return c.json({
+        data: {
+          ...result,
+          paymentStatus: fresh?.paymentStatus ?? result.status,
+          paidAt: fresh?.paidAt?.toISOString() ?? null,
+          amountFormatted: fresh ? formatMoneyEgp(fresh.totalCents) : undefined,
+        },
+      });
+    } catch (error) {
+      console.error('[ecd] admin verify failed', error);
+      return c.json(
+        { error: { code: 'ECD_VERIFY_FAILED', message: 'Unable to verify payment with gateway.' } },
         502,
       );
     }

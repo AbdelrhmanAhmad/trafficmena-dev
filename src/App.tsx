@@ -95,6 +95,7 @@ const AdminEcdRegistrations = lazy(() => import('./pages/admin/ecd-registrations
 const AdminEcdPartners = lazy(() => import('./pages/admin/ecd-partners'));
 const AdminEcdSpeakers = lazy(() => import('./pages/admin/ecd-speakers'));
 const AdminEcdPackages = lazy(() => import('./pages/admin/ecd-packages'));
+const AdminEcdPromoCodes = lazy(() => import('./pages/admin/ecd-promo-codes'));
 const AdminEcdSessions = lazy(() => import('./pages/admin/ecd-sessions'));
 const AdminEcdSponsorInquiries = lazy(() => import('./pages/admin/ecd-sponsor-inquiries'));
 const EcdBookingPortal = lazy(() => import('./pages/ecd/BookingPortalPage'));
@@ -904,6 +905,16 @@ const App = () => {
                       <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
                         <ErrorBoundary>
                           <AdminEcdPackages />
+                        </ErrorBoundary>
+                      </AdminProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/ecd-promo-codes"
+                    element={
+                      <AdminProtectedRoute allowedRoles={['owner', 'admin', 'manager']}>
+                        <ErrorBoundary>
+                          <AdminEcdPromoCodes />
                         </ErrorBoundary>
                       </AdminProtectedRoute>
                     }

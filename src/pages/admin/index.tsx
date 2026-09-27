@@ -10,7 +10,8 @@ import {
   Mail,
   Mic2,
   Package,
-  Ticket,
+    Tag,
+    Ticket,
   TrendingUp,
   UserCheck,
   Users,
@@ -165,6 +166,12 @@ const AdminDashboard: React.FC = () => {
       description: 'ct / fj names, prices, and features.',
       href: '/admin/ecd-packages',
       icon: Package,
+    },
+    {
+      label: 'ECD Promo Codes',
+      description: 'Checkout discount codes and percent off.',
+      href: '/admin/ecd-promo-codes',
+      icon: Tag,
     },
     {
       label: 'ECD Sessions',

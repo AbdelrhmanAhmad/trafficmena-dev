@@ -54,6 +54,8 @@ export async function serializeEcdBooking(bookingId: string) {
     discountCents: booking.discountCents,
     totalCents: booking.totalCents,
     amountFormatted: formatMoneyEgp(booking.totalCents),
+    unitPriceFormatted: formatMoneyEgp(booking.unitPriceCents * booking.qty),
+    discountFormatted: formatMoneyEgp(booking.discountCents),
     promoCode: booking.promoCode,
     buyerName: booking.buyerName,
     buyerFirstName: firstName,
