@@ -1,4 +1,4 @@
-import { CheckCircle2, DoorOpen, Loader2, Mail, Plus, RefreshCw, Search, Ticket, Trash2, Upload, UserCheck, X } from 'lucide-react';
+import { CheckCircle2, DoorOpen, Download, Loader2, Mail, Plus, RefreshCw, Search, Ticket, Trash2, Upload, UserCheck, X } from 'lucide-react';
 import * as QRCode from 'qrcode';
 import type React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -17,6 +17,7 @@ import {
   type EcdTicketRow,
   type EcdWorkshopReservation,
 } from '@/app/api/ecd';
+import { EcdAttendeeFrameCard } from '@/features/ecd/components/EcdAttendeeFrameCard';
 import AdminProtectedRoute from '@/shared/components/layout/AdminProtectedRoute';
 import AppLayout from '@/shared/components/layout/AppLayout';
 import { Badge } from '@/shared/components/ui/badge';
@@ -940,13 +941,32 @@ const EcdRegistrationsPage: React.FC = () => {
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">{row.orderCode}</td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-neutral-900">{row.buyerName}</div>
-                        <div className="text-xs text-neutral-500">{row.buyerEmail}</div>
-                        {row.grantReason ? (
-                          <div className="mt-0.5 text-[11px] text-neutral-400">
-                            Reason: {row.grantReason}
+                        <div className="flex items-start gap-2">
+                          {row.attendeeFrameUrl ? (
+                            <a
+                              href={row.attendeeFrameUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0"
+                              title="Attending photo"
+                            >
+                              <img
+                                src={row.attendeeFrameUrl}
+                                alt=""
+                                className="h-10 w-8 rounded object-cover border border-neutral-200"
+                              />
+                            </a>
+                          ) : null}
+                          <div>
+                            <div className="font-medium text-neutral-900">{row.buyerName}</div>
+                            <div className="text-xs text-neutral-500">{row.buyerEmail}</div>
+                            {row.grantReason ? (
+                              <div className="mt-0.5 text-[11px] text-neutral-400">
+                                Reason: {row.grantReason}
+                              </div>
+                            ) : null}
                           </div>
-                        ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-neutral-700">
                         {row.buyerMobile || '—'}
@@ -1105,6 +1125,33 @@ const EcdRegistrationsPage: React.FC = () => {
                       Paid: {formatWhen(selected.paidAt) || '—'}
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-lg border border-neutral-200 p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+                      Attending photo
+                    </div>
+                    {selected.attendeeFrameUrl ? (
+                      <Button type="button" variant="outline" size="sm" asChild>
+                        <a
+                          href={selected.attendeeFrameUrl}
+                          download={`ecd-${selected.orderCode}-attending.png`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="mr-1.5 h-3.5 w-3.5" />
+                          Download
+                        </a>
+                      </Button>
+                    ) : null}
+                  </div>
+                  <EcdAttendeeFrameCard
+                    orderCode={selected.orderCode}
+                    existingUrl={selected.attendeeFrameUrl}
+                    canEdit
+                    onSaved={(url) => patchRow(selected.id, { attendeeFrameUrl: url })}
+                  />
                 </div>
 
                 <div className="rounded-lg border border-neutral-200 p-4">

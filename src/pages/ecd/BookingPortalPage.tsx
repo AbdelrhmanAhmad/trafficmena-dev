@@ -22,6 +22,7 @@ import {
   verifyEcdPortalOtp,
   type EcdPortalWorkshopOption,
 } from '@/app/api/ecd';
+import { EcdAttendeeFrameCard } from '@/features/ecd/components/EcdAttendeeFrameCard';
 import Layout from '@/shared/components/layout/Layout';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
@@ -384,6 +385,20 @@ const EcdBookingPortalPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        <EcdAttendeeFrameCard
+          orderCode={booking.orderCode}
+          existingUrl={booking.attendeeFrameUrl}
+          canEdit={booking.canEdit || booking.viewer === 'staff'}
+          editToken={editToken || null}
+          onSaved={(url) => {
+            void queryClient.setQueryData(
+              ['ecd-portal', orderCode, user?.id, editToken || 'none'],
+              (prev: typeof booking | undefined) =>
+                prev ? { ...prev, attendeeFrameUrl: url } : prev,
+            );
+          }}
+        />
 
         <Card>
           <CardHeader className="pb-2">

@@ -1,9 +1,16 @@
 import { eq } from 'drizzle-orm';
-import type { Hono } from 'hono';
+import type { Context, Hono } from 'hono';
 import { z } from 'zod';
 import { env } from '../../../config/env.js';
 import { db } from '../../../db/client.js';
 import { ecdBookings, ecdHtmlForms, ecdTickets } from '../../../db/schema/ecd.js';
+import { profiles } from '../../../db/schema/index.js';
+import { getSessionFromRequest } from '../../../utils/session.js';
+import { normalizeRole } from '../utils.js';
+import {
+  parseDataUrlImage,
+  uploadEcdAttendeeFrameBuffer,
+} from './attendeeFrameUpload.js';
 import {
   ecdBookingPageUrl,
   formatMoneyEgp,
@@ -16,6 +23,7 @@ import {
   ticketDisplayName,
   verifyBookingAccessToken,
 } from './helpers.js';
+import { verifyPortalEditToken } from './portalEditAuth.js';
 import { loadWorkshopRows, reserveWorkshopsForBooking } from './workshopReserve.js';
 
 export async function serializeEcdBooking(bookingId: string) {
@@ -64,6 +72,7 @@ export async function serializeEcdBooking(bookingId: string) {
     buyerMobile: booking.buyerMobile,
     paidAt: booking.paidAt?.toISOString() ?? null,
     venueCheckedInAt: booking.venueCheckedInAt?.toISOString() ?? null,
+    attendeeFrameUrl: booking.attendeeFrameUrl ?? null,
     paymentMethodName: booking.paymentMethodName,
     paymentRef: `PAY-${booking.orderCode}`,
     event: {
@@ -131,6 +140,7 @@ async function authorizeBookingView(
   if (opts.bearer) {
     const resolved = await resolveEcdToken(opts.bearer);
     if (resolved && resolved.bookingId === booking.id) return true;
+    if (verifyPortalEditToken(opts.bearer, booking.id)) return true;
   }
   if (opts.publicToken && hashToken(opts.publicToken) === booking.publicTokenHash) {
     return true;
@@ -141,8 +151,32 @@ async function authorizeBookingView(
   return false;
 }
 
+async function authorizeAttendeeFrameMutate(
+  c: Context,
+  booking: typeof ecdBookings.$inferSelect,
+  opts: { bearer?: string; publicToken?: string; access?: string },
+) {
+  if (await authorizeBookingView(booking, opts)) return true;
+
+  const session = await getSessionFromRequest(c);
+  if (!session?.user) return false;
+  if (session.user.id === booking.userId) return true;
+
+  const [record] = await db
+    .select({ role: profiles.role })
+    .from(profiles)
+    .where(eq(profiles.id, session.user.id))
+    .limit(1);
+  const role = normalizeRole(record?.role ?? null);
+  return role === 'owner' || role === 'admin' || role === 'manager';
+}
+
 const reserveSchema = z.object({
   sessionSlugs: z.array(z.string().trim().min(1).max(40)).max(12),
+});
+
+const frameJsonSchema = z.object({
+  imageBase64: z.string().min(32).max(12_000_000),
 });
 
 export function registerEcdBookingRoutes(app: Hono) {
@@ -171,6 +205,125 @@ export function registerEcdBookingRoutes(app: Hono) {
 
     const data = await serializeEcdBooking(booking.id);
     return c.json({ data });
+  });
+
+  /**
+   * Upload composited "I am attending" social frame (PNG/JPEG).
+   * Auth: checkout access/publicToken/Bearer, portal edit token, buyer session, or staff.
+   */
+  app.post('/booking/:orderCode/attendee-frame', async (c) => {
+    const code = decodeURIComponent(c.req.param('orderCode'));
+    const publicToken = c.req.query('publicToken') || undefined;
+    const access = c.req.query('access') || undefined;
+    const bearer = getBearerToken(c);
+
+    const booking = await findBookingByPublicCode(code);
+    if (!booking) {
+      return c.json({ error: { code: 'BOOKING_NOT_FOUND', message: 'Booking not found.' } }, 404);
+    }
+    if (booking.paymentStatus !== 'paid' && booking.paymentStatus !== 'pending') {
+      return c.json(
+        {
+          error: {
+            code: 'BOOKING_NOT_READY',
+            message: 'Complete payment before creating your attending photo.',
+          },
+        },
+        409,
+      );
+    }
+
+    const authorized = await authorizeAttendeeFrameMutate(c, booking, {
+      bearer: bearer || undefined,
+      publicToken,
+      access,
+    });
+    if (!authorized) {
+      return c.json({ error: { code: 'ECD_FORBIDDEN', message: 'Not allowed.' } }, 403);
+    }
+
+    let buffer: Buffer | null = null;
+    let contentType = 'image/png';
+    let extension = 'png';
+
+    const contentTypeHeader = (c.req.header('content-type') || '').toLowerCase();
+    if (contentTypeHeader.includes('multipart/form-data')) {
+      const body = await c.req.parseBody();
+      const maybeFile = body.file ?? body.image;
+      const file = Array.isArray(maybeFile) ? maybeFile[0] : maybeFile;
+      if (!(file instanceof File)) {
+        return c.json(
+          { error: { code: 'INVALID_REQUEST', message: 'Upload an image file.' } },
+          400,
+        );
+      }
+      const mime = (file.type || 'image/png').toLowerCase();
+      if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(mime)) {
+        return c.json(
+          { error: { code: 'UNSUPPORTED_TYPE', message: 'PNG, JPEG, or WebP only.' } },
+          415,
+        );
+      }
+      contentType = mime === 'image/jpg' ? 'image/jpeg' : mime;
+      extension = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+      buffer = Buffer.from(await file.arrayBuffer());
+    } else {
+      const parsed = frameJsonSchema.safeParse(await c.req.json().catch(() => ({})));
+      if (!parsed.success) {
+        return c.json(
+          {
+            error: {
+              code: 'INVALID_REQUEST',
+              message: 'Send multipart file or JSON { imageBase64: data-url }.',
+            },
+          },
+          400,
+        );
+      }
+      const decoded = parseDataUrlImage(parsed.data.imageBase64);
+      if (!decoded) {
+        return c.json(
+          { error: { code: 'INVALID_REQUEST', message: 'Invalid image data URL.' } },
+          400,
+        );
+      }
+      buffer = decoded.buffer;
+      contentType = decoded.contentType;
+      extension = decoded.extension;
+    }
+
+    try {
+      const uploaded = await uploadEcdAttendeeFrameBuffer({ buffer, contentType, extension });
+      await db
+        .update(ecdBookings)
+        .set({ attendeeFrameUrl: uploaded.url, updatedAt: new Date() })
+        .where(eq(ecdBookings.id, booking.id));
+      return c.json({
+        data: {
+          attendeeFrameUrl: uploaded.url,
+          orderCode: booking.orderCode,
+        },
+      });
+    } catch (err: any) {
+      const codeName = err?.code || 'UPLOAD_FAILED';
+      const status =
+        codeName === 'UPLOAD_DISABLED'
+          ? 503
+          : codeName === 'FILE_TOO_LARGE'
+            ? 413
+            : codeName === 'UNSUPPORTED_TYPE'
+              ? 415
+              : 502;
+      return c.json(
+        {
+          error: {
+            code: codeName,
+            message: err?.message || 'Could not save attending photo.',
+          },
+        },
+        status,
+      );
+    }
   });
 
   app.get('/me/booking', requireEcdToken, async (c) => {

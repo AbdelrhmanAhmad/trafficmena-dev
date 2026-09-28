@@ -94,6 +94,8 @@ export const ecdBookings = pgTable(
     paidAt: timestamp('paid_at', { withTimezone: true }),
     /** Venue gate / bracelet issue after QR scan (day-of entry). */
     venueCheckedInAt: timestamp('venue_checked_in_at', { withTimezone: true }),
+    /** Composited social / attending frame (CDN URL). */
+    attendeeFrameUrl: text('attendee_frame_url'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

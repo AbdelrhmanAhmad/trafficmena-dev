@@ -41,6 +41,7 @@ export type EcdRegistrationListItem = {
   isComplimentary?: boolean;
   paidAt: string | null;
   venueCheckedInAt: string | null;
+  attendeeFrameUrl?: string | null;
   bookingPageUrl?: string;
   createdAt: string;
   userId: string;
@@ -480,6 +481,7 @@ export type EcdPortalBooking = {
   buyerMobile: string | null;
   paidAt: string | null;
   venueCheckedInAt: string | null;
+  attendeeFrameUrl?: string | null;
   event: {
     title: string;
     startIso: string;
@@ -554,6 +556,29 @@ export async function venueCheckInEcdPortal(orderCode: string) {
     data: { alreadyCheckedIn: boolean; venueCheckedInAt: string | null };
   }>(`${API_BASE}/ecd/portal/${encodeURIComponent(orderCode)}/venue-check-in`, {
     method: 'POST',
+  });
+  return response.data;
+}
+
+/** Upload composited attending-frame image (data URL) for a booking. */
+export async function uploadEcdAttendeeFrame(
+  orderCode: string,
+  imageBase64: string,
+  opts?: { access?: string | null; editToken?: string | null },
+) {
+  const qs = new URLSearchParams();
+  if (opts?.access) qs.set('access', opts.access);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (opts?.editToken) headers.Authorization = `Bearer ${opts.editToken}`;
+  const suffix = qs.toString() ? `?${qs.toString()}` : '';
+  const response = await fetchJson<{
+    data: { attendeeFrameUrl: string; orderCode: string };
+  }>(`${API_BASE}/ecd/booking/${encodeURIComponent(orderCode)}/attendee-frame${suffix}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ imageBase64 }),
   });
   return response.data;
 }
