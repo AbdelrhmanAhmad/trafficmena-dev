@@ -172,7 +172,7 @@ export function EcdAttendeeFrameCard({
     if (!photo || !canvasRef.current) return;
     setSaving(true);
     try {
-      const dataUrl = canvasRef.current.toDataURL('image/png');
+      const dataUrl = canvasRef.current.toDataURL('image/jpeg', 0.88);
       const result = await uploadEcdAttendeeFrame(orderCode, dataUrl, {
         access,
         editToken,

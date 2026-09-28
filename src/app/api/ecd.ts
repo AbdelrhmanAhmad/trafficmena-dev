@@ -1,4 +1,4 @@
-import { API_BASE, fetchJson } from '@/app/api/client';
+import { API_BASE, ApiError, fetchJson, getCsrfHeaders } from '@/app/api/client';
 
 export type EcdTicketRow = {
   id: string;
@@ -560,27 +560,49 @@ export async function venueCheckInEcdPortal(orderCode: string) {
   return response.data;
 }
 
-/** Upload composited attending-frame image (data URL) for a booking. */
+/** Upload composited attending-frame image as multipart (avoids 1MB JSON limit). */
 export async function uploadEcdAttendeeFrame(
   orderCode: string,
-  imageBase64: string,
+  imageDataUrl: string,
   opts?: { access?: string | null; editToken?: string | null },
 ) {
   const qs = new URLSearchParams();
   if (opts?.access) qs.set('access', opts.access);
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (opts?.editToken) headers.Authorization = `Bearer ${opts.editToken}`;
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
-  const response = await fetchJson<{
-    data: { attendeeFrameUrl: string; orderCode: string };
-  }>(`${API_BASE}/ecd/booking/${encodeURIComponent(orderCode)}/attendee-frame${suffix}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ imageBase64 }),
-  });
-  return response.data;
+
+  const blob = await (async () => {
+    const res = await fetch(imageDataUrl);
+    return res.blob();
+  })();
+  const form = new FormData();
+  const ext = blob.type.includes('png') ? 'png' : 'jpg';
+  form.append('file', blob, `attending.${ext}`);
+
+  const headers: Record<string, string> = { ...getCsrfHeaders() };
+  if (opts?.editToken) headers.Authorization = `Bearer ${opts.editToken}`;
+  // Do not set Content-Type — browser sets multipart boundary.
+
+  const response = await fetch(
+    `${API_BASE}/ecd/booking/${encodeURIComponent(orderCode)}/attendee-frame${suffix}`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: form,
+    },
+  );
+
+  const contentType = response.headers.get('content-type') ?? '';
+  const isJson = contentType.includes('application/json');
+  const body = isJson ? await response.json() : null;
+  if (!response.ok) {
+    throw new ApiError(
+      body?.error?.message || response.statusText,
+      response.status,
+      body?.error?.code,
+    );
+  }
+  return (body?.data ?? body) as { attendeeFrameUrl: string; orderCode: string };
 }
 
 export async function fetchEcdPublicWorkshops() {

@@ -237,7 +237,7 @@
       confirmBtn.disabled = true;
       setStatus("Saving…");
       redraw();
-      var dataUrl = canvas.toDataURL("image/png");
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.88);
       Promise.resolve(onConfirm(dataUrl))
         .then(function (result) {
           var url =
