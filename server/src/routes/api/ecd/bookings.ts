@@ -248,16 +248,21 @@ export function registerEcdBookingRoutes(app: Hono) {
 
     const contentTypeHeader = (c.req.header('content-type') || '').toLowerCase();
     if (contentTypeHeader.includes('multipart/form-data')) {
-      const body = await c.req.parseBody();
+      const body = await c.req.parseBody({ all: true });
       const maybeFile = body.file ?? body.image;
       const file = Array.isArray(maybeFile) ? maybeFile[0] : maybeFile;
-      if (!(file instanceof File)) {
+      // Hono may yield File or Blob depending on runtime; accept both.
+      const isBlob =
+        typeof Blob !== 'undefined' &&
+        file instanceof Blob &&
+        typeof (file as Blob).arrayBuffer === 'function';
+      if (!isBlob) {
         return c.json(
           { error: { code: 'INVALID_REQUEST', message: 'Upload an image file.' } },
           400,
         );
       }
-      const mime = (file.type || 'image/png').toLowerCase();
+      const mime = ((file as Blob).type || 'image/png').toLowerCase();
       if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(mime)) {
         return c.json(
           { error: { code: 'UNSUPPORTED_TYPE', message: 'PNG, JPEG, or WebP only.' } },
@@ -266,7 +271,7 @@ export function registerEcdBookingRoutes(app: Hono) {
       }
       contentType = mime === 'image/jpg' ? 'image/jpeg' : mime;
       extension = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
-      buffer = Buffer.from(await file.arrayBuffer());
+      buffer = Buffer.from(await (file as Blob).arrayBuffer());
     } else {
       const parsed = frameJsonSchema.safeParse(await c.req.json().catch(() => ({})));
       if (!parsed.success) {

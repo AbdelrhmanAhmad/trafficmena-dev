@@ -560,6 +560,22 @@ export async function venueCheckInEcdPortal(orderCode: string) {
   return response.data;
 }
 
+/**
+ * Convert a canvas data-URL to a Blob without fetch().
+ * CSP connect-src on the hub blocks fetch("data:…"), which surfaces as "Failed to fetch".
+ */
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const parts = String(dataUrl || '').split(',');
+  const mimeMatch = parts[0]?.match(/:(.*?);/);
+  const mime = mimeMatch?.[1] || 'image/jpeg';
+  const binary = atob(parts[1] || '');
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
+}
+
 /** Upload composited attending-frame image as multipart (avoids 1MB JSON limit). */
 export async function uploadEcdAttendeeFrame(
   orderCode: string,
@@ -570,10 +586,7 @@ export async function uploadEcdAttendeeFrame(
   if (opts?.access) qs.set('access', opts.access);
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
 
-  const blob = await (async () => {
-    const res = await fetch(imageDataUrl);
-    return res.blob();
-  })();
+  const blob = dataUrlToBlob(imageDataUrl);
   const form = new FormData();
   const ext = blob.type.includes('png') ? 'png' : 'jpg';
   form.append('file', blob, `attending.${ext}`);
